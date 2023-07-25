@@ -1,0 +1,12 @@
+# Project place file
+/Evostrike Redone.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+/aftman.toml
+
+/*.json
+
+/.gitattributes
