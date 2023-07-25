@@ -1,0 +1,114 @@
+local Players = game:GetService("Players")
+local Debris = game:GetService("Debris")
+local Modules = game:GetService("ReplicatedStorage"):WaitForChild("Scripts"):WaitForChild("Modules")
+local Libraries = game:GetService("ReplicatedStorage"):WaitForChild("Scripts"):WaitForChild("Libraries")
+local WeaponFunctions = require(Libraries.WeaponFunctions)
+
+local tool = script.Parent
+local serverModel = tool.ServerModel
+local weaponName = string.gsub(tool.Name, "Tool_", "")
+local weaponRemoteFunction = tool:WaitForChild("WeaponRemoteFunction")
+local weaponRemoteEvent = tool:WaitForChild("WeaponRemoteEvent")
+local weaponFolder = game:GetService("ServerScriptService"):WaitForChild("Modules"):WaitForChild("Weapon")
+local weaponOptions = require(weaponFolder:WaitForChild("Options")[weaponName])
+
+local serverStoredVar = {lastFireTime = tick(), nextFireTime = tick(), ammo = {magazine = weaponOptions.ammo.magazine, total = weaponOptions.ammo.total, lastYAcc = 0, accuracy = Vector2.zero}}
+serverStoredVar.vectorOffset = weaponOptions.fireVectorCameraOffset
+
+local player = tool:WaitForChild("PlayerObject").Value
+
+--[[
+	Remote Event Functions
+]]
+
+local timerTypeKeys = {Equip = weaponOptions.equipLength, Fire = weaponOptions.fireRate, Reload = weaponOptions.reloadLength}
+local function Timer(timerType)
+	local endTime = tick()
+	local length = timerTypeKeys[timerType]
+	if not length then error("Could not find timer " .. tostring(timerType)) end
+	endTime += length
+	repeat task.wait() until tick() >= endTime
+	return true
+end
+
+--[[
+	Hit Registration
+]]
+
+local AccuracyCalculator = require(Modules.AccuracyCalculator).init(player, weaponOptions)
+local CalculateAccuracy = AccuracyCalculator.Calculate
+
+function GetAccuracy(recoilVector3, currentBullet, speed)
+	local acc
+	acc, serverStoredVar = CalculateAccuracy(currentBullet, recoilVector3, serverStoredVar, speed)
+	serverStoredVar.accuracy = acc
+	return acc
+end
+
+--[[
+	Weapon Functions
+]]
+
+function Equip()
+	player.Character.HumanoidRootPart.WeaponGrip.Part1 = serverModel.GunComponents.WeaponHandle
+end
+
+function Unequip()
+	player.Character.HumanoidRootPart.WeaponMotor.Part1 = nil
+end
+
+function Fire(finalRay, currentBullet, recoilVector3)
+	local diff = serverStoredVar.nextFireTime - tick()
+	if diff > 0 then
+		--print(tostring(diff) .. " TIME UNTIL NEXT ALLOWED FIRE")
+		if diff > 0.01899 then
+			print(tostring(diff) .. " TIME UNTIL NEXT ALLOWED FIRE")
+			return
+		end
+	end
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {player.Character, workspace.Temp}
+
+	local result = workspace:Raycast(finalRay.Origin, finalRay.Direction * 100, params)
+
+	serverStoredVar.ammo.magazine -= 1
+	serverStoredVar.nextFireTime = tick() + weaponOptions.fireRate
+
+	return WeaponFunctions.RegisterShot(player, weaponOptions, result, finalRay.Origin)
+end
+
+function Reload()
+	if serverStoredVar.ammo.total <= 0 then return end
+	local newMag
+	local defMag = weaponOptions.ammo.magazine
+	task.spawn(function()
+		if serverStoredVar.ammo.total >= defMag then
+			newMag = defMag
+			serverStoredVar.ammo.total -= defMag - serverStoredVar.ammo.magazine
+		else
+			newMag = serverStoredVar.ammo.total
+			serverStoredVar.ammo.total = 0
+		end
+		serverStoredVar.ammo.magazine = newMag
+	end)
+	Timer("Reload")
+	return newMag, serverStoredVar.ammo.total
+end
+
+--[[
+	Connections
+]]
+
+local actions = {Timer = Timer, Fire = Fire, Reload = Reload, GetAccuracy = GetAccuracy}
+weaponRemoteFunction.OnServerInvoke = function(plr, action, ...)
+	return actions[action](...)
+end
+
+weaponRemoteEvent.OnServerEvent:Connect(function(plr, action, ...)
+	actions[action](...)
+end)
+
+tool.Equipped:Connect(Equip)
+tool.Unequipped:Connect(Unequip)

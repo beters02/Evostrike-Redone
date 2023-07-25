@@ -1,9 +1,9 @@
 local module = {
-	playerTorsoToGround = 3.1,
+	playerTorsoToGround = 2.65,
 	movementStickDistance = .1,
 
-	airAccelerate = 16,
-	airSpeed = 6,
+	airAccelerate = 50,
+	airSpeed = 5,
 	airMaxSpeed = 31,
 	airMaxSpeedFriction = 3.5,
 
@@ -11,7 +11,7 @@ local module = {
 	groundDeccelerate = 8,
 	groundMaxSpeed = 18,
 	
-	jumpVelocity = 42,
+	jumpVelocity = 40,
 	jumpTimeBeforeGroundRegister = 0.1,
 
 	minInAirTimeRegisterLand = 0.5,
