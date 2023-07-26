@@ -52,38 +52,82 @@ function module.CreateBullet(fromChar, endPos, client)
 	local sizegoal = {Size = Vector3.new(0.1, 0.1, 0.7), Transparency =  0}
 	local tween = Tween:Create(part, ti, goal)
 	local sizetween = Tween:Create(part, sizeti, sizegoal)
+	local finished = Instance.new("BindableEvent")
 	task.delay(0.015, function() -- wait debug so the bullet is shown starting at the tip of the weapon
 		tween:Play() -- play tweens and destroy bullet
 		sizetween:Play()
 		tween.Completed:Wait()
 		part:Destroy()
+		finished:Fire()
+		Debris:AddItem(finished, 3)
 	end)
-	return part
+	return part, finished
 end
 
-function module.FireBullet(fromChar, endPos)
+--[[
+	FireBullet
+
+	Replicates CreateBullet to all Clients except caster
+]]
+
+function module.FireBullet(fromChar, result, isHumanoid, hitChar, particleFolder, killed)
 	if game:GetService("RunService"):IsServer() then return end
-	module.CreateBullet(fromChar, endPos, true)
+	local endPos = result.Position
+	local bullet, bulletFinishedEvent = module.CreateBullet(fromChar, endPos, true)
 	WeaponRemotes.Replicate:FireServer("CreateBullet", fromChar, endPos)
+
+	bulletFinishedEvent.Event:Once(function()
+		if not isHumanoid then
+			module.CreateBulletHole(result)
+		else
+			task.spawn(function()
+				local instance = result.Instance
+				if killed then
+					EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood.Kill:GetChildren(), instance, hitChar)
+				end
+				EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood[particleFolder]:GetChildren(), instance)
+			end)
+		end
+		bulletFinishedEvent:Destroy()
+	end)
 end
+
+--[[
+	RegisterShot
+
+	Fires Bullet, Creates BulletHole and Registers Damage
+]]
 
 function module.RegisterShot(player, weaponOptions, result, origin)
 	if not result then return end
 
+	-- create bullet & bullet hole
+	
 	local char = result.Instance:FindFirstAncestorWhichIsA("Model")
+	local hole
+
 	if char and char:FindFirstChild("Humanoid") then
+
         local hum = char.Humanoid
         local distance = math.abs((result.Position - origin).Magnitude)
         local damage = weaponOptions.damage.base
 		local instance = result.Instance
 		local calculateFalloff = true
+		local particleFolderName = "Hit"
 
 		if string.match(instance.Name, "Head") then
 			damage *= weaponOptions.damage.headMultiplier
 			calculateFalloff = weaponOptions.damage.enableHeadFalloff or false
+			particleFolderName = "Headshot"
 		elseif string.match(instance.Name, "Leg") or string.match(instance.Name, "Foot") then
 			damage *= weaponOptions.damage.legMultiplier
 		end
+
+		local killed = hum.Health <= damage and true or false
+
+		task.spawn(function()
+			hole = module.FireBullet(player.Character, result, true, char, particleFolderName, killed)
+		end)
 
 		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
 			local diff = distance - weaponOptions.damage.damageFalloffDistance
@@ -95,14 +139,23 @@ function module.RegisterShot(player, weaponOptions, result, origin)
 		-- PLAY PARTICLE EFFECTS & ANIMATIONS
 
         if RunService:IsServer() then
+			char:SetAttribute("bulletRagdollNormal", -result.Normal)
+			char:SetAttribute("lastHitPart", result.Instance.Name)
+			char:SetAttribute("impulseModifier", 0.3)
+
             hum:TakeDamage(damage)
             print(damage)
             module.TagPlayer(char, player)
-        end
+		end
 
     	return false, damage
 	end
-	return module.CreateBulletHole(result)
+
+	if RunService:IsClient() then
+		return module.FireBullet(player.Character, result, false)
+	end
+
+	return false
 end
 
 function module.TagPlayer(tagged: Model, tagger: Player)

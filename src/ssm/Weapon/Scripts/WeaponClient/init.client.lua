@@ -158,7 +158,6 @@ function EquipAnimation()
 
     task.spawn(function() -- server
         weaponVar.animations.server.Pullout:Play()
-		print('playing')
         weaponVar.animations.server.Pullout.Stopped:Wait()
         if not weaponVar.equipped and not weaponVar.equipping then return end
         weaponVar.animations.server.Hold:Play()
@@ -198,6 +197,7 @@ function Fire()
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = {player.Character, camera, workspace.Temp}
+	params.CollisionGroup = "Bullets"
 
     weaponVar.animations.client.Fire:Play()
     weaponVar.animations.server.Fire:Play()
@@ -213,13 +213,12 @@ function Fire()
 	task.spawn(function() -- client accuracy
 		local clientAcc
 		clientAcc, weaponVar = CalculateAccuracy(weaponVar.currentBullet, currVecRecoil, weaponVar)
-		print(tostring(clientAcc) .. " client accuracy")
+		--print(tostring(clientAcc) .. " client accuracy")
 		local unitRay = GetNewTargetRay(mosPos, clientAcc)
 		task.spawn(function()
 			local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 100, params)
 			if not result then return end
 			local clientBulletHole, damage = WeaponFunctions.RegisterShot(player, weaponOptions, result, unitRay.Origin)
-			WeaponFunctions.FireBullet(char, result.Position)
 
 			--TODO:
 			-- particle effects and animations
@@ -229,7 +228,7 @@ function Fire()
 	
 	task.spawn(function() -- server accuracy
 		local serverAcc = weaponRemoteFunction:InvokeServer("GetAccuracy", currVecRecoil, weaponVar.currentBullet, char.HumanoidRootPart.Velocity.Magnitude)
-		print(tostring(serverAcc) .. " server accuracy")
+		--print(tostring(serverAcc) .. " server accuracy")
 		local finalRay = GetNewTargetRay(mosPos, serverAcc)
 		local serverBulletHole = weaponRemoteFunction:InvokeServer("Fire", finalRay, weaponVar.currentBullet, currVecRecoil)
 		if serverBulletHole then serverBulletHole:Destroy() end

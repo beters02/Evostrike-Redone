@@ -10,7 +10,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService('UserInputService')
 local RunService = game:GetService("RunService")
 
--- [[ Define Local Variables]]
+-- [[ Define Local Variables ]]
 local Inputs
 local Events = script:WaitForChild("Events")
 
@@ -25,19 +25,19 @@ local cameraLook = Vector3.new()
 local cameraYaw = Vector3.new()
 local currentInputSum = {Forward = 0, Side = 0}
 local currentDT = 1/60
-local partYRatio
-local partZRatio
 
 local playerGrounded = false
 local playerVelocity = Vector3.zero
 local jumping = false
 local jumpCooldown = false
-local jumpDebounce = false
 local inAir = false
 local landing = false
 
 local landed = Events:WaitForChild("Landed")
 local movementState = require(game:GetService("ReplicatedStorage"):WaitForChild("Scripts"):WaitForChild("Modules"):WaitForChild("States")).Movement
+
+local runningAnimation = hum.Animator:LoadAnimation(hum.Animations.Run)
+local jumpingAnimation = hum.Animator:LoadAnimation(hum.Animations.Jump)
 
 --[[ 
 	Variables for Custom Movement Abilities
@@ -132,9 +132,36 @@ end
 
 function Movement.Air()
 	Movement.movementPosition.maxForce = Vector3.new()
-	--Movement.movementVelocity.velocity = Movement:GetAirVelocity(Movement.movementVelocity.Velocity)
 	Movement:ApplyAirVelocity()
 	Movement.movementVelocity.maxForce = Movement:GetMovementVelocityAirForce()
+end
+
+--[[
+	@title  		- Movement.Run
+
+	@summary
+]]
+
+function Movement.Run(hitPosition)
+	Movement.movementPosition.position = hitPosition + Vector3.new(0, Movement.playerTorsoToGround, 0)
+	Movement.movementPosition.maxForce = Vector3.new(0, Movement.movementPositionForce, 0)
+	Movement:ApplyGroundVelocity()
+	Movement.movementVelocity.maxForce = Movement:GetMovementVelocityForce()
+	Movement.movementVelocity.P = Movement.movementVelocityP
+
+	if jumpingAnimation.IsPlaying then
+		jumpingAnimation:Stop(0.1)
+	end
+
+	if Movement.movementVelocity.Velocity.Magnitude > 1 then
+		if not runningAnimation.IsPlaying then
+			runningAnimation:Play(0.2)
+		end
+	else
+		if runningAnimation.IsPlaying then
+			runningAnimation:Stop(0.2)
+		end
+	end
 end
 
 --[[
@@ -147,21 +174,13 @@ function Movement.Jump(velocity)
 	Movement.jumpGrace = tick() + Movement.jumpTimeBeforeGroundRegister -- This is how i saved the glitchy mousewheel jump
 	collider.Velocity = Vector3.new(collider.Velocity.X, velocity, collider.Velocity.Z)
 	Movement.Air()
-end
 
---[[
-	@title  		- Movement.Run
+	if runningAnimation.IsPlaying then
+		runningAnimation:Stop(0.1)
+	end
 
-	@summary
-]]
+	jumpingAnimation:Play(0.1)
 
-function Movement.Run(hitPosition)
-	Movement.movementPosition.position = hitPosition + Vector3.new(0, Movement.playerTorsoToGround, 0)
-	Movement.movementPosition.maxForce = Vector3.new(0, Movement.movementPositionForce, 0)
-	--Movement.movementVelocity.Velocity = Movement:GetGroundVelocity(Movement.movementVelocity.Velocity)
-	Movement.movementVelocity.maxForce = Movement:GetMovementVelocityForce()
-	Movement.movementVelocity.P = Movement.movementVelocityP
-	Movement:ApplyGroundVelocity()
 end
 
 --[[
@@ -212,7 +231,7 @@ function Movement.Land(decrease, waitTime, iterations)
 
 
 	for i = iterations, 1, -1 do
-		--print('iteration ' .. tostring(i))
+		print('iteration ' .. tostring(i))
 
 		local newVelocity = Movement.movementVelocity.Velocity
 
@@ -387,14 +406,8 @@ local prevUpdateTime = nil
 local updateDT = 1/60
 local inAirMovementState = false
 
---local updateRate = 1/64
---local nxt = tick()
-
 function Update(dt)
 	if not hum or (hum and hum.Health <= 0) then return end
-	
-	--if tick() < nxt then return end
-	--nxt = tick() + updateRate
 	
 	currentDT = dt
 	Movement.currentDT = dt
@@ -420,7 +433,9 @@ function Update(dt)
 	
 	-- [[ LANDING REGISTRATION ]]
 	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then
-
+		
+		print('landing')
+		print(landing)
 		-- only register land after given time in air
 		if tick() >= inAir + Movement.minInAirTimeRegisterLand and not landing then
 
@@ -430,7 +445,7 @@ function Update(dt)
 			Movement.Land()
 			landed:Fire()
 		else
-
+			
 			-- if we didn't register a land, we jump
 			Movement.Run(hitPosition)
 		end
@@ -440,7 +455,7 @@ function Update(dt)
 
 		inAir = false
 		inAirMovementState = false
-		return
+		--return
 	end
 	
 	-- [[ INPUT REGISTRATION ]]
@@ -468,14 +483,17 @@ function Update(dt)
 	-- [[ GROUND MOVEMENT ]]
 	if playerGrounded and not dashing then
 		if jumping then
-			
+
+			print('jumping')
+
 			-- call ground movement if on jump cooldown and trying to jump
 			if jumpCooldown or inAir then
 				Movement.Run(hitPosition)
 			else
 				
+				print('jumping')
+
 				-- [[ JUMP MOVEMENT ]]
-				jumpDebounce = true
 				if not Movement.autoBunnyHop and Inputs.Keys.Jump[1] ~= "MouseWheel" then --jump cooldown start
 					jumpCooldown = true
 				end
@@ -488,16 +506,11 @@ function Update(dt)
 					inAirMovementState = true
 					movementState:SetState(player, "grounded", false)
 				end
-				
 			end
-			
 		else
-			
 			-- [[ RUN MOVEMENT ]]
-			Movement.Run(hitPosition)
-			
+			Movement.Run(hitPosition)			
 		end
-		
 	else
 		
 		-- [[ AIR MOVEMENT ]]
