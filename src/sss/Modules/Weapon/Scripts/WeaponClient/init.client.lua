@@ -158,7 +158,6 @@ function EquipAnimation()
 
     task.spawn(function() -- server
         weaponVar.animations.server.Pullout:Play()
-		print('playing')
         weaponVar.animations.server.Pullout.Stopped:Wait()
         if not weaponVar.equipped and not weaponVar.equipping then return end
         weaponVar.animations.server.Hold:Play()
@@ -182,6 +181,8 @@ local function GetNewTargetRay(mousePos, acc)
 end
 
 function Fire()
+
+	-- set var
 	weaponVar.fireLoop = true
 	weaponVar.firing = true
 	local t = tick()
@@ -191,18 +192,21 @@ function Fire()
 	cameraClass.weaponVar.currentBullet = weaponVar.currentBullet
 	weaponVar.lastFireTime = t
 	
-	local currVecOption, currShakeOption = cameraClass:GetSprayPatternKey()
-	local currVecRecoil = cameraClass:GetRecoilVector3(currVecOption)
-	local currShakeRecoil = cameraClass:GetRecoilVector3(currShakeOption)
+	local currVecOption, currShakeOption = cameraClass:GetSprayPatternKey()			-- get recoil pattern key
+	local currVecRecoil = cameraClass:GetRecoilVector3(currVecOption)				-- convert VectorRecoil or SpreadRecoil key into a Vector3
+	local currShakeRecoil = cameraClass:GetRecoilVector3(currShakeOption)			-- convert ShakeRecoil key into a Vector3
 	
+	-- init paramaters for client bullet registration
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = {player.Character, camera, workspace.Temp}
+	params.CollisionGroup = "Bullets"
 
+	-- play animations
     weaponVar.animations.client.Fire:Play()
     weaponVar.animations.server.Fire:Play()
-
-	task.spawn(function()
+	
+	task.spawn(function() -- client fire rate
 		local nextFire = t + weaponOptions.fireRate
 		repeat task.wait() until tick() >= nextFire
 		weaponVar.firing = false
@@ -210,26 +214,23 @@ function Fire()
 	
 	local mosPos = Vector2.new(mouse.X, mouse.Y)
 	
-	task.spawn(function() -- client accuracy
+	task.spawn(function() -- client accuracy & bullet, fire camera spring
 		local clientAcc
 		clientAcc, weaponVar = CalculateAccuracy(weaponVar.currentBullet, currVecRecoil, weaponVar)
-		print(tostring(clientAcc) .. " client accuracy")
 		local unitRay = GetNewTargetRay(mosPos, clientAcc)
+		task.spawn(function() -- camera spring is fired after the accuracy is registered, to avoid bullets going in the wrong place.
+			cameraClass:FireSpring(weaponVar.currentBullet)
+		end)
 		task.spawn(function()
 			local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 100, params)
 			if not result then return end
-			local clientBulletHole, damage = WeaponFunctions.RegisterShot(player, weaponOptions, result, unitRay.Origin)
-			WeaponFunctions.FireBullet(char, result.Position)
-
-			--TODO:
-			-- particle effects and animations
+			WeaponFunctions.RegisterShot(player, weaponOptions, result, unitRay.Origin)
 		end)
-		cameraClass:FireSpring(weaponVar.currentBullet)
 	end)
 	
 	task.spawn(function() -- server accuracy
 		local serverAcc = weaponRemoteFunction:InvokeServer("GetAccuracy", currVecRecoil, weaponVar.currentBullet, char.HumanoidRootPart.Velocity.Magnitude)
-		print(tostring(serverAcc) .. " server accuracy")
+		--print(tostring(serverAcc) .. " server accuracy")
 		local finalRay = GetNewTargetRay(mosPos, serverAcc)
 		local serverBulletHole = weaponRemoteFunction:InvokeServer("Fire", finalRay, weaponVar.currentBullet, currVecRecoil)
 		if serverBulletHole then serverBulletHole:Destroy() end
@@ -242,22 +243,30 @@ function Reload()
 	
 	task.spawn(function()
 		weaponVar.animations.client.Reload:Play()
-		--weaponVar.animations.server.Reload:Play()
+		--weaponVar.animations.server.Reload:Play() TODO: make server reload animations
 	end)
 
 	weaponVar.reloading = true
+	print({weaponVar.ammo.magazine, weaponVar.ammo.total})
 	local mag, total = weaponRemoteFunction:InvokeServer("Reload")
 	weaponVar.ammo.magazine = mag
 	weaponVar.ammo.total = total
+	print({weaponVar.ammo.magazine, weaponVar.ammo.total})
 	weaponVar.reloading = false
 end
 
+--[[
+	Vector Camera Recoil Down
+
+	currently, using an automatic weapon,
+	your vector camera recoil will only reset after you let go of your fire button or when you run out of ammo
+]]
 local fireKeyOptionName = "Key_PrimaryFire"
 function StopRecoil(auto)
 	if not cameraClass._recoilStopDebounce then
 		cameraClass._recoilStopDebounce = true
 		repeat task.wait() until not weaponVar.firing
-		if auto and UserInputService:IsMouseButtonPressed(Enum.UserInputType[PlayerOptions[fireKeyOptionName]]) then
+		if (auto and UserInputService:IsMouseButtonPressed(Enum.UserInputType[PlayerOptions[fireKeyOptionName]]) or weaponVar.ammo.magazine <= 0) then
 			cameraClass._recoilStopDebounce = false
 			return
 		end
@@ -266,6 +275,10 @@ function StopRecoil(auto)
 		cameraClass._recoilStopDebounce = false
 	end
 end
+
+--[[
+	Connection Functions
+]]
 
 -- hot connections are ones to be disabled/enabled upon unequip/equip
 function HotFire()
@@ -282,12 +295,14 @@ end
 
 function MouseDown(t)
 	if weaponVar.fireScheduled then
-		if t < weaponVar.fireScheduled then return end
-		weaponVar.fireScheduled = false
-		HotFire()
-		return
+		if t >= weaponVar.fireScheduled then -- if schedule time is reached
+			weaponVar.fireScheduled = false
+			HotFire()
+		end
+		return -- if there is already a fire scheduled we dont need to do anything
 	end
 
+	-- fire input scheduling, it makes semi automatic weapons feel less clunky and more responsive
 	if weaponVar.firing or t < weaponVar.nextFireTime then
 		if not weaponVar.fireScheduled then
 			local nxt = weaponVar.nextFireTime - t

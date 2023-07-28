@@ -23,16 +23,25 @@ function Weapon.Add(player, weaponName)
 	local currentInventory = WeaponGetEvent:InvokeClient(player)
 	local currWeaponInSlot = currentInventory[weaponOptions.inventorySlot]
 	if currWeaponInSlot then
-		Weapon.Remove(currWeaponInSlot)
+		Weapon.Remove(player, currWeaponInSlot)
 	end
 	
 	local tool = Instance.new("Tool")
 	tool.RequiresHandle = false
 	tool.Name = "Tool_" .. weaponName
-	local serverModel = weaponObjectsFolder.Models.Default:Clone()
+	local model = weaponObjectsFolder.Models.Default
+	local serverModel
+	local clientModel
+	if model:FindFirstChild("Server") then
+		serverModel = model.Server:Clone()
+		clientModel = model:Clone()
+		clientModel:WaitForChild("Server"):Destroy()
+	else
+		serverModel = model:Clone()
+		clientModel = serverModel:Clone()
+	end
 	serverModel.Name = "ServerModel"
 	serverModel.Parent = tool
-	local clientModel = serverModel:Clone()
 	clientModel.Name = "ClientModel"
 	clientModel.Parent = ReplicatedStorage:WaitForChild("Temp")
 	local clientScript = WeaponScripts.WeaponClient:Clone()
@@ -88,18 +97,11 @@ function Weapon.GetWeaponController(player)
 end
 
 function Weapon.AddWeaponMotor(char)
-	local hrp = char:WaitForChild("HumanoidRootPart")
+	--[[local hrp = char:WaitForChild("HumanoidRootPart")
 	local motor = Instance.new("Motor6D")
 	motor.Name = "WeaponMotor"
 	motor.Parent = hrp
-	motor.Part0 = hrp
+	motor.Part0 = hrp]]
 end
-
-WeaponRemotes.Replicate.OnServerEvent:Connect(function(player, functionName, ...)
-	for i, v in pairs(game:GetService("Players"):GetPlayers()) do
-		if v == player then continue end
-		WeaponRemotes.Weapon.Replicate:FireClient(v, functionName, ...)
-	end
-end)
 
 return Weapon

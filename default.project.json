@@ -18,10 +18,8 @@
     },
 
     "ServerScriptService": {
-      "Modules": {
-        "$path": "src/ssm",
-        "$ignoreUnknownInstances": true
-      }
+      "$path": "src/sss",
+      "$ignoreUnknownInstances": true
     }
 
   }
