@@ -41,9 +41,27 @@ end
 
 -- Camera Functions
 
+local rate = 1/60
+local next = tick()
+local last = tick()
+
+local nextPosUpdate = tick()
+local pos, returnPos
+
 function Camera:Update(dt)
-	local pos, returnPos = self.springs.shake.p, self.springs.vec.p
+	if tick() >= nextPosUpdate then
+		pos, returnPos = self.springs.shake.p, self.springs.vec.p
+	end
+
+	--[[local diff = tick() - last
+	local doAmount = diff/rate]]
+
 	self.camera.CFrame = self.camera.CFrame:Lerp(self.camera.CFrame * CFrame.Angles(pos.X, pos.Y, pos.Z) * CFrame.Angles(returnPos.X, returnPos.Y, returnPos.Z), dt * 60)
+		
+	next = tick() + rate
+	last = tick()
+	--[[local pos, returnPos = self.springs.shake.p, self.springs.vec.p
+	self.camera.CFrame = self.camera.CFrame:Lerp(self.camera.CFrame * CFrame.Angles(pos.X, pos.Y, pos.Z) * CFrame.Angles(returnPos.X, returnPos.Y, returnPos.Z), dt * 60)]]
 end
 
 function Camera:Connect()
@@ -58,12 +76,22 @@ end
 
 -- Camera Weapon Functions
 
+local WeaponFireCustomString = require(Libraries.WeaponFireCustomString)
+
 function Camera:GetSprayPatternKey()
 	return self.weaponVar.options.sprayPattern[self.weaponVar.currentBullet], self.weaponVar.options.shakePattern[self.weaponVar.currentBullet]
 end
 
 function Camera:GetRecoilVector3(patternKey)
-	local recoil = {x = patternKey[2], y = patternKey[1], z = patternKey[3]}
+	local new = {}
+	for i, v in pairs(patternKey) do
+		if type(v) == "string" then
+			new[i] = WeaponFireCustomString.duringStrings(v)
+		else
+			new[i] = v
+		end
+	end
+	local recoil = {x = new[2], y = new[1], z = new[3]}
 	return Vector3.new(recoil.x, recoil.y, recoil.z)
 end
 
@@ -84,13 +112,19 @@ function Camera:ChangeSpringStats(springName, speed, damp)
 end
 
 function Camera:FireSpring(currentBullet)
+
+	-- set var
 	self.weaponVar.currentBullet = currentBullet
 	self.weaponVar.recoiling = true
 	local nextTick = tick() + self.weaponVar.options.fireRate
 
+	-- get spray pattern keys
 	local patternKey, shakePatternKey = self:GetSprayPatternKey()
+
+	-- reset spray reset if currbullet is 1
 	if currentBullet == 1 then self:ResetSprayReset() end
 	
+	-- pattern key processing
 	for i, v in pairs({vec = patternKey, shake = shakePatternKey}) do
 		if v[4] then
 			self.springCurrents[i].modifier = v[4]
@@ -112,31 +146,45 @@ function Camera:FireSpring(currentBullet)
 		end
 	end
 
+	-- get recoil vectors and max
 	local recoil = self:GetRecoilVector3(patternKey) * Camera._defaults.fireCameraMult
 	local shakeRecoil = self:GetRecoilVector3(shakePatternKey) * Camera._defaults.fireCameraMult
 	local vecMax = self.weaponVar.options.fireVectorSpring.max
 
-	--local shakeVec = Math.vector3Min(Math.vector3Max(Vector3.new(shakeRecoil.x, shakeRecoil.Y, shakeRecoil.Z)/5, 1), 5) --TODO: set shake minimum
-	local shakeVec = Math.vector3Min(Vector3.new(shakeRecoil.x, shakeRecoil.Y, shakeRecoil.Z)/5, 5)
+	-- we gotta get rid of all of the modifiers dude
+	local shakeVec = Math.vector3Min(Vector3.new(shakeRecoil.X, shakeRecoil.Y, shakeRecoil.Z)/5, 5)
 	shakeVec *= self.springCurrents.shake.modifier * 20
-	
-	self.springs.shake:ChangeStats(57, 1)
+
+	-- shake spring processing
+	self.springs.shake:ChangeStats(self.springDefaults.shake.speed, self.springDefaults.shake.damp)
+	task.wait()
 	self.springs.shake:Accelerate(shakeVec)
+
 	task.spawn(function()
+		local modifier = self.springDefaults.shake.returnModifier or 1
 		task.wait(self.springDefaults.shake.downWait or DefaultCameraWait)
-		self.springs.shake:ChangeStats(50, 1)
-		self.springs.shake:Accelerate(-Vector3.new(shakeVec.X * 0.8, shakeVec.Y * 0.8, 0))
+		
+		if self.springDefaults.shake.returnDamp or self.springDefaults.shake.returnSpeed then
+			self.springs.shake:ChangeStats(self.springDefaults.shake.returnSpeed or false, self.springDefaults.shake.returnDamp or false)
+		end
+		task.wait()
+
+		self.springs.shake:Accelerate(-Vector3.new(shakeVec.X, shakeVec.Y, 0) * modifier)
 	end)
 	
+	-- vector camera recoil (for spray patterns only)
 	if not self.weaponVar.options.spread then
 		local vecVec = Vector3.new(recoil.X, recoil.Y, recoil.Z) * self.springCurrents.vec.modifier
 		if vecMax then
 			vecVec = Math.vector3Min(vecVec, vecMax)
 		end
+		
+		self.springs.vec:ChangeStats(self.springDefaults.vec.speed, self.springDefaults.vec.damp)
+		task.wait()
 
-		self.springs.vec:Accelerate(vecVec * 10)
-		self.weaponVar.sprayReset.x += vecVec.X * 10
-		self.weaponVar.sprayReset.y += vecVec.Y * 10
+		self.springs.vec:Accelerate(vecVec)
+		self.weaponVar.sprayReset.x += vecVec.X
+		self.weaponVar.sprayReset.y += vecVec.Y
 	end
 	
 	repeat task.wait() until tick() >= nextTick
@@ -145,14 +193,13 @@ end
 
 function Camera:StopFire()
 	if self.weaponVar.options.spread then return end
-	
-	local downAccelMod = self.weaponVar.options.downAccelerationModifier
-	local accelMod = downAccelMod and (self.weaponVar.currentBullet >= downAccelMod.start and downAccelMod.mod or downAccelMod.default) or 1
+
+	local accelMod = self.springDefaults.vec.returnModifier or 1
 
 	repeat task.wait() until not self.weaponVar.recoiling
+	self.springs.vec:ChangeStats(self.springDefaults.vec.returnSpeed or false, self.springDefaults.vec.returnDamp or false)
 
-	self:ChangeSpringStats("vec", self.springCurrents.vec.returnSpeed, self.springCurrents.vec.returnDamp)
-	
+	task.wait()
 	self.springs.vec:Accelerate(-Vector3.new(self.weaponVar.sprayReset.x, self.weaponVar.sprayReset.y, 0) * accelMod)
 
 	self:ResetSprayReset()

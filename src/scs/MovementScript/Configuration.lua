@@ -1,7 +1,7 @@
 local module = {
 
 	--[[ General Settings ]]
-	gravity = .25,
+	gravity = .23,
 	friction = 6,
 	maxVelocity = 50,
 	maxMovementPitch = 0.6,
@@ -12,22 +12,22 @@ local module = {
 	groundMaxSpeed = 18,
 
 	--[[ Air Settings ]]
-	airAccelerate = 50,
+	airAccelerate = 45,
 	airSpeed = 5,
 	airMaxSpeed = 31,
 	airMaxSpeedFriction = 3.5,
 
 	--[[ Jump Settings ]]
-	jumpVelocity = 32,
+	jumpVelocity = 29,
 	jumpTimeBeforeGroundRegister = 0.1,
 
 	--[[ Land Settings ]]
 	minInAirTimeRegisterLand = 0.3,
-	landingMovementDecrease = 0.5,
-	landingMovementDecreaseLength = 0.2,
+	landingMovementDecrease = 0.8,
+	landingMovementDecreaseLength = 0.15,
 
 	--[[ Bhop Settings ]]
-	missedBhopDecrease = 0.6,
+	missedBhopDecrease = 0.4,
 	autoBunnyHop = false,
 
 	--[[ Character Settings ]]

@@ -103,7 +103,10 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	local newVelocity = currentVelocity
 	
 	-- if no inputs, don't accelerate
-	if wishDir.Magnitude == 0 then return end
+	if wishDir.Magnitude == 0 then
+		if not self.dashing then return end
+		wishDir = self.collider.CFrame.LookVector
+	end
 	
 	-- get current/add speed
 	currentSpeed = currentVelocity:Dot(wishDir)
@@ -122,9 +125,11 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	--newSpeed = newSpeed.Unit * (math.min(newSpeed.Magnitude, self.groundMaxSpeed))
 
 	-- clamp magnitude (max velocity)
-	if newVelocity.Magnitude > self.maxVelocity then
-		newVelocity = newVelocity.Unit * (math.min(newVelocity.Magnitude, self.maxVelocity))
+	if newVelocity.Magnitude > self.maxVelocity and not self.dashing then
+		newVelocity = newVelocity.Unit * math.min(newVelocity.Magnitude, self.groundMaxSpeed)
 	end
+
+	
 
 	-- apply
 	self.movementVelocity.Velocity = newVelocity
@@ -153,8 +158,9 @@ function module:ApplyAirVelocity()
 
 	-- apply friction if max speed is reached
 	currSpeed = vel.Magnitude
-	if currSpeed > self.airMaxSpeed then
+	if currSpeed > self.airMaxSpeed and not self.dashing then
 		self:ApplyFriction(self.airMaxSpeedFriction)
+		print('max speed reached')
 	end
 	
 	-- apply acceleration
@@ -177,7 +183,10 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	local vel = self.movementVelocity.Velocity
 
 	-- if no inputs, don't accelerate
-	if wishDir.Magnitude == 0 then return end
+	if wishDir.Magnitude == 0 then
+		if not self.dashing then return end
+		wishDir = self.collider.CFrame.LookVector
+	end
 
 	-- get current/add speed
 	currentSpeed = vel:Dot(wishDir)

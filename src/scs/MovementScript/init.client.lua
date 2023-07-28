@@ -42,7 +42,6 @@ local jumpingAnimation = hum.Animator:LoadAnimation(hum.Animations.Jump)
 --[[ 
 	Variables for Custom Movement Abilities
 ]]
-local dashing = false
 local dashVariables = {
 	trigger = false,
 	direction = Vector3.zero,
@@ -81,6 +80,8 @@ local Movement = {
 	movementVelocity = nil,
 	movementVelocityP = 1500,
 	movementVelocityForce = 300000,
+
+	dashing = false
 	
 }
 Movement.__index = Movement
@@ -291,24 +292,31 @@ end
 function Movement.RegisterDashVariables(strength, upstrength)
 	dashVariables.strength = strength
 	dashVariables.upstrength = upstrength
+	dashVariables.direction = collider.CFrame.LookVector
+
 	if currentInputSum.Forward == 0 and currentInputSum.Side == 0 then
-		dashVariables.direction = collider.CFrame.LookVector
 	else
-		dashVariables.direction = ((currentInputSum.Forward * collider.CFrame.LookVector) + (currentInputSum.Side * -collider.CFrame.RightVector)).Unit
+		local fordir = currentInputSum.Forward ~= 0 and (currentInputSum.Forward > 0 and collider.CFrame.LookVector or -collider.CFrame.LookVector) or 1
+		local sidedir = currentInputSum.Side ~= 0 and (currentInputSum.Side > 0 and -collider.CFrame.RightVector or collider.CFrame.RightVector) or 1
+
+		dashVariables.direction = (fordir * sidedir).Unit		
 	end
+	print(dashVariables.direction)
 	dashVariables.trigger = true
 end
 
 function Movement.Dash()
-	dashing = true
+	Movement.dashing = true
 	
 	if playerGrounded then
 		Movement.Jump(dashVariables.upstrength)
 	end
+
+	task.wait()
 	
 	local newVel = (dashVariables.direction * dashVariables.strength)
-	newVel = Vector3.new(newVel.X, collider.Velocity.Y, newVel.Z)
-	collider.Velocity = newVel
+	Movement.movementVelocity.Velocity = Vector3.new(newVel.X, Movement.movementVelocity.Velocity.Y, newVel.Z)
+
 	Movement.Air()
 	
 	playerGrounded = false
@@ -317,7 +325,7 @@ function Movement.Dash()
 	task.wait(0.01)
 	
 	landed.Event:Wait()
-	dashing = false
+	Movement.dashing = false
 	Movement.Land(0.6)
 end
 
@@ -434,14 +442,12 @@ function Update(dt)
 	-- [[ LANDING REGISTRATION ]]
 	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then
 		
-		print('landing')
-		print(landing)
 		-- only register land after given time in air
 		if tick() >= inAir + Movement.minInAirTimeRegisterLand and not landing then
 
 			-- set inair to false before landing because Land has an inAir check, and we are not in the air
 			inAir = false
-
+			
 			Movement.Land()
 			landed:Fire()
 		else
@@ -481,7 +487,7 @@ function Update(dt)
 	end
 	
 	-- [[ GROUND MOVEMENT ]]
-	if playerGrounded and not dashing then
+	if playerGrounded and not Movement.dashing then
 		if jumping then
 
 			print('jumping')
@@ -512,7 +518,6 @@ function Update(dt)
 			Movement.Run(hitPosition)			
 		end
 	else
-		
 		-- [[ AIR MOVEMENT ]]
 		
 		-- set inAir to current time if this is first instance of being in the air (start falling)

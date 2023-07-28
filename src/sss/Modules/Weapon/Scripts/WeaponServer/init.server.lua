@@ -111,7 +111,7 @@ function Fire(finalRay, currentBullet, recoilVector3) -- Returns BulletHole
 	serverStoredVar.ammo.magazine -= 1
 	serverStoredVar.nextFireTime = tick() + weaponOptions.fireRate
 
-	return WeaponFunctions.RegisterShot(player, weaponOptions, result, finalRay.Origin)
+	WeaponFunctions.RegisterShot(player, weaponOptions, result, finalRay.Origin)
 end
 
 function Reload()

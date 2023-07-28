@@ -23,7 +23,7 @@ function Weapon.Add(player, weaponName)
 	local currentInventory = WeaponGetEvent:InvokeClient(player)
 	local currWeaponInSlot = currentInventory[weaponOptions.inventorySlot]
 	if currWeaponInSlot then
-		Weapon.Remove(currWeaponInSlot)
+		Weapon.Remove(player, currWeaponInSlot)
 	end
 	
 	local tool = Instance.new("Tool")

@@ -70,23 +70,14 @@ end
 	Replicates CreateBullet to all Clients except caster
 ]]
 
-function module.FireBullet(fromChar, result, isHumanoid, hitChar, particleFolder, killed)
+function module.FireBullet(fromChar, result, isHumanoid)
 	if game:GetService("RunService"):IsServer() then return end
 	local endPos = result.Position
 	local bullet, bulletFinishedEvent = module.CreateBullet(fromChar, endPos, true)
 	WeaponRemotes.Replicate:FireServer("CreateBullet", fromChar, endPos)
-
 	bulletFinishedEvent.Event:Once(function()
 		if not isHumanoid then
 			module.CreateBulletHole(result)
-		else
-			task.spawn(function()
-				local instance = result.Instance
-				if killed then
-					EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood.Kill:GetChildren(), instance, hitChar)
-				end
-				EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood[particleFolder]:GetChildren(), instance)
-			end)
 		end
 		bulletFinishedEvent:Destroy()
 	end)
@@ -99,22 +90,28 @@ end
 ]]
 
 function module.RegisterShot(player, weaponOptions, result, origin)
-	if not result then return end
+	if not result then return false end
 
-	-- create bullet & bullet hole
-	
+	local hole = false
+	local isHumanoid = false
+	local damage = false
+
 	local char = result.Instance:FindFirstAncestorWhichIsA("Model")
-	local hole
-
+	-- if we are shooting a humanoid character
 	if char and char:FindFirstChild("Humanoid") then
 
+		isHumanoid = true
+
+		-- register variables
         local hum = char.Humanoid
+		if hum.Health <= 0 then return false end
         local distance = math.abs((result.Position - origin).Magnitude)
-        local damage = weaponOptions.damage.base
+        damage = weaponOptions.damage.base
 		local instance = result.Instance
 		local calculateFalloff = true
 		local particleFolderName = "Hit"
 
+		-- get hit bodypart
 		if string.match(instance.Name, "Head") then
 			damage *= weaponOptions.damage.headMultiplier
 			calculateFalloff = weaponOptions.damage.enableHeadFalloff or false
@@ -123,36 +120,47 @@ function module.RegisterShot(player, weaponOptions, result, origin)
 			damage *= weaponOptions.damage.legMultiplier
 		end
 
-		local killed = hum.Health <= damage and true or false
-
-		task.spawn(function()
-			hole = module.FireBullet(player.Character, result, true, char, particleFolderName, killed)
-		end)
-
-		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
-			local diff = distance - weaponOptions.damage.damageFalloffDistance
-			damage = math.max(damage - diff * weaponOptions.damage.damageFalloffPerMeter, weaponOptions.damage.damageFalloffMinimumDamage)
-		end
-
+		-- round damage to remove decimals
 		damage = math.round(damage)
 
-		-- PLAY PARTICLE EFFECTS & ANIMATIONS
+		-- calculate damage falloff
+		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
+			local diff = distance - weaponOptions.damage.damageFalloffDistance
+			print(damage - diff * weaponOptions.damage.damageFalloffPerMeter)
+			damage = math.max(damage - diff * weaponOptions.damage.damageFalloffPerMeter, weaponOptions.damage.damageFalloffMinimumDamage)
+			print(damage)
+		end
+
+		-- see if player will be killed after damage is applied
+		local killed = hum.Health <= damage and true or false
 
         if RunService:IsServer() then
+
+			-- set ragdoll variations
 			char:SetAttribute("bulletRagdollNormal", -result.Normal)
 			char:SetAttribute("lastHitPart", result.Instance.Name)
 			char:SetAttribute("impulseModifier", 0.3)
-
+			
+			-- emit particles next frame (we do this on the server so hit registration is not so bad)
+			task.spawn(function()
+				local instance = result.Instance
+				if killed then
+					EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood.Kill:GetChildren(), instance, char)
+				end
+				EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood[particleFolderName]:GetChildren(), instance)
+			end)
+			
+			-- apply damage
             hum:TakeDamage(damage)
-            print(damage)
-            module.TagPlayer(char, player)
-		end
 
-    	return false, damage
+			-- apply tag so we can easily access damage information
+            module.TagPlayer(char, player)
+
+		end
 	end
 
 	if RunService:IsClient() then
-		return module.FireBullet(player.Character, result, false)
+		return module.FireBullet(player.Character, result, isHumanoid), damage
 	end
 
 	return false
