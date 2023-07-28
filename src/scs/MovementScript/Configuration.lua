@@ -32,7 +32,7 @@ local module = {
 
 	--[[ Character Settings ]]
 	playerTorsoToGround = 3.6,
-	movementStickDistance = .85
+	movementStickDistance = 0.85
 
 }
 

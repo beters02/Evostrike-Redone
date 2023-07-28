@@ -211,17 +211,24 @@ end
 ]]
 
 function module:GetAccelerationDirection()
+	local wishDir
+	local inputVec
+
+	-- if no input, direction = 0, 0, 0
 	if self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then
 		return Vector3.zero
 	end
-	local side = (self.cameraYaw * CFrame.Angles(0,math.rad(90),0)).lookVector * self.currentInputSum.Side
-	local forward = (self.cameraLook * self.currentInputSum.Forward)
-	local new = forward + side
-	if math.abs(new.Magnitude) > 1 then
-		new = new.Unit
-	end
-	new = Vector3.new(new.X, 0, new.Z)
-	return new, forward, side
+
+	-- get forward and side inputs
+	inputVec = Vector3.new(-self.currentInputSum.Side, 0, -self.currentInputSum.Forward).Unit 
+
+	-- convert vector into worldspace
+	wishDir = self.player.Character.PrimaryPart.CFrame:VectorToWorldSpace(inputVec)
+
+	-- apply antiSticking
+	wishDir = self:ApplyAntiSticking(wishDir, inputVec)
+
+	return wishDir
 end
 
 function module:GetMovementVelocityForce()
