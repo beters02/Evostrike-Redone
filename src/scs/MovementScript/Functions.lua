@@ -48,11 +48,11 @@ end
 
 function module:FindCollisionRay()
 	local torsoCFrame = self.character.HumanoidRootPart.CFrame
-	local ignoreList = {self.character, self.camera}
+	local ignoreList = {self.character, self.camera, workspace.Temp}
 
 	local rays = {
 		Ray.new(self.character.HumanoidRootPart.Position, Vector3.new(0, -self.rayYLength, 0)),
-		Ray.new((torsoCFrame * CFrame.new(-self.rayXLength,0,0)).p, Vector3.new(0, -self.rayYLength, 0)), -- EPIXPLODE: i changed the ray x distance values from 0.8 to 0.4, this is what makes the stickiness feel better
+		Ray.new((torsoCFrame * CFrame.new(-self.rayXLength,0,0)).p, Vector3.new(0, -self.rayYLength, 0)),
 		Ray.new((torsoCFrame * CFrame.new(self.rayXLength,0,0)).p, Vector3.new(0, -self.rayYLength, 0)),
 		Ray.new((torsoCFrame * CFrame.new(0,0,self.rayXLength)).p, Vector3.new(0, -self.rayYLength, 0)),
 		Ray.new((torsoCFrame * CFrame.new(0,0,-self.rayXLength)).p, Vector3.new(0, -self.rayYLength, 0))
@@ -110,51 +110,84 @@ function module:FindCollisionRay()
 	return rayReturns[i][1], rayReturns[i][2], rayReturns[i][3], yRatio, zRatio, ladderTable
 end
 
---[[
-	IsSticking
+local function visualizeRayResult(result, origin, direction)
+	local position = result and result.Position or (origin + direction)
+	local distance = (origin - position).Magnitude
+		local p = Instance.new("Part")
+		p.Anchored = true
+		p.CanCollide = false
+		p.Size = Vector3.new(0.1, 0.1, distance)
+		p.CFrame = CFrame.lookAt(origin, position)*CFrame.new(0, 0, -distance/2)
+		p.Parent = workspace.Temp
+end
+
+-- flattenVectorAgainstWall: flatten a vector given vector and normal
+function flattenVectorAgainstWall(moveVector: Vector3, normal: Vector3)
+	-- if magnitudes are 0 then just nevermind
+	if moveVector.Magnitude == 0 or normal.Magnitude == 0 then
+		return Vector3.zero
+	end
 	
-	@return sticking : bool or table - Detects what direction player is sticking in
+	-- unit the normal (i its already normalized idk)
+	normal = normal.Unit
+	
+	-- reflect the vector
+	local reflected = moveVector - 2 * moveVector:Dot(normal) * normal
+	-- add the reflection to the move vector = vector parallel to wall
+	local parallel = moveVector + reflected
+	
+	-- if magnitude 0 NEVERMIND!!!
+	if parallel.Magnitude == 0 then
+		return Vector3.zero
+	end
+	
+	-- reduce the parallel vector to make sense idk HorseNuggetsXD did all this thank u
+	local cropped = parallel.Unit:Dot(moveVector.Unit) * parallel.Unit * moveVector.Magnitude
+	return cropped
+end
+
+--[[
+	Apply AntiSticking
+
+	@param accelDir : Vector3 - The player's wished movement direction
+
+	@return direction : Vector3 - Applys AntiSticking to Acceleration Direction
 ]]
 
-function module:IsSticking()
-	local character = self.character
-	local camera = self.camera
-	local stickParams = RaycastParams.new()
-	stickParams.FilterType = Enum.RaycastFilterType.Exclude
-	stickParams.FilterDescendantsInstances = {character, camera}
-	local rayOffset = Vector3.new(0, -.65, 0)
-	local hrpCF = character.HumanoidRootPart.CFrame
-	local hrpPos = hrpCF.Position
+local VisualizeSticking = false
 
-	local forwardValues = {hrpCF.LookVector * 1, -hrpCF.LookVector * 1.15}
-	local sideValues = {-hrpCF.RightVector * 1.15, hrpCF.RightVector * 1.15}
-	local sticking = false
+function module:ApplyAntiSticking(accelDir, inputVec)
+	local newDir = accelDir
+	local hrp = self.player.Character.HumanoidRootPart
 
-	for i, v in pairs(forwardValues) do
-		local result = workspace:Raycast(hrpPos + rayOffset, v, stickParams)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {self.player.Character, workspace.CurrentCamera, workspace.Temp}
+
+	local rayOffset = Vector3.new(0, -.9, 0)
+	local rayPos = hrp.Position + rayOffset
+
+	if math.abs(inputVec.X) > 0.5 then
+		accelDir *= 2
+	end
+
+	local testDir = Vector3.new(accelDir.X + .9, 0, accelDir.Z).Unit
+	local testDir2 = Vector3.new(accelDir.X, 0, accelDir.Z + .9).Unit
+	local values = {accelDir, testDir, testDir2}
+
+	local results = {}
+	for i, v in pairs(values) do
+		local result = workspace:Raycast(rayPos, v, params)
+		results[i] = result
+
+		if VisualizeSticking then visualizeRayResult(false, hrp.Position, v) end
+
 		if result then
-			sticking = true
-			forwardValues[i] = i == 1 and 1 or -1
-			continue
+			return flattenVectorAgainstWall(newDir, result.Normal)
 		end
-		forwardValues[i] = 0
 	end
 
-	for i, v in pairs(sideValues) do
-		local result = workspace:Raycast(hrpPos + rayOffset, v, stickParams)
-		if result then
-			sticking = true
-			sideValues[i] = i == 1 and 1 or -1
-			continue
-		end
-		sideValues[i] = 0
-	end
-
-	if sticking then
-		return {forward = forwardValues, side = sideValues}
-	end
-
-	return false
+	return newDir
 end
 
 return module

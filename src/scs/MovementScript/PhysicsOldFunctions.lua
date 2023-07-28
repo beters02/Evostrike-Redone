@@ -187,4 +187,72 @@ function module:ApplyFrictionVector(prevVelocity, mod)
 	return Vector3.new(x * newSpeed, y * newSpeed, z * newSpeed)
 end
 
+--[[
+	IsSticking
+	
+	@return sticking : bool or table - Detects what direction player is sticking in
+]]
+
+--local VisualizeSticking = false
+
+--[[function module:IsSticking()
+	local character = self.character
+	local camera = self.camera
+
+	local stickParams = RaycastParams.new()
+	stickParams.FilterType = Enum.RaycastFilterType.Exclude
+	stickParams.FilterDescendantsInstances = {character, camera, workspace.Temp}
+	
+	local rayOffset = Vector3.new(0, -.9, 0)
+	local hrpCF = character.HumanoidRootPart.CFrame
+	local hrpPos = hrpCF.Position
+	local rayPos = hrpPos + rayOffset
+
+	local offsetMod = 1.05
+	local midOffsetMod = 1.75
+
+	local forwardValues = {hrpCF.LookVector, -hrpCF.LookVector}
+	local sideValues = {-hrpCF.RightVector, hrpCF.RightVector}
+	local sticking = false
+	
+	local forSidVal = {forwardValues[1], forwardValues[2], sideValues[1], sideValues[2]}
+	local dir
+	local stickNorm
+
+	-- 8 direction sticking
+	for i, v in pairs(forSidVal) do
+		local fResults = {{v * offsetMod, workspace:Raycast(rayPos, v, stickParams)}}
+
+		if i < 3 then
+			local middleLeft = sideValues[1] and (v + sideValues[1])/2 or false
+			local middleRight = sideValues[2] and (v + sideValues[2])/2 or false
+			if middleLeft then
+				table.insert(fResults, {middleRight * midOffsetMod, workspace:Raycast(rayPos, middleRight * midOffsetMod, stickParams)})
+			end
+			if middleRight then
+				table.insert(fResults, {middleLeft * midOffsetMod, workspace:Raycast(rayPos, middleLeft * midOffsetMod, stickParams)})
+			end
+		end
+
+		for a, b in pairs(fResults) do
+			if b[2] then
+				visualizeRayResult(b[2], rayPos)
+				if not sticking then sticking = true end
+				dir = b[1]
+				stickNorm = b[2].Normal
+				--return b[1], b[2].Normal
+			else
+				visualizeRayResult(false, rayPos, b[1])
+			end
+		end
+
+	end
+
+	if sticking then
+		return dir, stickNorm
+	end
+
+	return false
+end]]
+
 return module

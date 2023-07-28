@@ -230,7 +230,7 @@ function Movement.Land(decrease, waitTime, iterations)
 	-- get the total amount to wait per iteration
 	waitTime = Movement.landingMovementDecreaseLength / iterations
 
-
+	-- iterate
 	for i = iterations, 1, -1 do
 		print('iteration ' .. tostring(i))
 
@@ -399,11 +399,11 @@ end
 function Inputs.UpdateMovementSum()
 	currentInputSum.Forward = Inputs.FormattedKeys[Inputs.Keys.Forward[1]] + -Inputs.FormattedKeys[Inputs.Keys.Backward[1]]
 	currentInputSum.Side = Inputs.FormattedKeys[Inputs.Keys.Left[1]] + -Inputs.FormattedKeys[Inputs.Keys.Right[1]]
-	local stickingValues = Movement:IsSticking()
-	if stickingValues then
+	--local stickingValues = Movement:IsSticking()
+	--[[if stickingValues then
 		currentInputSum.Forward -= (math.abs(currentInputSum.Forward) > 0 and stickingValues.forward[1] + stickingValues.forward[2]) or 0
 		currentInputSum.Side -= (math.abs(currentInputSum.Side) > 0 and stickingValues.side[1] + stickingValues.side[2]) or 0
-	end
+	end]]
 	Movement.currentInputSum = currentInputSum
 end
 
