@@ -110,15 +110,18 @@ function module:FindCollisionRay()
 	return rayReturns[i][1], rayReturns[i][2], rayReturns[i][3], yRatio, zRatio, ladderTable
 end
 
+local currentVisualize = {}
+
 local function visualizeRayResult(result, origin, direction)
 	local position = result and result.Position or (origin + direction)
 	local distance = (origin - position).Magnitude
-		local p = Instance.new("Part")
-		p.Anchored = true
-		p.CanCollide = false
-		p.Size = Vector3.new(0.1, 0.1, distance)
-		p.CFrame = CFrame.lookAt(origin, position)*CFrame.new(0, 0, -distance/2)
-		p.Parent = workspace.Temp
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.Size = Vector3.new(0.1, 0.1, distance)
+	p.CFrame = CFrame.lookAt(origin, position)*CFrame.new(0, 0, -distance/2)
+	p.Parent = workspace.Temp
+	return p
 end
 
 -- flattenVectorAgainstWall: flatten a vector given vector and normal
@@ -152,6 +155,8 @@ end
 	@param accelDir : Vector3 - The player's wished movement direction
 
 	@return direction : Vector3 - Applys AntiSticking to Acceleration Direction
+
+	this function is a monstrosity, i need a break
 ]]
 
 local VisualizeSticking = false
@@ -167,20 +172,75 @@ function module:ApplyAntiSticking(accelDir, inputVec)
 	local rayOffset = Vector3.new(0, -.9, 0)
 	local rayPos = hrp.Position + rayOffset
 
-	if math.abs(inputVec.X) > 0.5 then
-		accelDir *= 2
+	accelDir *= 2
+
+	local dirStr = "Forward"
+	local xabs = math.abs(inputVec.X)
+	local zabs = math.abs(inputVec.Z)
+
+	local getF = inputVec.Z > 0 and -hrp.CFrame.LookVector or inputVec.Z < 0 and hrp.CFrame.LookVector
+	local getS = inputVec.X > 0 and hrp.CFrame.RightVector * 1.5 or inputVec.X < 0 and -hrp.CFrame.RightVector * 1.5
+
+	local currForDir
+	local currSideDir
+	local values = {}
+	local hval = {}
+
+	local dirAmnt = 1.7
+	local mainDirAmnt = 2
+
+	if inputVec.X > 0 then
+		currForDir = hrp.CFrame.RightVector
+		table.insert(values, currForDir)
+		table.insert(hval, hrp.CFrame.LookVector * dirAmnt)
+		table.insert(hval, -hrp.CFrame.LookVector * dirAmnt)
+	elseif inputVec.X < 0 then
+		currForDir = -hrp.CFrame.RightVector
+		table.insert(values, currForDir)
+		table.insert(hval, hrp.CFrame.LookVector * dirAmnt)
+		table.insert(hval, -hrp.CFrame.LookVector * dirAmnt)
 	end
 
-	local testDir = Vector3.new(accelDir.X + .9, 0, accelDir.Z).Unit
-	local testDir2 = Vector3.new(accelDir.X, 0, accelDir.Z + .9).Unit
-	local values = {accelDir, testDir, testDir2}
+	if inputVec.Z > 0 then
+		currSideDir = -hrp.CFrame.LookVector
+		table.insert(values, currSideDir)
+		table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
+		table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
+	elseif inputVec.Z < 0 then
+		currSideDir = hrp.CFrame.LookVector
+		table.insert(values, currSideDir)
+		table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
+		table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
+	end
+
+	if currForDir and currSideDir then
+		for i, v in pairs(values) do
+			values[i] = v * mainDirAmnt
+		end
+		table.insert(values, (currForDir+currSideDir) * mainDirAmnt)
+	else
+		values[1] *= mainDirAmnt
+		table.insert(values, (values[1] + hval[1]).Unit * 2)
+		table.insert(values, (values[1] + hval[2]).Unit * 2)
+		table.insert(values, hval[1])
+		table.insert(values, hval[2])
+	end
+
+	if VisualizeSticking then
+		for i, v in pairs(currentVisualize) do
+			v:Destroy()
+		end
+	end
 
 	local results = {}
 	for i, v in pairs(values) do
+		if not v then continue end
 		local result = workspace:Raycast(rayPos, v, params)
 		results[i] = result
 
-		if VisualizeSticking then visualizeRayResult(false, hrp.Position, v) end
+		if VisualizeSticking then
+			table.insert(currentVisualize, visualizeRayResult(false, hrp.Position, v))
+		end
 
 		if result then
 			return flattenVectorAgainstWall(newDir, result.Normal)
