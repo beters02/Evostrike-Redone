@@ -1,5 +1,10 @@
 --[[ Base AbilityClass ]]
 
+--[[
+    ServerUseVarCheck must be called in the custom AbilityClass:Use() function.
+    Must also have AbilityClass:UseFailed()
+]]
+
 local Base = {}
 Base.__index = Base
 
@@ -17,7 +22,6 @@ function Base:ServerUseVarCheck()
 
     local newUses = useSuccess
     self.uses = newUses
-    print(self.uses)
     return self.uses
 end
 
@@ -34,10 +38,6 @@ function Base:StartClientCooldown()
             task.wait(1)
         end
     end)
-    
-    --[[task.delay(0.02 + self.cooldownLength, function()
-        self.cooldown = false
-    end)]]
 end
 
 return Base
