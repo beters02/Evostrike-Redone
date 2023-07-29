@@ -170,7 +170,6 @@ function module:ApplyAntiSticking(accelDir, inputVec)
 	params.FilterDescendantsInstances = {self.player.Character, workspace.CurrentCamera, workspace.Temp}
 
 	local rayOffset = Vector3.new(0, -.9, 0)
-	local rayPos = hrp.Position + rayOffset
 
 	accelDir *= 2
 
@@ -181,50 +180,8 @@ function module:ApplyAntiSticking(accelDir, inputVec)
 	local getF = inputVec.Z > 0 and -hrp.CFrame.LookVector or inputVec.Z < 0 and hrp.CFrame.LookVector
 	local getS = inputVec.X > 0 and hrp.CFrame.RightVector * 1.5 or inputVec.X < 0 and -hrp.CFrame.RightVector * 1.5
 
-	local currForDir
-	local currSideDir
-	local values = {}
-	local hval = {}
-
 	local dirAmnt = 1.7
 	local mainDirAmnt = 2
-
-	if inputVec.X > 0 then
-		currForDir = hrp.CFrame.RightVector
-		table.insert(values, currForDir)
-		table.insert(hval, hrp.CFrame.LookVector * dirAmnt)
-		table.insert(hval, -hrp.CFrame.LookVector * dirAmnt)
-	elseif inputVec.X < 0 then
-		currForDir = -hrp.CFrame.RightVector
-		table.insert(values, currForDir)
-		table.insert(hval, hrp.CFrame.LookVector * dirAmnt)
-		table.insert(hval, -hrp.CFrame.LookVector * dirAmnt)
-	end
-
-	if inputVec.Z > 0 then
-		currSideDir = -hrp.CFrame.LookVector
-		table.insert(values, currSideDir)
-		table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
-		table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
-	elseif inputVec.Z < 0 then
-		currSideDir = hrp.CFrame.LookVector
-		table.insert(values, currSideDir)
-		table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
-		table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
-	end
-
-	if currForDir and currSideDir then
-		for i, v in pairs(values) do
-			values[i] = v * mainDirAmnt
-		end
-		table.insert(values, (currForDir+currSideDir) * mainDirAmnt)
-	else
-		values[1] *= mainDirAmnt
-		table.insert(values, (values[1] + hval[1]).Unit * 2)
-		table.insert(values, (values[1] + hval[2]).Unit * 2)
-		table.insert(values, hval[1])
-		table.insert(values, hval[2])
-	end
 
 	if VisualizeSticking then
 		for i, v in pairs(currentVisualize) do
@@ -232,22 +189,74 @@ function module:ApplyAntiSticking(accelDir, inputVec)
 		end
 	end
 
-	local results = {}
-	for i, v in pairs(values) do
-		if not v then continue end
-		local result = workspace:Raycast(rayPos, v, params)
-		results[i] = result
+	for _, v in pairs({Vector3.new(0, 0, 0), Vector3.new(0, -3.1, 0), Vector3.new(0, 1.5, 0)}) do
+		local currForDir
+		local currSideDir
+		local values = {}
+		local hval = {}
+		local rayPos = hrp.Position + v
 
-		if VisualizeSticking then
-			table.insert(currentVisualize, visualizeRayResult(false, hrp.Position, v))
+		if inputVec.X > 0 then
+			currForDir = hrp.CFrame.RightVector
+			table.insert(values, currForDir)
+			table.insert(hval, hrp.CFrame.LookVector * dirAmnt)
+			table.insert(hval, -hrp.CFrame.LookVector * dirAmnt)
+		elseif inputVec.X < 0 then
+			currForDir = -hrp.CFrame.RightVector
+			table.insert(values, currForDir)
+			table.insert(hval, hrp.CFrame.LookVector * dirAmnt)
+			table.insert(hval, -hrp.CFrame.LookVector * dirAmnt)
 		end
-
-		if result then
-			return flattenVectorAgainstWall(newDir, result.Normal)
+	
+		if inputVec.Z > 0 then
+			currSideDir = -hrp.CFrame.LookVector
+			table.insert(values, currSideDir)
+			table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
+			table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
+		elseif inputVec.Z < 0 then
+			currSideDir = hrp.CFrame.LookVector
+			table.insert(values, currSideDir)
+			table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
+			table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
+		end
+	
+		if currForDir and currSideDir then
+			for i, v in pairs(values) do
+				values[i] = v * mainDirAmnt
+			end
+			table.insert(values, (currForDir+currSideDir) * mainDirAmnt)
+		else
+			values[1] *= mainDirAmnt
+			table.insert(values, (values[1] + hval[1]).Unit * 2)
+			table.insert(values, (values[1] + hval[2]).Unit * 2)
+			table.insert(values, hval[1])
+			table.insert(values, hval[2])
+		end
+	
+		local results = {}
+		for a, b in pairs(values) do
+			if not b then continue end
+			local result = workspace:Raycast(rayPos, b, params)
+			results[a] = result
+	
+			if VisualizeSticking then
+				table.insert(currentVisualize, visualizeRayResult(false, rayPos, b))
+			end
+	
+			if result then
+				return flattenVectorAgainstWall(newDir, result.Normal), result.Normal
+			end
 		end
 	end
 
 	return newDir
+end
+
+function module:ApplyWallHit(wallHit, vel, wishDir)
+	if not wallHit then return vel end
+	local newVelocity = vel
+	newVelocity -= wallHit * (self.movementVelocity.Velocity * wishDir)
+	return newVelocity
 end
 
 return module

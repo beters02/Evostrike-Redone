@@ -62,7 +62,24 @@ end
 function module:ApplyGroundVelocity()
 
 	-- get acceleration (move) direction
-	local accelDir = self:GetAccelerationDirection() -- "wishDir"
+	local accelDir, wallHit = self:GetAccelerationDirection() -- "wishDir"
+
+	-- apply friction
+	self:ApplyFriction(1)
+
+	-- set the target speed of the player
+	local wishSpeed = accelDir.Magnitude
+	wishSpeed *= self.groundMaxSpeed
+	
+	-- apply acceleration
+	self:ApplyGroundAcceleration(accelDir, wishSpeed, wallHit)
+
+end
+
+--[[
+	Slope Ground Velocity
+	-- get acceleration (move) direction
+	local accelDir, wallHit = self:GetAccelerationDirection() -- "wishDir"
 	
 	-- ground normal for slopes
 	--local groundResult = GroundCast(self.player.Character)
@@ -83,9 +100,9 @@ function module:ApplyGroundVelocity()
 	--float yVelocityNew = forwardVelocity.normalized.y * new Vector3 (_surfer.moveData.velocity.x, 0f, _surfer.moveData.velocity.z).magnitude;
 	
 	-- apply acceleration
-	self:ApplyGroundAcceleration(accelDir, wishSpeed)
+	self:ApplyGroundAcceleration(accelDir, wishSpeed, wallHit)
+]]
 
-end
 
 --[[
 	@title 			- ApplyGroundAcceleration
@@ -94,7 +111,7 @@ end
 	@param
 ]]
 
-function module:ApplyGroundAcceleration(wishDir, wishSpeed)
+function module:ApplyGroundAcceleration(wishDir, wishSpeed, wallHit)
 
 	local addSpeed
 	local accelerationSpeed
@@ -114,6 +131,9 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	
 	-- if we're not adding speed, dont do anything
 	if addSpeed <= 0 then return end
+
+	-- if a wall was hit, dont accelerate in that direction
+	newVelocity = self:ApplyWallHit(wallHit, newVelocity, wishDir)
 	
 	-- get accelSpeed, cap at addSpeed
 	accelerationSpeed = math.min(self.groundAccelerate * self.currentDT * wishSpeed, addSpeed)
@@ -122,16 +142,11 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	newVelocity += (accelerationSpeed * wishDir)
 
 	-- clamp magnitude (max speed)
-	--newSpeed = newSpeed.Unit * (math.min(newSpeed.Magnitude, self.groundMaxSpeed))
-
-	-- clamp magnitude (max velocity)
-	if newVelocity.Magnitude > self.maxVelocity and not self.dashing then
+	if newVelocity.Magnitude > self.groundMaxSpeed and not self.dashing then
 		newVelocity = newVelocity.Unit * math.min(newVelocity.Magnitude, self.groundMaxSpeed)
 	end
 
-	
-
-	-- apply
+	-- apply acceleration
 	self.movementVelocity.Velocity = newVelocity
 
 end
@@ -148,9 +163,10 @@ function module:ApplyAirVelocity()
 	local wishSpeed
 	local currSpeed
 	local vel = self.movementVelocity.Velocity
+	local wallHit
 
 	-- get move direction
-	accelDir = self:GetAccelerationDirection()
+	accelDir, wallHit = self:GetAccelerationDirection()
 
 	-- get wanted speed
 	wishSpeed = accelDir.Magnitude
@@ -164,7 +180,7 @@ function module:ApplyAirVelocity()
 	end
 	
 	-- apply acceleration
-	self:ApplyAirAcceleration(accelDir, wishSpeed)
+	self:ApplyAirAcceleration(accelDir, wishSpeed, wallHit)
 end
 
 --[[
@@ -174,7 +190,7 @@ end
 	@param
 ]]
 
-function module:ApplyAirAcceleration(wishDir, wishSpeed)
+function module:ApplyAirAcceleration(wishDir, wishSpeed, wallHit)
 
 	local currentSpeed
 	local addSpeed
@@ -198,8 +214,14 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	-- get accelSpeed, cap at addSpeed
 	accelerationSpeed = math.min(self.airAccelerate * self.currentDT * wishSpeed, addSpeed)
 
+	-- get new velocity
+	local newVelocity = self.movementVelocity.Velocity + accelerationSpeed * wishDir
+
+	-- if a wall was hit, dont accelerate in that direction
+	newVelocity = self:ApplyWallHit(wallHit, newVelocity, wishDir)
+
 	-- apply acceleration
-	self.movementVelocity.Velocity += accelerationSpeed * wishDir
+	self.movementVelocity.Velocity = newVelocity
 
 end
 
@@ -213,6 +235,7 @@ end
 function module:GetAccelerationDirection()
 	local wishDir
 	local inputVec
+	local wallHit
 
 	-- if no input, direction = 0, 0, 0
 	if self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then
@@ -226,9 +249,9 @@ function module:GetAccelerationDirection()
 	wishDir = self.player.Character.PrimaryPart.CFrame:VectorToWorldSpace(inputVec)
 
 	-- apply antiSticking
-	wishDir = self:ApplyAntiSticking(wishDir, inputVec)
+	wishDir, wallHit = self:ApplyAntiSticking(wishDir, inputVec)
 
-	return wishDir
+	return wishDir, wallHit
 end
 
 function module:GetMovementVelocityForce()

@@ -18,7 +18,7 @@ local module = {
 	airMaxSpeedFriction = 3.5,
 
 	--[[ Jump Settings ]]
-	jumpVelocity = 29,
+	jumpVelocity = 25,
 	jumpTimeBeforeGroundRegister = 0.1,
 
 	--[[ Land Settings ]]
