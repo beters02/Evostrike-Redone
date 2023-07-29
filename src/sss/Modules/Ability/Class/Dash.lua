@@ -21,14 +21,11 @@ function Dash:Use()
     self.uses -= 1
     self.startCF = self.player.Character.PrimaryPart.CFrame
 
-    task.spawn(function() -- if uses on server is mismatched, player will be teleported back to startCF
-        local newUses = self.remoteFunction:InvokeServer("SubUses")
-        if newUses < 0 then
+    task.spawn(function()
+        local canUse = self:ServerUseVarCheck()
+        if not canUse then
             self.player.Character:SetPrimaryPartCFrame(self.startCF)
-            return warn("DASH USE MISMATCH")
         end
-        self.uses = newUses
-        print(self.uses)
     end)
 
     self.player.Character.MovementScript.Events.Dash:Fire(Dash.strength, Dash.upstrength)

@@ -126,9 +126,9 @@ function module.RegisterShot(player, weaponOptions, result, origin)
 		-- calculate damage falloff
 		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
 			local diff = distance - weaponOptions.damage.damageFalloffDistance
-			print(damage - diff * weaponOptions.damage.damageFalloffPerMeter)
+			--print(damage - diff * weaponOptions.damage.damageFalloffPerMeter)
 			damage = math.max(damage - diff * weaponOptions.damage.damageFalloffPerMeter, weaponOptions.damage.damageFalloffMinimumDamage)
-			print(damage)
+			--print(damage)
 		end
 
 		-- see if player will be killed after damage is applied
