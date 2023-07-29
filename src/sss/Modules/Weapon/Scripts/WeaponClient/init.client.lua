@@ -247,11 +247,9 @@ function Reload()
 	end)
 
 	weaponVar.reloading = true
-	print({weaponVar.ammo.magazine, weaponVar.ammo.total})
 	local mag, total = weaponRemoteFunction:InvokeServer("Reload")
 	weaponVar.ammo.magazine = mag
 	weaponVar.ammo.total = total
-	print({weaponVar.ammo.magazine, weaponVar.ammo.total})
 	weaponVar.reloading = false
 end
 

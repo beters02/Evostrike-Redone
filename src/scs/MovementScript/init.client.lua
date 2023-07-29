@@ -232,7 +232,7 @@ function Movement.Land(decrease, waitTime, iterations)
 
 	-- iterate
 	for i = iterations, 1, -1 do
-		print('iteration ' .. tostring(i))
+		--print('iteration ' .. tostring(i))
 
 		local newVelocity = Movement.movementVelocity.Velocity
 
@@ -330,6 +330,122 @@ function Movement.Dash()
 end
 
 --[[
+	Processing
+]]
+
+function Movement.ProcessMovement()
+	cameraYaw = Movement:GetYaw()
+	cameraLook = cameraYaw.lookVector
+	Movement.cameraYaw = cameraYaw
+	Movement.cameraLook = cameraLook
+	
+	if cameraLook == nil then return end
+	
+	local hitPart, hitPosition, hitNormal, yRatio, zRatio, ladderTable = Movement:FindCollisionRay()
+	playerGrounded = hitPart and true or false
+	playerVelocity = collider.Velocity - Vector3.new(0, collider.Velocity.y, 0)
+	
+	if Movement.jumpGrace and tick() < Movement.jumpGrace then
+		playerGrounded = false
+	end
+	
+	--local playerGrounded, groundHeight = Movement.GetCollisionCylinder()
+	
+	-- [[ LANDING REGISTRATION ]]
+	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then
+		
+		-- only register land after given time in air
+		if tick() >= inAir + Movement.minInAirTimeRegisterLand and not landing then
+
+			-- set inair to false before landing because Land has an inAir check, and we are not in the air
+			inAir = false
+			
+			Movement.Land()
+			landed:Fire()
+		else
+			
+			-- if we didn't register a land, we jump
+			Movement.Run(hitPosition)
+		end
+		
+		-- set player MovementState
+		movementState:SetState(player, "grounded", true)
+
+		inAir = false
+		inAirMovementState = false
+		--return
+	end
+	
+	-- [[ INPUT REGISTRATION ]]
+	if Inputs.FormattedKeys[Inputs.Keys.Jump[1]] > 0 then
+		jumping = true
+	else
+		jumping = false
+		if playerGrounded and jumpCooldown then
+			jumpCooldown = false
+		end
+	end
+	
+	-- set rotation
+	Movement:SetCharacterRotation()
+
+	-- dash trigger
+	if dashVariables.trigger then
+		dashVariables.trigger = false
+		Movement.Dash()
+
+		-- maybe set jumping to false in this instance so Movement.Jump() isnt called twice since the dash calls it
+		-- jumping = false
+	end
+	
+	-- [[ GROUND MOVEMENT ]]
+	if playerGrounded and not Movement.dashing then
+		if jumping then
+			-- call ground movement if on jump cooldown and trying to jump
+			if jumpCooldown or inAir then
+				Movement.Run(hitPosition)
+			else
+				--print('jumping')
+				-- [[ JUMP MOVEMENT ]]
+				if not Movement.autoBunnyHop and Inputs.Keys.Jump[1] ~= "MouseWheel" then --jump cooldown start
+					jumpCooldown = true
+				end
+
+				Movement.Jump(Movement.jumpVelocity)
+
+				inAir = tick()
+
+				if not inAirMovementState then
+					inAirMovementState = true
+					movementState:SetState(player, "grounded", false)
+				end
+			end
+		else
+			-- [[ RUN MOVEMENT ]]
+			Movement.Run(hitPosition)			
+		end
+	else
+		-- [[ AIR MOVEMENT ]]
+		
+		-- set inAir to current time if this is first instance of being in the air (start falling)
+		if not inAir then
+			inAir = tick()
+		end
+
+		-- get velocity
+		Movement.Air()
+
+		-- set grounded MovementState to false, only if it hasn't been set already
+		-- this is so the function wont overload the server with remotes
+		if not inAirMovementState then
+			inAirMovementState = true
+			movementState:SetState(player, "grounded", false)
+		end
+		
+	end
+end
+
+--[[
 	Inputs
 ]]
 
@@ -399,11 +515,6 @@ end
 function Inputs.UpdateMovementSum()
 	currentInputSum.Forward = Inputs.FormattedKeys[Inputs.Keys.Forward[1]] + -Inputs.FormattedKeys[Inputs.Keys.Backward[1]]
 	currentInputSum.Side = Inputs.FormattedKeys[Inputs.Keys.Left[1]] + -Inputs.FormattedKeys[Inputs.Keys.Right[1]]
-	--local stickingValues = Movement:IsSticking()
-	--[[if stickingValues then
-		currentInputSum.Forward -= (math.abs(currentInputSum.Forward) > 0 and stickingValues.forward[1] + stickingValues.forward[2]) or 0
-		currentInputSum.Side -= (math.abs(currentInputSum.Side) > 0 and stickingValues.side[1] + stickingValues.side[2]) or 0
-	end]]
 	Movement.currentInputSum = currentInputSum
 end
 
@@ -416,126 +527,11 @@ local inAirMovementState = false
 
 function Update(dt)
 	if not hum or (hum and hum.Health <= 0) then return end
-	
 	currentDT = dt
 	Movement.currentDT = dt
-	
+
 	Inputs.UpdateMovementSum()
-	
-	cameraYaw = Movement:GetYaw()
-	cameraLook = cameraYaw.lookVector
-	Movement.cameraYaw = cameraYaw
-	Movement.cameraLook = cameraLook
-	
-	if cameraLook == nil then return end
-	
-	local hitPart, hitPosition, hitNormal, yRatio, zRatio, ladderTable = Movement:FindCollisionRay()
-	playerGrounded = hitPart and true or false
-	playerVelocity = collider.Velocity - Vector3.new(0, collider.Velocity.y, 0)
-	
-	if Movement.jumpGrace and tick() < Movement.jumpGrace then
-		playerGrounded = false
-	end
-	
-	--local playerGrounded, groundHeight = Movement.GetCollisionCylinder()
-	
-	-- [[ LANDING REGISTRATION ]]
-	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then
-		
-		-- only register land after given time in air
-		if tick() >= inAir + Movement.minInAirTimeRegisterLand and not landing then
-
-			-- set inair to false before landing because Land has an inAir check, and we are not in the air
-			inAir = false
-			
-			Movement.Land()
-			landed:Fire()
-		else
-			
-			-- if we didn't register a land, we jump
-			Movement.Run(hitPosition)
-		end
-		
-		-- set player MovementState
-		movementState:SetState(player, "grounded", true)
-
-		inAir = false
-		inAirMovementState = false
-		--return
-	end
-	
-	-- [[ INPUT REGISTRATION ]]
-	if Inputs.FormattedKeys[Inputs.Keys.Jump[1]] > 0 then
-		jumping = true
-	else
-		jumping = false
-		if playerGrounded and jumpCooldown then
-			jumpCooldown = false
-		end
-	end
-	
-	-- set rotation
-	Movement:SetCharacterRotation()
-
-	-- dash trigger
-	if dashVariables.trigger then
-		dashVariables.trigger = false
-		Movement.Dash()
-
-		-- maybe set jumping to false in this instance so Movement.Jump() isnt called twice since the dash calls it
-		-- jumping = false
-	end
-	
-	-- [[ GROUND MOVEMENT ]]
-	if playerGrounded and not Movement.dashing then
-		if jumping then
-
-			print('jumping')
-
-			-- call ground movement if on jump cooldown and trying to jump
-			if jumpCooldown or inAir then
-				Movement.Run(hitPosition)
-			else
-				
-				print('jumping')
-
-				-- [[ JUMP MOVEMENT ]]
-				if not Movement.autoBunnyHop and Inputs.Keys.Jump[1] ~= "MouseWheel" then --jump cooldown start
-					jumpCooldown = true
-				end
-
-				Movement.Jump(Movement.jumpVelocity)
-
-				inAir = tick()
-
-				if not inAirMovementState then
-					inAirMovementState = true
-					movementState:SetState(player, "grounded", false)
-				end
-			end
-		else
-			-- [[ RUN MOVEMENT ]]
-			Movement.Run(hitPosition)			
-		end
-	else
-		-- [[ AIR MOVEMENT ]]
-		
-		-- set inAir to current time if this is first instance of being in the air (start falling)
-		if not inAir then
-			inAir = tick()
-		end
-
-		-- get velocity
-		Movement.Air()
-
-		-- set grounded MovementState to false, only if it hasn't been set already
-		-- this is so the function wont overload the server with remotes
-		if not inAirMovementState then
-			inAirMovementState = true
-			movementState:SetState(player, "grounded", false)
-		end
-		
-	end
+	Movement.ProcessMovement()
 end
 
 function SetDeltaTime() --seconds
@@ -556,12 +552,15 @@ end
 function Main()
 	local a = player.Character:FindFirstChildOfClass("Humanoid") or player.Character:WaitForChild("Humanoid")
 	a.PlatformStand = true
+
 	Init()
+
+	-- connect script connections
 	UserInputService.InputBegan:Connect(Inputs.OnInput)
 	UserInputService.InputEnded:Connect(Inputs.OnInput)
 	UserInputService.InputChanged:Connect(Inputs.OnInputChange)
 	RunService:BindToRenderStep("updateLoop", 1, UpdateLoop)
-	
+
 	-- connect movement abilities
 	script.Events.Dash.Event:Connect(Movement.RegisterDashVariables)
 end
@@ -587,36 +586,3 @@ function Init()
 end
 
 Main()
-
--- [[ Some extra functions for future use ]]
---[[function Movement.GetCollisionCylinder()
-	local vel = Movement.movementVelocity.Velocity
-	local speed = Vector3.new(vel.X, 0, vel.Z).Magnitude
-	local TARGET_SPEED = 24
-	local HIP_HEIGHT = 3.1
-	local radius = math.min(2, math.max(1.5, speed/TARGET_SPEED*2))
-	local biasVelicityFactor = 0.075 -- fudge constant
-	local biasRadius = math.max(speed/TARGET_SPEED*2, 1)
-	local biasCenter = Vector3.new(vel.X*biasVelicityFactor, 0, vel.Y*biasVelicityFactor)
-	local steepestInclineAngle = math.rad(60)
-	local maxInclineTan = math.tan(steepestInclineAngle)
-	local maxInclineStartTan = math.tan(math.max(0, steepestInclineAngle - math.rad(2.5)))
-	
-	local m = Movement
-	
-	local onGround, groundHeight, steepness, _, normal = m.castCylinder({
-		origin = m.character.PrimaryPart.Position,
-		direction = Vector3.new(0, -HIP_HEIGHT*2, 0),
-		steepTan = maxInclineTan,
-		steepStartTan = maxInclineStartTan,
-		radius = radius,
-		biasCenter = biasCenter,
-		biasRadius = biasRadius,
-		adorns = {},
-		ignoreInstance = m.character,
-		hipHeight = HIP_HEIGHT,
-	})
-	return onGround, groundHeight, steepness, normal
-end]]
-
---[[]]
