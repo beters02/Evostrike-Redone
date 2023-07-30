@@ -2,11 +2,11 @@ local Dash = {
 
     -- movement settings
     strength = 50,
-    upstrength = 20,
+    upstrength = 25,
 
     -- gemeral settings
     cooldownLength = 3,
-    uses = 2,
+    uses = 100,
 
     -- data settings
     abilityName = "Dash",
@@ -23,12 +23,14 @@ function Dash:Use()
 
     task.spawn(function()
         local canUse = self:ServerUseVarCheck()
-        if not canUse then
-            self.player.Character:SetPrimaryPartCFrame(self.startCF)
-        end
+        if not canUse then self:UseFailed() end
     end)
 
     self.player.Character.MovementScript.Events.Dash:Fire(Dash.strength, Dash.upstrength)
+end
+
+function Dash:UseFailed()
+    self.player.Character:SetPrimaryPartCFrame(self.startCF)
 end
 
 return Dash

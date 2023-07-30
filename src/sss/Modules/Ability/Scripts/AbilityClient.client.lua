@@ -15,8 +15,8 @@ local ability = require(baseAbilityClassModule).new(abilityClassModule)
 -- define some ability var
 local useKeyName = "Key_" .. Strings.firstToUpper(ability.inventorySlot) .. "Ability"
 local abilityRemotes = script.Parent.Parent.Remotes
-local abilityRemoteFunction = abilityRemotes.AbilityRemoteFunction
-ability.remoteFunction = abilityRemoteFunction
+ability.remoteFunction = abilityRemotes.AbilityRemoteFunction
+ability.remoteEvent = abilityRemotes.AbilityRemoteEvent
 
 --[[
 	Init HUD GUI
@@ -40,7 +40,14 @@ UserInputService.InputBegan:Connect(function(input, gp)
         if ability.uses <= 0 then return end
         if ability.cooldown then return end
         
+
         ability:StartClientCooldown()
         ability:Use()
+    end
+end)
+
+ability.remoteEvent.OnClientEvent:Connect(function(action, ...)
+    if action == "CooldownFinished" then
+        ability.cooldown = false
     end
 end)

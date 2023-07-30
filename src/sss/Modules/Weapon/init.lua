@@ -9,6 +9,10 @@ local WeaponOptions = script.Options
 local Weapon = {}
 
 function Weapon.Add(player, weaponName)
+	if not player.Character:FindFirstChild("WeaponController") then -- no controller failsafe
+		Weapon.AddWeaponController(player.Character)
+	end
+
 	local weaponOptions = WeaponOptions:FindFirstChild(weaponName)
 	if not weaponOptions or (weaponOptions and not weaponOptions:IsA("ModuleScript") or weaponOptions:GetAttribute("NotWeapon")) then
 		error("Could not verify WeaponOptions for " .. weaponName)
@@ -81,10 +85,11 @@ function Weapon.Remove(player, weaponName)
 	if not tool then tool = player.Backpack:FindFirstChild("Tool_" .. weaponName) else player.Character.Humanoid:UnequipTools() end
 	if not tool then
 		error("Could not find player's weapon " .. weaponName .. " to remove.")
+		return
 	end
 	
+	WeaponAddRemoveEvent:FireClient(player, "Remove", weaponName, tool)
 	tool:Destroy()
-	WeaponAddRemoveEvent:FireClient(player, "Remove", weaponName)
 end
 
 function Weapon.AddWeaponController(char)
@@ -94,14 +99,6 @@ end
 
 function Weapon.GetWeaponController(player)
 	return player.Character:FindFirstChild("WeaponController")
-end
-
-function Weapon.AddWeaponMotor(char)
-	--[[local hrp = char:WaitForChild("HumanoidRootPart")
-	local motor = Instance.new("Motor6D")
-	motor.Name = "WeaponMotor"
-	motor.Parent = hrp
-	motor.Part0 = hrp]]
 end
 
 return Weapon

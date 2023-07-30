@@ -61,6 +61,12 @@ local CalculateAccuracy = AccuracyCalculator.Calculate
 
 local weaponBar = player.PlayerGui:WaitForChild("HUD").WeaponBar
 local weaponFrame = weaponBar:WaitForChild(Strings.firstToUpper(weaponOptions.inventorySlot))
+local weaponIconEquipped = weaponFrame:WaitForChild("EquippedIconLabel")
+local weaponIconUnequipped = weaponFrame:WaitForChild("UnequippedIconLabel")
+weaponIconEquipped.Image = weaponObjectsFolder.Images.EquippedIcon.Image
+weaponIconUnequipped.Image = weaponObjectsFolder.Images.UnequippedIcon.Image
+
+
 weaponFrame.Visible = true
 
 --[[
@@ -123,6 +129,16 @@ function SetVMTransparency(t)
     end)
 end
 
+local function SetIconEquipped(equipped)
+	if equipped then
+		weaponIconUnequipped.Visible = false
+		weaponIconEquipped.Visible = true
+	else
+		weaponIconUnequipped.Visible = true
+		weaponIconEquipped.Visible = false
+	end
+end
+
 function Equip()
 	if weaponVar.equipped or weaponVar.equipping then return end
 	task.spawn(EnableHotConn)
@@ -144,6 +160,8 @@ function Equip()
 end
 
 function EquipAnimation()
+
+	SetIconEquipped(true)
 
     task.spawn(function() -- client
         SetVMTransparency(1)
@@ -169,6 +187,7 @@ function Unequip()
 	task.spawn(DisableHotConn)
 	task.spawn(CameraUnequip)
     task.spawn(StopAllAnimations)
+	SetIconEquipped(false)
 	weaponVar.equipping = false
 	weaponVar.equipped = false
     weaponVar.firing = false
@@ -247,11 +266,9 @@ function Reload()
 	end)
 
 	weaponVar.reloading = true
-	print({weaponVar.ammo.magazine, weaponVar.ammo.total})
 	local mag, total = weaponRemoteFunction:InvokeServer("Reload")
 	weaponVar.ammo.magazine = mag
 	weaponVar.ammo.total = total
-	print({weaponVar.ammo.magazine, weaponVar.ammo.total})
 	weaponVar.reloading = false
 end
 
@@ -350,6 +367,10 @@ function DisableHotConn()
 	for i, v in pairs(hotConnections) do
 		v:Disconnect()
 	end
+end
+
+function Remove()
+	
 end
 
 --[[ 
