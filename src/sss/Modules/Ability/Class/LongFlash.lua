@@ -64,10 +64,10 @@ if game:GetService("RunService"):IsServer() then
                 c.Parent = v.Character.Head
                 c.Enabled = true
 
-                local fadeInTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.15), {Transparency = 0}) 
+                local fadeInTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.3), {Transparency = 0}) 
                 fadeInTween:Play()
 
-                local fadeOutTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.25), {Transparency = 1})
+                local fadeOutTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.2), {Transparency = 1})
                 local cFadeTween = TweenService:Create(c, TweenInfo.new(0.25), {Rate = 0})
 
                 task.delay(LongFlash.blindLength, function()		 
