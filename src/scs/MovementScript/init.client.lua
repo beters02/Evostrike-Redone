@@ -86,6 +86,10 @@ local Movement = {
 }
 Movement.__index = Movement
 
+function Movement.GetIgnoreDescendantInstances()
+	return {character, workspace.CurrentCamera, workspace.Temp, workspace.MovementIgnore}
+end
+
 --[[
 	Init Movement Extrensic Module Functions & Configuration
 	

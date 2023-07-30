@@ -1,7 +1,7 @@
 local module = {
 
 	--[[ General Settings ]]
-	gravity = .23,
+	gravity = .25,
 	friction = 6,
 	maxVelocity = 50,
 	maxMovementPitch = 0.6,
@@ -18,7 +18,7 @@ local module = {
 	airMaxSpeedFriction = 3.5,
 
 	--[[ Jump Settings ]]
-	jumpVelocity = 25,
+	jumpVelocity = 29,
 	jumpTimeBeforeGroundRegister = 0.1,
 
 	--[[ Land Settings ]]

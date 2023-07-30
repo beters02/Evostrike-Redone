@@ -48,7 +48,6 @@ end
 
 function module:FindCollisionRay()
 	local torsoCFrame = self.character.HumanoidRootPart.CFrame
-	local ignoreList = {self.character, self.camera, workspace.Temp}
 
 	local rays = {
 		Ray.new(self.character.HumanoidRootPart.Position, Vector3.new(0, -self.rayYLength, 0)),
@@ -61,7 +60,7 @@ function module:FindCollisionRay()
 
 	local i
 	for i = 1, #rays do
-		local part, position, normal = game.Workspace:FindPartOnRayWithIgnoreList(rays[i],ignoreList)
+		local part, position, normal = game.Workspace:FindPartOnRayWithIgnoreList(rays[i], self:GetIgnoreDescendantInstances())
 
 		if part == nil then
 			position = Vector3.new(0,-3000000,0)
@@ -96,7 +95,7 @@ function module:FindCollisionRay()
 	-- CODE INSERTED BY EPIXPLODE
 	-- detect front ray for ladders
 	local params = RaycastParams.new()
-	params.FilterDescendantsInstances = {ignoreList}
+	params.FilterDescendantsInstances = self:GetIgnoreDescendantInstances()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local ladderResult = workspace:Raycast(torsoCFrame.Position + Vector3.new(0, -1, 0), torsoCFrame.LookVector * 2, params)
 	local ladderTable = false
@@ -159,29 +158,41 @@ end
 	this function is a monstrosity, i need a break
 ]]
 
+--[[
+	@title 						- ApplyAntiSticking
+	@summary					- Applies AntiSticking properties to the given direction.
+
+	@param wishedSpeed: Vector3 	- Wished speed of moving player
+
+	@return newSpeed: Vector3 	- Updated speed after getting direction from self.currentInputVec
+]]
+
 local VisualizeSticking = false
 
-function module:ApplyAntiSticking(accelDir, inputVec)
-	local newDir = accelDir
+function module:ApplyAntiSticking(wishedSpeed)
+	local inputVec = self.currentInputVec
+	if not inputVec then return wishedSpeed end
+
+	local newSpeed = wishedSpeed
 	local hrp = self.player.Character.HumanoidRootPart
 
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {self.player.Character, workspace.CurrentCamera, workspace.Temp}
+	params.FilterDescendantsInstances = self:GetIgnoreDescendantInstances()
 
 	local rayOffset = Vector3.new(0, -.9, 0)
 
-	accelDir *= 2
+	wishedSpeed *= 2
 
 	local dirStr = "Forward"
 	local xabs = math.abs(inputVec.X)
 	local zabs = math.abs(inputVec.Z)
 
 	local getF = inputVec.Z > 0 and -hrp.CFrame.LookVector or inputVec.Z < 0 and hrp.CFrame.LookVector
-	local getS = inputVec.X > 0 and hrp.CFrame.RightVector * 1.5 or inputVec.X < 0 and -hrp.CFrame.RightVector * 1.5
+	local getS = inputVec.X > 0 and hrp.CFrame.RightVector * 1.2 or inputVec.X < 0 and -hrp.CFrame.RightVector * 1.2
 
-	local dirAmnt = 1.7
-	local mainDirAmnt = 2
+	local dirAmnt = 1.375 -- 1.7
+	local mainDirAmnt = 1.55 -- 2
 
 	if VisualizeSticking then
 		for i, v in pairs(currentVisualize) do
@@ -189,7 +200,7 @@ function module:ApplyAntiSticking(accelDir, inputVec)
 		end
 	end
 
-	for _, v in pairs({Vector3.new(0, 0, 0), Vector3.new(0, -3.1, 0), Vector3.new(0, 1.5, 0)}) do
+	for _, v in pairs({Vector3.new(0, -3.1, 0), Vector3.new(0, 1.5, 0)}) do
 		local currForDir
 		local currSideDir
 		local values = {}
@@ -227,8 +238,8 @@ function module:ApplyAntiSticking(accelDir, inputVec)
 			table.insert(values, (currForDir+currSideDir) * mainDirAmnt)
 		else
 			values[1] *= mainDirAmnt
-			table.insert(values, (values[1] + hval[1]).Unit * 2)
-			table.insert(values, (values[1] + hval[2]).Unit * 2)
+			table.insert(values, (values[1] + hval[1]).Unit * mainDirAmnt)
+			table.insert(values, (values[1] + hval[2]).Unit * mainDirAmnt)
 			table.insert(values, hval[1])
 			table.insert(values, hval[2])
 		end
@@ -244,12 +255,12 @@ function module:ApplyAntiSticking(accelDir, inputVec)
 			end
 	
 			if result then
-				return flattenVectorAgainstWall(newDir, result.Normal), result.Normal
+				return flattenVectorAgainstWall(newSpeed, result.Normal), result.Normal
 			end
 		end
 	end
 
-	return newDir
+	return newSpeed
 end
 
 function module:ApplyWallHit(wallHit, vel, wishDir)
