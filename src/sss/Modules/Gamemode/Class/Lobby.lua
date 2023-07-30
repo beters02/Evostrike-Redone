@@ -3,6 +3,9 @@ local Lobby = {
 }
 
 local Players = game:GetService("Players")
+local Modules = game:GetService("ServerScriptService"):WaitForChild("Modules")
+local Ability = require(Modules:WaitForChild("Ability"))
+local Weapon = require(Modules:WaitForChild("Weapon"))
 
 function Lobby:Start()
     local min = self.minimumPlayers or 1
@@ -49,8 +52,11 @@ function Lobby:SpawnPlayer(player)
     character.PrimaryPart.Anchored = false
 
     -- give player knife
+    Ability.Add(player, "Dash")
+    Ability.Add(player, "LongFlash")
+    Weapon.Add(player, "AK47")
+    Weapon.Add(player, "Glock17")
 
-    print('spawned!')
 end
 
 function Lobby:Died(player)
