@@ -2,11 +2,11 @@ local Dash = {
 
     -- movement settings
     strength = 50,
-    upstrength = 20,
+    upstrength = 25,
 
     -- gemeral settings
     cooldownLength = 3,
-    uses = 2,
+    uses = 100,
 
     -- data settings
     abilityName = "Dash",
