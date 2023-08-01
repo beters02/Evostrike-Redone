@@ -191,8 +191,8 @@ function module:ApplyAntiSticking(wishedSpeed)
 	local getF = inputVec.Z > 0 and -hrp.CFrame.LookVector or inputVec.Z < 0 and hrp.CFrame.LookVector
 	local getS = inputVec.X > 0 and hrp.CFrame.RightVector * 1.2 or inputVec.X < 0 and -hrp.CFrame.RightVector * 1.2
 
-	local dirAmnt = 1.375 -- 1.7
-	local mainDirAmnt = 1.55 -- 2
+	local dirAmnt = 1.375
+	local mainDirAmnt = 1.55
 
 	if VisualizeSticking then
 		for i, v in pairs(currentVisualize) do
@@ -243,19 +243,24 @@ function module:ApplyAntiSticking(wishedSpeed)
 			table.insert(values, hval[1])
 			table.insert(values, hval[2])
 		end
-	
-		local results = {}
+
+		local partsAlreadyHit = {}
 		for a, b in pairs(values) do
 			if not b then continue end
+
+			-- visualize ray using pos and direction
+			if VisualizeSticking then table.insert(currentVisualize, visualizeRayResult(false, rayPos, b)) end
+			
 			local result = workspace:Raycast(rayPos, b, params)
-			results[a] = result
-	
-			if VisualizeSticking then
-				table.insert(currentVisualize, visualizeRayResult(false, rayPos, b))
-			end
-	
+			if not result then continue end
+
+			-- don't collide with the same part twice
+			if table.find(partsAlreadyHit, result.Instance) then continue end
+			table.insert(partsAlreadyHit, result.Instance)
+
 			if result then
-				return flattenVectorAgainstWall(newSpeed, result.Normal), result.Normal
+				newSpeed = flattenVectorAgainstWall(newSpeed, result.Normal), result.Normal
+				--print(newSpeed.Magnitude)
 			end
 		end
 	end

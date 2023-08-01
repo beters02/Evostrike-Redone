@@ -234,7 +234,7 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 
 	-- if a wall was hit, dont accelerate in that direction
 	newVelocity, wallHit = self:ApplyAntiSticking(newVelocity)
-	newVelocity = self:ApplyWallHit(wallHit, newVelocity, wishDir)
+	--newVelocity = self:ApplyWallHit(wallHit, newVelocity, wishDir)
 
 	-- apply acceleration
 	self.movementVelocity.Velocity = newVelocity
