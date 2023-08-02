@@ -53,6 +53,18 @@ if game:GetService("RunService"):IsServer() then
             local see = canSee(v, bullet)
             print(see)
             if not see then continue end
+            
+            -- check if flash can hit player
+            local params = RaycastParams.new()
+            params.FilterDescendantsInstances = {workspace.Temp, workspace.MovementIgnore}
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            local result = workspace:Raycast(bullet.Position, (v.Character:WaitForChild("HumanoidRootPart").Position - bullet.Position).Unit * 150, params)
+            local resultModel = result and result.Instance:FindFirstAncestorWhichIsA("Model")
+            if result and result.Instance:FindFirstAncestorWhichIsA("Model") ~= v.Character then
+                print(resultModel)
+                continue
+            end
+
             task.spawn(function()
                  -- gui responsible for "blinding" the player
                 local gui = LongFlash.flashGui:Clone()
