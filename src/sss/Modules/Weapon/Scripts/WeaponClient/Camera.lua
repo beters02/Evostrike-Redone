@@ -53,15 +53,10 @@ function Camera:Update(dt)
 		pos, returnPos = self.springs.shake.p, self.springs.vec.p
 	end
 
-	--[[local diff = tick() - last
-	local doAmount = diff/rate]]
-
 	self.camera.CFrame = self.camera.CFrame:Lerp(self.camera.CFrame * CFrame.Angles(pos.X, pos.Y, pos.Z) * CFrame.Angles(returnPos.X, returnPos.Y, returnPos.Z), dt * 60)
 		
 	next = tick() + rate
 	last = tick()
-	--[[local pos, returnPos = self.springs.shake.p, self.springs.vec.p
-	self.camera.CFrame = self.camera.CFrame:Lerp(self.camera.CFrame * CFrame.Angles(pos.X, pos.Y, pos.Z) * CFrame.Angles(returnPos.X, returnPos.Y, returnPos.Z), dt * 60)]]
 end
 
 function Camera:Connect()

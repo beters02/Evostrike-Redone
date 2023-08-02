@@ -51,9 +51,10 @@ local weaponVar = {
 	lastYAcc = 0
 }
 
-local cameraClass = require(script:WaitForChild("Camera")).init(weaponName)
 local AccuracyCalculator = require(game:GetService("ReplicatedStorage"):WaitForChild("Scripts"):WaitForChild("Modules"):WaitForChild("AccuracyCalculator")).init(player, weaponOptions)
 local CalculateAccuracy = AccuracyCalculator.Calculate
+
+local CameraObject = require(script:WaitForChild("CameraObject")).new(weaponName)
 
 --[[
 	Init HUD GUI
@@ -96,11 +97,10 @@ end
 ]]
 
 function CameraEquip()
-	cameraClass:Connect()
 end
 
 function CameraUnequip()
-	cameraClass:Disconnect()
+	CameraObject:StopRecoil()
 end
 
 --[[
@@ -208,12 +208,12 @@ function Fire()
 	weaponVar.nextFireTime = t + weaponOptions.fireRate
 	weaponVar.ammo.magazine -= 1
 	weaponVar.currentBullet = (t - weaponVar.lastFireTime >= weaponOptions.recoilReset and 1 or weaponVar.currentBullet + 1)
-	cameraClass.weaponVar.currentBullet = weaponVar.currentBullet
+	CameraObject.weaponVar.currentBullet = weaponVar.currentBullet
 	weaponVar.lastFireTime = t
 	
-	local currVecOption, currShakeOption = cameraClass:GetSprayPatternKey()			-- get recoil pattern key
-	local currVecRecoil = cameraClass:GetRecoilVector3(currVecOption)				-- convert VectorRecoil or SpreadRecoil key into a Vector3
-	local currShakeRecoil = cameraClass:GetRecoilVector3(currShakeOption)			-- convert ShakeRecoil key into a Vector3
+	local currVecOption, currShakeOption = CameraObject:GetSprayPatternKey()			-- get recoil pattern key
+	local currVecRecoil = CameraObject:GetRecoilVector3(currVecOption)				-- convert VectorRecoil or SpreadRecoil key into a Vector3
+	--local currShakeRecoil = cameraClass:GetRecoilVector3(currShakeOption)			-- convert ShakeRecoil key into a Vector3
 	
 	-- init paramaters for client bullet registration
 	local params = RaycastParams.new()
@@ -238,7 +238,7 @@ function Fire()
 		clientAcc, weaponVar = CalculateAccuracy(weaponVar.currentBullet, currVecRecoil, weaponVar)
 		local unitRay = GetNewTargetRay(mosPos, clientAcc)
 		task.spawn(function() -- camera spring is fired after the accuracy is registered, to avoid bullets going in the wrong place.
-			cameraClass:FireSpring(weaponVar.currentBullet)
+			CameraObject:FireRecoil(weaponVar.currentBullet)
 		end)
 		task.spawn(function()
 			local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 100, params)
@@ -273,24 +273,17 @@ function Reload()
 end
 
 --[[
-	Vector Camera Recoil Down
+	StopRecoil
 
-	currently, using an automatic weapon,
-	your vector camera recoil will only reset after you let go of your fire button or when you run out of ammo
+	turn off fireLoop when mouse is let go
 ]]
 local fireKeyOptionName = "Key_PrimaryFire"
 function StopRecoil(auto)
-	if not cameraClass._recoilStopDebounce then
-		cameraClass._recoilStopDebounce = true
-		repeat task.wait() until not weaponVar.firing
-		if (auto and UserInputService:IsMouseButtonPressed(Enum.UserInputType[PlayerOptions[fireKeyOptionName]]) or weaponVar.ammo.magazine <= 0) then
-			cameraClass._recoilStopDebounce = false
-			return
-		end
-		cameraClass:StopFire()
-		weaponVar.fireLoop = false
-		cameraClass._recoilStopDebounce = false
+	repeat task.wait() until not weaponVar.firing
+	if (auto and UserInputService:IsMouseButtonPressed(Enum.UserInputType[PlayerOptions[fireKeyOptionName]]) or weaponVar.ammo.magazine <= 0) then
+		return
 	end
+	weaponVar.fireLoop = false
 end
 
 --[[
@@ -367,10 +360,6 @@ function DisableHotConn()
 	for i, v in pairs(hotConnections) do
 		v:Disconnect()
 	end
-end
-
-function Remove()
-	
 end
 
 --[[ 
