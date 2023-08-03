@@ -84,7 +84,7 @@ function Weapon.Remove(player, weaponName)
 	local tool = player.Character:FindFirstChild("Tool_" .. weaponName)
 	if not tool then tool = player.Backpack:FindFirstChild("Tool_" .. weaponName) else player.Character.Humanoid:UnequipTools() end
 	if not tool then
-		error("Could not find player's weapon " .. weaponName .. " to remove.")
+		warn("Could not find player's weapon " .. weaponName .. " to remove.")
 		return
 	end
 	

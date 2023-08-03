@@ -60,9 +60,9 @@ function Camera:Update(dt)
 end
 
 function Camera:Connect()
-	RunService:BindToRenderStep("GunCamera", Enum.RenderPriority.Camera.Value + 3, function(dt)
+	--[[]RunService:BindToRenderStep("GunCamera", Enum.RenderPriority.Camera.Value + 3, function(dt)
 		self:Update(dt)
-	end)
+	end)]]
 end
 
 function Camera:Disconnect()

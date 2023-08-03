@@ -1,6 +1,4 @@
-local Recoil = {
-    
-}
+local Recoil = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -91,7 +89,7 @@ function Recoil:FireRecoil(currentBullet)
                 --print(counter)
 
                 if counter == 1 then
-                    self.testSpring:Accelerate(Vector3.new(0, 0.02, 0))
+                    --self.testSpring:Accelerate(Vector3.new(0, 0.02, 0))
                     counter += 1
                 else
                     counter = 1
@@ -108,7 +106,7 @@ function Recoil:FireRecoil(currentBullet)
                 tr = self.weaponVar.totalRecoiledVector/12
 
                 if counter == 1 then
-                    self.testSpring:Accelerate(Vector3.new(0, -0.02, 0))
+                    --self.testSpring:Accelerate(Vector3.new(0, -0.02, 0))
                 else
                     if counter == 12 then
                         stop = true

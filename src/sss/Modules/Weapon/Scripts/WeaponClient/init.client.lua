@@ -122,7 +122,7 @@ function SetVMTransparency(t)
     task.spawn(function()
         for i, v in pairs(vm:GetDescendants()) do
             if v:IsA("MeshPart") or v:IsA("BasePart") then
-                if v.Name == "HumanoidRootPart" then continue end
+                if v.Name == "HumanoidRootPart" or v.Name == "WeaponHandle" or v.Name == "WeaponTip" then continue end
                 v.Transparency = t
             end
         end
@@ -210,7 +210,8 @@ function Fire()
 	weaponVar.currentBullet = (t - weaponVar.lastFireTime >= weaponOptions.recoilReset and 1 or weaponVar.currentBullet + 1)
 	CameraObject.weaponVar.currentBullet = weaponVar.currentBullet
 	weaponVar.lastFireTime = t
-	
+	local fireRegisterTime = workspace:GetServerTimeNow()
+
 	local currVecOption, currShakeOption = CameraObject:GetSprayPatternKey()			-- get recoil pattern key
 	local currVecRecoil = CameraObject:GetRecoilVector3(currVecOption)				-- convert VectorRecoil or SpreadRecoil key into a Vector3
 	--local currShakeRecoil = cameraClass:GetRecoilVector3(currShakeOption)			-- convert ShakeRecoil key into a Vector3
@@ -251,7 +252,7 @@ function Fire()
 		local serverAcc = weaponRemoteFunction:InvokeServer("GetAccuracy", currVecRecoil, weaponVar.currentBullet, char.HumanoidRootPart.Velocity.Magnitude)
 		--print(tostring(serverAcc) .. " server accuracy")
 		local finalRay = GetNewTargetRay(mosPos, serverAcc)
-		local serverBulletHole = weaponRemoteFunction:InvokeServer("Fire", finalRay, weaponVar.currentBullet, currVecRecoil)
+		local serverBulletHole = weaponRemoteFunction:InvokeServer("Fire", finalRay, weaponVar.currentBullet, currVecRecoil, fireRegisterTime)
 		if serverBulletHole then serverBulletHole:Destroy() end
 	end)
 end
