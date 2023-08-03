@@ -111,6 +111,17 @@ end
 
 local currentVisualize = {}
 
+--[[
+	@title 							- visulizeRayResult
+	@summary						- Visualize a collision ray
+
+	@param result: RaycastResult	- Colliding result
+	@param origin: Vector3			- Origin of Raycast
+	@param direction: Vector3		- Direction of Raycast
+
+	@return part: BasePart 			- Rays visualized part
+]]
+
 local function visualizeRayResult(result, origin, direction)
 	local position = result and result.Position or (origin + direction)
 	local distance = (origin - position).Magnitude
@@ -123,7 +134,17 @@ local function visualizeRayResult(result, origin, direction)
 	return p
 end
 
--- flattenVectorAgainstWall: flatten a vector given vector and normal
+--[[
+	@title 						- flattenVectorAgainstWall
+	@summary					- Flattens a given speed vector on a wall.
+	@credit						- Roblox Devforums
+
+	@param moveVector: Vector3  - Wished speed of moving player
+	@param normal: Vector3		- Normal of colliding wall
+
+	@return newSpeed: Vector3 	- Updated speed after getting direction from self.currentInputVec
+]]
+
 function flattenVectorAgainstWall(moveVector: Vector3, normal: Vector3)
 	-- if magnitudes are 0 then just nevermind
 	if moveVector.Magnitude == 0 or normal.Magnitude == 0 then
@@ -149,16 +170,6 @@ function flattenVectorAgainstWall(moveVector: Vector3, normal: Vector3)
 end
 
 --[[
-	Apply AntiSticking
-
-	@param accelDir : Vector3 - The player's wished movement direction
-
-	@return direction : Vector3 - Applys AntiSticking to Acceleration Direction
-
-	this function is a monstrosity, i need a break
-]]
-
---[[
 	@title 						- ApplyAntiSticking
 	@summary					- Applies AntiSticking properties to the given direction.
 
@@ -169,31 +180,38 @@ end
 
 local VisualizeSticking = false
 
-function module:ApplyAntiSticking(wishedSpeed)
+function module:ApplyAntiSticking(wishedSpeed, mod, wc)
+	
+	-- get input vector
 	local inputVec = self.currentInputVec
-	if not inputVec then return wishedSpeed end
+	-- if no input and not weaponCollision, cancel
+	if not inputVec and not wc then return wishedSpeed end
+	-- if antiSticking is happening because of weaponCollision, then ignore no input
+	if not inputVec and wc then inputVec = {X = 0, Z = 1} end
 
 	local newSpeed = wishedSpeed
 	local hrp = self.player.Character.HumanoidRootPart
 
+	-- raycast var
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = self:GetIgnoreDescendantInstances()
+	local rayOffset = Vector3.new(0, -.9, 0) -- y offset
 
-	local rayOffset = Vector3.new(0, -.9, 0)
-
+	-- wished speed modifier
 	wishedSpeed *= 2
 
-	local dirStr = "Forward"
-	local xabs = math.abs(inputVec.X)
-	local zabs = math.abs(inputVec.Z)
+	-- direction amount var
+	local dirAmnt = 1.375 * (mod or 1)
+	local mainDirAmnt = 1.55 * (mod or 1)
 
-	local getF = inputVec.Z > 0 and -hrp.CFrame.LookVector or inputVec.Z < 0 and hrp.CFrame.LookVector
-	local getS = inputVec.X > 0 and hrp.CFrame.RightVector * 1.2 or inputVec.X < 0 and -hrp.CFrame.RightVector * 1.2
+	-- stick var
+	local isSticking = false
+	local normals = {}
+	local stickingDirections = {}
+	local ldd = {dir = false, dist = false} -- lowest distance direction
 
-	local dirAmnt = 1.375
-	local mainDirAmnt = 1.55
-
+	-- destroy sticking visualizations
 	if VisualizeSticking then
 		for i, v in pairs(currentVisualize) do
 			v:Destroy()
@@ -203,34 +221,43 @@ function module:ApplyAntiSticking(wishedSpeed)
 	for _, v in pairs({Vector3.new(0, -3.1, 0), Vector3.new(0, 1.5, 0)}) do
 		local currForDir
 		local currSideDir
+		local dontAddFor = false
 		local values = {}
 		local hval = {}
 		local rayPos = hrp.Position + v
 
+		-- right, front, back
 		if inputVec.X > 0 then
 			currForDir = hrp.CFrame.RightVector
 			table.insert(values, currForDir)
 			table.insert(hval, hrp.CFrame.LookVector * dirAmnt)
 			table.insert(hval, -hrp.CFrame.LookVector * dirAmnt)
+		
+		-- left, front, back
 		elseif inputVec.X < 0 then
 			currForDir = -hrp.CFrame.RightVector
 			table.insert(values, currForDir)
 			table.insert(hval, hrp.CFrame.LookVector * dirAmnt)
 			table.insert(hval, -hrp.CFrame.LookVector * dirAmnt)
 		end
-	
+		
+		-- back, left, right
 		if inputVec.Z > 0 then
+			dontAddFor = true
 			currSideDir = -hrp.CFrame.LookVector
 			table.insert(values, currSideDir)
 			table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
 			table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
+
+		-- front, left, right
 		elseif inputVec.Z < 0 then
 			currSideDir = hrp.CFrame.LookVector
 			table.insert(values, currSideDir)
 			table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
 			table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
 		end
-	
+		
+		-- middle directions
 		if currForDir and currSideDir then
 			for i, v in pairs(values) do
 				values[i] = v * mainDirAmnt
@@ -245,6 +272,7 @@ function module:ApplyAntiSticking(wishedSpeed)
 		end
 
 		local partsAlreadyHit = {}
+
 		for a, b in pairs(values) do
 			if not b then continue end
 
@@ -254,25 +282,36 @@ function module:ApplyAntiSticking(wishedSpeed)
 			local result = workspace:Raycast(rayPos, b, params)
 			if not result then continue end
 
+			if (not ldd.dir or not ldd.dist) or (ldd.dist and ldd.dist < result.Distance) then
+				ldd.dir = b
+				ldd.dist = result.Distance
+			end
+
 			-- don't collide with the same part twice
 			if table.find(partsAlreadyHit, result.Instance) then continue end
 			table.insert(partsAlreadyHit, result.Instance)
 
+			if not table.find(normals, result.Normal) then
+				table.insert(normals, result.Normal)
+			end
+
+			if not table.find(stickingDirections, b) and not dontAddFor then
+				table.insert(stickingDirections, b)
+			end
+
+			if not table.find(stickingDirections, currSideDir) and not dontAddFor then
+				table.insert(stickingDirections, currSideDir)
+			end
+
 			if result then
+				if not isSticking then isSticking = true end
 				newSpeed = flattenVectorAgainstWall(newSpeed, result.Normal), result.Normal
 				--print(newSpeed.Magnitude)
 			end
 		end
 	end
 
-	return newSpeed
-end
-
-function module:ApplyWallHit(wallHit, vel, wishDir)
-	if not wallHit then return vel end
-	local newVelocity = vel
-	newVelocity -= wallHit * (self.movementVelocity.Velocity * wishDir)
-	return newVelocity
+	return newSpeed, isSticking and normals, isSticking and stickingDirections, isSticking and ldd.dir
 end
 
 return module

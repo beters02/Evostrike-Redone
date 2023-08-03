@@ -63,6 +63,7 @@ local Movement = {
 	-- constants
 	player = player,
 	character = character,
+	humanoid = character:WaitForChild("Humanoid"),
 	camera = camera,
 	collider = collider,
 	currentDT = currentDT,
@@ -85,6 +86,22 @@ local Movement = {
 	
 }
 Movement.__index = Movement
+
+-- init sounds
+local humSounds = Movement.humanoid:WaitForChild("Sounds")
+local runsndsF = humSounds:WaitForChild("Run")
+local runsnds = {}
+for _, s in pairs(runsndsF:GetChildren()) do
+	if not s:IsA("Sound") then continue end
+	runsnds[s.Name] = s
+end
+
+Movement.Sounds = {
+	runDefault = runsnds.Tile,
+	landDefault = runsnds.Tile:Clone()
+}
+Movement.Sounds.landDefault.Parent = humSounds
+local runv = Movement.Sounds.runDefault.Volume
 
 function Movement.GetIgnoreDescendantInstances()
 	return {character, workspace.CurrentCamera, workspace.Temp, workspace.MovementIgnore}
@@ -139,6 +156,8 @@ function Movement.Air()
 	Movement.movementPosition.maxForce = Vector3.new()
 	Movement:ApplyAirVelocity()
 	Movement.movementVelocity.maxForce = Movement:GetMovementVelocityAirForce()
+	local runsnd = Movement.Sounds.runDefault
+	if runsnd.IsPlaying then runsnd:Stop() end
 end
 
 --[[
@@ -154,18 +173,22 @@ function Movement.Run(hitPosition)
 	Movement.movementVelocity.maxForce = Movement:GetMovementVelocityForce()
 	Movement.movementVelocity.P = Movement.movementVelocityP
 
+	-- get current run sound
+	-- TODO: groundcast for result material
+	local runsnd = Movement.Sounds.runDefault
+	local jumpsnd
+	local landsnd = Movement.Sounds.landDefault
+
 	if jumpingAnimation.IsPlaying then
 		jumpingAnimation:Stop(0.1)
 	end
 
 	if Movement.movementVelocity.Velocity.Magnitude > 1 then
-		if not runningAnimation.IsPlaying then
-			runningAnimation:Play(0.2)
-		end
+		if not runningAnimation.IsPlaying then runningAnimation:Play(0.2) end
+		if not runsnd.IsPlaying then runsnd:Play() end
 	else
-		if runningAnimation.IsPlaying then
-			runningAnimation:Stop(0.2)
-		end
+		if runningAnimation.IsPlaying then runningAnimation:Stop(0.2) end
+		if runsnd.IsPlaying then runsnd:Stop() end
 	end
 end
 
@@ -175,16 +198,22 @@ end
 	@summary
 ]]
 
+local connectViewmodelJump = true
+local vmScript
+
 function Movement.Jump(velocity)
 	Movement.jumpGrace = tick() + Movement.jumpTimeBeforeGroundRegister -- This is how i saved the glitchy mousewheel jump
 	collider.Velocity = Vector3.new(collider.Velocity.X, velocity, collider.Velocity.Z)
 	Movement.Air()
 
-	if runningAnimation.IsPlaying then
-		runningAnimation:Stop(0.1)
-	end
+	if runningAnimation.IsPlaying then runningAnimation:Stop(0.1) end
 
 	jumpingAnimation:Play(0.1)
+
+	if connectViewmodelJump then
+		if not vmScript then vmScript = character.ViewmodelScript end
+		vmScript.Jump:Fire()
+	end
 
 end
 
@@ -207,6 +236,16 @@ end
 ]]
 function Movement.Land(decrease, waitTime, iterations)
 	--print('landed')
+	--TODO: play land sound
+	local landsnd = Movement.Sounds.landDefault
+	local runsnd = Movement.Sounds.runDefault
+	runsnd.Volume = 0
+	if landsnd.IsPlaying then landsnd:Stop() end
+	landsnd:Play()
+	task.delay(0.1, function()
+		landsnd:Stop()
+		runsnd.Volume = runv
+	end)
 
 	decrease = decrease or Movement.landingMovementDecrease
 	waitTime = waitTime or Movement.landingMovementDecreaseLength
@@ -563,10 +602,14 @@ function Main()
 	UserInputService.InputBegan:Connect(Inputs.OnInput)
 	UserInputService.InputEnded:Connect(Inputs.OnInput)
 	UserInputService.InputChanged:Connect(Inputs.OnInputChange)
-	RunService:BindToRenderStep("updateLoop", 1, UpdateLoop)
+	RunService:BindToRenderStep("updateLoop", 100, UpdateLoop)
 
 	-- connect movement abilities
 	script.Events.Dash.Event:Connect(Movement.RegisterDashVariables)
+
+	script.Events.Get.OnInvoke = function()
+		return playerGrounded
+	end
 end
 
 function Init()
