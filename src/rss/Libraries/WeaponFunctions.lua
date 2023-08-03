@@ -83,31 +83,14 @@ function module.FireBullet(fromChar, result, isHumanoid)
 	end)
 end
 
---[[
-	RegisterShot
-
-	Fires Bullet, Creates BulletHole and Registers Damage
-]]
-
-function module.RegisterShot(player, weaponOptions, result, origin)
-	if not result then return false end
-
-	local hole = false
-	local isHumanoid = false
-	local damage = false
-
-	local char = result.Instance:FindFirstAncestorWhichIsA("Model")
-	-- if we are shooting a humanoid character
-	if char and char:FindFirstChild("Humanoid") then
-
-		isHumanoid = true
-
+local function getDamageFromHumResult(player, char, weaponOptions, pos, instance, normal, origin)
+		
 		-- register variables
         local hum = char.Humanoid
 		if hum.Health <= 0 then return false end
-        local distance = math.abs((result.Position - origin).Magnitude)
+        local distance = math.abs((pos - origin).Magnitude)
         damage = weaponOptions.damage.base
-		local instance = result.Instance
+		local instance = instance
 		local calculateFalloff = true
 		local particleFolderName = "Hit"
 
@@ -137,13 +120,13 @@ function module.RegisterShot(player, weaponOptions, result, origin)
         if RunService:IsServer() then
 
 			-- set ragdoll variations
-			char:SetAttribute("bulletRagdollNormal", -result.Normal)
-			char:SetAttribute("lastHitPart", result.Instance.Name)
+			char:SetAttribute("bulletRagdollNormal", normal)
+			char:SetAttribute("lastHitPart", instance.Name)
 			char:SetAttribute("impulseModifier", 0.3)
 			
 			-- emit particles next frame (we do this on the server so hit registration is not so bad)
 			task.spawn(function()
-				local instance = result.Instance
+				local instance = instance
 				if killed then
 					EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood.Kill:GetChildren(), instance, char)
 				end
@@ -157,7 +140,80 @@ function module.RegisterShot(player, weaponOptions, result, origin)
             module.TagPlayer(char, player)
 
 		end
+end
+
+--[[
+	LagCompensation
+
+]]
+
+local function lagCompensationShotIsRegisteredFromPartPos(player, dir, origin, pos)
+	local d = dir.Unit
+	local nd = (origin-pos).Unit
+	local rd = player.Character.HumanoidRootPart.CFrame:VectorToWorldSpace(CFrame.new(pos):VectorToObjectSpace(-1 * nd))
+	if math.abs(d.X - rd.X) < 0.03 or math.abs(d.Z - rd.Z) < 0.03 then
+		print('HIT REGISTERED')
+		return rd
 	end
+	print(pos)
+	print(d)
+	print(nd)
+	print(rd)
+	local dirDiff = d - nd
+	print(dirDiff)
+	print(nd - rd)
+	return false
+end
+
+function module.LagCompensateRegisterShot(player, registerTime, origin, dir, weaponOptions)
+	local tickStore = WeaponRemotes.ServerGet:Invoke(player, (registerTime - workspace:GetServerTimeNow()) + player:GetNetworkPing())
+	if not tickStore then return end
+	-- recieved lc store
+	for i, v in pairs(tickStore) do
+		print('getting player')
+		if v[1] ~= player then
+			print('getting part')
+			for _, partTable in pairs(v[2]) do
+				print(partTable)
+				for partName, position in pairs(partTable) do
+					local hitNorm = lagCompensationShotIsRegisteredFromPartPos(player, dir, origin, position)
+					if hitNorm then
+						print(partName)
+						getDamageFromHumResult(player, v[1].Character, weaponOptions, position, v[1].Character[partName], hitNorm, origin)
+						break
+					end
+				end
+			end
+		end
+	end
+	return false
+end
+
+--[[
+	RegisterShot
+
+	Fires Bullet, Creates BulletHole and Registers Damage
+	Also compensates for lag if needed
+]]
+
+function module.RegisterShot(player, weaponOptions, result, origin, dir, registerTime)
+	if not result then return false end
+
+	local hole = false
+	local isHumanoid = false
+	local damage = false
+
+	-- if we are shooting a humanoid character
+	local char = result.Instance:FindFirstAncestorWhichIsA("Model")
+	if char and char:FindFirstChild("Humanoid") then
+		isHumanoid = true
+		getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
+	else
+		-- LAG COMPENSATION TEST
+		if RunService and registerTime then
+			return module.LagCompensateRegisterShot(player, registerTime, origin, dir, weaponOptions)
+		end
+	end	
 
 	if RunService:IsClient() then
 		return module.FireBullet(player.Character, result, isHumanoid), damage
