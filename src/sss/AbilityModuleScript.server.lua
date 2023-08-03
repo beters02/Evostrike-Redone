@@ -26,3 +26,5 @@ local function Get(player, action, ...)
 end
 
 GetRemote.OnServerInvoke = Get
+
+-- lag compensation test
