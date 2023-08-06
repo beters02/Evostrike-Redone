@@ -9,7 +9,7 @@ local module = {
 	--[[ Ground Settings ]]
 	groundAccelerate = 10,
 	groundDeccelerate = 8,
-	groundMaxSpeed = 18,
+	groundMaxSpeed = 22,
 
 	--[[ Air Settings ]]
 	airAccelerate = 45,
@@ -31,7 +31,7 @@ local module = {
 	autoBunnyHop = false,
 
 	--[[ Character Settings ]]
-	playerTorsoToGround = 3.6,
+	playerTorsoToGround = 5,
 	movementStickDistance = 0.85
 
 }
