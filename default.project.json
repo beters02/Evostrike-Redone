@@ -4,10 +4,8 @@
     "$className": "DataModel",
 
     "ReplicatedStorage": {
-      "Scripts": {
-        "$path": "src/rss",
-        "$ignoreUnknownInstances": true
-      }
+      "$path": "src/rs",
+      "$ignoreUnknownInstances": true
     },
 
     "StarterPlayer": {
