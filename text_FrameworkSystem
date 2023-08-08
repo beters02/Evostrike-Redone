@@ -24,6 +24,7 @@ we need to make a system for objects to make everything uniform and organized.
 - A [Function] will **always** be created in the Game Scope that it was intended to be created in. (Client -> Client, Server -> Server, Shared -> Shared)
 
 [FunctionContainer] = A ModuleScript that contains more than 1 function and that does not involve any connections.
+- A [FunctionContainer] will **never** contain mutable variables.
 
 [PlayerFunction] = Player-Related Module Scripts that contain only 1 function
 
