@@ -1,5 +1,6 @@
 local Lobby = {
     minimumPlayers = 1,
+    isWaiting = false
 }
 
 local Players = game:GetService("Players")
@@ -7,18 +8,10 @@ local Modules = game:GetService("ServerScriptService"):WaitForChild("Modules")
 local Ability = require(Modules:WaitForChild("Ability"))
 local Weapon = require(Modules:WaitForChild("Weapon"))
 
-function Lobby:Start()
-    local min = self.minimumPlayers or 1
-    local players = Players:GetPlayers()
-    if #players < min then
-        repeat 
-            task.wait()
-            players = Players:GetPlayers()
-        until #players >= min
-    end
 
-     -- add any players that have already joined
-     for i, v in pairs(players) do
+function Lobby:PostWait(players)
+    -- add any players that have already joined
+    for i, v in pairs(players) do
         task.spawn(function()
             self:SpawnPlayer(v)
         end)
@@ -29,8 +22,45 @@ function Lobby:Start()
     self.playerAddedConnection = Players.PlayerAdded:Connect(function(player)
         self:SpawnPlayer(player)
     end)
+end
 
+function Lobby:Start()
+    local min = self.minimumPlayers or 1
+
+    self.waitingThread = false
+    if #Players:GetPlayers() < min then
+        self.waitingThread = task.spawn(function()
+            repeat
+                task.wait(1)
+            until #Players:GetPlayers() >= min
+            self:PostWait(Players:GetPlayers())
+        end)
+        return
+    end
+
+    self:PostWait(Players:GetPlayers())
     print("Gamemode " .. self.currentGamemode .. " started!")
+end
+
+function Lobby:Stop()
+
+    -- disconnect connections
+    if self.playerAddedConnection then self.playerAddedConnection:Disconnect() end
+    if self.isWaiting then
+        coroutine.yield(self.waitingThread)
+        return
+    end
+
+    -- remove all weapons and abilities
+    Ability.ClearAllPlayerInventories()
+    Weapon.ClearAllPlayerInventories()
+
+    -- unload all characters
+    for i, v in pairs(Players:GetPlayers()) do
+        v.Character.Humanoid:TakeDamage(1000)
+        v.Character = nil
+    end
+
 end
 
 function Lobby:SpawnPlayer(player)
@@ -43,8 +73,9 @@ function Lobby:SpawnPlayer(player)
     end)
 
     -- teleport player to spawn
-    local Spawns = workspace:FindFirstChild("Spawns")
-    local spawnLoc = Spawns and Spawns:FindFirstChild("Default")
+    local spawnLoc = workspace:WaitForChild("Spawns"):WaitForChild("Default")
+    --[[local Spawns = workspace:FindFirstChild("Spawns")
+    local spawnLoc = Spawns and Spawns:FindFirstChild("Default")]]
     spawnLoc = spawnLoc or workspace.SpawnLocation
 
     character.PrimaryPart.Anchored = true
@@ -56,10 +87,13 @@ function Lobby:SpawnPlayer(player)
     Ability.Add(player, "LongFlash")
     Weapon.Add(player, "AK47")
     Weapon.Add(player, "Glock17")
+    Weapon.Add(player, "Knife", true)
 
 end
 
 function Lobby:Died(player)
+    Weapon.ClearPlayerInventory(player)
+    Ability.ClearPlayerInventory(player)
     task.wait(2)
     self:SpawnPlayer(player)
 end

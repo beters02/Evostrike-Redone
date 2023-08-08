@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WeaponRemotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Weapon")
 local WeaponGetEvent = WeaponRemotes:WaitForChild("Get")
@@ -8,7 +9,8 @@ local WeaponOptions = script.Options
 
 local Weapon = {}
 
-function Weapon.Add(player, weaponName)
+function Weapon.Add(player, weaponName, forceEquip)
+	if not player.Character then return end
 	if not player.Character:FindFirstChild("WeaponController") then -- no controller failsafe
 		Weapon.AddWeaponController(player.Character)
 	end
@@ -18,8 +20,21 @@ function Weapon.Add(player, weaponName)
 		error("Could not verify WeaponOptions for " .. weaponName)
 	end
 	weaponOptions = require(weaponOptions)
-	
-	local weaponObjectsFolder = WeaponObjects:FindFirstChild(weaponName)
+
+	local weaponObjectsFolder
+
+	-- check to see if given weapon name string is a "Knife"
+	-- if so, we want to grab the knife skin from DataStore,
+	-- and change the location variables since Knives are
+	-- named differently than weapons.
+
+	if weaponName == "Knife" then
+		-- local skin = playerOptions.inventory.knife.equipped
+		weaponObjectsFolder = WeaponObjects:FindFirstChild("Knife_Karambit")
+	else
+		weaponObjectsFolder = WeaponObjects:FindFirstChild(weaponName)
+	end
+
 	if not weaponObjectsFolder then
 		error("Could not verify WeaponObjects for " .. weaponName)
 	end
@@ -33,9 +48,13 @@ function Weapon.Add(player, weaponName)
 	local tool = Instance.new("Tool")
 	tool.RequiresHandle = false
 	tool.Name = "Tool_" .. weaponName
+
 	local model = weaponObjectsFolder.Models.Default
 	local serverModel
 	local clientModel
+	local serverScript
+	local clientScript
+
 	if model:FindFirstChild("Server") then
 		serverModel = model.Server:Clone()
 		clientModel = model:Clone()
@@ -44,13 +63,23 @@ function Weapon.Add(player, weaponName)
 		serverModel = model:Clone()
 		clientModel = serverModel:Clone()
 	end
+
 	serverModel.Name = "ServerModel"
 	serverModel.Parent = tool
 	clientModel.Name = "ClientModel"
 	clientModel.Parent = ReplicatedStorage:WaitForChild("Temp")
-	local clientScript = WeaponScripts.WeaponClient:Clone()
+
+	-- knife
+	if weaponOptions.inventorySlot == "ternary" then
+		clientScript = WeaponScripts.KnifeClient:Clone()
+		serverScript = WeaponScripts.KnifeServer:Clone()
+	else
+	-- weapon
+		clientScript = WeaponScripts.WeaponClient:Clone()
+		serverScript = WeaponScripts.WeaponServer:Clone()
+	end
+
 	clientScript.Parent = tool
-	local serverScript = WeaponScripts.WeaponServer:Clone()
 	serverScript.Parent = tool
 	
 	local weaponRemote = Instance.new("RemoteFunction")
@@ -78,9 +107,16 @@ function Weapon.Add(player, weaponName)
 	
 	-- Add Weapon Client
 	WeaponAddRemoveEvent:FireClient(player, "Add", weaponName, weaponOptions, weaponObjectsFolder)
+
+	-- Force Equip
+	--[[task.wait()
+	if forceEquip then
+		player.Character:WaitForChild("Humanoid"):EquipTool(tool)
+	end]]
 end
 
 function Weapon.Remove(player, weaponName)
+	if not player.Character then return end
 	local tool = player.Character:FindFirstChild("Tool_" .. weaponName)
 	if not tool then tool = player.Backpack:FindFirstChild("Tool_" .. weaponName) else player.Character.Humanoid:UnequipTools() end
 	if not tool then
@@ -99,6 +135,25 @@ end
 
 function Weapon.GetWeaponController(player)
 	return player.Character:FindFirstChild("WeaponController")
+end
+
+function Weapon.ClearPlayerInventory(player)
+	local currentInventory = WeaponGetEvent:InvokeClient(player)
+	if not currentInventory then return end
+	for i, v in pairs(currentInventory) do
+		if v then
+			Weapon.Remove(player, v)
+		end
+	end
+end
+
+function Weapon.ClearAllPlayerInventories()
+	for _, player in pairs(Players:GetPlayers()) do
+		if not player.Character then continue end
+		task.spawn(function()
+			Weapon.ClearPlayerInventory(player)
+		end)
+	end
 end
 
 return Weapon

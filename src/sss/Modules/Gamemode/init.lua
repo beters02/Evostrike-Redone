@@ -1,20 +1,50 @@
-local Gamemode = {
-	playerAddedConnection = nil,
+local Gamemode = {}
+Gamemode.__index = Gamemode
+
+-- [[ CONFIGURATION ]]
+local DefaultGamemode = "Lobby"
+
+-- [[ VARIABLES ]]
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local GamemodeLoc = Framework.ServerScriptService.Modules.Gamemode
+local Tables = require(Framework.ReplicatedStorage.Libraries.Tables)
+
+local var = { -- mutable script variables
+    playerAddedConnection = nil,
     currentGamemode = "",
     currentClass = nil,
 }
-Gamemode.__index = Gamemode
+Gamemode = Tables.combine(Gamemode, var) -- apply script variables (var)
+Players.CharacterAutoLoads = false -- disable character autoloads
 
+--[[ BaseClass Functions ]]
 
-local Players = game:GetService("Players")
-Players.CharacterAutoLoads = false
-local GamemodeLoc = game:GetService("ServerScriptService"):WaitForChild("Modules").Gamemode
-local DefaultGamemode = "Lobby"
+function Gamemode:Start()
+    
+end
+
+function Gamemode:Stop()
+    
+end
+
+--[[ GamemodeModule Functions ]]
+
+--[[
+    @title Gamemode.SetGamemode
+
+    @summary Creates a new GamemodeClass, Starts gamemode
+]]
 
 function Gamemode.SetGamemode(gamemode: string)
     local class = GamemodeLoc.Class:FindFirstChild(gamemode)
     if not class then warn("Could not find gamemode " .. gamemode) return end
-    if Gamemode.playerAddedConnection then Gamemode.playerAddedConnection:Disconnect() end
+
+    if Gamemode.currentClass then
+        local c = Gamemode.currentClass
+        c:Stop()
+    end
 
     class = setmetatable(require(class), Gamemode)
     Gamemode.currentClass = class
@@ -22,6 +52,12 @@ function Gamemode.SetGamemode(gamemode: string)
 
     class:Start()
 end
+
+--[[
+    @title StartPlayerAdded
+
+    @summary The default PlayerAdded function, sets gamemode if teleportData.RequestedGamemode
+]]
 
 local function StartPlayerAddedFunction(player)
     local g = DefaultGamemode
@@ -35,7 +71,7 @@ local function StartPlayerAddedFunction(player)
     Gamemode.playerAddedConnection:Disconnect()
     Gamemode.playerAddedConnection = nil
 
-    -- start game
+    -- start game as default gamemode
     Gamemode.SetGamemode(g)
 end
 

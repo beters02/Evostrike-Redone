@@ -3,6 +3,7 @@
 ]]
 
 local Ability = {}
+local Players = game:GetService("Players")
 local Location = game:GetService("ServerScriptService").Modules.Ability
 
 function Ability.Add(player, abilityName)
@@ -33,6 +34,22 @@ end
 function Ability.AddAbilityController(char)
     local controller = Location.AbilityController:Clone()
     controller.Parent = char
+end
+
+function Ability.ClearPlayerInventory(player)
+    for _, v in pairs(player.Character:GetChildren()) do
+        if not string.match(v.Name, "AbilityFolder") then continue end
+        v:Destroy()
+    end
+end
+
+function Ability.ClearAllPlayerInventories()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if not plr.Character then continue end
+        task.spawn(function()
+            Ability.ClearPlayerInventory(plr)
+        end)
+    end
 end
 
 game:GetService("Players").PlayerAdded:Connect(function(player)

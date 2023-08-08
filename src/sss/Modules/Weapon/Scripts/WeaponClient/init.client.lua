@@ -1,5 +1,7 @@
+local Debris = game:GetService("Debris")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
 local ReplicatedScripts = ReplicatedStorage:WaitForChild("Scripts")
 local PlayerOptions = require(ReplicatedScripts:WaitForChild("Modules"):WaitForChild("PlayerOptions"))
@@ -7,7 +9,7 @@ local Libraries = ReplicatedStorage:WaitForChild("Scripts"):WaitForChild("Librar
 local CustomString = require(Libraries:WaitForChild("WeaponFireCustomString"))
 local Strings = require(Libraries:WaitForChild("Strings"))
 local Math = require(Libraries:WaitForChild("Math"))
-local FESpring = require(Libraries:WaitForChild("FESpring"))
+local VMSprings = require(Framework.ReplicatedStorage.Libraries.ViewmodelSprings)
 local WeaponRemotes = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Weapon")
 local Temp = ReplicatedStorage:WaitForChild("Temp")
 local WeaponFunctions = require(ReplicatedStorage.Scripts.Libraries.WeaponFunctions)
@@ -19,6 +21,7 @@ local weaponName = string.gsub(tool.Name, "Tool_", "")
 local weaponRemoteFunction = tool:WaitForChild("WeaponRemoteFunction")
 local weaponRemoteEvent = tool:WaitForChild("WeaponRemoteEvent")
 local weaponGetRemote = WeaponRemotes:WaitForChild("Get")
+local weaponReplicateRemote = WeaponRemotes:WaitForChild("Replicate")
 local weaponObjectsFolder = tool:WaitForChild("WeaponObjectsFolderObject").Value
 
 local player = game:GetService("Players").LocalPlayer
@@ -53,44 +56,197 @@ local weaponVar = {
 
 local AccuracyCalculator = require(game:GetService("ReplicatedStorage"):WaitForChild("Scripts"):WaitForChild("Modules"):WaitForChild("AccuracyCalculator")).init(player, weaponOptions)
 local CalculateAccuracy = AccuracyCalculator.Calculate
-
 local CameraObject = require(script:WaitForChild("CameraObject")).new(weaponName)
 
---[[
-	Init HUD GUI
+--[[ INIT ]]
+
+local weaponBar
+local weaponFrame
+local weaponIconEquipped
+local weaponIconUnequipped
+
+local hudCharClass
+local hudChar
+local hcModel
+
+local viewmodelScript
+local vmAnimController
+
+local VMEquipSpring
+local connectVMSpringEvent
+local weaponSounds
+
+local animationEventFunctions = {}
+local currentPlayingWeaponSounds = {}
+
+--[[@title 			- initHUDGui
+	
+	@summary
+					- Initializes the weapon frames (weapon icons) on the Main Menu HUD GUI
+
+	@return			- {void}
 ]]
 
-local weaponBar = player.PlayerGui:WaitForChild("HUD").WeaponBar
-local weaponFrame = weaponBar:WaitForChild(Strings.firstToUpper(weaponOptions.inventorySlot))
-local weaponIconEquipped = weaponFrame:WaitForChild("EquippedIconLabel")
-local weaponIconUnequipped = weaponFrame:WaitForChild("UnequippedIconLabel")
-weaponIconEquipped.Image = weaponObjectsFolder.Images.EquippedIcon.Image
-weaponIconUnequipped.Image = weaponObjectsFolder.Images.UnequippedIcon.Image
-
-
-weaponFrame.Visible = true
-
---[[
-    Init Animations
-]]
-
-weaponVar.animations = {client = {}, server = {}}
-local vmAnimController = vm.AnimationController
-local animationsFolder = weaponObjectsFolder.Animations
-for _, client in pairs(animationsFolder:GetChildren()) do
-
-    -- init server animations
-    if client.Name == "Server" then
-        for _, server in pairs(client:GetChildren()) do
-            weaponVar.animations.server[server.Name] = hum.Animator:LoadAnimation(server)
-        end
-        continue
-    end
-
-    -- init client animations
-    weaponVar.animations.client[client.Name] = vmAnimController:LoadAnimation(client)
-
+local function initHUDGui()
+	weaponBar = player.PlayerGui:WaitForChild("HUD").WeaponBar
+	weaponFrame = weaponBar:WaitForChild(Strings.firstToUpper(weaponOptions.inventorySlot))
+	weaponIconEquipped = weaponFrame:WaitForChild("EquippedIconLabel")
+	weaponIconUnequipped = weaponFrame:WaitForChild("UnequippedIconLabel")
+	weaponIconEquipped.Image = weaponObjectsFolder.Images.EquippedIcon.Image
+	weaponIconUnequipped.Image = weaponObjectsFolder.Images.UnequippedIcon.Image
+	weaponFrame.Visible = true
 end
+
+--[[@title 			- initHUDChar
+	
+	@summary
+					- HUDCharacter's weapon model.
+
+	@return			- {void}
+]]
+
+local function initHUDChar()
+	local hudCharModule = require(Libraries.HUDCharacter)
+	hudCharClass = hudCharModule.GetHUDCharacter()
+	if typeof(hudCharClass) == "RBXScriptSignal" then hudCharClass = hudCharClass:Wait() end
+	hudChar = hudCharClass.model
+	if not hudChar then warn("Couldn't load Weapon HUDCharacter!") else
+		-- init hudChar model
+		hcModel = serverModel:Clone()
+		hcModel.Parent = player.Backpack
+	end
+end
+
+--[[@title 			- initAnimations
+	
+	@summary
+					- Init all Weapon Animations for all player models including:
+					- Server (humanoid), Client (viewModel), HUDChar (hcModel)
+
+	@return			- {void}
+]]
+
+local function initAnimations()
+	local animationsFolder = weaponObjectsFolder.Animations
+
+	-- init anims table
+	weaponVar.animations = {client = {}, server = {}, clienthud = {}}
+
+	-- grab viewmodel script for animation events
+	viewmodelScript = char:WaitForChild("ViewmodelScript")
+
+	-- init client anim controller
+	vmAnimController = vm.AnimationController
+	connectVMSpringEvent = viewmodelScript:WaitForChild("ConnectVMSpring")
+
+	for _, client in pairs(animationsFolder:GetChildren()) do
+
+		-- init server animations
+		if client.Name == "Server" then
+			for _, server in pairs(client:GetChildren()) do
+				weaponVar.animations.server[server.Name] = hum.Animator:LoadAnimation(server)
+				if hudChar then
+					weaponVar.animations.clienthud[server.Name] = hudCharClass.LoadAnimation(server)
+				end
+			end
+			continue
+		elseif client.ClassName ~= "Animation" then continue end
+	
+		-- init client animations
+		weaponVar.animations.client[client.Name] = vmAnimController:LoadAnimation(client)
+	end
+end
+
+--[[@title 			- initAnimationEvents
+	
+	@summary
+					- Init all Weapon Animation Event Functions for player models including:
+					- Server (humanoid), Client (viewModel), HUDChar (hcModel)
+
+	@return			- {void}
+]]
+
+local function initAnimationEvents()
+
+	animationEventFunctions = {}
+
+	-- [[ ANIMATION EVENT FUNCTIONS ]]
+
+	-- viewmodel spring
+	animationEventFunctions.VMSpring = function(param)
+		print(param)
+		if param == "Equip" then
+			VMEquipSpring.Force = 80
+			VMEquipSpring.Speed = 6
+			VMEquipSpring.Damping = 2.5
+			VMEquipSpring:shove(Vector3.new(-0.4, -0.4, 0))
+		elseif param == "Equip3" then
+			VMEquipSpring.Force = 40
+			VMEquipSpring.Speed = 6
+			VMEquipSpring.Damping = 4
+			VMEquipSpring:shove(Vector3.new(math.random(5, 7) / 100, -(math.random(5,7)/100)))
+		elseif param == "EquipFinal" then
+			VMEquipSpring.Force = 40
+			VMEquipSpring.Speed = 6
+			VMEquipSpring.Damping = 2.5
+			VMEquipSpring:shove(Vector3.new(math.random(20, 30) / 100, -(math.random(10,20)/100)))
+		end
+	end
+
+	-- viewmodel spring update
+
+	VMEquipSpring = VMSprings:new(9, 80, 4, 7)
+
+	-- this is the update function that will be connected to the viewmodel script
+	local _updateFunction = function(dt, hrp)
+		local ues = VMEquipSpring:update(dt)
+		return hrp.CFrame * CFrame.Angles(ues.X, ues.Y, 0)
+	end
+
+	-- this is the string that will be used to index the spring in the viewmodel script
+	local springIndexStr = weaponName .. "_Equip"
+
+	-- connect equip spring update event function to viewmodel script
+	connectVMSpringEvent:Fire(true, VMEquipSpring, springIndexStr, _updateFunction)
+	
+	-- weapon sounds
+	weaponSounds = weaponObjectsFolder:WaitForChild("Sounds")
+
+	-- play weapon sound
+	animationEventFunctions.PlaySound = function(soundName, dontDestroyOnRecreate)
+		local _weaponName = weaponName
+		if dontDestroyOnRecreate then _weaponName = false end
+
+		local sound = weaponSounds:FindFirstChild(soundName)
+		return WeaponFunctions.PlaySound(player.Character, _weaponName, sound)
+	end
+
+	-- play replicated weapon sound (replicate to server)
+	animationEventFunctions.PlayReplicatedSound = function(soundName, dontDestroyOnRecreate)
+		local sound = weaponSounds:FindFirstChild(soundName)
+		local _weaponName = weaponName
+		if dontDestroyOnRecreate then _weaponName = false end
+
+		-- fire event (WeaponModuleScript.server.lua) to replicate to (WeaponModuleClientScript.client.lua)
+		weaponReplicateRemote:FireServer("PlaySound", char, _weaponName, sound)
+
+		-- play sound on local client
+		WeaponFunctions.PlaySound(player.Character, _weaponName, sound)
+	end
+
+	
+end
+
+--
+----
+-- [[ RUN ALL INIT FUNCTIONS HERE ]]
+----
+--
+
+initHUDGui()
+initHUDChar()
+initAnimations()
+initAnimationEvents()
 
 --[[
 	Camera Functions
@@ -104,18 +260,67 @@ function CameraUnequip()
 end
 
 --[[
+	HUD Char Functions
+]]
+
+local function hcEquip() -- model
+	if not hudChar then return end
+	hcModel.Parent = hudChar
+	local weaponHandle = hcModel.GunComponents.WeaponHandle
+	local grip = Instance.new("Motor6D")
+	grip.Name = "RightGrip"
+	grip.Parent = hudChar.RightHand
+	grip.Part0 = hudChar.RightHand
+	grip.Part1 = weaponHandle
+end
+
+local function hcUnequip() -- model
+	if not hudChar or not char or hum.Health <= 0 then return end
+	hcModel.Parent = player.Backpack
+end
+
+--[[
 	Weapon Functions
 ]]
 
 local connections = {}
 local hotConnections = {}
+local forcestop = false
+
+--[[
+	ANIMATION, VM, ICON FUNCTIONS
+]]
+
+function PlayWeaponAnimaton(location, name)
+	local animation: AnimationTrack = weaponVar.animations[location][name]
+
+	-- connect events
+	local wacvm = animation:GetMarkerReachedSignal("VMSpring"):Connect(function(param)
+		animationEventFunctions.VMSpring(param)
+	end)
+
+	local wacs = animation:GetMarkerReachedSignal("PlaySound"):Connect(function(param)
+		local sound: Sound = animationEventFunctions.PlaySound(param)
+	end)
+
+	animation:Play()
+	task.delay(animation.Length, function()
+		if animation.IsPlaying then animation.Ended:Wait() end
+		wacvm:Disconnect()
+		wacs:Disconnect()
+	end)
+	return animation
+end
 
 function StopAllAnimations()
+	forcestop = true
     for _, a in pairs(weaponVar.animations) do
         for _, v in pairs(a) do
             if v.IsPlaying then v:Stop() end
         end
     end
+	task.wait(0.06)
+	forcestop = false
 end
 
 function SetVMTransparency(t)
@@ -139,26 +344,6 @@ local function SetIconEquipped(equipped)
 	end
 end
 
-function Equip()
-	if weaponVar.equipped or weaponVar.equipping then return end
-	task.spawn(EnableHotConn)
-	task.spawn(CameraEquip)
-	weaponVar.equipping = true
-	
-	clientModel.Parent = vm.Equipped
-	vm.RightArm.RightGrip.Part1 = clientModel.GunComponents.WeaponHandle
-	
-	task.spawn(function()
-		weaponRemoteFunction:InvokeServer("Timer", "Equip")
-		if weaponVar.equipping then
-			weaponVar.equipped = true
-			weaponVar.equipping = false
-		end
-	end)
-
-    EquipAnimation()
-end
-
 function EquipAnimation()
 
 	SetIconEquipped(true)
@@ -168,8 +353,12 @@ function EquipAnimation()
         task.delay(0.07, function()
             SetVMTransparency(0)
         end)
-        weaponVar.animations.client.Pullout:Play()
-        weaponVar.animations.client.Pullout.Stopped:Wait()
+		local clientPullout = PlayWeaponAnimaton("client", "Pullout")
+		clientPullout.Stopped:Wait()
+        --weaponVar.animations.client.Pullout:Play()
+        --weaponVar.animations.client.Pullout.Stopped:Wait()
+		
+		if forcestop then return end
         if not weaponVar.equipped and not weaponVar.equipping then return end
         weaponVar.animations.client.Hold:Play()
     end)
@@ -180,80 +369,92 @@ function EquipAnimation()
         if not weaponVar.equipped and not weaponVar.equipping then return end
         weaponVar.animations.server.Hold:Play()
     end)
+
+	task.spawn(function() -- hud char
+		if not hudChar then return end
+		weaponVar.animations.clienthud.Pullout:Play()
+		weaponVar.animations.clienthud.Pullout.Stopped:Wait()
+		if forcestop then return end
+        if not weaponVar.equipped and not weaponVar.equipping then return end
+        weaponVar.animations.clienthud.Hold:Play()
+	end)
     
 end
 
+--[[
+	WEAPON TOOL FUNCTIONALITY
+]]
+
+function Equip()
+	if weaponVar.equipped or weaponVar.equipping then return end
+	forcestop = false
+	task.spawn(EnableHotConn)
+	task.spawn(CameraEquip)
+	weaponVar.equipping = true
+	
+	clientModel.Parent = vm.Equipped
+	local gripParent = vm:FindFirstChild("RightArm") or vm.RightHand
+	gripParent.RightGrip.Part1 = clientModel.GunComponents.WeaponHandle
+	
+	task.spawn(function()
+		weaponRemoteFunction:InvokeServer("Timer", "Equip")
+		if weaponVar.equipping then
+			weaponVar.equipped = true
+			weaponVar.equipping = false
+		end
+	end)
+
+	task.spawn(function()
+		hcEquip()
+		EquipAnimation()
+	end)
+end
+
 function Unequip()
-	task.spawn(DisableHotConn)
-	task.spawn(CameraUnequip)
-    task.spawn(StopAllAnimations)
-	SetIconEquipped(false)
+	clientModel.Parent = Temp
 	weaponVar.equipping = false
 	weaponVar.equipped = false
     weaponVar.firing = false
     weaponVar.reloading = false
-	clientModel.Parent = Temp
-end
-
-local function GetNewTargetRay(mousePos, acc)
-	return camera:ScreenPointToRay(mousePos.X + -acc.X, mousePos.Y + -acc.Y)
+	task.spawn(DisableHotConn)
+	task.spawn(CameraUnequip)
+	task.spawn(hcUnequip)
+	task.spawn(StopAllAnimations)
+	SetIconEquipped(false)
 end
 
 function Fire()
 
 	-- set var
+	local t = tick()
+	local mosPos = Vector2.new(mouse.X, mouse.Y)
+	local fireRegisterTime = workspace:GetServerTimeNow()
 	weaponVar.fireLoop = true
 	weaponVar.firing = true
-	local t = tick()
 	weaponVar.nextFireTime = t + weaponOptions.fireRate
 	weaponVar.ammo.magazine -= 1
 	weaponVar.currentBullet = (t - weaponVar.lastFireTime >= weaponOptions.recoilReset and 1 or weaponVar.currentBullet + 1)
-	CameraObject.weaponVar.currentBullet = weaponVar.currentBullet
 	weaponVar.lastFireTime = t
-	local fireRegisterTime = workspace:GetServerTimeNow()
+	CameraObject.weaponVar.currentBullet = weaponVar.currentBullet
 
-	local currVecOption, currShakeOption = CameraObject:GetSprayPatternKey()			-- get recoil pattern key
-	local currVecRecoil = CameraObject:GetRecoilVector3(currVecOption)				-- convert VectorRecoil or SpreadRecoil key into a Vector3
-	--local currShakeRecoil = cameraClass:GetRecoilVector3(currShakeOption)			-- convert ShakeRecoil key into a Vector3
-	
-	-- init paramaters for client bullet registration
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {player.Character, camera, workspace.Temp}
-	params.CollisionGroup = "Bullets"
+	RegisterFireRayAndCameraRecoil()
 
 	-- play animations
-    weaponVar.animations.client.Fire:Play()
+	PlayWeaponAnimaton("client", "Fire")
+    --weaponVar.animations.client.Fire:Play()
     weaponVar.animations.server.Fire:Play()
+	if hudChar then weaponVar.animations.clienthud.Fire:Play() end
+
+	-- play sounds
+	task.spawn(function()
+		animationEventFunctions.PlayReplicatedSound("Fire", true)
+		--animationEventFunctions.PlaySound("Fire")
+	end)
 	
 	task.spawn(function() -- client fire rate
 		local nextFire = t + weaponOptions.fireRate
 		repeat task.wait() until tick() >= nextFire
 		weaponVar.firing = false
-	end)
-	
-	local mosPos = Vector2.new(mouse.X, mouse.Y)
-	
-	task.spawn(function() -- client accuracy & bullet, fire camera spring
-		local clientAcc
-		clientAcc, weaponVar = CalculateAccuracy(weaponVar.currentBullet, currVecRecoil, weaponVar)
-		local unitRay = GetNewTargetRay(mosPos, clientAcc)
-		task.spawn(function() -- camera spring is fired after the accuracy is registered, to avoid bullets going in the wrong place.
-			CameraObject:FireRecoil(weaponVar.currentBullet)
-		end)
-		task.spawn(function()
-			local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 100, params)
-			if not result then return end
-			WeaponFunctions.RegisterShot(player, weaponOptions, result, unitRay.Origin)
-		end)
-	end)
-	
-	task.spawn(function() -- server accuracy
-		local serverAcc = weaponRemoteFunction:InvokeServer("GetAccuracy", currVecRecoil, weaponVar.currentBullet, char.HumanoidRootPart.Velocity.Magnitude)
-		--print(tostring(serverAcc) .. " server accuracy")
-		local finalRay = GetNewTargetRay(mosPos, serverAcc)
-		local serverBulletHole = weaponRemoteFunction:InvokeServer("Fire", finalRay, weaponVar.currentBullet, currVecRecoil, fireRegisterTime)
-		if serverBulletHole then serverBulletHole:Destroy() end
 	end)
 end
 
@@ -271,6 +472,118 @@ function Reload()
 	weaponVar.ammo.magazine = mag
 	weaponVar.ammo.total = total
 	weaponVar.reloading = false
+end
+
+--[[
+	ACCURACY, RECOIL, BULLET STUFF
+]]
+
+local function GetNewTargetRay(mousePos, acc)
+	return camera:ScreenPointToRay(mousePos.X + -acc.X, mousePos.Y + -acc.Y)
+end
+
+local function GetFireCastParams()
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {player.Character, camera, workspace.Temp}
+	params.CollisionGroup = "Bullets"
+	return params
+end
+
+local function createRayInformation(unitRay, result)
+	if not result then return end
+	return {origin = unitRay.Origin, direction = unitRay.Direction, instance = result.Instance, position = result.Position, normal = result.Normal, distance = result.Distance, material = result.Material}
+end
+
+local function isGrounded()
+	local hrp = char.HumanoidRootPart
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {char, camera}
+	return workspace:Raycast(hrp.CFrame.Position, -hrp.CFrame.UpVector * 5.85, params)
+end
+
+function RegisterFireRayAndCameraRecoil()
+
+	print('start fire ray')
+
+	task.spawn(function()
+		local m = player:GetMouse()
+		local mray = GetNewTargetRay(Vector2.new(m.X, m.Y), Vector2.zero)
+
+		print("get client accuracy")
+
+		local currVecOption = CameraObject:GetSprayPatternKey()			
+		local currVecRecoil = CameraObject:GetRecoilVector3(currVecOption)	-- convert VectorRecoil or SpreadRecoil key into a Vector3
+		local acc
+		acc, weaponVar = CalculateAccuracy(weaponVar.currentBullet, currVecRecoil, weaponVar, false, false, isGrounded()) -- update weaponVar on accuracy? i need to change that
+		local caccvec = AccuracyCalculator.GetMovementInaccuracyVector2((weaponOptions.accuracy.firstBullet and weaponVar.currentBullet == 1) or false)
+
+		print("get client accuracy")
+
+		-- register client ray using client accuracy
+		local direction = mray.Direction
+		direction = Vector3.new(direction.X + acc.X/500, direction.Y + acc.Y/500, direction.Z).Unit
+
+		-- if weapon is a spread weapon, add inaccuracy on the X vec
+		--[[if weaponOptions.spread then
+			direction = Vector3.new(direction.X + acc.X/500, direction.Y + acc.Y/500, direction.Z).Unit
+		else
+		
+		-- else, only add it on the Y vec (spray patterns)
+			direction = Vector3.new(direction.X, direction.Y + acc.Y/500, direction.Z).Unit
+		end]]
+
+		--if not mouse then mouse = player:GetMouse() end
+		--local mp = Vector2.new(mouse.X, mouse.Y)
+		--local unitRay = GetNewTargetRay(mp, acc)
+		local unitRay = mray
+
+		-- get server register time
+		--local fireRegisterTime = workspace:GetServerTimeNow()
+
+		-- get result
+		local params = GetFireCastParams()
+		local result = workspace:Raycast(unitRay.Origin, direction * 100, params) print(result)
+		
+		print("get client accuracy")
+
+		if result then
+			print("get client result")
+			-- register client shot for bullet/blood/sound effects
+			WeaponFunctions.RegisterShot(player, weaponOptions, result, unitRay.Origin)
+
+			-- pass ray information to server for verification and damage
+			local rayInformation = createRayInformation(unitRay, result)
+
+			task.spawn(function()
+				local hitRegistered, newAccVec = weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, caccvec, rayInformation, workspace:GetServerTimeNow())
+				-- if a hit is not registered through the server, reset accuracy and attempt to register again
+				--[[if not hitRegistered then
+					--[[acc, weaponVar = CalculateAccuracy(weaponVar.currentBullet, currVecRecoil, weaponVar, false, newAccVec)
+					local nur = GetNewTargetRay(Vector2.new(m.X, m.Y), Vector2.new(0,0))
+					local direction = nur.Direction
+					direction = Vector3.new(direction.X + acc.X/500, direction.Y + acc.Y/500, direction.Z).Unit
+					local nr = workspace:Raycast(unitRay.Origin, direction * 100, params)
+					local nri = createRayInformation(nur, nr)
+					weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, caccvec, nri, fireRegisterTime, true)
+				end]]
+			end)
+
+			return true
+		end
+
+		-- nothing hit
+
+		-- this shouldn't happen if the map is set
+		-- up with bullet colliders surrounding the map
+		return false
+	end)
+
+	-- fire camera recoil once accuracy has been calculated
+	-- to avoid the bullet going where the camera recoil is
+	CameraObject:FireRecoil(weaponVar.currentBullet)
+	
 end
 
 --[[
@@ -367,6 +680,7 @@ end
 	Connections
 ]]
 
+--[[ TOOL EQUIP INPUT CONNECTIONS ]]
 local equipKeyOptionName = "Key_" .. Strings.firstToUpper(weaponOptions.inventorySlot) .. "Weapon"
 connections.equipInputBegin = UserInputService.InputBegan:Connect(function(input, gp)
 	if input.KeyCode == Enum.KeyCode[PlayerOptions[equipKeyOptionName]] then
@@ -376,6 +690,7 @@ connections.equipInputBegin = UserInputService.InputBegan:Connect(function(input
 	end
 end)
 
+--[[ TOOL EQUIP ROBLOX CONNECTIONS ]]
 connections.equip = tool.Equipped:Connect(Equip)
 connections.unequip = tool.Unequipped:Connect(Unequip)
 

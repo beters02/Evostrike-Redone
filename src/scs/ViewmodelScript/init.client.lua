@@ -2,8 +2,8 @@
     Configuration
 ]]
 
-local bobcfg = {speed = 3.1, modifier = .5, clamp = 0.055}
-local charmoveswaycfg = {maxX = .2, maxY = .4}
+local bobcfg = {speed = 3.3, modifier = .3, clamp = 0.033}
+local charmoveswaycfg = {maxX = .2, maxY = .4, mod = 0.007}
 
 --[[
 	Variables
@@ -33,6 +33,7 @@ local bobSpring = VMSprings:new(9, 50, 4, 6) --m, f, d, s
 local charMoveSwaySpring = VMSprings:new(9, 30, 4, 6)
 local mouseSwaySpring = VMSprings:new(9, 40, 2, 6)
 local mouseSwayRotationSpring = VMSprings:new(9, 50, 4, 6)
+local weaponFireSpring = VMSprings:new(9, 75, 4, 6)
 
 --[[
 	Functions
@@ -54,6 +55,10 @@ end
 local function createViewmodel()
 	local viewModel = ReplicatedStorage:WaitForChild("Objects"):WaitForChild("viewModel")
 	local vm = viewModel:Clone()
+	if camera:FindFirstChild("viewModel") then
+		camera.viewModel:Destroy()
+		RunService:UnbindFromRenderStep("ViewmodelCamera")
+	end
 	vm.Parent = camera
 	return vm
 end
@@ -94,6 +99,7 @@ local function charMoveSway(dt)
 	local hum = char.Humanoid
 	local charHrp = char.HumanoidRootPart
 	local oldVel = movementVel.Velocity.Magnitude
+	local mod = charmoveswaycfg.mod
 	local velocity = oldVel * -.005
     local spring = charMoveSwaySpring
 	
@@ -120,8 +126,8 @@ local function charMoveSway(dt)
 	end
 
 	-- set velocity max/min
-	local velMax = 18 * -0.005
-	local velMagNum = (charHrp.Velocity.Magnitude * -0.005)
+	local velMax = 18 * -mod
+	local velMagNum = (charHrp.Velocity.Magnitude * -mod)
 	velMagNum = velMagNum < 0 and math.max(velMagNum, velMax) or math.min(-velMax, velMagNum)
 
 	-- create shove
@@ -131,7 +137,8 @@ local function charMoveSway(dt)
 	local shove = (Vector3.new(x, y, z))
 
 	-- accelerate shove
-	spring:shove(shove * (dt * 60))
+	-- needs to be multiplied by dt due to the velocity variable
+	spring:shove(shove * (dt*60))
 
 	--update
 	local updatedSpring = spring:update(dt)
@@ -150,7 +157,7 @@ local function mouseSway(dt)
     local shove = Vector3.new((-MouseDelta.X  / 500), MouseDelta.Y / 200, 0)
 
 	-- accelerate position shove
-	spring:shove(shove * dt * 60)
+	spring:shove(shove)
 
 	-- get rotation shove
 	-- we min the rotation on the up Y axis so it doesn't go up too much
@@ -159,7 +166,7 @@ local function mouseSway(dt)
 	rotShove = Vector3.new(rotShove.X, rsy, rotShove.Z)
 	
 	-- accelerate rotation shove
-	rotspring:shove(rotShove * dt * 60)
+	rotspring:shove(rotShove)
 	
 	--update
 	local uss = spring:update(dt)
@@ -172,25 +179,58 @@ local function jumpSway(dt)
 
 	-- var
 	local spring = charMoveSwaySpring
-	local y = math.clamp(50, -1, 1)
+
+	local y = (math.random(75, 100) / 100) * 0.7
 	local shov = Vector3.new(0, y, 0)
 
 	-- shove
-	spring:shove(shov * dt * 60)
+	spring:shove(shov)
+	
 	-- test shove mouse sway
-	mouseSwayRotationSpring:shove((shov/6)*dt*60)
+	--mouseSwayRotationSpring:shove((shov/7))
+
 	return
 end
 
 local function weaponFireSway(dt, x, y)
-	
+	local spring = weaponFireSpring
+	local shov = Vector3.new()
 end
 
-local function update(dt)
+local count = 0
+local VMSprings = {}
+
+local function updateVMSprings(dt)
+	if count > 0 then
+		for i, v in pairs(VMSprings) do
+			local func = v[2]
+			hrp.CFrame = func(dt, hrp)
+		end
+	end
+end
+
+function connectVMSpring(connect: boolean, spring, springName, func)
+	if connect then
+		VMSprings[springName] = {spring, func}
+		count += 1
+	else
+		disconnectVMSpring(spring)
+	end	
+end
+
+function disconnectVMSpring(springName)
+	VMSprings[springName] = nil
+	count -= 1
+end
+
+function update(dt)
 	cdt = dt
 	hrp.CFrame = camera.CFrame
     hrp.CFrame = hrp.CFrame:ToWorldSpace(bob(dt)) * charMoveSway(dt) * mouseSway(dt)
-	--HandleWeaponCollision()
+
+	-- VMSpringAnimation connect extra cfs
+	updateVMSprings(dt)
+
 end
 
 --[[
@@ -209,3 +249,5 @@ RunService:BindToRenderStep("ViewmodelCamera", Enum.RenderPriority.Camera.Value 
 script:WaitForChild("Jump").Event:Connect(function()
 	jumpSway(cdt)
 end)
+
+script:WaitForChild("ConnectVMSpring").Event:Connect(connectVMSpring)

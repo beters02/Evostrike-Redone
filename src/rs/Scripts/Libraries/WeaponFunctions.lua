@@ -53,6 +53,7 @@ function module.CreateBullet(fromChar, endPos, client)
 	local tween = Tween:Create(part, ti, goal)
 	local sizetween = Tween:Create(part, sizeti, sizegoal)
 	local finished = Instance.new("BindableEvent")
+	
 	task.delay(0.015, function() -- wait debug so the bullet is shown starting at the tip of the weapon
 		tween:Play() -- play tweens and destroy bullet
 		sizetween:Play()
@@ -74,15 +75,20 @@ function module.FireBullet(fromChar, result, isHumanoid)
 	if game:GetService("RunService"):IsServer() then return end
 	local endPos = result.Position
 	local bullet, bulletFinishedEvent = module.CreateBullet(fromChar, endPos, true)
-	WeaponRemotes.Replicate:FireServer("CreateBullet", fromChar, endPos)
+	task.spawn(function()
+		WeaponRemotes.Replicate:FireServer("CreateBullet", fromChar, endPos)
+	end)
 	if not isHumanoid then
-		module.CreateBulletHole(result)
+		task.spawn(function()
+			module.CreateBulletHole(result)
+		end)
 	end
 	bulletFinishedEvent.Event:Once(function()
 		bulletFinishedEvent:Destroy()
 	end)
 end
 
+-- player = damager
 local function getDamageFromHumResult(player, char, weaponOptions, pos, instance, normal, origin)
 		
 		-- register variables
@@ -93,6 +99,7 @@ local function getDamageFromHumResult(player, char, weaponOptions, pos, instance
 		local instance = instance
 		local calculateFalloff = true
 		local particleFolderName = "Hit"
+		local soundFolderName = "Bodyshot"
 		local killed = false
 
 		-- get hit bodypart
@@ -100,6 +107,7 @@ local function getDamageFromHumResult(player, char, weaponOptions, pos, instance
 			damage *= weaponOptions.damage.headMultiplier
 			calculateFalloff = weaponOptions.damage.enableHeadFalloff or false
 			particleFolderName = "Headshot"
+			soundFolderName = "Headshot"
 		elseif string.match(instance.Name, "Leg") or string.match(instance.Name, "Foot") then
 			damage *= weaponOptions.damage.legMultiplier
 		end
@@ -122,8 +130,9 @@ local function getDamageFromHumResult(player, char, weaponOptions, pos, instance
 
 			-- set ragdoll variations
 			char:SetAttribute("bulletRagdollNormal", -normal)
+			char:SetAttribute("bulletRagdollKillDir", (player.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Unit)
 			char:SetAttribute("lastHitPart", instance.Name)
-			char:SetAttribute("impulseModifier", 1)
+			char:SetAttribute("impulseModifier", 0.5)
 			
 			-- apply damage
             hum:TakeDamage(damage)
@@ -132,7 +141,7 @@ local function getDamageFromHumResult(player, char, weaponOptions, pos, instance
             module.TagPlayer(char, player)
 
 		end
-	return damage, particleFolderName, killed, char
+	return damage, particleFolderName, killed, char, soundFolderName
 end
 
 --[[
@@ -145,11 +154,13 @@ end
 function module.RegisterShot(player, weaponOptions, result, origin, dir, registerTime)
 	if not result.Instance then return false end
 
+	local particleFolderName
+	local soundFolderName
 	local hole = false
 	local isHumanoid = false
 	local damage = false
-	local particleFolderName
 	local killed = false
+	local _
 
 	-- if we are shooting a humanoid character
 	local char = result.Instance:FindFirstAncestorWhichIsA("Model")
@@ -158,15 +169,30 @@ function module.RegisterShot(player, weaponOptions, result, origin, dir, registe
 	end
 
 	if RunService:IsClient() then
+		print('shot registered')
 		task.spawn(function()
 			if not isHumanoid then return end
-			-- emit particles next frame
-			damage, particleFolderName, killed = getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
+
+			-- get damage, folders, killedBool
+			damage, particleFolderName, killed, _, soundFolderName = getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
 			local instance = result.Instance
-			if killed then
-				EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood.Kill:GetChildren(), instance, char)
+
+			-- particles
+			task.spawn(function()
+				if killed then
+					EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood.Kill:GetChildren(), instance, char)
+				end
+				if not particleFolderName then return end
+				EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood[particleFolderName]:GetChildren(), instance)
+			end)
+			
+			-- sounds
+			if soundFolderName then
+				task.spawn(function()
+					module.PlayGlobalSound(player.Character, "PlayerHit", soundFolderName)
+				end)
 			end
-			EmitParticle.EmitParticles(instance, ReplicatedStorage.Objects.Particles.Blood[particleFolderName]:GetChildren(), instance)
+
 		end)
 		return module.FireBullet(player.Character, result, isHumanoid)
 	elseif isHumanoid then
@@ -188,6 +214,53 @@ function module.TagPlayer(tagged: Model, tagger: Player)
 	gotTag.Value = tagger
 	gotTag.Parent = tagged
 	return gotTag
+end
+
+--[[
+	Sound
+]]
+
+-- if not weaponName, sound will not be destroyed upon recreation
+function module.PlaySound(playFrom, weaponName, sound)
+	local c: Sound
+
+	-- destroy sound on recreation if weaponName is specified
+	if weaponName then
+		c = playFrom:FindFirstChild(weaponName .. "_" .. sound.Name) :: Sound
+		if c then
+			c:Stop()
+			c:Destroy()
+		end
+	else
+		weaponName = "Weapon"
+	end
+
+	c = sound:Clone() :: Sound
+	c.Name = weaponName .. "_" .. sound.Name
+	c.Parent = playFrom
+	c:Play()
+	Debris:AddItem(c, c.TimeLength + 0.06)
+	return c
+end
+
+-- global weapon sounds (player hit, player killed, etc)
+
+-- global sounds typically consist of multiple sounds,
+-- therefore the PlayGlobalSound will play all sounds
+-- that are children to the specified SoundFolder
+function module.PlayGlobalSound(playFrom, ...)
+	local soundFolder
+
+	local globalSoundFolderName, a, b = ...
+	if globalSoundFolderName == "PlayerHit" then
+		local playerHitFolderName, soundName = a, b
+		soundFolder = ReplicatedStorage.Objects.Weapon.Global.Sounds.PlayerHit[playerHitFolderName]
+	end
+
+	for _, sound in pairs(soundFolder:GetChildren()) do
+		if not sound:IsA("Sound") then continue end
+		module.PlaySound(playFrom, false, sound)
+	end
 end
 
 return module

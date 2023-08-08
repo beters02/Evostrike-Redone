@@ -7,7 +7,7 @@ local module = {
 	maxMovementPitch = 0.6,
 
 	--[[ Ground Settings ]]
-	groundAccelerate = 10,
+	groundAccelerate = 8,
 	groundDeccelerate = 8,
 	groundMaxSpeed = 22,
 

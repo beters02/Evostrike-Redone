@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService('UserInputService')
 local RunService = game:GetService("RunService")
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 
 -- [[ Define Local Variables ]]
 local Inputs
@@ -34,10 +35,17 @@ local inAir = false
 local landing = false
 
 local landed = Events:WaitForChild("Landed")
-local movementState = require(game:GetService("ReplicatedStorage"):WaitForChild("Scripts"):WaitForChild("Modules"):WaitForChild("States")).Movement
+local movementState = require(Framework.ReplicatedStorage.Modules:WaitForChild("States")).Movement
+
+local hudCharModule = require(Framework.ReplicatedStorage.Libraries.HUDCharacter)
+local hudCharClass = hudCharModule.GetHUDCharacter()
+if typeof(hudCharClass) == "RBXScriptSignal" then hudCharClass = hudCharClass:Wait() end
+if not hudCharClass then warn("Couldn't load Movement HUDCharacter animations!") end
 
 local runningAnimation = hum.Animator:LoadAnimation(hum.Animations.Run)
 local jumpingAnimation = hum.Animator:LoadAnimation(hum.Animations.Jump)
+local hcRunningAnimation = hudCharClass.LoadAnimation(hum.Animations.Run)
+local hcJumpingAnimation = hudCharClass.LoadAnimation(hum.Animations.Jump)
 
 --[[ 
 	Variables for Custom Movement Abilities
@@ -95,6 +103,9 @@ for _, s in pairs(runsndsF:GetChildren()) do
 	if not s:IsA("Sound") then continue end
 	runsnds[s.Name] = s
 end
+
+-- init HUD character
+hudCharClass.animations = {running = hudCharClass.LoadAnimation(hum.Animations.Run), jumping = hudCharClass.LoadAnimation(hum.Animations.Jump)}
 
 Movement.Sounds = {
 	runDefault = runsnds.Tile,
@@ -183,11 +194,17 @@ function Movement.Run(hitPosition)
 		jumpingAnimation:Stop(0.1)
 	end
 
+	if hudCharClass.animations.jumping.IsPlaying then
+		hudCharClass.animations.jumping:Stop(0.1)
+	end
+
 	if Movement.movementVelocity.Velocity.Magnitude > 1 then
 		if not runningAnimation.IsPlaying then runningAnimation:Play(0.2) end
+		if not hudCharClass.animations.running.isPlaying then hudCharClass.animations.running:Play(0.2) end
 		if not runsnd.IsPlaying then runsnd:Play() end
 	else
 		if runningAnimation.IsPlaying then runningAnimation:Stop(0.2) end
+		if hudCharClass.animations.running.isPlaying then hudCharClass.animations.running:Stop(0.2) end
 		if runsnd.IsPlaying then runsnd:Stop() end
 	end
 end
@@ -206,9 +223,10 @@ function Movement.Jump(velocity)
 	collider.Velocity = Vector3.new(collider.Velocity.X, velocity, collider.Velocity.Z)
 	Movement.Air()
 
+	if hudCharClass.animations.running.isPlaying then hudCharClass.animations.running:Stop(0.2) end
 	if runningAnimation.IsPlaying then runningAnimation:Stop(0.1) end
 
-	jumpingAnimation:Play(0.1)
+	hudCharClass.animations.jumping:Play(0.1)
 
 	if connectViewmodelJump then
 		if not vmScript then vmScript = character.ViewmodelScript end
@@ -384,6 +402,11 @@ function Movement.ProcessMovement()
 	
 	if cameraLook == nil then return end
 	
+	local currVel = Movement.movementVelocity.Velocity
+	if currVel.X ~= currVel.X then Movement.movementVelocity.Velocity = Vector3.new(0,0,0)
+	elseif currVel.Y ~= currVel.Y then Movement.movementVelocity.Velocity = Vector3.new(0,0,0)
+	elseif currVel.Z ~= currVel.Z then Movement.movementVelocity.Velocity = Vector3.new(0,0,0) end
+
 	local hitPart, hitPosition, hitNormal, yRatio, zRatio, ladderTable = Movement:FindCollisionRay()
 	playerGrounded = hitPart and true or false
 	playerVelocity = collider.Velocity - Vector3.new(0, collider.Velocity.y, 0)

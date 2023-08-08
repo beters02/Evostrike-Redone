@@ -1,0 +1,26 @@
+The game is already starting to feel very messy and therefore I feel like
+we need to make a system for objects to make everything uniform and organized.
+
+Types:
+
+Module = A ModuleScript that contains more than 1 functions.
+Class = A ModuleScript that returns a class.
+Function = A ModuleScript that contains only 1 function.
+
+PlayerModule = Player-Related Module Scripts (Weapon, Ability)
+PlayerFunction = Player-Related Module Scripts that contain only 1 function
+
+Classes:
+
+GameObject = Any object that can be found within the game framework. (Modules, Folders, )
+
+Three main trees are:
+
+Server
+Contains Server only access GameObjects.
+
+Client
+Contains Client only access GameObjects.
+
+Shared
+Contains shared access GameObjects. 

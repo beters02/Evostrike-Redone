@@ -1,8 +1,14 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
-local Modules = game:GetService("ReplicatedStorage"):WaitForChild("Scripts"):WaitForChild("Modules")
-local Libraries = game:GetService("ReplicatedStorage"):WaitForChild("Scripts"):WaitForChild("Libraries")
+local Framework = require(ReplicatedStorage.Framework)
+local Scripts = Framework.ReplicatedStorage.Scripts
+local Modules = Framework.ReplicatedStorage.Modules
+local Libraries = Framework.ReplicatedStorage.Libraries
 local WeaponFunctions = require(Libraries.WeaponFunctions)
+local Signal = require(Modules.Signal)
+
+--local PlayerDamagedEvent = Framework.ReplicatedStorage.Remotes.PlayerDamaged :: BindableEvent
 
 local tool = script.Parent
 local serverModel = tool.ServerModel
@@ -45,6 +51,17 @@ function GetAccuracy(recoilVector3, currentBullet, speed)
 	return acc
 end
 
+function GetAccuracyVector(currentBullet)
+	return AccuracyCalculator.GetMovementInaccuracyVector2((weaponOptions.accuracy.firstBullet and currentBullet == 1) or false)
+end
+
+function RegisterShot(rayInformation, pos, origin, dir, shotRegisteredTime)
+	-- create a fake result to give to server
+	local fr = {Instance = rayInformation.instance, Position = pos, Normal = rayInformation.normal, Distance = rayInformation.distance, Material = rayInformation.material}
+	-- register shot function
+	WeaponFunctions.RegisterShot(player, weaponOptions, fr, origin, dir, shotRegisteredTime)
+end
+
 --[[
 	Weapon Functions
 ]]
@@ -57,37 +74,78 @@ function Equip()
 	local weaponHandle = serverModel.GunComponents.WeaponHandle
 
 	local grip = Instance.new("Motor6D")
+	grip.Name = "RightGrip"
 	grip.Parent = char.RightHand
 	grip.Part0 = char.RightHand
 	grip.Part1 = weaponHandle
 
-	grip.C0 = CFrame.new(Vector3.zero) * CFrame.fromEulerAnglesXYZ(0.18523180484771729, 1.4023197889328003, -1.4882946014404297)
+	--grip.C0 = CFrame.new(Vector3.zero) * CFrame.fromEulerAnglesXYZ(0.18523180484771729, 1.4023197889328003, -1.4882946014404297)
 end
 
 function Unequip()
 	player.Character.HumanoidRootPart.WeaponGrip.Part1 = nil
 end
 
-function Fire(finalRay, currentBullet, recoilVector3, shotRegisteredTime) -- Returns BulletHole
-	local diff = serverStoredVar.nextFireTime - tick()
-	if diff > 0 then
-		if diff > 0.01899 then
-			print(tostring(diff) .. " TIME UNTIL NEXT ALLOWED FIRE")
-			return
+local shotServerReRegistration = false
+function Fire(currentBullet, clientAccuracyVector, rayInformation, shotRegisteredTime, isFinal)
+
+	if not isFinal then
+		-- check client->server timer diff
+		local diff = serverStoredVar.nextFireTime - tick()
+		if diff > 0 then
+			if diff > 0.01899 then
+				print(tostring(diff) .. " TIME UNTIL NEXT ALLOWED FIRE")
+				return
+			end
 		end
+
+		-- update ammo
+		serverStoredVar.ammo.magazine -= 1
+		serverStoredVar.nextFireTime = tick() + weaponOptions.fireRate
 	end
 
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = {player.Character, workspace.Temp}
-	params.CollisionGroup = "Bullets"
+	local cb = currentBullet
+	local pos = rayInformation.position
+	local origin = rayInformation.origin
+	local dir = rayInformation.direction
+	local accvec = GetAccuracyVector(cb)
+	local caccvec = clientAccuracyVector
+	local fr
 
-	local result = workspace:Raycast(finalRay.Origin, finalRay.Direction * 100, params)
+	-- do result verifications if not already done
+	if not isFinal and shotServerReRegistration then
 
-	serverStoredVar.ammo.magazine -= 1
-	serverStoredVar.nextFireTime = tick() + weaponOptions.fireRate
+		-- accuracy verification
+		-- disabled temporarily
+		local cx, cy = math.abs(caccvec.X), math.abs(caccvec.Y)
+		local sx, sy = math.abs(accvec.X), math.abs(accvec.Y)
+		local ct = {cx, cy}
+		local st = {sx, sy}
 
-	WeaponFunctions.RegisterShot(player, weaponOptions, result, finalRay.Origin, finalRay.Direction, shotRegisteredTime)
+		for i, v in pairs(ct) do
+			if v < st[i] then
+				if sx - cx > 6 then
+					-- acc diff is bigger than 6, re register shot
+					--print("SHOT NOT REGSITERED")
+					--return false, accvec
+				end
+			end
+		end
+
+		-- position verification
+
+	end
+	
+	-- if initial shot is verified, register
+	local damage, _, _, damagedChar = RegisterShot(rayInformation, pos, origin, dir, shotRegisteredTime)
+
+	-- if damage was inflicted, fire PlayerDamaged event/signal
+	if damage then
+		local PlayerDamagedSignal = Signal.GetSignal("PlayerDamaged")
+		if PlayerDamagedSignal then PlayerDamagedSignal.Fire(damagedChar, char, damage) end
+	end
+
+	return true
 end
 
 function Reload()

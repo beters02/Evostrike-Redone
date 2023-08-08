@@ -1,0 +1,16 @@
+--[[@title 			- initHUDGui
+	@summary
+					- Initializes the weapon frames (weapon icons) on the Main Menu HUD GUI
+					- Doesn't stop at goal, only stops after time is reached. 
+
+	@param[opt]		- {number} decrease - Amount goal to decrease current movement speed by.
+					- default: Movement.landingMovementDecrease
+
+	@param[opt]		- {number} waitTime - Total length of speed decrease.
+					- default: Movement.landingMovementDecreaseLength
+
+	@param[opt]		- {number} iterations - Total loop iterations
+					- default: 12
+	
+	@return			- {void}
+]]

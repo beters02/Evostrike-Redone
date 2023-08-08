@@ -52,7 +52,6 @@ function Recoil:FireRecoil(currentBullet)
 	recoilVec = (recoilVec/1) * self.weaponVar.camModifier -- /4
 
 	local x = recoilVec.X > 0 and math.min(recoilVec.X, max.X) or math.max(recoilVec.X, -max.X)
-    if self.weaponVar.isSpread then x = math.min(math.abs(recoilVec.X), max.X) end
 	local y = recoilVec.Y > 0 and math.min(recoilVec.Y, max.Y) or math.max(recoilVec.Y, -max.Y)
 	local z = recoilVec.Z > 0 and math.min(recoilVec.Z, max.Z) or math.max(recoilVec.Z, -max.Z)
     

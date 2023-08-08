@@ -23,7 +23,6 @@ function CameraObject.new(weaponName)
     self.weaponVar.camReset = self.weaponVar.options.cameraRecoilReset or self.weaponVar.options.recoilReset
     self.weaponVar.camModifier = 1
     self.weaponVar.vecModifier = 1
-    self.weaponVar.isSpread = self.weaponVar.options.spread or false
 
     -- test spring
     self.testSpring = FESpring.spring.new(Vector3.zero)
