@@ -215,7 +215,7 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
     return tool
 end
 
---[[@title 			    - Add
+--[[@title 			    - Remove
 	@summary
 					    - Removes a weapon from a players inventory
 
@@ -232,15 +232,6 @@ function Weapon.Remove(player, weaponName)
 	
 	WeaponAddRemoveEvent:FireClient(player, "Remove", weaponName, tool)
 	tool:Destroy()
-end
-
-function Weapon.AddWeaponController(char)
-	local controller = script.WeaponController:Clone()
-	controller.Parent = char
-end
-
-function Weapon.GetWeaponController(player)
-	return player.Character:FindFirstChild("WeaponController")
 end
 
 function Weapon.ClearPlayerInventory(player)

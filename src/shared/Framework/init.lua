@@ -86,6 +86,14 @@ local compile = {
         local n: Types.Class = {Access = "Shared", Location = game:GetService("ReplicatedStorage")[key], Module = req, New = req.new}
         Framework[key] = n
         return n
+    end,
+
+    shm_ = function(key: string)
+        key = key:gsub("shm", "m")
+        local req = require(game:GetService("ReplicatedStorage")[key])
+        local n: Types.Module = {Access = "Shared", Location = game:GetService("ReplicatedStorage")[key], Client = quickGetClient}
+        Framework[key] = n
+        return n
     end
 }
 
