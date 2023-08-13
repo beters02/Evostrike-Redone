@@ -1,0 +1,13 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "sharedRagdollRE",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "sharedRagdollRF",
+        "ClassName": "RemoteFunction"
+      }
+    ]
+  }

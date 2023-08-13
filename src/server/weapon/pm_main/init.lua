@@ -33,7 +33,8 @@ local function verifyWeaponSanity(weaponName: string)
     local isKnife
     
     -- verify weapon options, if found return require table
-    weaponOptions = ServerScriptService.weapon.obj.config:FindFirstChild(string.lower(weaponName))
+    weaponOptions = ServerScriptService.weapon.config:WaitForChild(string.lower(weaponName))
+	print(weaponOptions)
 	if not weaponOptions or (weaponOptions and not weaponOptions:IsA("ModuleScript") or weaponOptions:GetAttribute("NotWeapon")) then
 		warn("Could not verify WeaponOptions for " .. weaponName)
         return false
@@ -120,15 +121,9 @@ local function initScripts(tool, isKnife)
     local clientScript, serverScript
     local newFolder = Instance.new("Folder") -- create folder
     newFolder.Name = "Scripts"
-        -- knife
-	if isKnife then
-		clientScript = WeaponScripts[3]:Clone()
-		serverScript = WeaponScripts[4]:Clone()
-	else
-	    -- weapon
-		clientScript = WeaponScripts[1]:Clone()
-		serverScript = WeaponScripts[2]:Clone()
-	end
+
+	clientScript = WeaponScripts[1]:Clone()
+	serverScript = WeaponScripts[2]:Clone()
 
     clientScript.Parent, serverScript.Parent = newFolder, newFolder
     newFolder.Parent = tool
@@ -204,6 +199,23 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
     
     -- init scripts
 	clientScript, serverScript, scriptsFolder = initScripts(tool, isKnife)
+	
+	-- init remotes
+	initRemotesAndObjects(player, tool, clientModel, weaponObjects)
+
+	-- grab core functioncontainer
+	local baseCore = WeaponScripts[1].Parent.basecore
+	local core = WeaponScripts[1].Parent:FindFirstChild(string.lower(weaponName) .. "core")
+
+	if core then
+		core = core:Clone()
+		core.Name = "corefunctions"
+		core.Parent = clientScript
+	end
+	
+	baseCore = baseCore:Clone()
+	baseCore.Name = "basecorefunctions"
+	baseCore.Parent = clientScript
 
     -- parent tool and enable scripts
 	tool.Parent = player.Backpack

@@ -30,16 +30,3 @@ we need to make a system for objects to make everything uniform and organized.
 
 [GameObject] = Any object that can be found within the game framework. (Modules, Folders)
 [ScriptGameObject] = A [GameObject] that is a script and not a ModuleScript.
-
-[GameScopes]
-
-Three main trees (GameScopes) are:
-
-Server
-Contains Server only access GameObjects.
-
-Client
-Contains Client only access GameObjects.
-
-Shared
-Contains shared access GameObjects.

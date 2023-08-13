@@ -1,9 +1,0 @@
-intellisense works with this:
-
-    local new: {b: string} = {}
-    for i, v in pairs({b = "b"}) do
-        new[i] = v
-    end
-
-    local s = {b = {Test = "b"}}
-    s[new.b].Test

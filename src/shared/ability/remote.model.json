@@ -1,0 +1,17 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "sharedAbilityRE",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "sharedAbilityRF",
+        "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "grenade",
+        "ClassName": "RemoteEvent"
+      }
+    ]
+  }

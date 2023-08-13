@@ -11,8 +11,8 @@ local wepconfig = {
 	recoilReset = 0.24,
 	camRecoilReset = 0.5,
 	
-	fireVectorCameraOffset = Vector2.new(0, 35),
-	fireVectorCameraMax = Vector3.new(0.009, 0.012, 0.3),
+	fireVectorCameraOffset = Vector2.new(10, 35),
+	fireVectorCameraMax = Vector3.new(0.009, 0.011, 0.3),
 	
 	ammo = {
 		magazine = 30,
@@ -40,5 +40,8 @@ local wepconfig = {
 	
 	serverModelSize = 0.75
 }
+
+local sprayPattern = require(game:GetService("ServerScriptService"):WaitForChild("weapon"):WaitForChild("config"):WaitForChild("ak47"):WaitForChild("spraypattern"))
+wepconfig.sprayPattern = require(game:GetService("ReplicatedStorage"):WaitForChild("weapon"):WaitForChild("fc_initSprayPattern"))(sprayPattern.vec)
 
 return wepconfig

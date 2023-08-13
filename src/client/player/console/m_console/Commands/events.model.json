@@ -1,0 +1,17 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "Clear",
+        "ClassName": "BindableEvent"
+      },
+      {
+        "Name": "Close",
+        "ClassName": "BindableEvent"
+      },
+      {
+        "Name": "Gamemode",
+        "ClassName": "BindableEvent"
+      }
+    ]
+  }
