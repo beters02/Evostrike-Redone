@@ -11,6 +11,16 @@ local module = {
 	groundDeccelerate = 10, -- the lower this number is, the longer it takes to decel btw
 	groundMaxSpeed = 21,
 
+	walkMoveSpeed = 14,
+	--walkFriction
+
+	crouchMoveSpeed = 8,
+	crouchFriction = 6,
+	crouchDeccelerate = 4,
+
+	defGroundDeccelerate = 10,
+	defFriction = 7,
+
 	--[[ Air Settings ]]
 	airAccelerate = 22,
 	airSpeed = 5,
@@ -33,7 +43,9 @@ local module = {
 
 	--[[ Character Settings ]]
 	playerTorsoToGround = 5,
-	movementStickDistance = 0.85
+	movementStickDistance = 0.85,
+	crouchDownAmount = 1.6,
+	defaultCameraHeight = -0.55,
 
 }
 

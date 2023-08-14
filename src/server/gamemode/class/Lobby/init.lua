@@ -28,6 +28,11 @@ function Lobby:PostWait(players)
     for i, v in pairs(GamemodeLoc.Bots:GetChildren()) do
         BotModule:Add(v)
     end
+
+    -- remove barriers
+    if workspace:FindFirstChild("Barriers") then
+        workspace.Barriers.Parent = game:GetService("ReplicatedStorage")
+    end
 end
 
 function Lobby:Start()
@@ -91,6 +96,7 @@ function Lobby:SpawnPlayer(player)
     -- give player knife
     Ability.Add(player, "Dash")
     Ability.Add(player, "Molly")
+    --Ability.Add(player, "LongFlash")
     Weapon.Add(player, "AK47")
     --Weapon.Add(player, "Glock17")
     Weapon.Add(player, "Knife", true)

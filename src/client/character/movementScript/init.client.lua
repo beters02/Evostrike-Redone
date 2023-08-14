@@ -34,6 +34,7 @@ local currentDT = 1/60
 
 local playerGrounded = false
 local jumping = false
+local crouching = false
 local jumpCooldown = false
 local inAir = false
 local landing = false
@@ -44,6 +45,7 @@ local landed = Events:WaitForChild("Landed")
 
 local runningAnimation = hum.Animator:LoadAnimation(hum.Animations.Run)
 local jumpingAnimation = hum.Animator:LoadAnimation(hum.Animations.Jump)
+local crouchingAnimation = hum.Animator:LoadAnimation(hum.Animations.Crouch)
 
 --[[ 
 	Variables for Custom Movement Abilities
@@ -130,6 +132,13 @@ end
 
 --create YLength after config variables are added
 Movement.rayYLength = Movement.playerTorsoToGround + Movement.movementStickDistance
+
+-- Total max speed add modifier (for weapon slowing)
+Movement.maxSpeedAdd = 0
+
+-- update camera height
+hum.CameraOffset = Vector3.new(0, Movement.defaultCameraHeight, 0)
+print(hum.CameraOffset)
 
 -- extract movement functions and put them in the Movement scope
 for i, v in pairs(setmetatable(require(script.Functions), Movement)) do
@@ -325,6 +334,53 @@ function Movement.Land(fric: number, waitTime: number)
 end
 
 --[[
+	@title  		- Movement.Crouch
+
+	@summary
+]]
+
+function Movement.Crouch(crouch: boolean)
+
+	if crouch then
+		
+		-- slow player
+		Movement.maxSpeedAdd -= Movement.groundMaxSpeed - Movement.crouchMoveSpeed
+		Movement.friction = Movement.crouchFriction
+		Movement.groundDeccelerate = Movement.crouchDeccelerate
+
+		-- play crouching animation
+		crouchingAnimation:Play(0.3)
+
+		-- lower camera height
+		hum.CameraOffset = Vector3.new(0, -Movement.crouchDownAmount, 0)
+
+	else
+	
+		-- unslow player
+		Movement.maxSpeedAdd += Movement.groundMaxSpeed - Movement.crouchMoveSpeed
+		Movement.friction = Movement.defFriction
+		Movement.groundDeccelerate = Movement.defGroundDeccelerate
+
+		-- stop crouching animation
+		crouchingAnimation:Stop(0.5)
+
+		-- raise camera height
+		hum.CameraOffset = Vector3.new(0, Movement.defaultCameraHeight, 0)
+
+	end
+end
+
+--[[
+	@title  		- Movement.Walk
+
+	@summary
+]]
+
+function Movement.Walk(walk: boolean)
+	
+end
+
+--[[
 	Movement Abilities
 ]]
 
@@ -422,7 +478,8 @@ function Movement.ProcessMovement()
 		end
 	end
 	
-	-- [[ INPUT REGISTRATION ]]
+	-- [[ JUMP & CROUCH INPUT REGISTRATION ]]
+
 	if Inputs.FormattedKeys[Inputs.Keys.Jump[1]] > 0 then
 		jumping = true
 	else
@@ -430,6 +487,16 @@ function Movement.ProcessMovement()
 		if playerGrounded and jumpCooldown then
 			jumpCooldown = false
 		end
+	end
+
+	if Inputs.FormattedKeys[Inputs.Keys.Crouch[1]] > 0 then
+		if not crouching then
+			crouching = true
+			Movement.Crouch(true)
+		end
+	elseif crouching then
+		Movement.Crouch(false)
+		crouching = false
 	end
 	
 	-- set rotation
@@ -497,7 +564,8 @@ Inputs.Keys = {
 	Left = {"A", false},
 	Right = {"D", false},
 	--Jump = {"Space", false}
-	Jump = {"MouseWheel", false}
+	Jump = {"MouseWheel", false},
+	Crouch = {"C", false}
 }
 
 Inputs.FormattedKeys = {
@@ -506,7 +574,8 @@ Inputs.FormattedKeys = {
 	A = 0,
 	D = 0,
 	--Space = 0
-	MouseWheel = 0
+	MouseWheel = 0,
+	C = 0
 }
 
 function Inputs.FormatKeys()
@@ -560,8 +629,26 @@ function Inputs.UpdateMovementSum()
 end
 
 --[[
+	Communication (Only property changed right now)
+]]
+
+local Communicate = require(script:WaitForChild("Communicate"))
+
+local function listenForPropertyChanged()
+	local newproptab = Communicate._listenForChanges(Movement)
+	if not newproptab then return end
+
+	for i, v in pairs(newproptab) do
+		Movement[i] = v
+	end
+	return
+end
+
+
+--[[
 	Main Scope
 ]]
+
 local prevUpdateTime = nil
 local updateDT = 1/60
 
@@ -572,6 +659,7 @@ function Update(dt)
 
 	Inputs.UpdateMovementSum()
 	Movement.ProcessMovement()
+	listenForPropertyChanged()
 end
 
 function SetDeltaTime() --seconds

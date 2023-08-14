@@ -72,6 +72,9 @@ local camera = workspace.CurrentCamera
 local vm = camera:WaitForChild("viewModel")
 local mouse = player:GetMouse()
 --local viewmodelScript
+local movementScript = char:WaitForChild("movementScript")
+local movementCommunicate = require(movementScript:WaitForChild("Communicate"))
+local groundMaxSpeed = movementCommunicate.GetVar("groundMaxSpeed")
 
 -- viewmodel var
 local vmAnimController
@@ -463,6 +466,26 @@ function util_getMouseTargetRayWithAcc(mousePos, acc)
 	return camera:ScreenPointToRay(mousePos.X + -acc.X, mousePos.Y + -acc.Y)
 end
 
+--[[@title 			- util_handleHoldMovementPenalize(equip)
+	
+	@summary
+					- 
+	@return			- {void}
+]]
+
+function util_handleHoldMovementPenalize(equip)
+	local currAdd = movementCommunicate.GetVar("maxSpeedAdd")
+
+	if equip then
+		currAdd -= weaponOptions.movement.penalty
+	else
+		currAdd += weaponOptions.movement.penalty
+	end
+
+	movementCommunicate.SetVar("maxSpeedAdd", currAdd)
+	--print('set new ground max speed add', currAdd)
+end
+
 --[[@title 			- conn_enableHotConnections
 	
 	@summary
@@ -606,6 +629,10 @@ function core_equip()
 
     -- animation (sounds are processed in animationevents)
     util_processEquipAnimation()
+
+	-- set movement speed
+	util_handleHoldMovementPenalize(true)
+	
 end
 
 --[[@title 			- core_unequip
@@ -618,6 +645,7 @@ function core_unequip()
 	weaponVar.equipped = false
     weaponVar.firing = false
     weaponVar.reloading = false
+	util_handleHoldMovementPenalize(false)
 
     task.spawn(function()
         weaponCameraObject:StopCurrentRecoilThread()

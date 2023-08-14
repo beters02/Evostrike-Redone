@@ -12,7 +12,7 @@ local Molly = {
     isGrenade = true,
     acceleration = 10,
     speed = 150,
-    gravityModifier = 0.2,
+    gravityModifier = 0.5,
     startHeight = 2,
 
     -- genral settings

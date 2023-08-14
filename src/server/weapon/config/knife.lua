@@ -39,6 +39,11 @@ local module = {
 		damageFalloffDistance = 20,
 		damageFalloffMinimumDamage = 20,
 		enableHeadFalloff = false
+	},
+
+	movement = {
+		penalty = 0,
+		hitTagAmount = 6
 	}
 	
 }

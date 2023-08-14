@@ -32,7 +32,6 @@ function remote_timer(timerType)
 	if not length then error("Could not find timer " .. tostring(timerType)) end
 	endTime += length
 	repeat task.wait() until tick() >= endTime
-	print(timerType .. " ended!")
 	return true
 end
 

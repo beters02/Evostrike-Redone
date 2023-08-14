@@ -197,9 +197,7 @@ local function getDamageFromHumResult(player, char, weaponOptions, pos, instance
 		-- calculate damage falloff
 		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
 			local diff = distance - weaponOptions.damage.damageFalloffDistance
-			--print(damage - diff * weaponOptions.damage.damageFalloffPerMeter)
 			damage = math.max(damage - diff * weaponOptions.damage.damageFalloffPerMeter, weaponOptions.damage.damageFalloffMinimumDamage)
-			--print(damage)
 		end
 
 		-- see if player will be killed after damage is applied
@@ -249,7 +247,6 @@ function module.RegisterShot(player, weaponOptions, result, origin, dir, registe
 	end
 
 	if RunService:IsClient() then
-		print('shot registered')
 		task.spawn(function()
 			if not isHumanoid then return end
 
@@ -389,7 +386,6 @@ function module.getMovementInaccuracyVector2(firstBullet, player, speed, weaponO
 	
 	local acc = quickVecAdd(Vector2.zero, toAdd)
 	if not move and not first then acc = Vector2.new(acc.X, quickMaxOrMin(acc.Y, 1.5)) end
-	print(acc)
 	return acc
 end
 
@@ -399,7 +395,6 @@ function module.CalculateAccuracy(player, weaponOptions, currentBullet, recoilVe
 	local vecmod = storedVar.currentVectorModifier or 1
 	local offset = weaponOptions.fireVectorCameraOffset * vecmod
 
-	print(recoilVector3)
 	local newy
 	if recoilVector3.Y < 0 then
 		newy = math.max(recoilVector3.Y, -1.5)

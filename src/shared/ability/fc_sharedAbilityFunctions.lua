@@ -57,7 +57,7 @@ function Shared.FireCaster(player, mouseHit, caster, casbeh, abilityOptions)
         if abilityOptions.abilityName == "LongFlash" then
             Shared.LongFlashRayHit(cast, result, velocity, bullet, playerLookNormal)
         elseif abilityOptions.abilityName == "Molly" then
-            Shared.MollyRayHit(cast, result, bullet, Shared.AbilityObjects.Molly)
+            Shared.MollyRayHit(cast, result, bullet, Shared.AbilityObjects.Molly, direction, velocity)
         end
     end))
     table.insert(conns, caster.CastTerminating:Connect(function()
@@ -160,10 +160,10 @@ function Shared.GetMollyParams()
     return op
 end
 
-function Shared.CreateMollyCirclePart(grenade, abilityObjects)
+function Shared.CreateMollyCirclePart(grenade, abilityObjects, position)
     local vispart = abilityObjects.Models.MollyPreset:Clone()
     vispart.Size = Vector3.new(0.1, 15, 15)
-    vispart.CFrame = CFrame.new(grenade.CFrame.Position) * CFrame.Angles(0,0,math.pi*-.5)
+    vispart.CFrame = CFrame.new(position or grenade.CFrame.Position) * CFrame.Angles(0,0,math.pi*-.5)
     vispart.CollisionGroup = "Bullets"
     vispart.Parent = workspace.Temp
 
@@ -178,7 +178,41 @@ end
     function MollyRayHit
 ]]
 
-function Shared.MollyRayHit(cast, result, grenade, abilityObjects)
+function Shared.MollyRayHit(cast, result, grenade, abilityObjects, direction, velocity)
+
+    local explode = true
+    local touchedConn
+    local position = grenade.CFrame.Position
+
+    -- unit the normal (i its already normalized idk)
+	local normal = result.Normal
+	-- reflect the vector
+	local reflected = velocity - 2 * velocity:Dot(normal) * normal
+
+    if result.Normal ~= Vector3.new(0,1,0) then
+        explode = false
+
+        grenade.CanCollide = true
+        grenade.Velocity = reflected * 0.3
+        task.wait()
+
+        touchedConn = grenade.Touched:Connect(function(part)
+            local p = RaycastParams.new()
+            p.FilterDescendantsInstances = {grenade}
+            p.FilterType = Enum.RaycastFilterType.Exclude
+            local g = workspace:Raycast(grenade.Position, Vector3.new(0,-1,0) * 2, p)
+            print(g)
+            if not g then return end
+
+            position = g.Position
+            explode = true
+            touchedConn:Disconnect()
+            print(part.Name)
+        end)
+    end
+
+    if not explode then repeat task.wait() until explode end
+
     grenade:Destroy()
 
     if RunService:IsClient() then
@@ -186,7 +220,7 @@ function Shared.MollyRayHit(cast, result, grenade, abilityObjects)
     end
 
     -- create circle radius
-    local circlepart, hitpart = Shared.CreateMollyCirclePart(grenade, abilityObjects)
+    local circlepart, hitpart = Shared.CreateMollyCirclePart(grenade, abilityObjects, position)
 
     local t = tick() + 3 --(abilityOptions.mollyLength)
     local conn

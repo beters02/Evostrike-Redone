@@ -1,4 +1,5 @@
 local wepconfig = {
+
     inventorySlot = "primary",
 	automatic = true,
 	
@@ -38,6 +39,11 @@ local wepconfig = {
 		enableHeadFalloff = false
 	},
 	
+	movement = {
+		penalty = 2.6,
+		hitTagAmount = 6
+	},
+
 	serverModelSize = 0.75
 }
 
