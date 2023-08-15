@@ -73,18 +73,16 @@ end
 local function checkPlayerHasWeaponInSlot(player: Player, weaponSlot: string)
     local _stored = Weapon.StoredPlayerInventories[player.Name]
     if not _stored then warn("Could not find stored player weapon inventory") return false end
-
     if _stored[weaponSlot] then
         return _stored[weaponSlot]
     end
-
     return false
 end
 
-local function setPlayerWeaponInSlot(player: string, weaponName: string, weaponSlot: string)
+local function setPlayerWeaponInSlot(player: string, weaponName: string, weaponSlot: string, weaponTool: Model)
     local _stored = Weapon.StoredPlayerInventories[player.Name]
     if not _stored then warn("Could not find stored player weapon inventory") return false end
-    _stored[weaponSlot] = weaponName
+    Weapon.StoredPlayerInventories[player.Name][weaponSlot] = {Name = weaponName, Tool = weaponTool, Slot = weaponSlot}
     return true
 end
 
@@ -186,16 +184,17 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
 	inventorySlot = weaponOptions.inventorySlot
 	
     -- check if player has a weapon in the slot
+	task.wait()
     local currentWeaponInSlot = checkPlayerHasWeaponInSlot(player, inventorySlot)
     if currentWeaponInSlot then
         Weapon.Remove(player, currentWeaponInSlot)
     end
 
-    -- set player inv
-    setPlayerWeaponInSlot(player, weaponName, inventorySlot)
-
 	-- create tool & models
     tool, clientModel, serverModel = initToolAndModels(weaponName, weaponObjects)
+
+	-- set player inv
+    setPlayerWeaponInSlot(player, weaponName, inventorySlot, tool)
     
     -- init scripts
 	clientScript, serverScript, scriptsFolder = initScripts(tool, isKnife)
@@ -224,6 +223,14 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
 	-- Add Weapon Client
 	WeaponAddRemoveEvent:FireClient(player, "Add", weaponName, weaponOptions, weaponObjects)
 
+	task.wait()
+	task.wait()
+
+	-- force equip
+	if forceEquip then
+		player.Character:WaitForChild("Humanoid"):EquipTool(tool)
+	end
+
     return tool
 end
 
@@ -233,21 +240,27 @@ end
 
     @return
 ]]
-function Weapon.Remove(player, weaponName)
+function Weapon.Remove(player, weaponTable)
 	if not player.Character then return end
-	local tool = player.Character:FindFirstChild("Tool_" .. weaponName)
-	if not tool then tool = player.Backpack:FindFirstChild("Tool_" .. weaponName) else player.Character.Humanoid:UnequipTools() end
-	if not tool then
-		warn("Could not find player's weapon " .. weaponName .. " to remove.")
-		return
-	end
-	
-	WeaponAddRemoveEvent:FireClient(player, "Remove", weaponName, tool)
+
+	local tool = weaponTable.Tool
+	WeaponAddRemoveEvent:FireClient(player, "Remove", tool)
 	tool:Destroy()
+
+	-- equip knife if possible
+	local knife = checkPlayerHasWeaponInSlot(player, "ternary")
+	if knife then
+		if not knife or not knife.Parent then return end
+		player.Character.Humanoid:EquipTool(knife.Tool)
+	end
+
+	-- set inv slot
+	Weapon.StoredPlayerInventories[player.Name][weaponTable.Slot] = nil
+
 end
 
 function Weapon.ClearPlayerInventory(player)
-	local currentInventory = WeaponGetEvent:InvokeClient(player)
+	local currentInventory = Weapon.StoredPlayerInventories[player.Name]
 	if not currentInventory then return end
 	for i, v in pairs(currentInventory) do
 		if v then

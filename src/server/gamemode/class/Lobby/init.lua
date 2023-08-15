@@ -11,6 +11,7 @@ local BotModule = require(Framework.sm_bots.Location)
 local GamemodeLoc = game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("class"):WaitForChild("Lobby")
 
 function Lobby:PostWait(players)
+
     -- add any players that have already joined
     for i, v in pairs(players) do
         task.spawn(function()
@@ -33,6 +34,8 @@ function Lobby:PostWait(players)
     if workspace:FindFirstChild("Barriers") then
         workspace.Barriers.Parent = game:GetService("ReplicatedStorage")
     end
+
+    print('Loaded')
 end
 
 function Lobby:Start()
@@ -76,12 +79,13 @@ end
 
 function Lobby:SpawnPlayer(player)
     player:LoadCharacter()
-    local character = player.Character or player.CharacterAdded:Wait()
 
-    -- connect death events
-    character.Humanoid.Died:Once(function()
-        self:Died(player)
-    end)
+    task.wait()
+
+    local hum = player.Character:WaitForChild("Humanoid")
+    print(hum)
+
+    player.Character.Humanoid.Health = 100
 
     -- teleport player to spawn
     local spawnLoc = workspace:WaitForChild("Spawns"):WaitForChild("Default")
@@ -89,23 +93,35 @@ function Lobby:SpawnPlayer(player)
     local spawnLoc = Spawns and Spawns:FindFirstChild("Default")]]
     spawnLoc = spawnLoc or workspace.SpawnLocation
 
-    character.PrimaryPart.Anchored = true
-    character:SetPrimaryPartCFrame(spawnLoc.CFrame + Vector3.new(0,2,0))
-    character.PrimaryPart.Anchored = false
+    player.Character.PrimaryPart.Anchored = true
+    player.Character:SetPrimaryPartCFrame(spawnLoc.CFrame + Vector3.new(0,2,0))
+    player.Character.PrimaryPart.Anchored = false
 
     -- give player knife
     Ability.Add(player, "Dash")
-    Ability.Add(player, "Molly")
-    --Ability.Add(player, "LongFlash")
+    --Ability.Add(player, "Molly")
+    Ability.Add(player, "LongFlash")
     Weapon.Add(player, "AK47")
     --Weapon.Add(player, "Glock17")
     Weapon.Add(player, "Knife", true)
 
+    if player.Character.Humanoid.Health <= 0 then warn("what the fuck") end
+
+    local conn
+    conn = hum:GetPropertyChangedSignal("Health"):Connect(function()
+        print(hum.Health)
+        if hum.Health <= 0 then
+            self:Died(player)
+            conn:Disconnect()
+        end
+    end)
 end
 
 function Lobby:Died(player)
-    Weapon.ClearPlayerInventory(player)
-    Ability.ClearPlayerInventory(player)
+    task.spawn(function()
+        Weapon.ClearPlayerInventory(player)
+        Ability.ClearPlayerInventory(player)
+    end)
     task.wait(2)
     self:SpawnPlayer(player)
 end

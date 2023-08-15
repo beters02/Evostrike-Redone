@@ -96,6 +96,8 @@ local function disableAllParticleEmittersAndLights(grenadeModel)
            _t.Completed:Once(function()
                 _t:Destroy()
            end)
+        elseif v:IsA("Attachment") then
+            disableAllParticleEmittersAndLights(v)
         end
     end
 end
@@ -113,9 +115,9 @@ function Shared.LongFlashRayHit(cast, result, velocity, grenadeModel, playerLook
         for i, v in pairs(grenadeModel:GetChildren()) do
             if not v:IsA("ParticleEmitter") or not v.Name == "Spark" then continue end
             v = v :: ParticleEmitter
-            v.Speed = NumberRange.new(40, 60)
+            v.Speed = NumberRange.new(10, 20)
             v.Lifetime = NumberRange.new(0.1, 0.1)
-            v.Rate = 60
+            v.Rate = 30
         end
 
         -- pop animation
@@ -140,6 +142,17 @@ function Shared.LongFlashRayHit(cast, result, velocity, grenadeModel, playerLook
             popt:Play()
             poptl:Play()
             popt.Completed:Wait()
+
+                -- set emitter variables
+            for i, v in pairs(grenadeModel:GetChildren()) do
+                if not v:IsA("ParticleEmitter") or not v.Name == "Spark" then continue end
+                v = v :: ParticleEmitter
+                v.Speed = NumberRange.new(40, 60)
+                v.Lifetime = NumberRange.new(0.1, 0.1)
+                v.Rate = 60
+            end
+
+
             grenadeModel.Transparency = 1
             disableAllParticleEmittersAndLights(grenadeModel)
             Debris:AddItem(grenadeModel, 2)

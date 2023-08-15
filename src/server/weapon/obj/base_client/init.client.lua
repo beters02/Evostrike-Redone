@@ -496,6 +496,7 @@ end
 
 function conn_enableHotConnections()
     hotConnections.fireCheck = game:GetService("RunService").RenderStepped:Connect(function()
+		if not player.Character or hum.Health <= 0 then return end
 		local t = tick()
 		if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
 			return conn_mouseDown(t)
@@ -505,6 +506,7 @@ function conn_enableHotConnections()
 	end)
 	
 	hotConnections.reloadCheck = UserInputService.InputBegan:Connect(function(input, gp)
+		if not player.Character or hum.Health <= 0 then return end
 		if input.KeyCode == Enum.KeyCode.R then
 			core_reload()
 		end
@@ -524,6 +526,7 @@ end
 local s = weaponOptions.inventorySlot
 local tempequip = s == "primary" and "One" or s == "secondary" and "Two" or "Three"
 function conn_equipInputBegan(input, gp)
+	if not player.Character or hum.Health <= 0 then return end
     if input.KeyCode == Enum.KeyCode[tempequip] then
 		if not weaponVar.equipping and not weaponVar.equipped then
 			hum:EquipTool(tool)
@@ -532,6 +535,7 @@ function conn_equipInputBegan(input, gp)
 end
 
 function conn_mouseUp()
+	if not player.Character or hum.Health <= 0 then return end
     if weaponVar.fireLoop then
         conn_disableRecoilConnections(true)
 	end
@@ -543,6 +547,7 @@ function conn_mouseUp()
 end
 
 function conn_mouseDown(t)
+	if not player.Character or hum.Health <= 0 then return end
 
     
     if weaponVar.fireScheduled then
@@ -606,7 +611,6 @@ end
 
 
 function core_equip()
-    if weaponVar.equipped or weaponVar.equipping then return end
     forcestop = false
     weaponVar.equipping = true
 
@@ -640,6 +644,7 @@ end
 ]]
 
 function core_unequip()
+	if not player.Character or hum.Health <= 0 then return end
     clientModel.Parent = reptemp
 	weaponVar.equipping = false
 	weaponVar.equipped = false
@@ -686,10 +691,12 @@ local coreself = {
 }
 
 core_fire = function()
+	if not player.Character or hum.Health <= 0 then return end
 	corefunc.fire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions)
 end
 
 core_reload = function()
+	if not player.Character or hum.Health <= 0 then return end
 	corefunc.reload(weaponVar, weaponRemoteFunction)
 end
 
