@@ -68,6 +68,7 @@ UserInputService.InputBegan:Connect(function(input)
 			Close()
 		end
 	elseif input.KeyCode == Enum.KeyCode.Return then
+		if not ConsoleGui.Enabled then return end
 		ConsoleModule.Enter()
 	else
 		if ConsoleGui.Enabled and not TextBox:IsFocused() then

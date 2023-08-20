@@ -30,6 +30,10 @@ function Lobby:PostWait(players)
     if workspace:FindFirstChild("Barriers") then
         workspace.Barriers.Parent = game:GetService("ReplicatedStorage")
     end
+
+    -- start queue service
+    local _qs = require(game:GetService("ServerScriptService").main.sm_queueService)
+    if not _qs.serviceStatus == "running" then _qs:StartService() end
 end
 
 function Lobby:Start()

@@ -94,7 +94,7 @@ function crosshair:updateCrosshair(dataKey: string, newValue: any)
     -- update color and outline
     for i, v in pairs(hairs) do
         v = v :: Frame
-        v.BackgroundColor3 = Color3.new(self.red, self.green, self.blue)
+        v.BackgroundColor3 = Color3.fromRGB(self.red, self.green, self.blue)
         v.BorderSizePixel = self.outline and 1 or 0
     end
 

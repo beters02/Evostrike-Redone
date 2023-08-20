@@ -1,7 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
-local Players = game:GetService("Players")
-local Types = require(ReplicatedStorage:WaitForChild("Framework"):WaitForChild("Types"))
+local Types = require(ReplicatedStorage.Framework:WaitForChild("Types"))
 
 local compiler = {}
 
@@ -11,19 +11,11 @@ local parse_translations
     Utility
 ]]
 
-local function CloneTable(tab)
-    local new = {}
-    for i, v in pairs(tab) do
-        new[i] = v
+local function combine(t, t1)
+    for i, v in pairs(t1) do
+        t[i] = v
     end
-    return new
-end
-
-local function quickcombine(tab, tab1)
-    for i, v in pairs(tab1) do
-        if tonumber(i) then table.insert(tab, v) else tab[i] = v end
-    end
-    return tab
+    return t
 end
 
 --[[
@@ -77,12 +69,27 @@ typecomp.cm_ = function(key: string, loc)
     return {Access = "Client", Location = loc, Client = function() end} :: Types.Module
 end
 
+typecomp.sm_ = function(key: string, loc)
+    key = key:gsub("sm", "m")
+    loc = loc.Name ~= "ServerScriptService" and loc or game:GetService("ServerScriptService")
+    loc = loc[key]
+    return {Access = "Server", Location = loc, Server = function() end} :: Types.Module
+end
+
+typecomp.ssm_ = function(key: string, loc)
+    key = key:gsub("ssm", "sm")
+    loc = loc.Name ~= "ServerScriptService" and loc or game:GetService("ServerScriptService")
+    loc = loc[key]
+    return {Access = "Server", Location = loc, Server = function() end} :: Types.Module
+end
+
 --[[
     Compiling for each tree
 ]]
 
 local function CompileTree(self, prefix, location, except: table)
     for i, v in pairs(location:GetDescendants()) do
+        if location.Name == "ServerScriptService" and (v.Parent.Name == "ability" or v.Parent.Name == "weapon") then continue end
 
         if v.Parent:IsA("ModuleScript") then continue end
         if not v:IsA("ModuleScript") or not string.match(v.Name, "_") then
@@ -93,6 +100,8 @@ local function CompileTree(self, prefix, location, except: table)
         local key = string.sub(v.Name, 1, endi)
         local newPrefix = prefix .. key
 
+        if not typecomp[newPrefix] then warn("Could not find compile function table: " .. newPrefix) end
+
         local gameObject = typecomp[newPrefix](prefix .. v.Name, v.Parent)
         self[prefix .. v.Name] = gameObject
     end
@@ -100,45 +109,65 @@ local function CompileTree(self, prefix, location, except: table)
     return self
 end
 
-function compiler:CompileShared()
-    self = CompileTree(self, "sh", ReplicatedStorage)
-    return self
+local function CompileShared()
+    local _new = {}
+    _new = CompileTree(_new, "sh", ReplicatedStorage)
+    return _new
 end
 
-function compiler:CompileServer()
-    self.Weapon = smf_Weapon(self)
-    self.Ability = smf_Ability(self)
-    return self
+local function CompileServer()
+    local _new = {}
+    _new.Weapon = smf_Weapon(_new)
+    _new.Ability = smf_Ability(_new)
+    _new = CompileTree(_new, "s", game:GetService("ServerScriptService"))
+    return _new
 end
 
-function compiler:CompileClient()
+local function CompileClient()
+    local self = {}
     self.GetCharacterScript = function(character, scriptName)
-        return character:FindFirstDescendant(scriptName)
+        local scrip
+        for i, v in pairs(character:GetChildren()) do
+            scrip = v:FindFirstChild(scriptName)
+            if scrip then break end
+        end
+
+        if not scrip then return end -- TODO: module not found protocol
+
+        return scrip
     end
     return self
-end
-
--- CompileCharacter will create connections to
--- automatically compile any character modules.
-function compiler:CompileCharacter(player)
 end
 
 --[[
     Hard-Coded Compile Functions
 ]]
 
-function smf_Weapon(self)
+function smf_Weapon()
     local _mWeaponFold = game:GetService("ServerScriptService"):WaitForChild("weapon")
     local _loc = _mWeaponFold.pm_main
     local _mWeapon: Types.PlayerModule = {Access = "Server", Location = _loc, Server = _mWeaponFold.mss_main, Client = function() end}
     return _mWeapon
 end
 
-function smf_Ability(self)
+function smf_Ability()
     local _mAbilityFold = game:GetService("ServerScriptService"):WaitForChild("ability")
     local _loc = _mAbilityFold.pm_main
     local _mAbility: Types.PlayerModule = {Access = "Server", Location = _loc, Server = _mAbilityFold.mss_main, Client = function() end}
     return _mAbility
 end
 
-return compiler
+--[[
+    Run Script on Require
+]]
+
+local compiled = CompileShared()
+if RunService:IsServer() then
+    compiled = combine(compiled, CompileServer())
+    --compiled = combine(compiled, smf_Weapon())
+    --compiled = combine(compiled, smf_Ability())
+elseif RunService:IsClient() then
+    compiled = combine(compiled, CompileClient())
+end
+
+return compiled
