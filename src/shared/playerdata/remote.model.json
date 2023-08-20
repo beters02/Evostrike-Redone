@@ -1,0 +1,13 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "sharedPlayerDataRE",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "sharedPlayerDataRF",
+        "ClassName": "RemoteFunction"
+      }
+    ]
+  }

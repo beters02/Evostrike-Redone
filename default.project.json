@@ -1,26 +1,27 @@
 {
-  "name": "Evostrike Redone",
+  "name": "Evostrike Redone New",
   "tree": {
     "$className": "DataModel",
 
     "ReplicatedStorage": {
-      "Scripts": {
-        "$path": "src/rss",
-        "$ignoreUnknownInstances": true
-      }
-    },
-
-    "StarterPlayer": {
-      "StarterCharacterScripts": {
-        "$path": "src/scs",
-        "$ignoreUnknownInstances": true
-      }
+      "$path": "src/shared",
+      "$ignoreUnknownInstances": true
     },
 
     "ServerScriptService": {
-      "$path": "src/sss",
+      "$path": "src/server",
       "$ignoreUnknownInstances": true
-    }
+    },
 
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$path": "src/client/player",
+        "$ignoreUnknownInstances": true
+      },
+      "StarterCharacterScripts" : {
+        "$path": "src/client/character",
+        "$ignoreUnknownInstances": true
+      }
+    }
   }
 }
