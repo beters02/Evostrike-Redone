@@ -1,0 +1,9 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "replicate",
+        "ClassName": "RemoteEvent"
+      }
+    ]
+  }

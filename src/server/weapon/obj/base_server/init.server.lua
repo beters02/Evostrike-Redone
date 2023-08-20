@@ -4,7 +4,6 @@ local Debris = game:GetService("Debris")
 local Framework = require(ReplicatedStorage.Framework)
 --local Signal = require(Framework.shc_signal)
 
-print(Framework)
 local sharedWeaponFunctions = require(Framework.shfc_sharedWeaponFunctions.Location)
 
 local tool = script.Parent.Parent
@@ -111,7 +110,6 @@ function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegi
 			if v < st[i] then
 				if sx - cx > 6 then
 					-- acc diff is bigger than 6, re register shot
-					--print("SHOT NOT REGSITERED")
 					--return false, accvec
 				end
 			end

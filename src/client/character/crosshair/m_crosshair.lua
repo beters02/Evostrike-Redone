@@ -22,6 +22,10 @@ function crosshair.initialize(hud)
         self[i] = v
     end
 
+    if hud:FindFirstChild("Crosshair") then
+        hud.Crosshair:Destroy()
+    end
+
     self.crosshairgui = Instance.new("ScreenGui")
     self.crosshairgui.IgnoreGuiInset = true
     self.crosshairgui.Name = "Crosshair"

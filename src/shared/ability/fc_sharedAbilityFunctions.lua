@@ -1,6 +1,7 @@
 local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local RemotesLib = require(Framework.shfc_remotes.Location)
@@ -14,9 +15,11 @@ Shared.AbilityObjects = {}
 
 if RunService:IsClient() then
     Shared.AbilityOptions.LongFlash = require(SharedAbilityRF:InvokeServer("Class", "LongFlash"))
+    Shared.AbilityOptions.HEGrenade = require(SharedAbilityRF:InvokeServer("Class", "HEGrenade"))
 else
     local AbilityClass = Framework.Ability.Location.Parent.class
     Shared.AbilityOptions.LongFlash = require(AbilityClass.LongFlash)
+    Shared.AbilityOptions.HEGrenade = require(AbilityClass.HEGrenade)
 end
 
 Shared.AbilityObjects.Molly = ReplicatedStorage.ability.obj.Molly
@@ -58,6 +61,8 @@ function Shared.FireCaster(player, mouseHit, caster, casbeh, abilityOptions)
             Shared.LongFlashRayHit(cast, result, velocity, bullet, playerLookNormal)
         elseif abilityOptions.abilityName == "Molly" then
             Shared.MollyRayHit(cast, result, bullet, Shared.AbilityObjects.Molly, direction, velocity)
+        elseif abilityOptions.abilityName == "HEGrenade" then
+            Shared.HEGrenadeRayHit(cast, result, bullet, direction, velocity)
         end
     end))
     table.insert(conns, caster.CastTerminating:Connect(function()
@@ -65,6 +70,13 @@ function Shared.FireCaster(player, mouseHit, caster, casbeh, abilityOptions)
             v:Disconnect()
         end
     end))
+    --[[if abilityOptions.abilityName == "Molly" then -- rotating doesnt work :/
+        if RunService:IsClient() then
+            table.insert(conns, RunService.RenderStepped:Connect(function(dt)
+                bullet.CFrame *= CFrame.Angles(45, 45, 45)
+            end))
+        end
+    end]]
     return bullet, conns
 end
 
@@ -84,7 +96,25 @@ end
     function LongFlashRayHit
 ]]
 
-local TweenService = game:GetService("TweenService")
+function Shared.GetMollyParams()
+    local op = OverlapParams.new()
+    op.CollisionGroup = "MollyDamageCast"
+    return op
+end
+
+function Shared.CreateMollyCirclePart(grenade, abilityObjects, position)
+    local vispart = abilityObjects.Models.MollyPreset:Clone()
+    vispart.Size = Vector3.new(0.1, 15, 15)
+    vispart.CFrame = CFrame.new(position or grenade.CFrame.Position) * CFrame.Angles(0,0,math.pi*-.5)
+    vispart.CollisionGroup = "Bullets"
+    vispart.Parent = workspace.Temp
+
+    local hitpart = vispart:Clone()
+    hitpart.Size = Vector3.new(10, hitpart.Size.Y, hitpart.Size.Z)
+    hitpart.Parent = workspace.Temp
+    hitpart.Transparency = 1
+    return vispart, hitpart
+end
 
 local function disableAllParticleEmittersAndLights(grenadeModel)
     for i, v in pairs(grenadeModel:GetChildren()) do
@@ -161,30 +191,6 @@ function Shared.LongFlashRayHit(cast, result, velocity, grenadeModel, playerLook
         -- destroy bullet after flashpop
         
     end)
-end
-
---[[
-    function GetMollyParams
-]]
-
-function Shared.GetMollyParams()
-    local op = OverlapParams.new()
-    op.CollisionGroup = "MollyDamageCast"
-    return op
-end
-
-function Shared.CreateMollyCirclePart(grenade, abilityObjects, position)
-    local vispart = abilityObjects.Models.MollyPreset:Clone()
-    vispart.Size = Vector3.new(0.1, 15, 15)
-    vispart.CFrame = CFrame.new(position or grenade.CFrame.Position) * CFrame.Angles(0,0,math.pi*-.5)
-    vispart.CollisionGroup = "Bullets"
-    vispart.Parent = workspace.Temp
-
-    local hitpart = vispart:Clone()
-    hitpart.Size = Vector3.new(10, hitpart.Size.Y, hitpart.Size.Z)
-    hitpart.Parent = workspace.Temp
-    hitpart.Transparency = 1
-    return vispart, hitpart
 end
 
 --[[
@@ -279,6 +285,72 @@ function Shared.MollyRayHit(cast, result, grenade, abilityObjects, direction, ve
 
     end)
     
+end
+
+--[[
+
+]]
+
+function HEGrenadeUpdate(grenade, num)
+    local p = RaycastParams.new()
+    p.FilterDescendantsInstances = {grenade}
+    p.FilterType = Enum.RaycastFilterType.Exclude
+    local g = workspace:Raycast(grenade.Position, Vector3.new(0,-1,0) * 2, p)
+
+    if g then
+        grenade.Velocity *= num.Value
+        return
+    end
+
+    grenade.Velocity = Vector3.new(grenade.Velocity.X * num.Value, grenade.Velocity.Y, grenade.Velocity.Z * num.Value)
+end
+
+function Shared.HEGrenadeRayHit(cast, result, grenade, direction, velocity)
+
+    print('he grenade worked')
+
+    local explodeLength = Shared.AbilityOptions.HEGrenade.explodeLength
+    
+    -- unit the normal (i its already normalized idk)
+	local normal = result.Normal
+	-- reflect the vector
+	local reflected = velocity - 2 * velocity:Dot(normal) * normal
+    local conn
+
+    grenade.CanCollide = true
+    grenade.Velocity = reflected * 0.3
+    task.wait()
+
+    local num = Instance.new("NumberValue")
+    num.Parent = ReplicatedStorage.temp
+    num.Value = 1
+    local tween = TweenService:Create(num, TweenInfo.new(explodeLength), {Value = 0})
+    local e = tick() + explodeLength
+    tween:Play()
+
+    if RunService:IsClient() then
+        conn = RunService.RenderStepped:Connect(function()
+            if tick() >= e then
+                print("BOOM")
+                grenade:Destroy()
+                conn:Disconnect()
+            end
+            
+            HEGrenadeUpdate(grenade, num)
+        end)
+    else
+        conn = RunService.Heartbeat:Connect(function()
+            if tick() >= e then
+                print("BOOM")
+                grenade:Destroy()
+                conn:Disconnect()
+            end
+    
+            HEGrenadeUpdate(grenade, num)
+        end)
+    end
+    
+
 end
 
 return Shared

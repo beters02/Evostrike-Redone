@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local sharedMovementFunctions = require(Framework.shfc_sharedMovementFunctions.Location)
 local States = require(Framework.shm_states.Location)
+local SoundModule = require(Framework.shm_sound.Location)
 
 -- [[ Define Local Variables ]]
 local Inputs
@@ -138,7 +139,6 @@ Movement.maxSpeedAdd = 0
 
 -- update camera height
 hum.CameraOffset = Vector3.new(0, Movement.defaultCameraHeight, 0)
-print(hum.CameraOffset)
 
 -- extract movement functions and put them in the Movement scope
 for i, v in pairs(setmetatable(require(script.Functions), Movement)) do
@@ -207,11 +207,15 @@ function Movement.Run(hitPosition, hitNormal)
 	if Movement.movementVelocity.Velocity.Magnitude > 1 then
 		if not runningAnimation.IsPlaying then runningAnimation:Play(0.2) end
 		--if not hudCharClass.animations.running.isPlaying then hudCharClass.animations.running:Play(0.2) end
-		if not runsnd.IsPlaying then runsnd:Play() end
+		if not runsnd.IsPlaying then
+			SoundModule.PlayReplicated(runsnd)
+		end
 	else
 		if runningAnimation.IsPlaying then runningAnimation:Stop(0.2) end
 		--if hudCharClass.animations.running.isPlaying then hudCharClass.animations.running:Stop(0.2) end
-		if runsnd.IsPlaying then runsnd:Stop() end
+		if runsnd.IsPlaying then
+			SoundModule.StopReplicated(runsnd)
+		end
 	end
 
 	if not onGroundMovementState then
@@ -396,7 +400,6 @@ function Movement.RegisterDashVariables(strength, upstrength)
 		dashVariables.direction = (fordir * sidedir).Unit
 	end
 
-	print(dashVariables.direction)
 	dashVariables.trigger = true
 end
 
@@ -518,7 +521,6 @@ function Movement.ProcessMovement()
 			if jumpCooldown or inAir or Movement.dashing then
 				Movement.Run(hitPosition, hitNormal)
 			else
-				--print('jumping')
 				-- [[ JUMP MOVEMENT ]]
 				if not Movement.autoBunnyHop and Inputs.Keys.Jump[1] ~= "MouseWheel" then --jump cooldown start
 					jumpCooldown = true

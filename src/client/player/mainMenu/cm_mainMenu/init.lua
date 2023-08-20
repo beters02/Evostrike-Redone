@@ -60,11 +60,12 @@ function main.open()
 	main.buttonSideFrame.connect()
 
 	-- open menu
-	main.gui.Enabled = true 
+	main.gui.Enabled = true
 	main.moveButtonFrameMiddle()
 
 	UserInputService.MouseIconEnabled = true
 	
+	print('opened!')
 end
 
 function main.close()
@@ -77,10 +78,7 @@ function main.close()
 end
 
 function main.toggle()
-    --local console = player.PlayerGui:FindFirstChild("console") -- if console is open, dont open menu
-	--if console and console.Enabled then return end
-	if main.player:GetAttribute("loading") then return end -- if player is loading then dont open menu
-
+	print('toggled')
 	if main.var.opened then
 		main.close()
 		task.wait()

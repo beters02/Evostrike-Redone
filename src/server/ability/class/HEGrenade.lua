@@ -6,22 +6,25 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local AbilityObjects = ReplicatedStorage:WaitForChild("ability"):WaitForChild("obj"):WaitForChild("Molly")
 
-local Molly = {
+local HEGrenade = {
 
     -- grenade settings
     isGrenade = true,
-    grenadeThrowDelay = 0.2,
     acceleration = 10,
     speed = 150,
     gravityModifier = 0.5,
     startHeight = 2,
+    explodeLength = 1.2,
+    maxDamage = 80,
+    damageFalloffPerMeter = 1,
+    damageFalloffDistance = {Min = 1, Max = 6},
 
     -- genral settings
     cooldownLength = 3,
     uses = 100,
 
     -- data settings
-    abilityName = "Molly",
+    abilityName = "HEGrenade",
     inventorySlot = "secondary",
 
     player = game:GetService("Players").LocalPlayer or nil, -- set to nil incase required from server,
@@ -34,11 +37,11 @@ local Molly = {
     Use
 ]]
 
-function Molly:Use()
+function HEGrenade:Use()
 
     -- long flash does CanUse on the server via remoteFunction: ThrowGrenade
-    local hit = Molly.player:GetMouse().Hit
-    local used = Molly.remoteFunction:InvokeServer("ThrowGrenade", hit)
+    local hit = HEGrenade.player:GetMouse().Hit
+    local used = HEGrenade.remoteFunction:InvokeServer("ThrowGrenade", hit)
 
     -- update client uses
     if used then
@@ -46,4 +49,4 @@ function Molly:Use()
     end
 end
 
-return Molly
+return HEGrenade

@@ -6,6 +6,7 @@ local SharedAbilityRF = ReplicatedStorage.ability.remote.sharedAbilityRF
 --local PlayerOptions = require(Scripts:WaitForChild("Modules"):WaitForChild("PlayerOptions"))
 
 local player = game:GetService("Players").LocalPlayer
+local vmAnimController = workspace.CurrentCamera:WaitForChild("viewModel"):WaitForChild("AnimationController")
 local key
 local keyCode
 
@@ -20,10 +21,7 @@ local abilityRemotes = script.Parent.Parent.Remotes
 ability.remoteFunction = abilityRemotes.AbilityRemoteFunction
 ability.remoteEvent = abilityRemotes.AbilityRemoteEvent
 
---[[
-	Init HUD GUI
-]]
-
+-- init HUD GUI
 local keys = {primary = "F", secondary = "V"}
 ability.key = keys[ability.inventorySlot]
 
@@ -34,6 +32,10 @@ abilityFrame.Visible = true
 ability.frame = abilityFrame
 abilityFrame.Key.Text = ability.key
 
+-- init animations
+local anims = {throw = vmAnimController:LoadAnimation(script:WaitForChild("grenadeThrow"))}
+
+-- connect
 UserInputService.InputBegan:Connect(function(input, gp)
     --key = PlayerOptions[useKeyName]
     keyCode = ability.key and Enum.KeyCode[ability.key]
@@ -41,9 +43,14 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if input.KeyCode == keyCode then
         if ability.uses <= 0 then return end
         if ability.cooldown then return end
-        
 
         ability:StartClientCooldown()
+
+        if ability.isGrenade then
+            anims.throw:Play()
+            task.wait(ability.grenadeThrowDelay or 0.01)
+        end
+        
         ability:Use()
         print('used')
     end

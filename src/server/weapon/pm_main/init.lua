@@ -34,7 +34,6 @@ local function verifyWeaponSanity(weaponName: string)
     
     -- verify weapon options, if found return require table
     weaponOptions = ServerScriptService.weapon.config:WaitForChild(string.lower(weaponName))
-	print(weaponOptions)
 	if not weaponOptions or (weaponOptions and not weaponOptions:IsA("ModuleScript") or weaponOptions:GetAttribute("NotWeapon")) then
 		warn("Could not verify WeaponOptions for " .. weaponName)
         return false

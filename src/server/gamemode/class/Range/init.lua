@@ -13,6 +13,7 @@ local BotModule = require(Framework.sm_bots.Location)
 local GamemodeLoc = game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("class"):WaitForChild("Lobby")
 
 function Lobby:PostWait(players)
+
     -- add any players that have already joined
     for i, v in pairs(players) do
         task.spawn(function()
@@ -26,10 +27,17 @@ function Lobby:PostWait(players)
         self:SpawnPlayer(player)
     end)
 
+    -- init bots
+    for i, v in pairs(GamemodeLoc.Bots:GetChildren()) do
+        BotModule:Add(v)
+    end
+
     -- remove barriers
     if workspace:FindFirstChild("Barriers") then
         workspace.Barriers.Parent = game:GetService("ReplicatedStorage")
     end
+
+    print('Loaded')
 end
 
 function Lobby:Start()
@@ -84,19 +92,27 @@ function Lobby:SpawnPlayer(player)
 
     -- teleport player to spawn
     local spawnLoc = GamemodeLoc:WaitForChild("Spawns"):WaitForChild("Default")
+
     player.Character.PrimaryPart.Anchored = true
     player.Character:SetPrimaryPartCFrame(spawnLoc.CFrame + Vector3.new(0,2,0))
     player.Character.PrimaryPart.Anchored = false
 
     Ability.Add(player, "Dash")
+    Ability.Add(player, "Molly")
+    --Ability.Add(player, "LongFlash")
+    --Ability.Add(player, "HEGrenade")
+
+    Weapon.Add(player, "AK47")
+    --Weapon.Add(player, "Glock17")
     Weapon.Add(player, "Knife", true)
 
     local conn
     conn = hum:GetPropertyChangedSignal("Health"):Connect(function()
-        print('died')
         if self.status ~= "running" then conn:Disconnect() return end
-        if hum.Health <= 0 then self:Died(player) conn:Disconnect() return end
-        if hum.Health < 100 then hum.Health = 100 return end
+        if hum.Health <= 0 then
+            self:Died(player)
+            conn:Disconnect()
+        end
     end)
 end
 

@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
+local SoundModule = require(Framework.shm_sound.Location)
 
 local sharedMovementFunctions = require(Framework.shfc_sharedMovementFunctions.Location)
 local strings = require(Framework.shfc_strings.Location)
@@ -210,11 +211,7 @@ local function init_animationEvents()
 		local _weaponName = weaponName
 		if dontDestroyOnRecreate then _weaponName = false end
 
-		-- fire event (WeaponModuleScript.server.lua) to replicate to (WeaponModuleClientScript.client.lua)
-		--weaponReplicateRemote:FireServer("PlaySound", char, _weaponName, sound)
-
-		-- play sound on local client
-		sharedWeaponFunctions.PlaySound(player.Character, _weaponName, sound)
+		SoundModule.PlayReplicatedClone(sound, player.Character.HumanoidRootPart)
 	end
 	
 end

@@ -2,7 +2,7 @@ local Gamemode = {}
 Gamemode.__index = Gamemode
 
 -- [[ CONFIGURATION ]]
-local DefaultGamemode = "Lobby"
+local DefaultGamemode = "Deathmatch"
 
 -- [[ VARIABLES ]]
 local Players = game:GetService("Players")
@@ -44,6 +44,7 @@ function Gamemode.SetGamemode(gamemode: string)
     if Gamemode.currentClass then
         local c = Gamemode.currentClass
         c:Stop()
+        task.wait()
     end
 
     class = setmetatable(require(class), Gamemode)
