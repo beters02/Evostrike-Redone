@@ -24,8 +24,8 @@ function main.initialize(gui)
     main.initTweens()
 
 	main.buttonSideFrame.init()
-	main.page.init()
-	main.page.options.init()
+	
+	main.page = require(Players.LocalPlayer.PlayerScripts.mainMenu.cm_mainMenu.page).init(main)
 
 	return main
 end
@@ -52,7 +52,7 @@ function main.open()
 	main.var.opened = true
 
 	-- prepare frames
-	main.page.closeAllPages()
+	main.page:CloseAllPages()
 	main.prepareButtonSideOpen()
 	main.prepareBackgroundOpen()
 
@@ -70,15 +70,16 @@ end
 
 function main.close()
 	main.var.opened = false
+
+	main.page:CloseAllPages()
 	main.stopAllMenuTweens()
 	main.buttonSideFrame.disconnect()
-	main.page.closeAllPages()
+	
 	main.gui.Enabled = false
 	UserInputService.MouseIconEnabled = false
 end
 
 function main.toggle()
-	print('toggled')
 	if main.var.opened then
 		main.close()
 		task.wait()
@@ -186,7 +187,7 @@ function bsf.disconnect()
 		conn:Disconnect()
 	end
 	bsf.connections = {}
-	--main.page.close("Options") -- force options update on close
+	--main.page:ClosePage("Options") -- force options update on close
 end
 
 function bsf.click(button)
@@ -198,15 +199,17 @@ function bsf.click(button)
 	
 	-- if the page is already open, then close it
 	local close = false
-	if table.find(main.page.openPages, frameName) then
+	if main.page:GetOpenPages()[frameName] then
 		main.moveButtonFrameMiddle()
 		close = true
 	end
 
-	main.page.closeAllPages()
+	print("opening " .. tostring(not close))
 
-	if not close then
-		main.page.open(frameName)
+	if close then
+		main.page:ClosePage(frameName)
+	else
+		main.page:OpenPage(frameName)
 	end
 	
 	button:SetAttribute("canTween", true)
@@ -225,136 +228,7 @@ function bsf.hoverOut(button, defaultPos)
 	button.TextColor3 = Color3.fromRGB(232, 241, 255)
 end
 
--- page
-local page = {}
-
-function page.init()
-	page.openPages = {}
-end
-
-function page.open(pageName)
-	local pageObj = main.gui:FindFirstChild(pageName .. "Frame")
-	if not pageObj then warn("MainMenu: Could not find page " .. pageName .. "!") end
-    pageObj.Visible = true
-	table.insert(main.page.openPages, pageName)
-end
-
-function page.close(pageName)
-    local pageObj = main.gui:FindFirstChild(pageName .. "Frame")
-	if not pageObj then warn("MainMenu: Could not find page " .. pageName .. "!") end
-    pageObj.Visible = false
-	table.remove(main.page.openPages, table.find(page.openPages, pageName))
-end
-
-function page.closeAllPages()
-	for i, v in pairs(page.openPages) do
-		page.close(v)
-	end
-	main.closeAllFrames()
-	main.page.openPages = {}
-end
-
--- options page
-
-local optionsPage = {}
-
-function optionsPage.init()
-	local clientPlayerDataModule = require(Framework.shm_clientPlayerData.Location)
-	if not clientPlayerDataModule.stored then repeat task.wait() until clientPlayerDataModule.stored end
-	optionsPage.playerdata = require(Framework.shm_clientPlayerData.Location)
-	optionsPage.connections = {}
-	optionsPage.crosshairModule = optionsPage.getPlayerCrosshairModule()
-	main.page.options = optionsPage
-	main.optionspageobj = main.gui:WaitForChild("OptionsFrame")
-	main.optcrosshairfr = main.optionspageobj.General.Crosshair
-
-	main.page.options.updateCrosshairFrame()
-	main.page.options.connect()
-end
-
-function optionsPage.connect()
-	for i, tab in pairs({Crosshair = main.optcrosshairfr:GetChildren()}) do -- init crosshair settings
-		for _, frame in pairs(tab) do
-			if not frame:IsA("Frame") then continue end
-
-			local textBox = frame:FindFirstChildWhichIsA("TextBox")
-			if textBox then
-				table.insert(main.page.options.connections, textBox.FocusLost:Connect(function(enterPressed)
-					typingFocusFinished(enterPressed, textBox, frame)
-				end))
-				continue
-			end
-
-			local textButton = frame:FindFirstChildWhichIsA("TextButton")
-			if textButton then
-				table.insert(main.page.options.connections, textButton.MouseButton1Click:Connect(function()
-					--optionsBooleanInteract(textButton, i)
-				end))
-			end
-		end
-	end
-end
-
-function optionsPage.disconnect()
-	for i, v in pairs(main.page.options.connections) do
-		v:Disconnect()
-	end
-	main.page.options.connections = nil
-end
-
-function optionsPage.open()
-	main.page.options.connect()
-end
-
-function optionsPage.close()
-	main.page.options.disconnect()
-	--ProfileService.invokeFromClient("Options", "update")
-end
-
---
-
-function optionsPage.updateCrosshairFrame()
-	for _, frame in pairs(main.optcrosshairfr:GetChildren()) do
-		if not frame:IsA("Frame") then continue end
-		local dataKey = string.lower(string.sub(frame.Name, 3))
-		frame:WaitForChild("button").Text = tostring(main.page.options.playerdata.get("crosshair", dataKey))
-	end
-end
-
-function optionsPage.getPlayerCrosshairModule()
-	local module = require(main.player.Character:WaitForChild("crosshair"):WaitForChild("m_crosshair"))
-	if not module._isInit then repeat task.wait() until module._isInit end
-	return module
-end
-
-function typingFocusFinished(enterPressed, button, frame, isButton)
-	local parentSettingDataPrefix = frame:FindFirstAncestorWhichIsA("Frame"):GetAttribute("DataPrefix")
-	local dataKey = string.lower(string.sub(frame.Name, 3))
-	--local currValue = ProfileService.invokeFromClient("Options", "getValue", {parrentSettingDataPrefix, dataKey})
-	local currValue = main.page.options.playerdata.get(parentSettingDataPrefix, dataKey)
-
-	if enterPressed then
-		local newValue = tonumber(button.Text)
-		if not newValue then
-			button.Text = tostring(currValue)
-			return
-		end
-
-		--main.page.options.profile[parentSettingDataPrefix][dataKey] = newValue
-		main.page.options.playerdata.set(parentSettingDataPrefix, dataKey, newValue)
-
-		if parentSettingDataPrefix == "crosshair" then
-			main.page.options.updateCrosshairFrame()
-			main.page.options.crosshairModule:updateCrosshair(dataKey, newValue)
-		end
-	else
-		button.Text = tostring(currValue)
-	end
-end
-
 -- finalize
 main.buttonSideFrame = bsf
-main.page = page
-main.page.options = optionsPage
 
 return main

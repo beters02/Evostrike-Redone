@@ -2,7 +2,7 @@ local Gamemode = {}
 Gamemode.__index = Gamemode
 
 -- [[ CONFIGURATION ]]
-local DefaultGamemode = "Deathmatch"
+local DefaultGamemode = "Lobby"
 
 -- [[ VARIABLES ]]
 local Players = game:GetService("Players")

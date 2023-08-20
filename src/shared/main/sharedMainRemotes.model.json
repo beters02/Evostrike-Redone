@@ -4,6 +4,10 @@
       {
         "Name": "deathRE",
         "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "requestQueueFunction",
+        "ClassName": "RemoteFunction"
       }
     ]
   }

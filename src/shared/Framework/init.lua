@@ -39,22 +39,8 @@ local Types = require(FrameworkLocation:WaitForChild("Types"))
 local Framework = {}
 Framework._types = Types
 
--- new compiler test
-local Compiled = require(FrameworkLocation:WaitForChild("CompilerWithGrabTest"))
+-- Compile Functions
+local Compiled = require(FrameworkLocation:WaitForChild("Compiler"))
 Framework = combine(Framework, Compiled)
-
---[[
--- Compile Shared for Client and Server
-Framework = Compiler.CompileShared(Framework)
-
--- Compile Server for Server
-if RunService:IsServer() then
-    Framework = Compiler.CompileServer(Framework)
-end
-
--- Indexing for non pre-compiled modules
-Framework.__index = function(table, key: string)
-end
-]]
 
 return Framework
