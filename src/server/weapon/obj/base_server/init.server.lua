@@ -79,55 +79,25 @@ function core_unequip()
 end
 
 local shotServerReRegistration = false
-function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegisteredTime, isFinal)
-	if not isFinal then
-		if not util_registerFireDiff() then return end -- check client->server timer diff
-
-		-- update ammo
-		serverStoredVar.ammo.magazine -= 1
-		serverStoredVar.nextFireTime = tick() + weaponOptions.fireRate
-	end
-
-	local cb = currentBullet
-	local pos = rayInformation.position
-	local origin = rayInformation.origin
-	local dir = rayInformation.direction
-	local accvec = util_getAccuracyVector(cb)
-	local caccvec = clientAccuracyVector
-	local fr
-
-	-- do result verifications if not already done
-	if not isFinal and shotServerReRegistration then
-
-		-- accuracy verification
-		-- disabled temporarily
-		local cx, cy = math.abs(caccvec.X), math.abs(caccvec.Y)
-		local sx, sy = math.abs(accvec.X), math.abs(accvec.Y)
-		local ct = {cx, cy}
-		local st = {sx, sy}
-
-		for i, v in pairs(ct) do
-			if v < st[i] then
-				if sx - cx > 6 then
-					-- acc diff is bigger than 6, re register shot
-					--return false, accvec
-				end
-			end
-		end
-
-		-- position verification
-
-	end
+function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegisteredTime)
 	
+	-- check client->server timer diff
+	if not util_registerFireDiff() then return end
+
+	-- update ammo
+	serverStoredVar.ammo.magazine -= 1
+	serverStoredVar.nextFireTime = tick() + weaponOptions.fireRate
+
 	-- if initial shot is verified, register
-	local damage, _, _, damagedChar = util_registerShot(rayInformation, pos, origin, dir, shotRegisteredTime)
+	local damage, _, _, damagedChar = util_registerShot(
+		rayInformation,
+		rayInformation.position,
+		rayInformation.origin,
+		rayInformation.direction,
+		shotRegisteredTime
+	)
 
 	-- if damage was inflicted, fire PlayerDamaged event/signal
-	if damage then
-		--local PlayerDamagedSignal = Signal.GetSignal("PlayerDamaged")
-		--if PlayerDamagedSignal then PlayerDamagedSignal.Fire(damagedChar, char, damage) end
-	end
-
 	return true
 end
 

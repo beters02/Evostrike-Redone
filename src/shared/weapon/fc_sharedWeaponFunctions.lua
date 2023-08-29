@@ -9,10 +9,16 @@ local MainObj = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj")
 local BulletModel = MainObj:WaitForChild("Bullet")
 local BulletHole = MainObj:WaitForChild("BulletHole")
 local WeaponFolder = ReplicatedStorage:WaitForChild("weapon")
+local GlobalSounds = WeaponFolder:WaitForChild("obj"):WaitForChild("global"):WaitForChild("sounds") -- global weapon sounds (player hit, player killed, etc)
 local WeaponRemotes = WeaponFolder:WaitForChild("remote")
+local Particles = MainObj:WaitForChild("particles")
 local EmitParticle = require(Framework.shfc_emitparticle.Location)
+local Math = require(Framework.shfc_math.Location)
+local States = require(Framework.shm_states.Location)
 
 local module = {}
+
+-- Weapon Spray Pattern Utility
 
 --[[
 	Spray Pattern Spring Parsing
@@ -27,11 +33,6 @@ function module.checkSplitForNeg(split)
 	return split
 end
 
-function module.numberAbsoluteValueCheck(str)
-	
-end
-
--- RETURN NUMBERS FROM STRINGS
 function module.initStrings(str)--: tuple -- strings to be formatted on require
 	--[[
 		Range String format:
@@ -87,6 +88,8 @@ function module.duringStrings(str): number -- strings to be formatted real time
 		return (math.random(0, 1) == 1 and 1 or -1) * tonumber(numstr)
 	end
 end
+
+-- Weapon Bullets
 
 function module.CreateBulletHole(result)
 	if not result then return end
@@ -155,11 +158,12 @@ function module.FireBullet(fromChar, result, isHumanoid)
 	local endPos = result.Position
 	local bullet, bulletFinishedEvent = module.CreateBullet(fromChar, endPos, true)
 	task.spawn(function()
-		--WeaponRemotes.Replicate:FireServer("CreateBullet", fromChar, endPos)
+		WeaponRemotes.replicate:FireServer("CreateBullet", fromChar, endPos, false)
 	end)
 	if not isHumanoid then
 		task.spawn(function()
 			module.CreateBulletHole(result)
+			WeaponRemotes.replicate:FireServer("CreateBulletHole", {Position = result.Position, Instance = result.Instance, Normal = result.Normal})
 		end)
 	end
 	bulletFinishedEvent.Event:Once(function()
@@ -167,24 +171,35 @@ function module.FireBullet(fromChar, result, isHumanoid)
 	end)
 end
 
--- player = damager
-local function getDamageFromHumResult(player, char, weaponOptions, pos, instance, normal, origin)
+-- Weapon Shot & Damage Registration
+
+-- Utility
+
+function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance, normal, origin) -- player = damager
 		
 		-- register variables
         local hum = char.Humanoid
 		if hum.Health <= 0 then return false end
-        local distance = math.abs((pos - origin).Magnitude)
+        local distance = (pos - origin).Magnitude
         damage = weaponOptions.damage.base
 		local instance = instance
 		local calculateFalloff = true
+		local min = weaponOptions.damage.damageFalloffMinimumDamage
 		local particleFolderName = "Hit"
 		local soundFolderName = "Bodyshot"
 		local killed = false
 
 		-- get hit bodypart
 		if string.match(instance.Name, "Head") then
+
+			-- apply head mult to base damage
 			damage *= weaponOptions.damage.headMultiplier
-			calculateFalloff = weaponOptions.damage.enableHeadFalloff or false
+			-- apply head mult to min damage
+			min *= weaponOptions.damage.headMultiplier
+
+			-- apply head falloff multiplier if necessary
+			calculateFalloff = weaponOptions.damage.enableHeadFalloff and (weaponOptions.damage.headFalloffMultiplier or true) or false
+			
 			particleFolderName = "Headshot"
 			soundFolderName = "Headshot"
 		elseif string.match(instance.Name, "Leg") or string.match(instance.Name, "Foot") then
@@ -197,7 +212,7 @@ local function getDamageFromHumResult(player, char, weaponOptions, pos, instance
 		-- calculate damage falloff
 		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
 			local diff = distance - weaponOptions.damage.damageFalloffDistance
-			damage = math.max(damage - diff * weaponOptions.damage.damageFalloffPerMeter, weaponOptions.damage.damageFalloffMinimumDamage)
+			damage = math.max(damage - diff * (weaponOptions.damage.damageFalloffPerMeter * (type(calculateFalloff) == "number" and calculateFalloff or 1)), min)
 		end
 
 		-- see if player will be killed after damage is applied
@@ -220,14 +235,14 @@ local function getDamageFromHumResult(player, char, weaponOptions, pos, instance
 	return damage, particleFolderName, killed, char, soundFolderName
 end
 
+-- Functions
+
 --[[
 	RegisterShot
 
 	Fires Bullet, Creates BulletHole and Registers Damage
 	Also compensates for lag if needed
 ]]
-
-local Particles = MainObj:WaitForChild("particles")
 
 function module.RegisterShot(player, weaponOptions, result, origin, dir, registerTime)
 	if not result.Instance then return false end
@@ -251,7 +266,7 @@ function module.RegisterShot(player, weaponOptions, result, origin, dir, registe
 			if not isHumanoid then return end
 
 			-- get damage, folders, killedBool
-			damage, particleFolderName, killed, _, soundFolderName = getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
+			damage, particleFolderName, killed, _, soundFolderName = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
 			local instance = result.Instance
 
 			-- particles
@@ -273,7 +288,7 @@ function module.RegisterShot(player, weaponOptions, result, origin, dir, registe
 		end)
 		return module.FireBullet(player.Character, result, isHumanoid)
 	elseif isHumanoid then
-		return getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
+		return util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
 	end
 
 	return false
@@ -293,12 +308,9 @@ function module.TagPlayer(tagged: Model, tagger: Player)
 	return gotTag
 end
 
---[[
-	Sound
-]]
+-- Weapon Sounds
 
--- if not weaponName, sound will not be destroyed upon recreation
-function module.PlaySound(playFrom, weaponName, sound)
+function module.PlaySound(playFrom, weaponName, sound) -- if not weaponName, sound will not be destroyed upon recreation
 	local c: Sound
 
 	-- destroy sound on recreation if weaponName is specified
@@ -320,9 +332,6 @@ function module.PlaySound(playFrom, weaponName, sound)
 	return c
 end
 
--- global weapon sounds (player hit, player killed, etc)
-local GlobalSounds = WeaponFolder:WaitForChild("obj"):WaitForChild("global"):WaitForChild("sounds")
-
 -- global sounds typically consist of multiple sounds,
 -- therefore the PlayGlobalSound will play all sounds
 -- that are children to the specified SoundFolder
@@ -341,103 +350,150 @@ function module.PlayGlobalSound(playFrom, ...)
 	end
 end
 
-local quickabsr = function(a) return a * (math.random(1, 2) == 1 and -1 or 1) end
-local function quickMaxOrMin(v, m) return v > 0 and math.min(v, m) or math.max(v, -m) end
+-- Accuracy Utility
 
-local function quickVecAdd(vec, add)
+-- Add Absr Random 1-add value to Vector2
+function util_vec2AddWithAbsrR1(vec, add)
 	if add == 0 then return vec end
-	local a1 = math.random(1, add)
-	return Vector2.new(vec.X + quickabsr(a1), vec.Y + quickabsr(math.random(1, add)))
+	return Vector2.new(vec.X + Math.absValueRandom(math.random(1, add), vec.Y + Math.absValueRandom(math.random(1, add))))
 end
 
-local function quickVecAddRandomAbsRandomXY(vec, addX, addY)
-	addX = addX > 0 and math.random(-addX, addX) or math.random(addX, -addX)
-	addY = addY > 0 and math.random(-addY, addY) or math.random(addY, -addY)
+-- Add Fixed Absr Random add-add value to Vector2
+function util_vec2AddWithFixedAbsrRR(vec, addX, addY)
+	addX = Math.frand(addX)
+	addY = Math.frand(addY)
 	return Vector2.new(vec.X + addX, vec.Y + addY)
 end
 
-local function randomize(num)
-	return math.round(math.random(100, 200)) == 1 and num or -num
-end
+-- Accuracy
 
-function module.getMovementInaccuracyVector2(firstBullet, player, speed, weaponOptions)
-	local toAdd = 0
-	local move = false
-	local first = false
-	if not weaponOptions.accuracy.firstBullet or not firstBullet then
-		toAdd = weaponOptions.accuracy.base
-	else first = true end
+function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions)
+	local movementConfig = require(player.Character.movementScript.Configuration)
+
+	local _x
+	local _y
+	if type(baseAccuracy) == "table" then
+		_x, _y = baseAccuracy[2], baseAccuracy[3] -- recoilVectorX, recoilVectorY
+		baseAccuracy = baseAccuracy[1]
+	end
 	
 	-- movement speed inacc
-	local movementSpeed = speed or player.Character.HumanoidRootPart.Velocity.magnitude
-	if movementSpeed > 8 and movementSpeed < 12 then
-		toAdd = weaponOptions.accuracy.walk
-		move = true
-	elseif movementSpeed >= 12 then
-		toAdd = weaponOptions.accuracy.run
-		move = true
+	local movementSpeed = player.Character.HumanoidRootPart.Velocity.Magnitude
+	if States.GetStateVariable("Movement", "crouching") then
+		baseAccuracy *= 1.5
+	elseif (movementSpeed > 6 or States.GetStateVariable("Movement", "landing")) and movementSpeed < movementConfig.walkMoveSpeed then
+		baseAccuracy = weaponOptions.accuracy.walk
+	elseif movementSpeed >= movementConfig.walkMoveSpeed + math.round((movementConfig.groundMaxSpeed - movementConfig.walkMoveSpeed)/2) then
+		baseAccuracy = weaponOptions.accuracy.run
 	end
 	
 	-- jump inacc
-	if require(Framework.shfc_sharedMovementFunctions.Location).IsPlayerGrounded(player) then
-		toAdd += weaponOptions.accuracy.jump
-		move = true
+	if not require(Framework.shfc_sharedMovementFunctions.Location).IsGrounded(player) then
+		baseAccuracy += weaponOptions.accuracy.jump
 	end
+
+	movementConfig = nil
 	
-	local acc = quickVecAdd(Vector2.zero, toAdd)
-	if not move and not first then acc = Vector2.new(acc.X, quickMaxOrMin(acc.Y, 1.5)) end
+	return util_vec2AddWithFixedAbsrRR(Vector2.zero, _x and _x * baseAccuracy or baseAccuracy, _y and _y * baseAccuracy or baseAccuracy)
+end
+
+function module.CalculateAccuracy(player, recoilVector3, weaponOptions, storedVar) -- cvec2 is client accuracy re-registration
+	local acc
+
+	-- get base accuracy & apply movement inaccuracy
+
+	-- spread weapons rely on weapon accuracy for it's functionality,
+	-- so we will apply that here if necessary.
+
+	local baseAccuracy = storedVar.currentBullet == 1 and weaponOptions.accuracy.firstBullet or weaponOptions.accuracy.base
+	if storedVar.currentBullet ~= 1 and weaponOptions.accuracy.spread then
+		baseAccuracy = {baseAccuracy, recoilVector3.X, recoilVector3.X}
+	end
+
+	acc = module.GetMovementInaccuracyVector2(
+		player,
+		baseAccuracy,
+		weaponOptions
+	)
+
+	-- randomize acc abs
+	acc = Vector2.new(Math.absr(acc.X), Math.absr(acc.Y))
+
 	return acc
 end
 
-function module.CalculateAccuracy(player, weaponOptions, currentBullet, recoilVector3, storedVar, currentMovementSpeed, cvec2) -- cvec2 is client accuracy re-registration
-	-- var
-	local acc
-	local vecmod = storedVar.currentVectorModifier or 1
-	local offset = weaponOptions.fireVectorCameraOffset * vecmod
+function module.CalculateVectorRecoil(recoilVector3, weaponOptions, storedVar)
 
-	local newy
-	if recoilVector3.Y < 0 then
-		newy = math.max(recoilVector3.Y, -1.5)
+	-- before we were applying a mmabs of 1.5 on the y(side), and a math.min of 1 on the x(up)
+	-- this was a weird way to do it
+	--local new = Vector2.new(Math.mmabs(recoilVector3.Y, 1.5), math.min(recoilVector3.X, 1))
+
+	-- we have to convert the table back from Up, Side to Side, Up
+	-- this is because the Vector3 is made to be used with CFrames,
+	-- the accuracy vector2's are used on direction Vector3s.
+	local new = Vector2.new(recoilVector3.Y, recoilVector3.X)
+
+	-- first bullet remove vector recoil
+	if storedVar.currentBullet == 1 then
+		new = Vector2.zero
+		storedVar.lastYVec = 0
 	else
-		newy = math.min(recoilVector3.Y, 1.5)
-	end
-	local new = Vector2.new(newy, math.min(recoilVector3.X, 1))
-
-	-- grow vector offset for first 4 bullets
-	-- bullets would shoot up after the first bullet without this
-	--[[if currentBullet < 9 then
-		offset *= currentBullet/9
-	end]]
-
-	-- first bullet acc
-	if currentBullet == 1 then
-		if weaponOptions.accuracy.firstBullet then
-			new = Vector2.zero
-		end
-		acc = cvec2 or module.getMovementInaccuracyVector2(true, player, currentMovementSpeed, weaponOptions)
-		storedVar.lastYAcc = acc.Y
-	else
-		acc = cvec2 or module.getMovementInaccuracyVector2(false, player, currentMovementSpeed, weaponOptions)
-
 		-- if the add vector is 0, don't keep climbing the vec recoil
 		if new.Y ~= 0 then
-			storedVar.lastYAcc = new.Y
+			storedVar.lastYVec = new.Y
 		end
 	end
 
 	-- apply spread and return if spread only
 	if weaponOptions.spread then
-		acc = Vector2.new(randomize(acc.X + recoilVector3.Y), randomize(acc.Y + recoilVector3.X))
-		return quickVecAddRandomAbsRandomXY(acc, new.X * offset.X, new.Y * offset.Y), storedVar
+		return Vector2.new(Math.absr(new.X, new.Y))
 	end
 
-	-- randomize acc abs
-	acc = Vector2.new(randomize(acc.X), randomize(acc.Y))
-
-	-- apply offset and acc
-	new = Vector2.new(acc.X + (new.X * offset.X), acc.Y + (storedVar.lastYAcc * offset.Y))
-	return new, storedVar
+	local offset = weaponOptions.fireVectorCameraOffset * (storedVar.currentVectorModifier or 1)
+	return Vector2.new(new.X, storedVar.lastYVec) * offset, storedVar
 end
+
+function module.GetAccuracyAndRecoilDirection(player, mray, currVecRecoil, weaponOptions, storedVar)
+	local acc
+
+	-- calculate accuracy
+	acc = module.CalculateAccuracy(player, currVecRecoil, weaponOptions, storedVar)
+	acc /= 550 -- Arbitrary accuracy modifier
+
+	-- resolve accuracy being too strong on Up and not strong enough on Side
+	--acc = Vector2.new(acc.X*1.2, acc.Y*0.8)
+
+	-- calculate vector recoil
+	local vecr
+	vecr, storedVar = module.CalculateVectorRecoil(currVecRecoil, weaponOptions, storedVar)
+	vecr /= 500
+
+	-- combine acc and vec recoil
+	acc += vecr
+
+	-- register client ray using
+	-- client accuracy and vector recoil for direction
+	--local direction = mray.Direction
+	--[[local direction = storedVar.originPoint and storedVar.originPoint.Direction
+	if direction then
+		--print(direction)
+		-- apply y offset according to new mouse pos
+		direction = Vector3.new(
+			mray.Direction.X,
+			direction.Y > 0 and direction.Y + (mray.Direction.Y + direction.Y)/1.8 or direction.Y + (mray.Direction.Y - direction.Y)/1.8,
+			mray.Direction.Z
+		)
+	else
+		direction = mray.Direction
+	end]]
+
+	local direction = mray.Direction
+	
+
+	return Vector3.new(direction.X + (acc.X)*(direction.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X)*(direction.Z > 0 and 1 or -1)).Unit
+end
+
+-- Fire Ray
 
 function module.getFireCastParams(player, camera)
 	local params = RaycastParams.new()

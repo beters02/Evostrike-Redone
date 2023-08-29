@@ -1,30 +1,43 @@
-local config = {
+local module = {
 
-    --[[ General Settings ]]
+	--[[ General Settings ]]
 	gravity = .25,
-	friction = 6,
+	friction = 7.5,
 	maxVelocity = 50,
 	maxMovementPitch = 0.6,
 
 	--[[ Ground Settings ]]
-	groundAccelerate = 8,
-	groundDeccelerate = 8,
-	groundMaxSpeed = 22,
+	groundAccelerate = 10.2,
+	groundDeccelerate = 16, -- the lower this number is, the longer it takes to decel btw
+	groundMaxSpeed = 21,
+
+	walkMoveSpeed = 14,
+	--walkFriction
+
+	crouchMoveSpeed = 10,
+	crouchFriction = 6,
+	crouchDeccelerate = 4,
+	crouchAccelerate = 16,
+
+	defGroundAccelerate = 10.2,
+	defGroundDeccelerate = 16,
+	defFriction = 7.5,
 
 	--[[ Air Settings ]]
-	airAccelerate = 45,
+	airAccelerate = 22,
 	airSpeed = 5,
-	airMaxSpeed = 31,
-	airMaxSpeedFriction = 3.5,
+	airMaxSpeed = 33,
+	airMaxSpeedFriction = 4,
+	airMaxSpeedFrictionDecrease = 0.2,
 
 	--[[ Jump Settings ]]
 	jumpVelocity = 29,
-	jumpTimeBeforeGroundRegister = 0.1,
+	jumpTimeBeforeGroundRegister = 0.05,
 
 	--[[ Land Settings ]]
-	minInAirTimeRegisterLand = 0.3,
-	landingMovementDecrease = 0.8,
-	landingMovementDecreaseLength = 0.15,
+	minInAirTimeRegisterLand = 0.1,
+	landingMovementDecreaseLength = 0.24,
+	landingMovementDecreaseFriction = 1,
 
 	--[[ Bhop Settings ]]
 	missedBhopDecrease = 0.4,
@@ -32,8 +45,10 @@ local config = {
 
 	--[[ Character Settings ]]
 	playerTorsoToGround = 5,
-	movementStickDistance = 0.85
-    
+	movementStickDistance = 0.85,
+	crouchDownAmount = 1.6,
+	defaultCameraHeight = -0.5,
+
 }
 
-return config
+return module

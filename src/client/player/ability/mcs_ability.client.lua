@@ -1,13 +1,17 @@
+local player = game:GetService("Players").LocalPlayer
+if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local SharedAbilityRF = ReplicatedStorage.ability.remote.sharedAbilityRF
 local RunService = game:GetService("RunService")
 local SharedAbilityFunc = require(Framework.shfc_sharedAbilityFunctions.Location)
 
-local player = game:GetService("Players").LocalPlayer
+
 local character = player.Character or player.CharacterAdded:Wait()
 local camera = workspace.CurrentCamera
 local grenadeEvent = ReplicatedStorage.ability.remote.grenade :: RemoteEvent
+local bindableFunction = ReplicatedStorage.ability.remote.localAbilityBF :: BindableFunction
 local storedCasters = {} -- abilityName = caster
 
 --[[
@@ -32,15 +36,18 @@ local function fireClientGrenadeCaster(fromPlayer, serverGrenade, mouseHit, abil
     local stored = storedCasters[abilityOptions.abilityName]
     local caster, casbeh = stored[1], stored[2]
 
-    if serverGrenadeDebug then
-        serverGrenade.Size *= 1.1
-        serverGrenade.Color = Color3.new(255, 0, 0)
-        serverGrenade.Transparency = 0
-    else
-        serverGrenade:Destroy()
+    if serverGrenade then
+        if serverGrenadeDebug then
+            serverGrenade.Size *= 1.1
+            serverGrenade.Color = Color3.new(255, 0, 0)
+            serverGrenade.Transparency = 0
+        else
+            serverGrenade:Destroy()
+        end
     end
 
-    SharedAbilityFunc.FireCaster(fromPlayer, mouseHit, caster, casbeh, abilityOptions)
+    -- store local grenade part for external access
+    storedCasters[abilityOptions.abilityName][3] = SharedAbilityFunc.FireCaster(fromPlayer, mouseHit, caster, casbeh, abilityOptions)
 end
 
 --[[
@@ -64,6 +71,12 @@ end
 SharedAbilityRF.OnClientInvoke = function(action, ...)
     if action == "CanSee" then
         return canSee(...)
+    end
+end
+
+bindableFunction.OnInvoke = function(action, ...)
+    if action == "GetStored" then
+        return storedCasters[...]
     end
 end
 

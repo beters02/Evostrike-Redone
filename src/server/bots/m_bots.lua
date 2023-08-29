@@ -2,6 +2,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Tables = require(Framework.shfc_tables.Location)
 local RagdollRE = ReplicatedStorage:WaitForChild("ragdoll"):WaitForChild("remote"):WaitForChild("sharedRagdollRE")
+local CollectionService = game:GetService("CollectionService")
+local PlayerDiedEvent = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
 
 local bots = {}
 local botNames = {"Fred", "Dave", "Laney", "George", "Ardiis"}
@@ -41,41 +43,70 @@ function bots:Add(character, properties)
         newProp = Tables.combine(newProp, properties) -- must be done in this order for properties to be overwritten correctly
     end
 
+    -- create bot
+    local _clone = character:Clone()
+    print(character)
+    print(_clone)
+
+    local hum = _clone:WaitForChild("Humanoid")
+    hum.BreakJointsOnDeath = false
+
     -- assign the given name or random bot name
     local botName = newProp.Name or self.BotNames[#self.BotNames]
     local bni = table.find(self.BotNames, botName)
     if bni then table.remove(self.BotNames, bni) end
-    character.Name = botName
+    _clone.Name = botName
 
-    -- create bot
-    local hum = character:WaitForChild("Humanoid")
-    hum.BreakJointsOnDeath = false
-    local new_bot: Bot = {Name = botName, Character = character, Humanoid = hum, Properties = newProp}
+    local new_bot: Bot = {Name = botName, Character = _clone, Humanoid = hum, Properties = newProp}
 
-    -- create respawn clone if neccessary
-    local respawnClone
-    if newProp.Respawn then
-        respawnClone = character:Clone()
-        respawnClone.Parent = ReplicatedStorage:WaitForChild("temp")
-    end
+    -- set bot collision
+    task.spawn(function()
+        for i, v in pairs(_clone:GetDescendants()) do
+            if v:IsA("Part") or v:IsA("MeshPart") then
+                if v.Name:match("Foot") then
+                    v.CollisionGroup = "PlayerFeet"
+                    continue
+                end
+
+                v.CollisionGroup = "Bots"
+            end
+        end
+    end)
 
     -- connect died event
     hum.Died:Once(function()
-        task.delay(newProp.RespawnLength or 3, function()
-            if newProp.Respawn then
-                self:Add(respawnClone, {Name = botName})
-            end
-            character:Destroy()
-        end)
+
+        -- death event
+        PlayerDiedEvent:FireAllClients(_clone)
+
+        table.insert(self.BotNames, botName)
+        
+        if not hum:GetAttribute("Removing") then
+            task.delay(newProp.RespawnLength or 3, function()
+                if newProp.Respawn and _clone then
+                    self:Add(character, {Name = botName or self.BotNames[math.random(1, #self.BotNames)]})
+                end
+                _clone:Destroy()
+            end)
+        end
         
         bots.Bots[botName] = nil
+
+        for i, v in pairs(_clone:GetChildren()) do
+            if v:IsA("Part") or v:IsA("BasePart") or v:IsA("MeshPart") then
+                v.CollisionGroup = "DeadCharacters"
+            end
+        end
     end)
 
+    -- tag bot
+    CollectionService:AddTag(_clone, "Bot")
+
     -- move to workspace
-    character.Parent = workspace
+    _clone.Parent = workspace
 
     -- create ragdolls
-    RagdollRE:FireAllClients("NonPlayerInitRagdoll", character)
+    RagdollRE:FireAllClients("NonPlayerInitRagdoll", _clone)
     bots.Bots[botName] = new_bot
 end
 

@@ -49,8 +49,11 @@ local function verifyWeaponSanity(weaponName: string)
 
 	if weaponName == "Knife" then
         isKnife = true
+
+		--[[ KNIFE SKIN TODO ]]
 		-- get skin here
-		weaponObjectsFolder = ReplicatedStorage.weapon.obj:FindFirstChild(string.lower("knife_karambit"))
+		--weaponObjectsFolder = ReplicatedStorage.weapon.obj:FindFirstChild(string.lower("knife_karambit"))
+		weaponObjectsFolder = ReplicatedStorage.weapon.obj:FindFirstChild(string.lower("knife_attackdefault"))
 	else
         isKnife = false
 		weaponObjectsFolder = ReplicatedStorage.weapon.obj:FindFirstChild(string.lower(weaponName))
@@ -96,6 +99,12 @@ local function initToolAndModels(weaponName: string, weaponObjects: Folder) -- -
 	tool.Name = "Tool_" .. weaponName
 
 	model = weaponObjects.models.default
+
+	-- set collision groups
+	for i, v in pairs(model:GetDescendants()) do
+		if not v:IsA("MeshPart") and not v:IsA("BasePart") then continue end
+		v.CollisionGroup = "Weapons"
+	end
 	
 	if model:FindFirstChild("Server") then
 		serverModel = model.Server:Clone()
@@ -186,7 +195,18 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
 	task.wait()
     local currentWeaponInSlot = checkPlayerHasWeaponInSlot(player, inventorySlot)
     if currentWeaponInSlot then
+		-- unequip all weapons
+		-- we do this to counter any animation/movement speed bugs
+		player.Character.Humanoid:UnequipTools()
+		task.wait(0.1) -- this wait period is neccessary to allow for the unequip function to run
+
+		-- now we remove the weapon
         Weapon.Remove(player, currentWeaponInSlot)
+
+		-- finally, re equip the knife if available
+		-- otherwise, equip the weapon once it's loaded
+		--[[local knife = player.Backpack:FindFirstChild("Tool_Knife")
+		if knife then player.Character.Humanoid:EquipTool(knife) else forceEquip = true end]]
     end
 
 	-- create tool & models
@@ -222,8 +242,7 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
 	-- Add Weapon Client
 	WeaponAddRemoveEvent:FireClient(player, "Add", weaponName, weaponOptions, weaponObjects)
 
-	task.wait()
-	task.wait()
+	task.wait(0.1)
 
 	-- force equip
 	if forceEquip then
@@ -248,10 +267,10 @@ function Weapon.Remove(player, weaponTable)
 
 	-- equip knife if possible
 	local knife = checkPlayerHasWeaponInSlot(player, "ternary")
-	if knife then
+	--[[if knife then
 		if not knife or not knife.Parent then return end
 		player.Character.Humanoid:EquipTool(knife.Tool)
-	end
+	end]]
 
 	-- set inv slot
 	Weapon.StoredPlayerInventories[player.Name][weaponTable.Slot] = nil

@@ -5,10 +5,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
 local SoundModule = require(Framework.shm_sound.Location)
+local States = require(Framework.shm_states.Location)
 
 local sharedMovementFunctions = require(Framework.shfc_sharedMovementFunctions.Location)
 local strings = require(Framework.shfc_strings.Location)
-local math = require(Framework.shfc_math.Location)
+local Math = require(Framework.shfc_math.Location)
 local vmsprings = require(Framework.shc_vmsprings.Location)
 local sharedWeaponFunctions = require(Framework.shfc_sharedWeaponFunctions.Location)
 local weaponRemotes = ReplicatedStorage:WaitForChild("weapon"):WaitForChild("remote")
@@ -44,7 +45,7 @@ local weaponVar = {
 	fireDebounce = false,
 	fireLoop = false,
 	fireScheduled = false,
-	lastYAcc = 0,
+	lastYVec = 0,
 	ammo = {
 		magazine = 1,
 		total = 1
@@ -59,8 +60,8 @@ if not string.match(string.lower(tool.Name), "knife") then
 end
 local weaponBar
 local weaponFrame
+local weaponInfoFrame
 local weaponIconEquipped
-local weaponIconUnequipped
 local weaponSounds
 local weaponFireKeyOptName = "Key_PrimaryFire"
 local weaponCameraObject = cameraobject.new(weaponName)
@@ -72,7 +73,6 @@ local hum = char:WaitForChild("Humanoid")
 local camera = workspace.CurrentCamera
 local vm = camera:WaitForChild("viewModel")
 local mouse = player:GetMouse()
---local viewmodelScript
 local movementScript = char:WaitForChild("movementScript")
 local movementCommunicate = require(movementScript:WaitForChild("Communicate"))
 local groundMaxSpeed = movementCommunicate.GetVar("groundMaxSpeed")
@@ -81,6 +81,11 @@ local groundMaxSpeed = movementCommunicate.GetVar("groundMaxSpeed")
 local vmAnimController
 local VMEquipSpring
 local connectVMSpringEvent
+
+-- init states
+States.SetStateVariable("PlayerActions", "shooting", false)
+States.SetStateVariable("PlayerActions", "reloading", false)
+States.SetStateVariable("PlayerActions", "weaponEquipped", false)
 
 --[[ 
     SCRIPT FUNCTIONS
@@ -101,11 +106,20 @@ local connectVMSpringEvent
 local function init_HUD()
 	weaponBar = player.PlayerGui:WaitForChild("HUD").WeaponBar
 	weaponFrame = weaponBar:WaitForChild(strings.firstToUpper(weaponOptions.inventorySlot))
+
 	weaponIconEquipped = weaponFrame:WaitForChild("EquippedIconLabel")
-	weaponIconUnequipped = weaponFrame:WaitForChild("UnequippedIconLabel")
 	weaponIconEquipped.Image = weaponObjectsFolder.images.iconEquipped.Image
-	weaponIconUnequipped.Image = weaponObjectsFolder.images.iconUnequipped.Image
+
 	weaponFrame.Visible = true
+
+	util_setIconEquipped(false)
+
+	weaponInfoFrame = player.PlayerGui.HUD.InfoCanvas.MainFrame.WeaponFrame
+	weaponVar.infoFrame = weaponInfoFrame
+
+	game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE").Event:Connect(function()
+		weaponFrame.Visible = false
+	end)
 end
 
 --[[@title 			- init_animations
@@ -160,6 +174,7 @@ local function init_animationEvents()
 
 	-- viewmodel spring
 	animationEventFunctions.VMSpring = function(param)
+		--[[if not VMEquipSpring then return end
 		if param == "Equip" then
 			VMEquipSpring.Force = 80
 			VMEquipSpring.Speed = 6
@@ -175,7 +190,7 @@ local function init_animationEvents()
 			VMEquipSpring.Speed = 6
 			VMEquipSpring.Damping = 2.5
 			VMEquipSpring:shove(Vector3.new(math.random(20, 30) / 100, -(math.random(10,20)/100), 0))
-		end
+		end]]
 	end
 
 	-- viewmodel spring update
@@ -208,9 +223,6 @@ local function init_animationEvents()
 	-- play replicated weapon sound (replicate to server)
 	animationEventFunctions.PlayReplicatedSound = function(soundName, dontDestroyOnRecreate)
 		local sound = weaponSounds:FindFirstChild(soundName)
-		local _weaponName = weaponName
-		if dontDestroyOnRecreate then _weaponName = false end
-
 		SoundModule.PlayReplicatedClone(sound, player.Character.HumanoidRootPart)
 	end
 	
@@ -288,12 +300,10 @@ end
 	@return			- {void}
 ]]
 
-local disableServerTransparencyDebug = false
 function util_setServerTransparency(t)
-    if disableServerTransparencyDebug then return end
     for i, v in pairs(serverModel:GetDescendants()) do
 		if v:IsA("BasePart") or v:IsA("MeshPart") then
-			v.Transparency = 1
+			v.Transparency = t
 		end
 	end
 end
@@ -307,11 +317,9 @@ end
 
 function util_setIconEquipped(equipped)
 	if equipped then
-		weaponIconUnequipped.Visible = false
-		weaponIconEquipped.Visible = true
+		weaponIconEquipped.ImageColor3 = weaponIconEquipped.Parent:GetAttribute("EquippedColor")
 	else
-		weaponIconUnequipped.Visible = true
-		weaponIconEquipped.Visible = false
+		weaponIconEquipped.ImageColor3 = weaponIconEquipped.Parent:GetAttribute("UnequippedColor")
 	end
 end
 
@@ -324,14 +332,23 @@ end
 
 function util_processEquipAnimation()
 
-    -- enable weapon icon
-	util_setIconEquipped(true)
+	util_setVMTransparency(1)
+
+	-- disable grenade throwing animation if neccessary
+	task.spawn(function()
+		local _throwing = States.GetStateVariable("PlayerActions", "grenadeThrowing")
+		if _throwing then
+			print(_throwing)
+			-- find ability folder on character
+			if not player.Character:FindFirstChild("AbilityFolder_" .. _throwing) then warn("Could not cancel ability throw anim! Couldnt find ability folder") return end
+			player.Character["AbilityFolder_" .. _throwing].Scripts.base_client.communicate:Fire("StopThrowAnimation")
+		end
+	end)
 
     task.spawn(function() -- client
 
         -- we make the vm transparent so you cant see the animations bugging
         -- this may be unnecessary once i add seperate viewmodels to each weapon
-        util_setVMTransparency(1)
         task.delay(0.07, function()
             util_setVMTransparency(0)
         end)
@@ -374,7 +391,13 @@ function util_fireWithChecks()
 
     weaponVar.fireDebounce = true
 
+	-- reset origin point if currBullet is 1
+	if weaponVar.currentBullet == 1 then
+		util_resetSprayOriginPoint()
+	end
+
     core_fire()
+	
     
     if weaponOptions.automatic then
         weaponVar.fireDebounce = false
@@ -383,64 +406,61 @@ function util_fireWithChecks()
     end
 end
 
---[[@title 			- util_registerFireRayAndCameraRecoil
+--[[@title 			- util_RegisterRecoils
 	
 	@summary
-					- 
+					- registerFireRayAndCameraRecoil
 	@return			- {void}
 ]]
 
-function util_registerFireRayAndCameraRecoil()
+function util_RegisterRecoils()
+
+	-- Vector Recoil
 	task.spawn(function()
+
+		-- grab vector recoil from pattern using the camera object
 		local m = player:GetMouse()
 		local mray = util_getMouseTargetRayWithAcc(Vector2.new(m.X, m.Y), Vector2.zero)
-		local currVecRecoil, vecmod = weaponCameraObject:getRecoilVector3(weaponCameraObject:getSprayPatternKey())
+		local currVecRecoil, vecmod, camRecoil = weaponCameraObject:getRecoilVector3(weaponCameraObject:getSprayPatternKey())
 		weaponVar.currentVectorModifier = vecmod
-		local acc = sharedWeaponFunctions.CalculateAccuracy(player, weaponOptions, weaponVar.currentBullet, currVecRecoil, weaponVar, char.HumanoidRootPart.Velocity.Magnitude)
-		acc /= 500
 
-		-- register client ray using client accuracy
-		local direction = mray.Direction
-		direction = Vector3.new(direction.X + acc.X, direction.Y + acc.Y, direction.Z).Unit
+		-- recalculate mray direction to be the height of origin point
+		-- the origin point will be reset in conn_mouseUp
+		if not weaponVar.originPoint then
+			weaponVar.originPoint = {Direction = mray.Direction, Origin = mray.Origin}
+		end
 
-		--if weapon is a spread weapon, add inaccuracy on the X vec
-		--[[if weaponOptions.spread then
-			direction = Vector3.new(direction.X + acc.X, direction.Y + acc.Y, direction.Z).Unit
-		else
-			-- else, only add it on the Y vec (spray patterns)
-			direction = Vector3.new(direction.X, direction.Y + acc.Y/500, direction.Z).Unit
-		end]]
+		mray = {Direction = mray.Direction, Origin = mray.Origin}
+		mray.Direction = Vector3.new(
+			mray.Direction.X,
+			--(weaponVar.originPoint.Direction.Y + mray.Direction.Y)/2 - math.min(camRecoil.X/12, weaponOptions.fireVectorCameraMax.X),
+			--(weaponVar.originPoint.Direction.Y + mray.Direction.Y)/2 + (weaponVar.totalRecoiledVector.Y/12),
+			--mray.Direction.Y - math.min(camRecoil.X/12, weaponOptions.fireVectorCameraMax.X),
+			mray.Direction.Y,
+			mray.Direction.Z
+		)
 
-		-- get result
+		-- get total accuracy and recoil vec direction
+		local direction = sharedWeaponFunctions.GetAccuracyAndRecoilDirection(player, mray, currVecRecoil, weaponOptions, weaponVar)
+
+		-- get ray params & fire ray
 		local params = sharedWeaponFunctions.getFireCastParams(player, camera)
-		local result = workspace:Raycast(mray.Origin, direction * 100, params)
+		local result = workspace:Raycast(mray.Origin, direction * 250, params)
 
 		if result then
+
 			-- register client shot for bullet/blood/sound effects
 			sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, mray.Origin)
 
 			-- pass ray information to server for verification and damage
-			local rayInformation = sharedWeaponFunctions.createRayInformation(mray, result)
-
 			task.spawn(function()
-				local hitRegistered, newAccVec = weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, rayInformation, workspace:GetServerTimeNow())
-				-- if a hit is not registered through the server, reset accuracy and attempt to register again
-				--[[if not hitRegistered then
-					--[[acc, weaponVar = CalculateAccuracy(weaponVar.currentBullet, currVecRecoil, weaponVar, false, newAccVec)
-					local nur = GetNewTargetRay(Vector2.new(m.X, m.Y), Vector2.new(0,0))
-					local direction = nur.Direction
-					direction = Vector3.new(direction.X + acc.X/500, direction.Y + acc.Y/500, direction.Z).Unit
-					local nr = workspace:Raycast(unitRay.Origin, direction * 100, params)
-					local nri = createRayInformation(nur, nr)
-					weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, caccvec, nri, fireRegisterTime, true)
-				end]]
+				local hitRegistered, newAccVec = weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow())
 			end)
 
 			return true
 		end
 
 		-- nothing hit
-
 		-- this shouldn't happen if the map is set
 		-- up with bullet colliders surrounding the map
 		return false
@@ -449,7 +469,17 @@ function util_registerFireRayAndCameraRecoil()
 	-- fire camera recoil once accuracy has been calculated
 	-- to avoid the bullet going where the camera recoil is
 	weaponCameraObject:FireRecoil(weaponVar.currentBullet)
+end
+
+--[[@title 			- util_resetSprayOriginPoint
 	
+	@summary
+					- 
+	@return			- {void}
+]]
+
+function util_resetSprayOriginPoint()
+	weaponVar.originPoint = nil
 end
 
 --[[@title 			- util_getMouseTargetRayWithAcc
@@ -492,22 +522,24 @@ end
 ]]
 
 function conn_enableHotConnections()
-    hotConnections.fireCheck = game:GetService("RunService").RenderStepped:Connect(function()
-		if not player.Character or hum.Health <= 0 then return end
-		local t = tick()
-		if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-			return conn_mouseDown(t)
-		else
-			return conn_mouseUp()
-		end
-	end)
+    --hotConnections.fireCheck = game:GetService("RunService").RenderStepped:Connect(fireCheck)
 	
-	hotConnections.reloadCheck = UserInputService.InputBegan:Connect(function(input, gp)
+	--[[hotConnections.reloadCheck = UserInputService.InputBegan:Connect(function(input, gp)
 		if not player.Character or hum.Health <= 0 then return end
 		if input.KeyCode == Enum.KeyCode.R then
 			core_reload()
 		end
-	end)
+	end)]]
+end
+
+function fireCheck()
+	if not player.Character or hum.Health <= 0 then return end
+	local t = tick()
+	if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+		return conn_mouseDown(t)
+	else
+		return conn_mouseUp()
+	end
 end
 
 --[[@title 			- conn_disableHotConnections
@@ -538,14 +570,15 @@ function conn_mouseUp()
 	end
 
 	if not weaponOptions.automatic then
-		if weaponVar.firing then repeat task.wait() until not weaponVar.firing end
+		--if weaponVar.firing then repeat task.wait() until not weaponVar.firing end
 		weaponVar.fireDebounce = false
+		util_resetSprayOriginPoint()
 	end
 end
 
 function conn_mouseDown(t)
 	if not player.Character or hum.Health <= 0 then return end
-
+	t = type(t) == "number" and t or tick()
     
     if weaponVar.fireScheduled then
 		if t >= weaponVar.fireScheduled then
@@ -561,7 +594,7 @@ function conn_mouseDown(t)
 	if weaponVar.firing or t < weaponVar.nextFireTime then
 		if not weaponVar.fireScheduled then
 			local nxt = weaponVar.nextFireTime - t
-			if nxt < 0.1 then
+			if nxt < 0.2 then
 				weaponVar.fireScheduled = t + nxt
 			end
 		end
@@ -569,6 +602,8 @@ function conn_mouseDown(t)
 	end
 
 	if weaponVar.fireScheduled then return end
+
+
 	util_fireWithChecks()
 end
 
@@ -606,13 +641,71 @@ end
 	@return			- {void}
 ]]
 
+local m_inputs = require(player.PlayerScripts.m_inputs)
+local bind = m_inputs._bindModule
+
+function binds_connectHotBinds()
+	if not weaponVar._hotBinds then weaponVar._hotBinds = {} end
+
+	local hotHeyProp: bind.KeyActionProperties = {
+		Repeats = false,
+		IgnoreOnDead = true,
+		IgnoreWhen = {
+			function() return not weaponVar.equipped end
+		}
+	}
+
+	local fireKeyProp: bind.KeyActionProperties = {
+		Repeats = weaponOptions.automatic,
+		RepeatDelay = 0,
+		IgnoreOnDead = true,
+		IgnoreWhen = {
+			function() return not weaponVar.equipped end
+		}
+	}
+	
+	weaponVar._hotBinds.reload = m_inputs:Bind(
+		"R",
+		weaponName .. "_Reload",
+		hotHeyProp,
+		{},
+		core_reload
+	):: bind.KeyAction
+
+	weaponVar._hotBinds.fire = m_inputs:Bind(
+		"MouseButton1",
+		weaponName .. "_Fire",
+		fireKeyProp,
+		{},
+		conn_mouseDown,
+		conn_mouseUp
+	):: bind.KeyAction
+
+end
+
+function binds_disconnectHotBinds()
+	if not weaponVar._hotBinds then return end
+
+	for i, v in pairs(weaponVar._hotBinds) do
+		v.Unbind()
+	end
+
+	weaponVar._hotBinds = {}
+end
 
 function core_equip()
+	util_resetSprayOriginPoint()
     forcestop = false
     weaponVar.equipping = true
+	States.SetStateVariable("PlayerActions", "weaponEquipping", true)
+	States.SetStateVariable("PlayerActions", "weaponEquipped", weaponName)
 
     -- enable hot connections (fire, reload)
     task.spawn(conn_enableHotConnections)
+	task.spawn(binds_connectHotBinds)
+
+	-- enable weapon icon
+	util_setIconEquipped(true)
     
     -- move model and set motors
     clientModel.Parent = vm.Equipped
@@ -625,15 +718,44 @@ function core_equip()
         if weaponVar.equipping then
             weaponVar.equipped = true
             weaponVar.equipping = false
+			States.SetStateVariable("PlayerActions", "weaponEquipping", false)
         end
     end)
+
+	-- HUD and Sound
+	if weaponOptions.inventorySlot == "ternary" then
+		 -- knife
+
+		-- equip sound
+		animationEventFunctions.PlayReplicatedSound("Equip")
+
+		-- hud
+		weaponInfoFrame.KnifeNameLabel.Visible = true
+		weaponInfoFrame.GunNameLabel.Visible = false
+		weaponInfoFrame.CurrentMagLabel.Visible = false
+		weaponInfoFrame.CurrentTotalAmmoLabel.Visible = false
+		weaponInfoFrame["/"].Visible = false
+	else 
+
+		-- weapon
+
+		-- hud
+		weaponInfoFrame.KnifeNameLabel.Visible = false
+		weaponInfoFrame.GunNameLabel.Visible = true
+		weaponInfoFrame.CurrentMagLabel.Visible = true
+		weaponInfoFrame.CurrentTotalAmmoLabel.Visible = true
+		weaponInfoFrame["/"].Visible = true
+		weaponInfoFrame.CurrentMagLabel.Text = tostring(weaponVar.ammo.magazine)
+		weaponInfoFrame.CurrentTotalAmmoLabel.Text = tostring(weaponVar.ammo.total)
+		weaponInfoFrame.GunNameLabel.Text = strings.firstToUpper(weaponName)
+
+	end
 
     -- animation (sounds are processed in animationevents)
     util_processEquipAnimation()
 
 	-- set movement speed
 	util_handleHoldMovementPenalize(true)
-	
 end
 
 --[[@title 			- core_unequip
@@ -647,12 +769,19 @@ function core_unequip()
 	weaponVar.equipped = false
     weaponVar.firing = false
     weaponVar.reloading = false
+	States.SetStateVariable("PlayerActions", "weaponEquipped", false)
+	States.SetStateVariable("PlayerActions", "weaponEquipping", false)
+	States.SetStateVariable("PlayerActions", "reloading", false)
+	States.SetStateVariable("PlayerActions", "shooting", false)
 	util_handleHoldMovementPenalize(false)
+	util_resetSprayOriginPoint()
+	util_setVMTransparency(1)
 
     task.spawn(function()
         weaponCameraObject:StopCurrentRecoilThread()
     end)
 	task.spawn(conn_disableHotConnections)
+	task.spawn(binds_disconnectHotBinds)
 	task.spawn(util_stopAllAnimations)
 
     util_setIconEquipped(false)
@@ -683,19 +812,29 @@ corefunc = basecorefunc
 
 -- keys of functions that corefunc will use
 local coreself = {
-	util_registerFireRayAndCameraRecoil = util_registerFireRayAndCameraRecoil,
+	util_RegisterRecoils = util_RegisterRecoils,
 	util_playAnimation = util_playAnimation
 }
 
 core_fire = function()
 	if not player.Character or hum.Health <= 0 then return end
-	corefunc.fire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions)
+	if States.GetStateVariable("PlayerActions", "grenadeThrowing") then return end
+	local autoReload
+	weaponVar, autoReload = corefunc.fire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions)
+	if autoReload then
+		task.spawn(function()
+			repeat task.wait() until tick() >= autoReload
+			core_reload()
+		end)
+	end
 end
 
 core_reload = function()
 	if not player.Character or hum.Health <= 0 then return end
-	corefunc.reload(weaponVar, weaponRemoteFunction)
+	if States.GetStateVariable("PlayerActions", "grenadeThrowing") then return end
+	weaponVar = corefunc.reload(weaponOptions, weaponVar, weaponRemoteFunction)
 end
+
 
 --[[{                                 }]
 
@@ -716,4 +855,9 @@ connections.equip = tool.Equipped:Connect(core_equip)
 connections.unequip = tool.Unequipped:Connect(core_unequip)
 
 -- make server model invisible
-util_setServerTransparency(1)
+local debugServerModel = false
+if debugServerModel then
+	util_setServerTransparency(0)
+else
+	util_setServerTransparency(1)
+end

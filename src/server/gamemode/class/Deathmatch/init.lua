@@ -1,6 +1,7 @@
 local Deathmatch = {
     minimumPlayers = 1,
     respawnLength = 4,
+    maximumPlayers = 8,
 
     isWaiting = false,
     status = "running",
@@ -8,15 +9,18 @@ local Deathmatch = {
     buymenu = nil
 }
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Ability = require(Framework.Ability.Location)
 local Weapon = require(Framework.Weapon.Location)
 local BotModule = require(Framework.sm_bots.Location)
 local RunService = game:GetService("RunService")
 local GamemodeLoc = game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("class"):WaitForChild("Deathmatch")
 local Spawns = GamemodeLoc:WaitForChild("Spawns")
+local MessagingService = game:GetService("MessagingService")
 
 local diedGui = GamemodeLoc:WaitForChild("DeathmatchDeathGui")
 local buyMenuGui = GamemodeLoc:WaitForChild("BuyMenu")
@@ -26,17 +30,34 @@ local deathCamera = GamemodeLoc:WaitForChild("deathCamera")
 function Deathmatch:Start()
     local min = self.minimumPlayers or 1
 
+    self.nextUpdateTick = tick()
     self.waitingThread = false
+
+    -- init removing conn
+    self.playerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
+        if self.playerdata[player.Name] then
+            pcall(function()
+                for i, v in pairs(self.playerdata[player.Name].connections) do
+                    v:Disconnect()
+                end
+            end)
+            self.playerdata[player.Name] = nil
+        end
+    end)
+
+    -- wait if minimum players not reached
     if #Players:GetPlayers() < min then
         self.waitingThread = task.spawn(function()
             repeat
                 task.wait(1)
             until #Players:GetPlayers() >= min
             self:PostWait(Players:GetPlayers())
+            print("Gamemode " .. self.currentGamemode .. " started!")
         end)
         return
     end
 
+    -- start otherwise
     self:PostWait(Players:GetPlayers())
     print("Gamemode " .. self.currentGamemode .. " started!")
 end
@@ -48,11 +69,11 @@ function Deathmatch:Stop()
 
     -- disconnect connections
     if self.playerAddedConnection then self.playerAddedConnection:Disconnect() end
-    if self.playerDiedRegisterConn then self.playerDiedRegisterConn:Disconnect() end
     if self.isWaiting then
         coroutine.yield(self.waitingThread)
         return
     end
+    self.serverInfoUpdateConn:Disconnect()
 
     -- remove all weapons and abilities
     Ability.ClearAllPlayerInventories()
@@ -64,6 +85,27 @@ function Deathmatch:Stop()
         v.Character = nil
     end
 
+    -- clear temps
+    for i, v in pairs(workspace:WaitForChild("Temp"):GetChildren()) do
+        v:Destroy()
+    end
+
+    for i, v in pairs(ReplicatedStorage:WaitForChild("temp"):GetChildren()) do
+        v:Destroy()
+    end
+
+    -- destroy bots
+    for i, v in pairs(CollectionService:GetTagged("Bot")) do
+        task.spawn(function()
+            v.Humanoid:TakeDamage(1000)
+            task.wait(0.1)
+            v:Destroy()
+        end)
+    end
+
+    task.wait(0.1)
+
+    print('Gamemode Lobby Stopped')
 end
 
 function Deathmatch:PostWait(players)
@@ -104,34 +146,39 @@ function Deathmatch:InitPlayer(player)
 end
 
 function Deathmatch:SpawnPlayer(player)
-    player:LoadCharacter()
-    task.wait()
+    task.spawn(function()
+        if not player:GetAttribute("Loaded") then
+            repeat task.wait() until player:GetAttribute("Loaded")
+        end
 
-    player.Character.Humanoid.Health = 100
+        player:LoadCharacter()
+        task.wait()
 
-    -- teleport player to spawn
-    local spawnLoc = self:RequestSpawnPoint(player)
+        player.Character.Humanoid.Health = 100
 
-    player.Character.PrimaryPart.Anchored = true
-    player.Character:SetPrimaryPartCFrame(spawnLoc.CFrame + Vector3.new(0,2,0))
-    player.Character.PrimaryPart.Anchored = false
+        -- teleport player to spawn
+        local spawnLoc = self:RequestSpawnPoint(player)
 
-    -- playerdata sanity check
-    if not self.playerdata[player.Name] then self:InitPlayer(player) end
-    local loadout = self.playerdata[player.Name].loadout
+        player.Character.PrimaryPart.Anchored = true
+        player.Character:SetPrimaryPartCFrame(spawnLoc.CFrame + Vector3.new(0,2,0))
+        player.Character.PrimaryPart.Anchored = false
 
-    -- add abilities
-    Ability.Add(player, loadout.ability.primary)
-    Ability.Add(player, loadout.ability.secondary)
+        -- playerdata sanity check
+        if not self.playerdata[player.Name] then self:InitPlayer(player) end
+        local loadout = self.playerdata[player.Name].loadout
 
-    -- add weapons
-    Weapon.Add(player, loadout.weapon.primary)
-    --Weapon.Add(player, loadout.weapon.secondary)
-    Weapon.Add(player, "Knife", true)
+        -- add abilities
+        Ability.Add(player, loadout.ability.primary)
+        Ability.Add(player, loadout.ability.secondary)
 
-    -- buy menu
-    self:AddBuyMenu(player)
+        -- add weapons
+        Weapon.Add(player, loadout.weapon.primary, true)
+        Weapon.Add(player, loadout.weapon.secondary)
+        Weapon.Add(player, "Knife")
 
+        -- buy menu
+        self:AddBuyMenu(player)
+    end)
 end
 
 function Deathmatch:Died(player)
@@ -140,11 +187,12 @@ function Deathmatch:Died(player)
         Ability.ClearPlayerInventory(player)
     end)
 
-    -- give player gui (handle respawn)
-    self:HandleDeathGuiRespawn(player)
-
     -- remove buy menu
     self:RemoveBuyMenu(player)
+
+    -- give player gui (handle respawn)
+    self:HandleDeathGuiRespawn(player)
+    
 end
 
 function Deathmatch:RequestSpawnPoint(player): Part
@@ -176,37 +224,62 @@ function Deathmatch:HandleDeathGuiRespawn(player) -- Handles Death GUI, Camera a
     camerac:WaitForChild("killerObject").Value = killer
     camerac.Parent = player.Character
 
-    local c = diedGui:Clone()
-    c:SetAttribute("KilledPlayerName", killer.Name)
+    local died = diedGui:Clone()
+    died:SetAttribute("KilledPlayerName", killer.Name)
+
+    -- we need to recycle the menu to
+    -- prevent spam instancing
+    local menu = self:AddBuyMenu(player, died)
+    menu.Enabled = false
+    menu.KeyboardInputConnect:Destroy()
 
     -- connect respawn remote
     local conn
-    conn = c:WaitForChild("Remote").OnServerEvent:Connect(function(plr, action)
+    conn = died:WaitForChild("Remote").OnServerEvent:Connect(function(plr, action)
         if action == "Respawn" then
             camerac:WaitForChild("Destroy"):FireClient(player)
             task.wait()
-            self:SpawnPlayer(player)
+
+            -- YOU MUST CALL REMOVE BUY MENU
+            -- MEMORY LEAK MOMENT
+            self:RemoveBuyMenu(player)
+
             conn:Disconnect()
             conn = nil
-            c:Destroy()
-        else
-            c.Enabled = false
-            local menu = self:AddBuyMenu(player)
+            died:Destroy()
+
+            task.wait()
+            
+            -- Call SpawnPlayer last for gameplay stuff
+            self:SpawnPlayer(player)
+        elseif action == "Back" then
+            menu.Enabled = false
+            died.Enabled = true
+            print('worked2')
+        elseif action == "Loadout" then
+            died.Enabled = false
             menu.Enabled = true
-            menu:WaitForChild("Back").OnServerEvent:Once(function()
-                menu:Destroy()
-                c.Enabled = true
-            end)
+            print('loadout2')
         end
     end)
 
-    c.Parent = player.PlayerGui
+    died.Parent = player.PlayerGui
 end
 
-function Deathmatch:AddBuyMenu(player)
+function Deathmatch:AddBuyMenu(player, diedgui)
+
     -- add buy menu
     local c = buyMenuGui:Clone()
+
+    -- if it's a dead buy menu, add object values
+    if diedgui then
+        local remoteObject = Instance.new("ObjectValue", c)
+        remoteObject.Name = "RemoteObject"
+        remoteObject.Value = diedgui.Remote
+    end
+
     c.Parent = player.PlayerGui
+
     self.playerdata[player.Name].connections.buymenu = {
         c:WaitForChild("AbilitySelected").OnServerEvent:Connect(function(plr, ability, slot)
             self.playerdata[player.Name].loadout.ability[slot] = ability
@@ -216,6 +289,8 @@ function Deathmatch:AddBuyMenu(player)
         end)
     }
     self.playerdata[player.Name].buymenu = c
+
+    print('added buy menu!')
     return c
 end
 
@@ -229,6 +304,14 @@ function Deathmatch:RemoveBuyMenu(player)
         end
         self.playerdata[player.Name].connections.buymenu = {}
     end
+end
+
+function Deathmatch:GetTotalPlayerCount()
+    local _count = 0
+    for i, v in pairs(self.playerdata) do
+        if v then _count += 1 end
+    end
+    return _count
 end
 
 return Deathmatch

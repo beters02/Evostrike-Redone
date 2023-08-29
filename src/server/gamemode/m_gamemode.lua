@@ -50,6 +50,7 @@ function Gamemode.SetGamemode(gamemode: string)
     class = setmetatable(require(class), Gamemode)
     Gamemode.currentClass = class
     Gamemode.currentGamemode = gamemode
+    class.Name = gamemode
 
     class:Start()
 end
@@ -76,8 +77,18 @@ local function StartPlayerAddedFunction(player)
     Gamemode.SetGamemode(g)
 end
 
+--
+
 function Gamemode.Init()
     Gamemode.playerAddedConnection = Players.PlayerAdded:Connect(StartPlayerAddedFunction)
+end
+
+--
+
+function Gamemode.GetTotalPlayerCount()
+    return pcall(function()
+        return Gamemode.currentClass:GetTotalPlayerCount()
+    end)
 end
 
 return Gamemode

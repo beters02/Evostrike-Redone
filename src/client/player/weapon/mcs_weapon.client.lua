@@ -1,5 +1,12 @@
-local WeaponRemotes = game:GetService("ReplicatedStorage"):WaitForChild("weapon"):WaitForChild("remote")
+local player = game:GetService("Players").LocalPlayer
+if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local WeaponRemotes = game.ReplicatedStorage:WaitForChild("weapon"):WaitForChild("remote")
 local WeaponAddRemoveEvent = WeaponRemotes:WaitForChild("addremove")
+local WeaponReplicateEvent = WeaponRemotes:WaitForChild("replicate")
+local SharedWeaponFunc = require(Framework.shfc_sharedWeaponFunctions.Location)
+
 
 local player = game:GetService("Players").LocalPlayer
 local vm = workspace.CurrentCamera:WaitForChild("viewModel")
@@ -19,4 +26,9 @@ WeaponAddRemoveEvent.OnClientEvent:Connect(function(action, tool)
 			v:Stop()
 		end
 	end
+end)
+
+-- Replicate
+WeaponReplicateEvent.OnClientEvent:Connect(function(functionName, ...)
+	return SharedWeaponFunc[functionName](...)
 end)

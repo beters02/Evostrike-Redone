@@ -1,7 +1,11 @@
+local player = game:GetService("Players").LocalPlayer
+if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+
 local Debris = game:GetService("Debris")
 local replicateRemote = game:GetService("ReplicatedStorage"):WaitForChild("sound"):WaitForChild("remote"):WaitForChild("replicate")
 
 replicateRemote.OnClientEvent:Connect(function(action, sound, whereFrom)
+    if not sound then return end
     if action == "Play" then
         sound:Play()
     elseif action == "Clone" then

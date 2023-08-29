@@ -1,3 +1,6 @@
+local player = game:GetService("Players").LocalPlayer
+if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+
 --[[
     Initializes Death Connections for All current Players
     and player's added for the LocalPlayer.
@@ -48,9 +51,11 @@ end
 -- Shared Functions
 
 function DiedRagdoll(character, ragdoll)
+	setCharCollision(character)
+
     initRagdollParts(ragdoll)
-    setCharCollision(character)
     replaceCharacterWithRagdoll(character, ragdoll)
+	setRagCollision(ragdoll)
 
 	task.wait()
 	impulseRagdoll(ragdoll, character)
@@ -90,7 +95,6 @@ function createRagdollClone(character)
 	ragdollValue.Value = clone
 	ragdollValue.Parent = character
 
-    setRagCollision(clone)
     return clone
 end
 

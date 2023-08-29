@@ -1,3 +1,6 @@
+local player = game:GetService("Players").LocalPlayer
+if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+
 local Framework = require(game:GetService("ReplicatedStorage").Framework)
 local statesloc = game:GetService("ReplicatedStorage"):WaitForChild("states")
 local states = require(Framework.shm_states.Location)

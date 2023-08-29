@@ -110,13 +110,9 @@ end
 
 function Console.Enter()
 	local stringToEnter = enterTextFrame.TextBox.Text
-	--local split = string.split(stringToEnter, " ")
-	--local command = split[1]
 	
-	print(stringToEnter)
 	local split = {}
 	for word in string.gmatch(stringToEnter, "%S+") do
-		print(word)
 		table.insert(split, word)
 	end
 	

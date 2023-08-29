@@ -1,7 +1,9 @@
 local RunService = game:GetService("RunService")
+local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local DataStore = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
 
 local classLoc = game:GetService("ServerScriptService"):WaitForChild("main").sm_queueService.class
 local gameFoundGui = classLoc:WaitForChild("GameFoundGui")
@@ -14,11 +16,14 @@ class.__index = class
 
 function class.new(className: string, service)
     local self = setmetatable({}, class)
+    self.name = className
     self.connections = {}
     self.playeridstore = {} -- most recently receieved :GetStoredAsync which is usernames
     self.playerstorequeue = {} -- queue'd to add to store
     self.datastore = DataStore:GetOrderedDataStore(className .. "_Queue")
+    self.qplayerdatastore = DataStore:GetDataStore("QueuePlayerDataStore")
     self.service = service
+    self.isQueueClass = true
 
     -- if we can't find the className, we just use the base class
     if className and classLoc:FindFirstChild(className) then
@@ -110,15 +115,23 @@ function class:RequestPlayerAdd(player: Player)
 end
 
 -- Request a player be removed from the queue
-function class:RequestPlayerRemove(player: Player)
-    if self.playerstorequeue[player.Name] then
-        self.playerstorequeue[player.Name] = nil
+function class:RequestPlayerRemove(player: Player|string)
+
+    -- convert player: Player -> playerName: string
+    if typeof(player) ~= "string" then
+        player = player.Name
+    end
+
+    if self.playerstorequeue[player] then
+        self.playerstorequeue[player] = nil
         print('Player removed from both queues!')
         return true
     end
 
     local success = pcall(function()
-        self.datastore:RemoveAsync(player.Name)
+        self.datastore:RemoveAsync(player)
+        self.qplayerdatastore:RemoveAsync(player .. "CanJoin")
+        --self.datastore:SaveAsync()
     end)
 
     if success then
@@ -129,6 +142,76 @@ function class:RequestPlayerRemove(player: Player)
     end
 
     return success
+end
+
+-- Sends the specified party to game place
+function class:SendPartyToPlace(party: table) -- party: table<string>
+
+    local _players = {}
+    local _mapID = self:RequestRandomMap()
+    local _privID = TeleportService:ReserveServer(_mapID)
+
+    -- first remove players from queue
+    for i, v in pairs(party) do
+        self.datastore:SetAsync(v .. "CanJoin", 0)
+    end
+
+    -- now lets check if theres already a server running Deathmatch
+    local serverData = {}
+    MessagingService:SubscribeAsync("ServerInfo", function(data)
+        -- see if we've already saved server's data
+        for i, v in pairs(serverData) do
+            if data.PlaceID == v.PlaceID then return end
+        end
+        table.insert(serverData, data)
+    end)
+    
+    task.wait(5)
+
+    local teleport = false
+    local teleportOtherPlayer = false
+
+    for i, v in pairs(serverData) do
+        print(v.PlaceID)
+        if v.Gamemode == self.Name then
+            if self.maximumPlayers then
+                if #party + #v.Players > self.maximumPlayers then
+                    continue
+                else
+                    -- GO HERE
+                    teleport = v
+                    break
+                end
+            end
+        end
+    end
+
+    -- other place found, set teleport function to be proper
+    if teleport then
+        local to: TeleportOptions = {ServerInstanceId = teleport.JobID}
+        to:SetTeleportData({RequestedGamemode = self.Name})
+        
+        teleport = function() TeleportService:TeleportAsync(teleport.PlaceID, _players, to) end
+        teleportOtherPlayer = function(v) MessagingService:PublishAsync("teleport", "public", {PlayerName = v, PlaceID = teleport.PlaceID, JobID = teleport.JobID, TeleportOptions = to}) end
+    else
+        teleport = function() TeleportService:TeleportToPrivateServer(_mapID, _privID, _players, false, {RequestedGamemode = "Deathmatch"}) end
+        teleportOtherPlayer = function(v) MessagingService:PublishAsync("teleport", "private", {PlayerName = v, PlaceID = _mapID, AccessCode = _privID, TeleportData = {RequestedGamemode = "Deathmatch"}}) end
+    end
+
+    for i, v in pairs(party) do
+        -- check if player is in this place
+        _players[i] = Players:FindFirstChild(v)
+
+        -- if not, remove them from list of players to teleport from here
+        if not _players[i] then
+            table.remove(_players, i)
+
+            -- use messaging service to teleport them on the other server
+            teleportOtherPlayer(v)
+        end
+    end
+
+    teleport()
 end
 
 -- Update local table from store
@@ -143,13 +226,15 @@ function class:PlayerTableMerge()
         for _, inq in pairs(self.playeridstore) do if inq.key == v.Name then warn("Player already in queue!") alreadyinq = true break end end -- check if player is in queue
         if alreadyinq then self.playerstorequeue[i] = nil continue end
 
-        local success = pcall(function()
+        local success, res = pcall(function()
             self.datastore:SetAsync(v.Name, #self.playeridstore + 1)
+            self.qplayerdatastore:SetAsync(v.Name .. "CanJoin", 1)
         end)
         
         if success then
             self.playerstorequeue[i] = nil
         else
+            print(res)
             warn("Could not add player to global queue")
         end
     end
@@ -161,6 +246,7 @@ end
 -- Fires every 5 seconds
 function class:PlayerCheck()
     if #self.playeridstore >= self.options.partySize then
+        print(self.playeridstore)
 
         -- get the players
         local _party = self:GetTopPlayers(self.options.partySize)
@@ -181,8 +267,10 @@ function class:PlayerCheck()
     end
 end
 
--- Get the earliest queueing players
-function class:GetTopPlayers(total: number)
+-- Get the earliest queueing players (return playerNames)
+function class:GetTopPlayers(total: number, ignoreCanJoin)
+
+    if #self.playeridstore == 0 then return {} end
 
     -- at first, _party will be a table array, values = {playerName, queueRank}
     local _party = {}
@@ -190,6 +278,12 @@ function class:GetTopPlayers(total: number)
 
     -- first, we'll sort the players in the queue currently
     for index, array in pairs(self.playeridstore) do
+
+        -- check if player is currently teleporting to a game
+        if self.qplayerdatastore:GetAsync(array.key .. "CanJoin") ~= 1 and not ignoreCanJoin then
+            continue
+        end
+
         _totalpartysize += 1
 
         local ni = #_party
@@ -197,7 +291,7 @@ function class:GetTopPlayers(total: number)
             if i > v[2] then ni = i-1 end
         end
 
-        _party[ni] = {Players[array.key], array.value} -- {Player, QueueSpot}
+        _party[ni] = {array.key, array.value} -- {PlayerName, QueueSpot}
     end
 
     -- let's check if there is a total, or max party size set
@@ -207,12 +301,13 @@ function class:GetTopPlayers(total: number)
     end
 
     -- this shouldn't happen hopefully
-    if total == 0 then warn("Couldn't get total party size") total = 1 end
+    if total == 0 then warn("Couldn't get total party size") return {} end
 
     -- now we get the top [total: number] of players,
     -- and put them in a table array
+    if not total or total == 0 then total = #_party else total = math.min(total, #_party) end
     local _top = {}
-    for i = math.min(total, #_party), 0, -1 do
+    for i = total, 0, -1 do
         table.insert(_top, _party[i][1])
     end
 
@@ -222,15 +317,34 @@ function class:GetTopPlayers(total: number)
     return _top
 end
 
+function class:VerifyPlayersAreOnline()
+	if RunService:IsStudio() then return true end -- luv it
+	
+	local online = false
+	for i, v in pairs(self.playeridstore) do
+		local success, err = pcall(function()
+			TeleportService:GetPlayerPlaceInstanceAsync(Players:GetUserIdFromNameAsync(v.key))
+		end)
+		
+		-- if the player is online, we dont do anything
+		if success then continue else print(err) end 
+		
+		-- if they're not online we remove them from the queue
+		self:RequestPlayerRemove(v.key)
+		online = false
+	end
+	
+	return online
+end
+
 -- Remove a group of players from the queue
 function class:RemoveParty(party: table) -- party: PlayerTable
     for i, v in pairs(party) do
-        self.service:RemovePlayer(v)
-        --self:RequestPlayerRemove(v)
+        self.service:RemovePlayer(v, self.name)
     end
 end
 
--- Connect the queue loop
+-- Connect the queue loop & JobID Subscription
 function class:Connect()
     self.nxt = tick()
     self.connections.queueheartbeat = RunService.Heartbeat:Connect(function(dt)
@@ -240,7 +354,11 @@ function class:Connect()
         self:PlayerTableMerge()
         task.wait()
 
+        self:VerifyPlayersAreOnline()
+        task.wait()
+        
         self:PlayerCheck()
+        task.wait()
 
         self.signal.Fire()
     end)
@@ -252,7 +370,18 @@ function class:Disconnect()
     self.connections.signal:Disconnect()
 end
 
-function class:SendPartyToPlace()
+--[[ Debug ]]
+
+-- clear all players from queue
+function class:ClearAllPlayers()
+    for i, v in pairs(self:GetTopPlayers(0, true)) do
+        self:RequestPlayerRemove(v)
+    end
+end
+
+-- print all players in queue
+function class:PrintAllPlayers()
+    print(self:GetTopPlayers(0, true))
 end
 
 -- [[ Extra ]]

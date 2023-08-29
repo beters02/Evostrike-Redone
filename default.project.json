@@ -22,6 +22,11 @@
         "$path": "src/client/character",
         "$ignoreUnknownInstances": true
       }
+    },
+
+    "ServerStorage": {
+      "$path": "src/serverstorage",
+      "$ignoreUnknownInstances": true
     }
   }
 }

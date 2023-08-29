@@ -5,11 +5,15 @@ local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local AbilityObjects = ReplicatedStorage:WaitForChild("ability"):WaitForChild("obj"):WaitForChild("LongFlash")
+local Sound = require(Framework.shm_sound.Location)
+local States = require(Framework.shm_states.Location)
 
 local LongFlash = {
 
     -- flash settings
     isGrenade = true,
+    grenadeThrowDelay = 0.2,
+    usingDelay = 1, -- Time that player will be "using" their ability, won't be able to interact with weapons during this time
     acceleration = 10,
     speed = 150,
     gravityModifier = 0.2,
@@ -23,8 +27,23 @@ local LongFlash = {
     startHeight = 2,
 
     -- genral settings
-    cooldownLength = 3,
+    cooldownLength = 7,
     uses = 100,
+
+    -- absr = Absolute Value Random
+    -- rtabsr = Random to Absolute Value Random
+    useCameraRecoil = {
+        downDelay = 0.07,
+
+        up = 0.02,
+        side = 0.008,
+        shake = "0.015-0.035rtabsr",
+
+        speed = 4,
+        force = 60,
+        damp = 4,
+        mass = 9
+    },
 
     -- data settings
     abilityName = "LongFlash",
@@ -37,40 +56,25 @@ local LongFlash = {
 }
 
 --[[
-    Use
-]]
-
-function LongFlash:Use()
-
-    -- long flash does CanUse on the server via remoteFunction: ThrowGrenade
-    local hit = LongFlash.player:GetMouse().Hit
-    local used = LongFlash.remoteFunction:InvokeServer("ThrowGrenade", hit)
-
-    -- update client uses
-    if used then
-        self.uses -= 1
-    end
-end
-
---[[
     FlashPop
 ]]
 
 function LongFlash.FlashPop(grenadeModel)
-    if not RunService:IsServer() then return end
+    --if not RunService:IsServer() then end -- Unneccssary since it wont be called on client
     for i, v in pairs(Players:GetPlayers()) do
         if not v.Character then continue end
         local see = LongFlash.CanSee(v, grenadeModel)
-        print(see)
         if not see then continue end
 
         -- check if flash can hit player (wall collision)
         local params = RaycastParams.new()
         params.FilterDescendantsInstances = {workspace.Temp, workspace.MovementIgnore}
         params.FilterType = Enum.RaycastFilterType.Exclude
-        local result = workspace:Raycast(grenadeModel.Position, (v.Character:WaitForChild("Head").Position - grenadeModel.Position).Unit * 150, params)
+        params.CollisionGroup = "Bullets"
+        local result = workspace:Raycast(grenadeModel.Position, ((v.Character:WaitForChild("Head").CFrame.Position - Vector3.new(0,0,0)) - grenadeModel.Position).Unit * 150, params)
+
         local resultModel = result and result.Instance:FindFirstAncestorWhichIsA("Model")
-        if result and result.Instance:FindFirstAncestorWhichIsA("Model") ~= v.Character then
+        if result and (result.Instance:FindFirstAncestorWhichIsA("Model") ~= v.Character or not string.match(result.Instance.Name, "Head")) then
             print(resultModel)
             continue
         end

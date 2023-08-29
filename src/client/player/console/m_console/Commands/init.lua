@@ -103,4 +103,45 @@ Commands.Gamemode = {
 	end,
 }
 
+Commands.Map = {
+	Description = "Teleport player or players to map",
+	Public = true,
+
+	Function = function(_, mapName, players)
+		if not mapName then
+			warn("Could not teleport, Map Name is requred!")
+			return
+		end
+
+		if players then
+			if players == "all" then
+				players = Players:GetPlayers()
+			end
+		end
+
+		local success, err = game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("MapCommand", mapName, players)
+		if not success then warn(err) return end
+		print("Teleporting!")
+		return
+	end
+}
+
+Commands.qs_clearqueues = {
+	Description = "Clear all queue data stores {Debug}",
+	Public = true,
+
+	Function = function()
+		game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("ClearAll")
+	end
+}
+
+Commands.qs_printqueues = {
+	Description = "Print all players that are in queues {Debug}",
+	Public = true,
+
+	Function = function()
+		game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("PrintAll")
+	end
+}
+
 return Commands

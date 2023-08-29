@@ -15,6 +15,12 @@ local GetFunctions = {
         local baseClass = Classes.Base:Clone()
         baseClass.Parent = ReplicatedStorage
 
+        local baseGrenadeClass = Classes.GrenadeBase:Clone()
+        baseGrenadeClass.Parent = class
+
+        game:GetService("Debris"):AddItem(class, 3)
+        game:GetService("Debris"):AddItem(baseClass, 3)
+
         return class, baseClass
     end
 }

@@ -6,8 +6,16 @@
         "ClassName": "RemoteEvent"
       },
       {
+        "Name": "deathBE",
+        "ClassName": "BindableEvent"
+      },
+      {
         "Name": "requestQueueFunction",
         "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "playerLoadedEvent",
+        "ClassName": "RemoteEvent"
       }
     ]
   }

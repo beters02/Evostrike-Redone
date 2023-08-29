@@ -36,6 +36,7 @@ local currentDT = 1/60
 local playerGrounded = false
 local jumping = false
 local crouching = false
+local walking = false
 local jumpCooldown = false
 local inAir = false
 local landing = false
@@ -98,25 +99,29 @@ local Movement = {
 Movement.__index = Movement
 
 -- init sounds
-local humSounds = Movement.humanoid:WaitForChild("Sounds")
+--[[local humSounds = Movement.collider:WaitForChild("Sounds")
 local runsndsF = humSounds:WaitForChild("Run")
 local runsnds = {}
 for _, s in pairs(runsndsF:GetChildren()) do
 	if not s:IsA("Sound") then continue end
 	runsnds[s.Name] = s
-end
-
--- init HUD character
---hudCharClass.animations = {running = hudCharClass.LoadAnimation(hum.Animations.Run), jumping = hudCharClass.LoadAnimation(hum.Animations.Jump)}
+end]]
 
 Movement.Sounds = {
-	runDefault = runsnds.Tile,
-	landDefault = runsnds.Tile:Clone()
-}
-Movement.Sounds.landDefault.Parent = humSounds
-local runv = Movement.Sounds.runDefault.Volume
+	runDefault = Movement.collider.Run_Tile,
+	landDefault = Movement.collider.Land_Tile,
 
-Movement.GetIgnoreDescendantInstances = sharedMovementFunctions.GetIgnoreDescendantInstances
+	runTile = Movement.collider.Run_Tile,
+	runMetal = Movement.collider.Run_Metal
+}
+
+-- LOCAL RUN VOLUME
+local runv = 0.6
+Movement.Sounds.runDefault.Volume = runv
+
+Movement.GetIgnoreDescendantInstances = function()
+	return {player.Character, workspace.CurrentCamera, workspace.Temp, workspace.MovementIgnore}
+end
 
 --[[
 	Init Movement Extrensic Module Functions & Configuration
@@ -174,7 +179,9 @@ function Movement.Air()
 	Movement:ApplyAirVelocity()
 	Movement.movementVelocity.maxForce = Movement:GetMovementVelocityAirForce()
 	local runsnd = Movement.Sounds.runDefault
-	if runsnd.IsPlaying then runsnd:Stop() end
+	if runsnd.IsPlaying then
+		SoundModule.StopReplicated(runsnd)
+	end
 end
 
 --[[
@@ -183,7 +190,7 @@ end
 	@summary
 ]]
 
-function Movement.Run(hitPosition, hitNormal)
+function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	Movement.movementPosition.position = hitPosition + Vector3.new(0, Movement.playerTorsoToGround, 0)
 	Movement.movementPosition.maxForce = Vector3.new(0, Movement.movementPositionForce, 0)
 	Movement:ApplyGroundVelocity(hitNormal)
@@ -191,7 +198,22 @@ function Movement.Run(hitPosition, hitNormal)
 	Movement.movementVelocity.P = Movement.movementVelocityP
 
 	-- get current run sound
-	-- TODO: groundcast for result material
+	if hitMaterial == Enum.Material.Metal or hitMaterial == Enum.Material.CorrodedMetal then
+		if Movement.Sounds.runDefault ~= Movement.Sounds.runMetal then
+			if Movement.Sounds.runDefault.isPlaying then
+				SoundModule.StopReplicated(Movement.Sounds.runDefault)
+			end
+			Movement.Sounds.runDefault = Movement.Sounds.runMetal
+		end
+	else
+		if Movement.Sounds.runDefault ~= Movement.Sounds.runTile then
+			if Movement.Sounds.runDefault.isPlaying then
+				SoundModule.StopReplicated(Movement.Sounds.runDefault)
+			end
+			Movement.Sounds.runDefault = Movement.Sounds.runTile
+		end
+	end
+
 	local runsnd = Movement.Sounds.runDefault
 	local jumpsnd
 	local landsnd = Movement.Sounds.landDefault
@@ -200,22 +222,18 @@ function Movement.Run(hitPosition, hitNormal)
 		jumpingAnimation:Stop(0.1)
 	end
 
-	--[[if hudCharClass.animations.jumping.IsPlaying then
-		hudCharClass.animations.jumping:Stop(0.1)
-	end]]
+	-- Running Sounds
+	if Movement.movementVelocity.Velocity.Magnitude > Movement.walkMoveSpeed + math.round((Movement.groundMaxSpeed - Movement.walkMoveSpeed)/2) then
+		if not runsnd.IsPlaying then SoundModule.PlayReplicated(runsnd) end
+	else
+		if runsnd.IsPlaying then SoundModule.StopReplicated(runsnd) end
+	end
 
+	-- Running Animations
 	if Movement.movementVelocity.Velocity.Magnitude > 1 then
 		if not runningAnimation.IsPlaying then runningAnimation:Play(0.2) end
-		--if not hudCharClass.animations.running.isPlaying then hudCharClass.animations.running:Play(0.2) end
-		if not runsnd.IsPlaying then
-			SoundModule.PlayReplicated(runsnd)
-		end
 	else
 		if runningAnimation.IsPlaying then runningAnimation:Stop(0.2) end
-		--if hudCharClass.animations.running.isPlaying then hudCharClass.animations.running:Stop(0.2) end
-		if runsnd.IsPlaying then
-			SoundModule.StopReplicated(runsnd)
-		end
 	end
 
 	if not onGroundMovementState then
@@ -273,10 +291,9 @@ local cnumval
 local ctween
 local cconn
 
-local function landFinish(ctween)
+local function landFinish()
 	landing = false
 	States.SetStateVariable("Movement", "landing", false, player)
-	if not ctween then return end
 	ctween[3]:Disconnect()
 	ctween[4]:Disconnect()
 	ctween[1]:Destroy()
@@ -289,7 +306,7 @@ end
 
 function Movement.Land(fric: number, waitTime: number)
 
-	fric = fric or Movement.landingMovementDecreaseFriction
+	fric = fric or (Movement.dashing and 0.6) or Movement.landingMovementDecreaseFriction
 	waitTime = waitTime or Movement.landingMovementDecreaseLength
 	landing = true
 
@@ -298,10 +315,12 @@ function Movement.Land(fric: number, waitTime: number)
 	local runsnd = Movement.Sounds.runDefault
 
 	runsnd.Volume = 0
-	if landsnd.IsPlaying then landsnd:Stop() end
-	landsnd:Play()
+	if landsnd.IsPlaying then
+		SoundModule.StopReplicated(landsnd)
+	end
+	SoundModule.PlayReplicated(landsnd)
 	task.delay(0.1, function()
-		landsnd:Stop()
+		SoundModule.StopReplicated(landsnd)
 		runsnd.Volume = runv
 	end)
 
@@ -310,7 +329,7 @@ function Movement.Land(fric: number, waitTime: number)
 
 	-- friction tween
 	if cconn then cconn:Disconnect() end
-	if ctween then landFinish(ctween) end
+	if ctween then landFinish() end
 	if cnumval then cnumval:Destroy() end
 
 	cnumval = Instance.new("NumberValue", RepTemp)
@@ -334,7 +353,9 @@ function Movement.Land(fric: number, waitTime: number)
 			ctween = landFinish(ctween)
 		end
 		Movement:ApplyFriction(cnumval.Value * dt * 60)
+		task.wait()
 	end)
+
 end
 
 --[[
@@ -343,27 +364,33 @@ end
 	@summary
 ]]
 
+local crouchDebounce = false
+
 function Movement.Crouch(crouch: boolean)
+
+	if crouchDebounce then repeat task.wait() until not crouchDebounce end
+	crouchDebounce = true
 
 	if crouch then
 		
 		-- slow player
-		Movement.maxSpeedAdd -= Movement.groundMaxSpeed - Movement.crouchMoveSpeed
-		Movement.friction = Movement.crouchFriction
-		Movement.groundDeccelerate = Movement.crouchDeccelerate
-
+		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.crouchMoveSpeed)
+		Movement.groundAccelerate = Movement.crouchAccelerate
+		
 		-- play crouching animation
 		crouchingAnimation:Play(0.3)
 
 		-- lower camera height
 		hum.CameraOffset = Vector3.new(0, -Movement.crouchDownAmount, 0)
 
+		-- movement state
+		States.SetStateVariable("Movement", "crouching", true)
+
 	else
 	
 		-- unslow player
-		Movement.maxSpeedAdd += Movement.groundMaxSpeed - Movement.crouchMoveSpeed
-		Movement.friction = Movement.defFriction
-		Movement.groundDeccelerate = Movement.defGroundDeccelerate
+		Movement.maxSpeedAdd = math.min(Movement.maxSpeedAdd + (Movement.groundMaxSpeed - Movement.crouchMoveSpeed), Movement.groundMaxSpeed)
+		Movement.groundAccelerate = Movement.defGroundAccelerate
 
 		-- stop crouching animation
 		crouchingAnimation:Stop(0.5)
@@ -371,7 +398,12 @@ function Movement.Crouch(crouch: boolean)
 		-- raise camera height
 		hum.CameraOffset = Vector3.new(0, Movement.defaultCameraHeight, 0)
 
+		-- movement state
+		States.SetStateVariable("Movement", "crouching", false)
+
 	end
+
+	task.delay(0.04, function() crouchDebounce = false end)
 end
 
 --[[
@@ -381,16 +413,33 @@ end
 ]]
 
 function Movement.Walk(walk: boolean)
+	if walk then
+
+		-- slow player
+		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.walkMoveSpeed)
+
+		-- movement state
+		--States.SetStateVariable("Movement", "walking", true)
+		print('Walked!')
+	else
 	
+		-- unslow player
+		Movement.maxSpeedAdd += (Movement.groundMaxSpeed - Movement.walkMoveSpeed)
+
+		-- movement state
+		--States.SetStateVariable("Movement", "walking", false)
+		print('Unalked!')
+	end
 end
 
 --[[
 	Movement Abilities
 ]]
 
-function Movement.RegisterDashVariables(strength, upstrength)
+function Movement.RegisterDashVariables(strength, upstrength, upstrengthmod)
 	dashVariables.strength = strength
 	dashVariables.upstrength = upstrength
+	dashVariables.jumpupstrengthmod = upstrengthmod
 	dashVariables.direction = collider.CFrame.LookVector
 
 	if currentInputSum.Forward ~= 0 or currentInputSum.Side ~= 0 then
@@ -406,9 +455,7 @@ end
 function Movement.Dash()
 	Movement.dashing = true
 	
-	if playerGrounded then
-		Movement.Jump(dashVariables.upstrength)
-	end
+	Movement.Jump(dashVariables.upstrength * (not playerGrounded and dashVariables.jumpupstrengthmod or 1))
 
 	task.wait()
 	
@@ -422,8 +469,12 @@ function Movement.Dash()
 	
 	task.wait(0.01)
 	
-	landed.Event:Wait()
-	Movement.dashing = false
+	task.spawn(function()
+		landed.Event:Wait()
+		Movement.dashing = false
+		--print('dashing finisehd!')
+	end)
+	
 	--Movement.Land(0.6)
 end
 
@@ -431,13 +482,17 @@ end
 	Processing
 ]]
 
+local processCrouch
+local processWalk
+local lastSavedHitPos
+
 function Movement.ProcessMovement()
 	cameraYaw = Movement:GetYaw()
 	cameraLook = cameraYaw.lookVector
 	Movement.cameraYaw = cameraYaw
 	Movement.cameraLook = cameraLook
 	
-	if cameraLook == nil then return end
+	if cameraLook == nil then print('NILLAGE') return end
 	
 	local currVel = Movement.movementVelocity.Velocity
 	if currVel.X ~= currVel.X then Movement.movementVelocity.Velocity = Vector3.new(0,0,0)
@@ -448,19 +503,32 @@ function Movement.ProcessMovement()
 	playerGrounded = hitPart and true or false
 	playerVelocity = collider.Velocity - Vector3.new(0, collider.Velocity.y, 0)
 	
-	if Movement.jumpGrace and tick() < Movement.jumpGrace then
+	if Movement.jumpGrace and tick() < Movement.jumpGrace and collider.Velocity.Y > 0 then
 		playerGrounded = false
+	end
+
+	-- attempt resolve players flying out of the map
+	if Movement.movementVelocity.Velocity.Magnitude > 70 or Movement.collider.Velocity.Magnitude > 70 then
+		Movement.movementVelocity.Velocity = Vector3.zero
+		Movement.collider.Velocity = Vector3.zero
+		--Movement.movementPosition.Position = lastSavedHitPos
+		print("GLITCHAGE")
+		print(Movement)
+		print(Movement.movementVelocity.Velocity)
+		print(collider.Velocity)
+		print(Movement.movementPosition.Position)
+	else
+		lastSavedHitPos = hitPosition
 	end
 
 	--[[
 		SERIALIZE ATTRIBUTES TEST
+
+		Movement.groundAccelerate = script:GetAttribute("groundAccelerate")
+	Movement.groundDeccelerate = script:GetAttribute("groundDeccelerate")
+	Movement.friction = script:GetAttribute("friction")
 	
-	--[[Movement.groundAccelerate = script:GetAttribute("groundAccelerate")
-		Movement.groundDeccelerate = script:GetAttribute("groundDeccelerate")
-		Movement.friction = script:GetAttribute("friction")
 	]]
-	
-	--local playerGrounded, groundHeight = Movement.GetCollisionCylinder()
 	
 	-- [[ LANDING REGISTRATION ]]
 	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then
@@ -476,7 +544,7 @@ function Movement.ProcessMovement()
 		else
 			
 			-- if we didn't register a land, we jump
-			Movement.Run(hitPosition, hitNormal)
+			Movement.Run(hitPosition, hitNormal, hitPart.Material)
 			return
 		end
 	end
@@ -492,14 +560,43 @@ function Movement.ProcessMovement()
 		end
 	end
 
-	if Inputs.FormattedKeys[Inputs.Keys.Crouch[1]] > 0 then
+	processCrouch = Inputs.FormattedKeys[Inputs.Keys.Crouch[1]] > 0
+	processWalk = Inputs.FormattedKeys[Inputs.Keys.Walk[1]] > 0
+
+	if processCrouch then
+
+		-- cancel walk when crouching
+		-- we dont need to do the same for
+		-- walk since you cant crouch and
+		-- walk at the same time
+		processWalk = false
+		if walking then
+			walking = false
+			Movement.Walk(false)
+			task.wait()
+		end
+
 		if not crouching then
 			crouching = true
 			Movement.Crouch(true)
 		end
+
 	elseif crouching then
-		Movement.Crouch(false)
 		crouching = false
+		Movement.Crouch(false)
+	end
+
+	if processWalk then
+
+		-- do not process walk while crouching
+		if not crouching and not walking then
+			walking = true
+			Movement.Walk(true)
+		end
+
+	elseif walking then
+		walking = false
+		Movement.Walk(false)
 	end
 	
 	-- set rotation
@@ -510,8 +607,6 @@ function Movement.ProcessMovement()
 		dashVariables.trigger = false
 		Movement.Dash()
 		return
-		-- maybe set jumping to false in this instance so Movement.Jump() isnt called twice since the dash calls it
-		-- jumping = false
 	end
 	
 	-- [[ GROUND MOVEMENT ]]
@@ -519,7 +614,7 @@ function Movement.ProcessMovement()
 		if jumping then
 			-- call ground movement if on jump cooldown and trying to jump
 			if jumpCooldown or inAir or Movement.dashing then
-				Movement.Run(hitPosition, hitNormal)
+				Movement.Run(hitPosition, hitNormal, hitPart.Material)
 			else
 				-- [[ JUMP MOVEMENT ]]
 				if not Movement.autoBunnyHop and Inputs.Keys.Jump[1] ~= "MouseWheel" then --jump cooldown start
@@ -531,7 +626,7 @@ function Movement.ProcessMovement()
 			end
 		else
 			-- [[ RUN MOVEMENT ]]
-			Movement.Run(hitPosition, hitNormal)
+			Movement.Run(hitPosition, hitNormal, hitPart.Material)
 		end
 		if Movement.dashing then Movement.dashing = false end
 	else
@@ -567,7 +662,8 @@ Inputs.Keys = {
 	Right = {"D", false},
 	--Jump = {"Space", false}
 	Jump = {"MouseWheel", false},
-	Crouch = {"C", false}
+	Crouch = {"C", false},
+	Walk = {"LeftShift", false}
 }
 
 Inputs.FormattedKeys = {
@@ -577,7 +673,8 @@ Inputs.FormattedKeys = {
 	D = 0,
 	--Space = 0
 	MouseWheel = 0,
-	C = 0
+	C = 0,
+	LeftShift = 0
 }
 
 function Inputs.FormatKeys()

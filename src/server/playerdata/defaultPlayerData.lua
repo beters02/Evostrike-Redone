@@ -11,8 +11,20 @@ local profile = {
 			dot = false,
 			dynamic = false,
 			outline = false
+		},
+		camera = {
+			vmX = 0,
+			vmY = 0,
+			vmZ = 0,
+			FOV = 75,
 		}
-    }
+    },
+	states = {
+		isQueueProcessing = false,
+		isQueueAdding = false,
+		isQueueRemoving = false,
+		isQueueDisabled = false
+	}
 }
 
 return profile

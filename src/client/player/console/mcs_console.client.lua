@@ -1,3 +1,6 @@
+local player = game:GetService("Players").LocalPlayer
+if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+
 local ConsoleModuleLocation = script.Parent:WaitForChild("m_console")
 local ConsoleModule = require(ConsoleModuleLocation)
 local CommandsLocation = ConsoleModuleLocation:WaitForChild("Commands")

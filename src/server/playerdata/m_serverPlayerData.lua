@@ -11,7 +11,28 @@ function module.GetPlayerData(player)
     local profile
 
     local success, response = pcall(function()
-        profile = store:Get(module.defaultData)
+        profile = store:GetTable(module.defaultData)
+
+        -- update defaults
+        local _updated = false
+        for mi, main in pairs(module.defaultData) do
+            if not profile[mi] then _updated = true profile[mi] = main end
+            if type(main) == "table" then
+                for ti, tab in pairs(main) do
+                    if not profile[mi][ti] then _updated = true profile[mi][ti] = tab end
+                    if type(tab) == "table" then
+                        for ti1, tab1 in pairs(tab) do
+                            if not profile[mi][ti][ti1] then _updated = true profile[mi][ti][ti1] = tab1 end
+                        end
+                    end
+                end
+            end
+        end
+
+        if _updated then
+            module.SetPlayerData(player, profile)
+            print('Updated necessary defaults!')
+        end
     end)
 
     if not success then
@@ -35,6 +56,14 @@ function module.SetPlayerData(player, newData)
     end
 
     return result
+end
+
+function module.SavePlayerData(player)
+    local store = DataStore2("PlayerData", player)
+    local success, result = pcall(function()
+        store:Save()
+    end)
+    return success
 end
 
 return module

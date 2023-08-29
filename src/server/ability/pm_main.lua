@@ -25,7 +25,9 @@ function Ability.Add(player, abilityName)
     are.Name = "AbilityRemoteEvent"
     local arf = Instance.new("RemoteFunction")
     arf.Name = "AbilityRemoteFunction"
-    are.Parent, arf.Parent = remotesFolder, remotesFolder
+    local abe = Instance.new("BindableEvent")
+    abe.Name = "AbilityBindableEvent"
+    are.Parent, arf.Parent, abe.Parent = remotesFolder, remotesFolder, remotesFolder
 
     -- create scripts
     local scriptsFolder = Instance.new("Folder")

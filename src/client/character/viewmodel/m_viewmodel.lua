@@ -11,10 +11,13 @@ local Math =  require(Framework.shfc_math.Location)
 local Tables = require(Framework.shfc_tables.Location)
 local viewmodelModel = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj"):WaitForChild("viewModel")
 
+local _count = 0
+local _storedSprings = {}
+
 local viewmodelModule = {}
 viewmodelModule.cfg = Tables.clone(require(script.Parent:WaitForChild("config")))
 
---[[ init functions ]]
+--[[ Init Functions ]]
 
 function viewmodelModule.initialize()
     local self = viewmodelModule
@@ -53,17 +56,38 @@ end
 
 function viewmodelModule:initSprings()
     self.springs = {}
-    self.springs.bob = VMSprings:new(9, 50, 4, 6) --m, f, d, s
-    self.springs.charMoveSway = VMSprings:new(9, 30, 4, 6)
-    self.springs.mouseSway = VMSprings:new(9, 40, 2, 6)
-    self.springs.mouseSwayRotation = VMSprings:new(9, 50, 4, 6)
-    self.springs.weaponFire = VMSprings:new(9, 75, 4, 6)
+    self.springs.bob = VMSprings:new(9, 50, 4, 3.5) --m, f, d, s
+    self.springs.charMoveSway = VMSprings:new(9, 30, 4, 3.5)
+    self.springs.mouseSway = VMSprings:new(9, 40, 2, 3.5)
+    self.springs.mouseSwayRotation = VMSprings:new(9, 50, 4, 3.5)
+    self.springs.weaponFire = VMSprings:new(9, 75, 4, 3.5)
+
 end
 
+-- [[ Core ]]
 
---[[
-	Functions
-]]
+function viewmodelModule:connect()
+    RunService:BindToRenderStep("ViewmodelCamera", Enum.RenderPriority.Camera.Value + 3, function(dt)
+        self:update(dt)
+    end)
+end
+
+function viewmodelModule:disconnect()
+    RunService:UnbindFromRenderStep("ViewmodelCamera")
+end
+
+function viewmodelModule:update(dt)
+	self.cdt = dt
+	self.vmhrp.CFrame = util_getVMStartCF(self)
+    self.vmhrp.CFrame = self.vmhrp.CFrame:ToWorldSpace(self:bob(dt)) * self:charMoveSway(dt) * self:mouseSway(dt)
+end
+
+function viewmodelModule:destroy()
+    self.vm:Destroy()
+    self:disconnect()
+end
+
+--[[ Viewmodel Spring Functions ]]
 
 local function getBob(addition, speed, modifier)
 	return math.sin(tick()*addition*speed)*modifier
@@ -190,7 +214,6 @@ function viewmodelModule:mouseSway(dt)
 end
 
 function viewmodelModule:jumpSway(dt)
-
 	-- var
 	local spring = self.springs.charMoveSway
 
@@ -200,65 +223,19 @@ function viewmodelModule:jumpSway(dt)
 	-- shove
 	spring:shove(shov)
 	
-	-- test shove mouse sway
-	--mouseSwayRotationSpring:shove((shov/7))
-
 	return
 end
 
-function viewmodelModule:weaponFireSway(dt, x, y)
-	local spring = self.springs.weaponFireSway
-	local shov = Vector3.new()
-end
-
-local count = 0
-local VMSprings = {}
-
-function viewmodelModule:updateVMSprings(dt)
-	if count > 0 then
-		for i, v in pairs(VMSprings) do
-			local func = v[2]
-			self.vmhrp.CFrame = func(dt, self.vmhrp)
-		end
+function util_getVMStartCF(self)
+	-- get default vm offset based on FOV
+	local _defoff = Vector3.zero -- TODO: grab offset from playeroptions
+	if workspace.CurrentCamera.FieldOfView > 70 then
+		-- every 5 fov we increment a specific amount
+		local diff = workspace.CurrentCamera.FieldOfView - 70
+		_defoff = Vector3.new(_defoff.X + (-0.04 * (diff/5)), 0, _defoff.Z + (0.07 * (diff/5)))
 	end
-end
 
-function connectVMSpring(connect: boolean, spring, springName, func)
-	if connect then
-		VMSprings[springName] = {spring, func}
-		count += 1
-	else
-		disconnectVMSpring(spring)
-	end	
-end
-
-function disconnectVMSpring(springName)
-	VMSprings[springName] = nil
-	count -= 1
-end
-
-function viewmodelModule:update(dt)
-	self.cdt = dt
-	self.vmhrp.CFrame = self.camera.CFrame
-    self.vmhrp.CFrame = self.vmhrp.CFrame:ToWorldSpace(self:bob(dt)) * self:charMoveSway(dt) * self:mouseSway(dt)
-
-	-- VMSpringAnimation connect extra cfs
-	self:updateVMSprings(dt)
-end
-
-function viewmodelModule:connect()
-    RunService:BindToRenderStep("ViewmodelCamera", Enum.RenderPriority.Camera.Value + 3, function(dt)
-        self:update(dt)
-    end)
-end
-
-function viewmodelModule:disconnect()
-    RunService:UnbindFromRenderStep("ViewmodelCamera")
-end
-
-function viewmodelModule:destroy()
-    self.vm:Destroy()
-    self:disconnect()
+	return self.camera.CFrame + self.camera.CFrame:VectorToWorldSpace(_defoff)
 end
 
 return viewmodelModule

@@ -70,6 +70,7 @@ Functions.ThrowGrenade = function(mouseHit: Vector3)
 
 	task.spawn(function()
 		local serverGrenade = AbilityFunc.FireCaster(player, mouseHit, caster, casbeh, abilityOptions)
+		serverGrenade.Transparency = 1
 		grenadeEvent:FireAllClients("Fire", player, serverGrenade, mouseHit, abilityOptions, abilityOptions.RayHit)
 	end)
 	return true

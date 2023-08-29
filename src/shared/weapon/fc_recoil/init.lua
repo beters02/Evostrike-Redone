@@ -175,36 +175,35 @@ function Recoil:updateRecoilVectorTableAsCamera(recoil, parsedKey): Vector3
 end
 
 -- returns the vector3 to be added to vector recoil
+-- the recoil vector table is Up, Side instead of Side, Up
 function Recoil:getRecoilVector3(patternKey: table, isCamera: boolean): Vector3
     local parsedKey
     local recoil
     local rVec3
     local rmod
+    local rcam
 
     -- parse runtime strings (absr)
 	parsedKey = self:parseRecoilRuntimeString({}, patternKey)
 
     -- gather recoil var
+    -- this changes the table to Up, Side.
     recoil = Vector3.new(parsedKey[2], parsedKey[1], parsedKey[3])
 
     rmod = self.weaponVar.vecModifier
     rVec3 = Vector3.new(recoil.X * rmod, recoil.Y * rmod, recoil.Z * rmod)
+    rcam = self:updateRecoilVectorTableAsCamera(recoil, parsedKey)
     
     -- set camera variables
     if isCamera then
-        recoil = self:updateRecoilVectorTableAsCamera(recoil, parsedKey)
+        recoil = rcam
         self.weaponVar.lastSavedRecVec = recoil
     else
         -- grab the vec modifier after cam var update incase mod was updated
         recoil = rVec3
     end
-    
-    -- update camera last to vector last
-    -- idk why i did this, i fear it breaks
-    -- something if i change it
-    --if isCamera then self.weaponVar.lastSavedRecVec = rVec3 end
 
-    return recoil, rmod
+    return recoil, rmod, rcam
 end
 
 -- apply fire max to fake vector

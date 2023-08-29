@@ -1,10 +1,6 @@
 local wepconfig = {
-
     inventorySlot = "primary",
 	automatic = true,
-	
-	totalAmmoSize = 90,
-	magazineSize = 30,
 	
 	equipLength = 1,
 	fireRate = 0.105, -- 0.118
@@ -12,8 +8,9 @@ local wepconfig = {
 	recoilReset = 0.24,
 	camRecoilReset = 0.5,
 	
-	fireVectorCameraOffset = Vector2.new(10, 35),
-	fireVectorCameraMax = Vector3.new(0.009, 0.011, 0.3),
+	fireVectorCameraOffset = Vector2.new(5, 13), -- Side, Up
+	fireAccuracyCameraOffset = Vector2.new(1, 10), -- Side, Up
+	fireVectorCameraMax = Vector3.new(0.011, 0.0105, 0.3), -- Up, Side
 	
 	ammo = {
 		magazine = 30,
@@ -21,11 +18,10 @@ local wepconfig = {
 	},
 	
 	accuracy = {
-		firstBullet = true,
-		base = 5,
-		spray = 2,
-		walk = 90,
-		run = 100,
+		firstBullet = 2,
+		base = 7,
+		walk = 200,
+		run = 200,
 		jump = 150
 	},
 	
@@ -34,7 +30,7 @@ local wepconfig = {
 		headMultiplier = 5,
 		legMultiplier = 0.9,
 		damageFalloffPerMeter = 0.7,
-		damageFalloffDistance = 50,
+		damageFalloffDistance = 35,
 		damageFalloffMinimumDamage = 20,
 		enableHeadFalloff = false
 	},

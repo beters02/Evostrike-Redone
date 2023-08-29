@@ -1,3 +1,6 @@
+local player = game:GetService("Players").LocalPlayer
+if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+
 local UserInputService = game:GetService("UserInputService")
 
 local player = game:GetService("Players").LocalPlayer

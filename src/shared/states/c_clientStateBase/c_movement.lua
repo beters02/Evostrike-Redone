@@ -2,7 +2,8 @@ local module = {
 	stateName = "Movement",
 	var = {
 		grounded = false,
-		landing = false
+		landing = false,
+		crouching = false
 	}
 }
 

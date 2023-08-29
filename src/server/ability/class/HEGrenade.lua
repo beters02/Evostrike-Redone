@@ -5,11 +5,15 @@ local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local AbilityObjects = ReplicatedStorage:WaitForChild("ability"):WaitForChild("obj"):WaitForChild("Molly")
+local Sound = require(Framework.shm_sound.Location)
+local States = require(Framework.shm_states.Location)
 
 local HEGrenade = {
 
     -- grenade settings
     isGrenade = true,
+    grenadeThrowDelay = 0.2,
+    usingDelay = 1, -- Time that player will be "using" their ability, won't be able to interact with weapons during this time
     acceleration = 10,
     speed = 150,
     gravityModifier = 0.5,
@@ -32,21 +36,5 @@ local HEGrenade = {
     remoteFunction = nil, -- to be added in AbilityClient upon init
     remoteEvent = nil,
 }
-
---[[
-    Use
-]]
-
-function HEGrenade:Use()
-
-    -- long flash does CanUse on the server via remoteFunction: ThrowGrenade
-    local hit = HEGrenade.player:GetMouse().Hit
-    local used = HEGrenade.remoteFunction:InvokeServer("ThrowGrenade", hit)
-
-    -- update client uses
-    if used then
-        self.uses -= 1
-    end
-end
 
 return HEGrenade

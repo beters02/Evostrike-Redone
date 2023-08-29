@@ -1,3 +1,8 @@
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local Math = require(Framework.shfc_math.Location)
+local Workspace = game:GetService("Workspace")
+local CastVisuals = require(Framework.shfc_castvisuals.Location)
+
 local module = {}
 
 -- [[ GET ]]
@@ -58,9 +63,17 @@ function module:FindCollisionRay()
 	}
 	local rayReturns = {}
 
-	local i
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = self.GetIgnoreDescendantInstances(self.player)
+	params.CollisionGroup = "PlayerMovement"
+
 	for i = 1, #rays do
-		local part, position, normal = game.Workspace:FindPartOnRayWithIgnoreList(rays[i], self.GetIgnoreDescendantInstances(self.player))
+		local part, position, normal
+		local result = workspace:Raycast(rays[i].Origin, rays[i].Direction, params)
+
+		if not result then position = torsoCFrame.Position part = nil normal = Vector3.zero else
+		part, position, normal = result.Instance, result.Position, result.Normal end
 
 		if part == nil then
 			position = Vector3.new(0,-3000000,0)
@@ -94,7 +107,7 @@ function module:FindCollisionRay()
 
 	-- CODE INSERTED BY EPIXPLODE
 	-- detect front ray for ladders
-	local params = RaycastParams.new()
+	--[[local params = RaycastParams.new()
 	params.FilterDescendantsInstances = self.GetIgnoreDescendantInstances(self.player)
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local ladderResult = workspace:Raycast(torsoCFrame.Position + Vector3.new(0, -1, 0), torsoCFrame.LookVector * 2, params)
@@ -104,9 +117,9 @@ function module:FindCollisionRay()
 		if (model and model:GetAttribute("ladder") ~= nil) or string.match(ladderResult.Instance.Name, "Ladder") then
 			ladderTable = {ladderResult.Instance, ladderResult.Position, ladderResult.Normal, ladderResult.Distance}
 		end
-	end
+	end]]
 
-	return rayReturns[i][1], rayReturns[i][2], rayReturns[i][3], yRatio, zRatio, ladderTable
+	return rayReturns[i][1], rayReturns[i][2], rayReturns[i][3], yRatio, zRatio
 end
 
 local currentVisualize = {}
@@ -147,7 +160,7 @@ end
 
 function flattenVectorAgainstWall(moveVector: Vector3, normal: Vector3)
 	-- if magnitudes are 0 then just nevermind
-	if moveVector.Magnitude == 0 or normal.Magnitude == 0 then
+	if moveVector.Magnitude == 0 and normal.Magnitude == 0 then
 		return Vector3.zero
 	end
 	
@@ -180,14 +193,16 @@ end
 
 local VisualizeSticking = false
 
-function module:ApplyAntiSticking(wishedSpeed, mod, wc)
+function module:ApplyAntiSticking(wishedSpeed, inAir, addSpeed)
+
+	local mod = 1
 	
+	if wishedSpeed.Magnitude == 0 then
+		return wishedSpeed
+	end
+
 	-- get input vector
 	local inputVec = self.currentInputVec
-	-- if no input and not weaponCollision, cancel
-	if not inputVec then return wishedSpeed end
-	-- if antiSticking is happening because of weaponCollision, then ignore no input
-	if not inputVec and wc then inputVec = {X = 0, Z = 1} end
 
 	local newSpeed = wishedSpeed
 	local hrp = self.player.Character.HumanoidRootPart
@@ -196,6 +211,7 @@ function module:ApplyAntiSticking(wishedSpeed, mod, wc)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = self.GetIgnoreDescendantInstances(self.player)
+	params.CollisionGroup = "PlayerMovement"
 	local rayOffset = Vector3.new(0, -.9, 0) -- y offset
 
 	-- wished speed modifier
@@ -210,6 +226,7 @@ function module:ApplyAntiSticking(wishedSpeed, mod, wc)
 	local normals = {}
 	local stickingDirections = {}
 	local ldd = {dir = false, dist = false} -- lowest distance direction
+	local partsAlreadyHit = {}
 
 	-- destroy sticking visualizations
 	if VisualizeSticking then
@@ -218,13 +235,14 @@ function module:ApplyAntiSticking(wishedSpeed, mod, wc)
 		end
 	end
 
-	for _, v in pairs({Vector3.new(0, -3.1, 0), Vector3.new(0, 1.5, 0)}) do
+	for _, v in pairs({Vector3.new(0, -3.1, 0), Vector3.new(0, 1.5, 0), "Head"}) do
 		local currForDir
 		local currSideDir
 		local dontAddFor = false
 		local values = {}
 		local hval = {}
-		local rayPos = hrp.Position + v
+		--local rayPos = hrp.Position + v
+		local rayPos = typeof(v) == "Vector3" and hrp.Position + v or Vector3.new(hrp.Position.X, hrp.Parent[v].CFrame.Position, hrp.Position.Z)
 
 		-- right, front, back
 		if inputVec.X > 0 then
@@ -256,6 +274,15 @@ function module:ApplyAntiSticking(wishedSpeed, mod, wc)
 			table.insert(hval, hrp.CFrame.RightVector * dirAmnt)
 			table.insert(hval, -hrp.CFrame.RightVector * dirAmnt)
 		end
+
+
+		if inputVec.Z == 0 and inputVec.X == 0 then
+			values[1] = wishedSpeed.Unit
+			table.insert(hval, CFrame.new(wishedSpeed.Unit).RightVector * dirAmnt)
+			table.insert(hval, -CFrame.new(wishedSpeed.Unit).RightVector * dirAmnt)
+		else
+			table.insert(values, wishedSpeed.Unit * dirAmnt)
+		end
 		
 		-- middle directions
 		if currForDir and currSideDir then
@@ -270,8 +297,6 @@ function module:ApplyAntiSticking(wishedSpeed, mod, wc)
 			table.insert(values, hval[1])
 			table.insert(values, hval[2])
 		end
-
-		local partsAlreadyHit = {}
 
 		for a, b in pairs(values) do
 			if not b then continue end
@@ -291,23 +316,35 @@ function module:ApplyAntiSticking(wishedSpeed, mod, wc)
 			if table.find(partsAlreadyHit, result.Instance) then continue end
 			table.insert(partsAlreadyHit, result.Instance)
 
-			if not table.find(normals, result.Normal) then
-				table.insert(normals, result.Normal)
+			-- get the movement direction compared to the wall
+			local _v =  newSpeed.Unit * result.Normal
+			
+			-- find active coordinate of comparison
+			for _, c in pairs({_v.X, _v.Y, _v.Z}) do
+				if math.abs(c) > 0 then
+					_v = c
+					break
+				end
 			end
 
-			if not table.find(stickingDirections, b) and not dontAddFor then
-				table.insert(stickingDirections, b)
+			-- if we are moving AWAY from the normal, (positive)
+			-- then do not flatten the vector.
+
+			-- it's not necessary.
+			-- you will stick.
+			-- stick.
+
+			if type(_v) == "number" and _v > 0 then
+				continue
 			end
 
-			if not table.find(stickingDirections, currSideDir) and not dontAddFor then
-				table.insert(stickingDirections, currSideDir)
-			end
+			if not isSticking then isSticking = true end
+			newSpeed = flattenVectorAgainstWall(newSpeed, result.Normal)
+			newSpeed -= result.Instance.Velocity
 
-			if result then
-				if not isSticking then isSticking = true end
-				newSpeed = flattenVectorAgainstWall(newSpeed, result.Normal), result.Normal
-				--print(newSpeed.Magnitude)
-			end
+			self.movementVelocity.Velocity = newSpeed
+			self.collider.Velocity = newSpeed -- anti sticking has to be applied on collider velocity as well (resolves head & in air collision)
+		
 		end
 	end
 

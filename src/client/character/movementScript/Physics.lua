@@ -1,3 +1,6 @@
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local Math = require(Framework.shfc_math.Location)
+
 local module = {}
 
 --[[
@@ -130,7 +133,7 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	-- if no inputs, don't accelerate
 	if wishDir.Magnitude == 0 then
 		if self.dashing then
-			wishDir = self.collider.CFrame.LookVector
+			self.movementVelocity.Velocity = self:ApplyAntiSticking(currentVelocity)
 			return
 		end
 		self.movementVelocity.Velocity = self:ApplyAntiSticking(currentVelocity)
@@ -218,10 +221,14 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	local newSpeed
 	local wallHit
 
+	-- apply anti sticking on collider velocity
+	-- resolves head collision ** THIS IS A MUST HAVE **
+	self.collider.Velocity = self:ApplyAntiSticking(self.collider.Velocity, true, wishSpeed - self.collider.Velocity.Magnitude)
+
 	-- if no inputs, don't accelerate
 	if wishDir.Magnitude == 0 then
 		if not self.dashing then
-			self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity)
+			self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, true, wishSpeed - self.movementVelocity.Velocity.Magnitude)
 			return
 		end
 		wishDir = self.collider.CFrame.LookVector
@@ -233,7 +240,7 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 
 	-- if we're not adding speed, dont do anything
 	if addSpeed <= 0 then
-		self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity)
+		self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, self.dashing, addSpeed)
 		return
 	end
 
@@ -244,13 +251,31 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	local newVelocity = self.movementVelocity.Velocity + accelerationSpeed * wishDir
 
 	-- if a wall was hit, dont accelerate in that direction
-	newVelocity, wallHit = self:ApplyAntiSticking(newVelocity)
-	--newVelocity = self:ApplyWallHit(wallHit, newVelocity, wishDir)
+	newVelocity, wallHit = self:ApplyAntiSticking(newVelocity, self.dashing, addSpeed)
 
 	-- apply acceleration
 	self.movementVelocity.Velocity = newVelocity
 
 end
+
+-- if no inputs, don't accelerate
+	--[[if wishDir.Magnitude == 0 then
+		if not self.dashing then
+			self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity)
+			return
+		end
+		print('is dashing')
+		wishDir = self.movementVelocity.Velocity.Unit
+	end]]
+
+-- get current/add speed
+	--[[currentSpeed = currentVelocity:Dot(wishDir)
+	addSpeed = wishSpeed - currentSpeed
+	if wishDir.Magnitude == 0 then
+		currentSpeed = self.movementVelocity.Velocity:Dot(self:ApplyAntiSticking(self.movementVelocity.Velocity))
+	else
+		currentSpeed = self.movementVelocity.Velocity:Dot(wishDir)
+	end]]
 
 --[[
 	@title 			- GetAccelerationDirection
@@ -266,6 +291,7 @@ function module:GetAccelerationDirection()
 
 	-- if no input, direction = 0, 0, 0
 	if self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then
+		self.currentInputVec = Vector3.zero
 		return Vector3.zero
 	end
 
