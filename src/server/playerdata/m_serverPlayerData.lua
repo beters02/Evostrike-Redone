@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local RunService = game:GetService("RunService")
 local DataStore2 = require(Framework.sm_datastore2.Location)
 
 local module = {}
@@ -12,8 +13,14 @@ function module.GetPlayerData(player)
 
     local success, response = pcall(function()
         profile = store:GetTable(module.defaultData)
+        print(profile)
 
         -- update defaults
+        -- todo: change to data change function i made awhile ago
+        
+        -- this will update to the third table index.
+        -- ex: playerdata.options.keybinds.exampleTable
+        
         local _updated = false
         for mi, main in pairs(module.defaultData) do
             if not profile[mi] then _updated = true profile[mi] = main end
@@ -30,7 +37,8 @@ function module.GetPlayerData(player)
         end
 
         if _updated then
-            module.SetPlayerData(player, profile)
+            print(profile)
+            module.SetPlayerData(player, profile, true)
             print('Updated necessary defaults!')
         end
     end)
@@ -43,7 +51,7 @@ function module.GetPlayerData(player)
     return profile
 end
 
-function module.SetPlayerData(player, newData)
+function module.SetPlayerData(player, newData, save)
     local store = DataStore2("PlayerData", player)
 
     local success, result = pcall(function()
@@ -55,10 +63,15 @@ function module.SetPlayerData(player, newData)
         return false
     end
 
+    if save then
+        module.SavePlayerData(player)
+    end
+
     return result
 end
 
 function module.SavePlayerData(player)
+    if RunService:IsStudio() then return true end
     local store = DataStore2("PlayerData", player)
     local success, result = pcall(function()
         store:Save()

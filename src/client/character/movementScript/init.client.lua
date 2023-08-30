@@ -15,6 +15,9 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local sharedMovementFunctions = require(Framework.shfc_sharedMovementFunctions.Location)
 local States = require(Framework.shm_states.Location)
 local SoundModule = require(Framework.shm_sound.Location)
+local PlayerData = require(Framework.shm_clientPlayerData.Location)
+if not PlayerData.isInit then repeat task.wait() until PlayerData.isInit end
+local Strings = require(Framework.shfc_strings.Location)
 
 -- [[ Define Local Variables ]]
 local Inputs
@@ -418,17 +421,11 @@ function Movement.Walk(walk: boolean)
 		-- slow player
 		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.walkMoveSpeed)
 
-		-- movement state
-		--States.SetStateVariable("Movement", "walking", true)
-		print('Walked!')
 	else
 	
 		-- unslow player
 		Movement.maxSpeedAdd += (Movement.groundMaxSpeed - Movement.walkMoveSpeed)
 
-		-- movement state
-		--States.SetStateVariable("Movement", "walking", false)
-		print('Unalked!')
 	end
 end
 
@@ -512,11 +509,11 @@ function Movement.ProcessMovement()
 		Movement.movementVelocity.Velocity = Vector3.zero
 		Movement.collider.Velocity = Vector3.zero
 		--Movement.movementPosition.Position = lastSavedHitPos
-		print("GLITCHAGE")
+		--[[print("GLITCHAGE")
 		print(Movement)
 		print(Movement.movementVelocity.Velocity)
 		print(collider.Velocity)
-		print(Movement.movementPosition.Position)
+		print(Movement.movementPosition.Position)]]
 	else
 		lastSavedHitPos = hitPosition
 	end
@@ -671,11 +668,23 @@ Inputs.FormattedKeys = {
 	S = 0,
 	A = 0,
 	D = 0,
+	C = 0,
 	--Space = 0
 	MouseWheel = 0,
-	C = 0,
 	LeftShift = 0
 }
+
+function Inputs.UpdateBindables()
+	local keybinds = PlayerData:Get("options.keybinds")
+	for i, v in pairs({jump = Inputs.Keys.Jump, crouch = Inputs.Keys.Crouch}) do
+		if v[1] ~= keybinds[i] then
+			local _currKey = v[1]
+			Inputs.Keys[Strings.firstToUpper(i)][1] = keybinds[i]
+			Inputs.FormattedKeys[_currKey] = nil
+			Inputs.FormattedKeys[Inputs.Keys[Strings.firstToUpper(i)][1]] = 0
+		end
+	end
+end
 
 function Inputs.FormatKeys()
 	Inputs.FormattedKeys = {}
@@ -756,6 +765,7 @@ function Update(dt)
 	currentDT = dt
 	Movement.currentDT = dt
 
+	Inputs.UpdateBindables()
 	Inputs.UpdateMovementSum()
 	Movement.ProcessMovement()
 	listenForPropertyChanged()

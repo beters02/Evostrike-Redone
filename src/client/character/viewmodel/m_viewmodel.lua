@@ -56,12 +56,10 @@ end
 
 function viewmodelModule:initSprings()
     self.springs = {}
-    self.springs.bob = VMSprings:new(9, 50, 4, 3.5) --m, f, d, s
-    self.springs.charMoveSway = VMSprings:new(9, 30, 4, 3.5)
-    self.springs.mouseSway = VMSprings:new(9, 40, 2, 3.5)
-    self.springs.mouseSwayRotation = VMSprings:new(9, 50, 4, 3.5)
-    self.springs.weaponFire = VMSprings:new(9, 75, 4, 3.5)
-
+    self.springs.bob = VMSprings:new(9, 50, 5, 3.5) --m, f, d, s
+    self.springs.charMoveSway = VMSprings:new(9, 50, 4, 4)
+    self.springs.mouseSway = VMSprings:new(9, 60, 4, 4)
+    self.springs.mouseSwayRotation = VMSprings:new(9, 50, 4, 4)
 end
 
 -- [[ Core ]]
@@ -136,11 +134,17 @@ function viewmodelModule:charMoveSway(dt)
 
     --var
     local cfg = self.cfg.charmovesway
-	local oldVel = self.movementVel.Velocity.Magnitude
     local mod = cfg.mod
-	local velocity = oldVel * -.005
+	--local velocity = self.movementVel.Velocity.Magnitude * -.008
     local spring = self.springs.charMoveSway
 	
+	
+	
+    -- get direction
+	local directive = self.charhrp.CFrame:VectorToObjectSpace(self.hum.MoveDirection)
+	local velocity = self.movementVel.Velocity.Magnitude * -.008
+	--print(self.charhrp.CFrame:VectorToWorldSpace(self.movementVel.Velocity))
+
 	-- set to max or 0
 	if math.abs(velocity) >= .0001 then
 		if velocity < 0 then
@@ -151,17 +155,15 @@ function viewmodelModule:charMoveSway(dt)
 	else
 		velocity = 0
 	end
-	
-    -- get direction
-	local directive = self.charhrp.CFrame:VectorToObjectSpace(self.hum.MoveDirection)
-	local max = cfg.maxX
+
+	--[[local max = cfg.maxX
 	local ymax = cfg.maxY
 
     -- if jumping change max
 	if self:isJumping() then
 		max = 0.2
 		ymax = 0.42
-	end
+	end]]
 
 	-- set velocity max/min
 	local velMax = 18 * -mod
@@ -169,9 +171,9 @@ function viewmodelModule:charMoveSway(dt)
 	velMagNum = velMagNum < 0 and math.max(velMagNum, velMax) or math.min(-velMax, velMagNum)
 
 	-- create shove
-	local x = math.clamp(directive.X, -max, max) * velocity
-	local y = math.clamp(self.charhrp.Velocity.Y, -ymax, ymax) * velMagNum
-	local z = math.clamp(directive.Z, -max, max) * velocity
+	local x = math.clamp(directive.X, cfg.minX, cfg.maxX) * velocity
+	local y = math.clamp(self.charhrp.Velocity.Y, -cfg.maxY, cfg.maxY) * velMagNum
+	local z = math.clamp(directive.Z, cfg.minZ, cfg.maxZ) * velocity
 	local shove = (Vector3.new(x, y, z))
 
 	-- accelerate shove
@@ -199,7 +201,7 @@ function viewmodelModule:mouseSway(dt)
 
 	-- get rotation shove
 	-- we min the rotation on the up Y axis so it doesn't go up too much
-	local rsy = math.max(math.min(shove.Y, 0.02), -0.035)
+	local rsy = math.max(math.min(shove.Y, 0.007), -0.007)
 	local rotShove = Math.vector3Max(Math.vector3Min(shove, 0.03), -0.03)
 	rotShove = Vector3.new(rotShove.X, rsy, rotShove.Z)
 	

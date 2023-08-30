@@ -1,9 +1,8 @@
-local player = game:GetService("Players").LocalPlayer
-if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
-
 local UserInputService = game:GetService("UserInputService")
 
 local player = game:GetService("Players").LocalPlayer
+if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+
 local gui = player.PlayerGui:WaitForChild("MainMenu")
 local module = require(script.Parent.cm_mainMenu).initialize(gui)
 

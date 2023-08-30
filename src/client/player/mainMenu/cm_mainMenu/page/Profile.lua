@@ -1,30 +1,28 @@
 local LocalizationService = game:GetService("LocalizationService")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 
-local options = {}
+local profile = {}
 
-function options:Open()
+function profile:Open()
 	self:Connect()
 	self.Location.Visible = true
 end
 
-function options:Close()
+function profile:Close()
 	self:Disconnect()
 	self.Location.Visible = false
 end
 
 --
 
-function options:init(main)
-    self = setmetatable(self, options)
+function profile:init(main)
+    self = setmetatable(self, profile)
 	local clientPlayerDataModule = require(Framework.shm_clientPlayerData.Location)
 
 	-- wait for data module to init
 	if not clientPlayerDataModule.stored then
 		repeat task.wait() until clientPlayerDataModule.stored
 	end
-
-    print(self)
 
 	self.connections = {}
 	self.player = main.player
@@ -36,15 +34,15 @@ end
 
 --
 
-function options:Connect()
+function profile:Connect()
 
 end
 
-function options:Disconnect()
+function profile:Disconnect()
 	for i, v in pairs(self.connections) do
 		v:Disconnect()
 	end
 	self.connections = {}
 end
 
-return options
+return profile

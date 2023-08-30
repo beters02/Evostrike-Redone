@@ -15,6 +15,8 @@ function crosshair.initialize(hud)
     self.origin = UDim2.fromOffset(self.resolution.X / 2, self.resolution.Y / 2)
     self.hairs = {}
 
+    -- this is a brute force way to get client stored player data
+    -- alternatively, you could use module:Get() or module:GetAsync()
     local clientPlayerDataModule = require(Framework.shm_clientPlayerData.Location)
 	if not clientPlayerDataModule.stored then repeat task.wait() until clientPlayerDataModule.stored end
 

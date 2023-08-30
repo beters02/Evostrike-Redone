@@ -3,7 +3,7 @@ local Deathmatch = {
     
     config = {
         updateInterval = 5,
-        minParty = 2,
+        minParty = 1,
         maxParty = 8
     }
 }

@@ -4,7 +4,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Strings = require(Framework.shfc_strings.Location)
 local SharedAbilityRF = ReplicatedStorage.ability.remote.sharedAbilityRF
 local States = require(Framework.shm_states.Location)
---local PlayerOptions = require(Scripts:WaitForChild("Modules"):WaitForChild("PlayerOptions"))
+local PlayerData = require(Framework.shm_clientPlayerData.Location)
 
 local player = game:GetService("Players").LocalPlayer
 local key
@@ -24,18 +24,26 @@ ability.remoteFunction = abilityRemotes.AbilityRemoteFunction
 ability.remoteEvent = abilityRemotes.AbilityRemoteEvent
 ability.bindableEvent = abilityRemotes.AbilityBindableEvent
 
+-- init keycode
+local keypath = "options.keybinds." .. ability.inventorySlot .. "Ability"
+keyCode = PlayerData:Get(keypath)
+
+-- listen for changed
+PlayerData:Changed(keypath, function(newValue)
+    keyCode = newValue
+    ability.key = keyCode
+end)
+
 -- init HUD GUI
 local abilityFrame
 local abilityIcon
-
-local keys = {primary = "F", secondary = "V"}
-ability.key = keys[ability.inventorySlot]
 
 local abilityBar = player.PlayerGui:WaitForChild("HUD").AbilityBar
 abilityFrame = abilityBar:WaitForChild(Strings.firstToUpper(ability.inventorySlot))
 
 ability.frame = abilityFrame
-abilityFrame.Key.Text = ability.key
+abilityFrame.Key.Text = Strings.convertFullNumberStringToNumberString(keyCode)
+ability.key = keyCode
 
 abilityIcon = abilityFrame:WaitForChild("IconImage")
 abilityIcon.Image = abilityObjects.Images.Icon.Texture
@@ -64,9 +72,7 @@ States.SetStateVariable("PlayerActions", "grenadeThrowing", false)
 local debounce = false
 UserInputService.InputBegan:Connect(function(input, gp)
     if debounce then return end
-    keyCode = ability.key and Enum.KeyCode[ability.key]
-    if not keyCode then return end
-    if input.KeyCode == keyCode then
+    if (string.match(keyCode, "Mouse") and input.UserInputType == Enum.UserInputType[keyCode]) or input.KeyCode == Enum.KeyCode[keyCode] then
         if ability.uses <= 0 or ability.cooldown then return end
         if ability.isGrenade then
             if States.GetStateVariable("PlayerActions", "shooting") then return end

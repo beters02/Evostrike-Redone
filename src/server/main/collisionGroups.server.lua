@@ -128,7 +128,7 @@ initRagdolls()
 task.wait()
 
 -- test lmao
-local printt = {}
+--[[local printt = {}
 for i, v in pairs(cg) do
     if not PhysicsService:IsCollisionGroupRegistered(v) then continue end
 
@@ -138,4 +138,4 @@ for i, v in pairs(cg) do
     end
 end
 
-print(printt)
+print(printt)]]

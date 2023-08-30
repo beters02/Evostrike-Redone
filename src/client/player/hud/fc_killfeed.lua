@@ -14,7 +14,6 @@ function killfeed.init(self)
 	_n.currentItems = {}
 	_n.upLength = self.upLength or 5
 	if self.yours then
-		print(self)
 		function _n:setKillfeedTexts(item, killer, killed)
 			item:WaitForChild("KillText").Text = "Killed " .. tostring(killed.Name)
 		end

@@ -6,6 +6,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
 local SoundModule = require(Framework.shm_sound.Location)
 local States = require(Framework.shm_states.Location)
+local PlayerData = require(Framework.shm_clientPlayerData.Location)
 
 local sharedMovementFunctions = require(Framework.shfc_sharedMovementFunctions.Location)
 local strings = require(Framework.shfc_strings.Location)
@@ -94,6 +95,36 @@ States.SetStateVariable("PlayerActions", "weaponEquipped", false)
     the functions will edit the all of the script's variables.
 ]]
 
+--[[@title 			- init_keybinds
+	
+	@summary
+					- Initializes the keybind variables for the weapon.
+					- Currently it only initializes the Equip key.
+
+	@return			- {void}
+]]
+
+local function init_keybinds()
+
+	-- init key path
+	weaponVar._keypath = "options.keybinds." .. weaponOptions.inventorySlot .. "Weapon"
+
+	-- when a key is changed from the data, we will fire a
+	-- bindable event to let the client know to update the HUD
+	weaponVar._keyChangedBind = Instance.new("BindableEvent", tool)
+	weaponVar._keyChangedBind.Name = "KeyChangedBindableEvent"
+
+	-- connect playerdata changed
+	PlayerData:Changed(weaponVar._keypath, function(newValue)
+		weaponVar._equipKey = weaponVar._convert(newValue)
+		weaponVar._keyChangedBind:Fire(newValue)
+	end)
+
+	-- init key
+	weaponVar._equipKey = PlayerData:Get(weaponVar._keypath)
+
+end
+
 --[[@title 			- init_HUD
 	
 	@summary
@@ -104,22 +135,35 @@ States.SetStateVariable("PlayerActions", "weaponEquipped", false)
 ]]
 
 local function init_HUD()
+
+	
+	-- init weapon bar
 	weaponBar = player.PlayerGui:WaitForChild("HUD").WeaponBar
 	weaponFrame = weaponBar:WaitForChild(strings.firstToUpper(weaponOptions.inventorySlot))
-
-	weaponIconEquipped = weaponFrame:WaitForChild("EquippedIconLabel")
-	weaponIconEquipped.Image = weaponObjectsFolder.images.iconEquipped.Image
-
-	weaponFrame.Visible = true
-
-	util_setIconEquipped(false)
-
 	weaponInfoFrame = player.PlayerGui.HUD.InfoCanvas.MainFrame.WeaponFrame
 	weaponVar.infoFrame = weaponInfoFrame
 
-	game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE").Event:Connect(function()
+	-- init icons
+	weaponIconEquipped = weaponFrame:WaitForChild("EquippedIconLabel")
+	weaponIconEquipped.Image = weaponObjectsFolder.images.iconEquipped.Image
+	util_setIconEquipped(false)
+
+	-- key
+	weaponBar.SideBar[weaponOptions.inventorySlot .. "Key"].Text = strings.convertFullNumberStringToNumberString(weaponVar._equipKey)
+
+	-- connect key changed bind for hud elements
+	weaponVar._keyChangedBind.Event:Connect(function(newValue)
+		weaponBar.SideBar[weaponOptions.inventorySlot .. "Key"].Text = strings.convertFullNumberStringToNumberString(newValue)
+	end)
+
+	-- disable weaponFrame on death
+	game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE").Event:Once(function()
 		weaponFrame.Visible = false
 	end)
+
+	-- enable
+	weaponFrame.Visible = true
+
 end
 
 --[[@title 			- init_animations
@@ -286,7 +330,7 @@ function util_setVMTransparency(t)
     task.spawn(function()
         for i, v in pairs(vm:GetDescendants()) do
             if v:IsA("MeshPart") or v:IsA("BasePart") then
-                if v.Name == "HumanoidRootPart" or v.Name == "WeaponHandle" or v.Name == "WeaponTip" then continue end
+                if v.Name == "HumanoidRootPart" or v.Name == "WeaponHandle" or v.Name == "WeaponTip" or v:GetAttribute("IgnoreTransparency") then continue end
                 v.Transparency = t
             end
         end
@@ -513,6 +557,39 @@ function util_handleHoldMovementPenalize(equip)
 	--print('set new ground max speed add', currAdd)
 end
 
+--[[@title 			- util_setInfoFrameWeapon()
+	
+	@summary
+					- 
+	@return			- {void}
+]]
+
+function util_setInfoFrameWeapon()
+	weaponInfoFrame.KnifeNameLabel.Visible = false
+	weaponInfoFrame.GunNameLabel.Visible = true
+	weaponInfoFrame.CurrentMagLabel.Visible = true
+	weaponInfoFrame.CurrentTotalAmmoLabel.Visible = true
+	weaponInfoFrame["/"].Visible = true
+	weaponInfoFrame.CurrentMagLabel.Text = tostring(weaponVar.ammo.magazine)
+	weaponInfoFrame.CurrentTotalAmmoLabel.Text = tostring(weaponVar.ammo.total)
+	weaponInfoFrame.GunNameLabel.Text = strings.firstToUpper(weaponName)
+end
+
+--[[@title 			- util_setInfoFrameKnife()
+	
+	@summary
+					- 
+	@return			- {void}
+]]
+
+function util_setInfoFrameKnife()
+	weaponInfoFrame.KnifeNameLabel.Visible = true
+	weaponInfoFrame.GunNameLabel.Visible = false
+	weaponInfoFrame.CurrentMagLabel.Visible = false
+	weaponInfoFrame.CurrentTotalAmmoLabel.Visible = false
+	weaponInfoFrame["/"].Visible = false
+end
+
 --[[@title 			- conn_enableHotConnections
 	
 	@summary
@@ -552,11 +629,10 @@ function conn_disableHotConnections()
 	end
 end
 
-local s = weaponOptions.inventorySlot
-local tempequip = s == "primary" and "One" or s == "secondary" and "Two" or "Three"
 function conn_equipInputBegan(input, gp)
 	if not player.Character or hum.Health <= 0 then return end
-    if input.KeyCode == Enum.KeyCode[tempequip] then
+
+    if input.KeyCode == Enum.KeyCode[weaponVar._equipKey] then
 		if not weaponVar.equipping and not weaponVar.equipped then
 			hum:EquipTool(tool)
 		end
@@ -723,32 +799,12 @@ function core_equip()
     end)
 
 	-- HUD and Sound
-	if weaponOptions.inventorySlot == "ternary" then
-		 -- knife
-
-		-- equip sound
-		animationEventFunctions.PlayReplicatedSound("Equip")
-
-		-- hud
-		weaponInfoFrame.KnifeNameLabel.Visible = true
-		weaponInfoFrame.GunNameLabel.Visible = false
-		weaponInfoFrame.CurrentMagLabel.Visible = false
-		weaponInfoFrame.CurrentTotalAmmoLabel.Visible = false
-		weaponInfoFrame["/"].Visible = false
-	else 
-
-		-- weapon
-
-		-- hud
-		weaponInfoFrame.KnifeNameLabel.Visible = false
-		weaponInfoFrame.GunNameLabel.Visible = true
-		weaponInfoFrame.CurrentMagLabel.Visible = true
-		weaponInfoFrame.CurrentTotalAmmoLabel.Visible = true
-		weaponInfoFrame["/"].Visible = true
-		weaponInfoFrame.CurrentMagLabel.Text = tostring(weaponVar.ammo.magazine)
-		weaponInfoFrame.CurrentTotalAmmoLabel.Text = tostring(weaponVar.ammo.total)
-		weaponInfoFrame.GunNameLabel.Text = strings.firstToUpper(weaponName)
-
+	if weaponOptions.inventorySlot == "ternary" then -- knife
+		animationEventFunctions.PlayReplicatedSound("Equip") -- equip sound
+		util_setInfoFrameKnife()
+	else -- weapon
+		-- equip sound is played via animation events for weapons
+		util_setInfoFrameWeapon()
 	end
 
     -- animation (sounds are processed in animationevents)
@@ -845,6 +901,7 @@ end
 --[{                                 }]]
 
 -- run all inits
+init_keybinds()
 init_HUD()
 init_animations()
 init_animationEvents()

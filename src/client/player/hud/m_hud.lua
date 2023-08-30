@@ -54,7 +54,6 @@ function hud.initKillfeeds(self)
         self.killfeed:addItem(killer, killed)
 
         -- your kill feed
-        print(killer)
         if killer == self.player then
             self.yourkillfeed:addItem(killer, killed)
         end

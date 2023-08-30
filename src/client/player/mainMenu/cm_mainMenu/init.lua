@@ -64,8 +64,6 @@ function main.open()
 	main.moveButtonFrameMiddle()
 
 	UserInputService.MouseIconEnabled = true
-	
-	print('opened!')
 end
 
 function main.close()
@@ -203,8 +201,6 @@ function bsf.click(button)
 		main.moveButtonFrameMiddle()
 		close = true
 	end
-
-	print("opening " .. tostring(not close))
 
 	if close then
 		main.page:ClosePage(frameName)

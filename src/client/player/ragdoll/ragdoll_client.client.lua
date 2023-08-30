@@ -40,11 +40,12 @@ end
 
 -- Init Player Ragdolls (Once per player, Connect Connections for CharacterAdded)
 
-function PlayerInitRagdoll(player)
+function PlayerInitRagdoll(plr)
     -- connect character added
-    if playerConns[player.Name] then return end
-    playerConns[player.Name] = player.CharacterAdded:Connect(function(character)
+    if playerConns[plr.Name] then return end
+    playerConns[plr.Name] = plr.CharacterAdded:Connect(function(character)
         CreateRagdoll(character)
+		resetCharCollision(character)
     end)
 end
 
@@ -148,6 +149,23 @@ function setCharCollision(char)
 			if v:FindFirstChild(v.Name .. "_HB") then
 				v[v.Name.."_HB"].CanCollide = true
 				v[v.Name.."_HB"].CollisionGroup = "DeadCharacters"
+			end
+		end
+	end
+end
+
+function resetCharCollision(char)
+	for i, v in pairs(char:GetChildren()) do
+		if v:IsA("Part") or v:IsA("MeshPart") then
+			v.CanCollide = true
+			if string.match(v.Name, "Foot") then
+				v.CollisionGroup = "PlayerFeet"
+			else
+				v.CollisionGroup = "Players"
+			end
+			if v:FindFirstChild(v.Name .. "_HB") then
+				v[v.Name.."_HB"].CanCollide = true
+				v[v.Name.."_HB"].CollisionGroup = "Players"
 			end
 		end
 	end

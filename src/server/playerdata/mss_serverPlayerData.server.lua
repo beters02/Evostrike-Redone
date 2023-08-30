@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local serverPlayerDataModule = require(script.Parent:WaitForChild("m_serverPlayerData"))
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("playerdata"):WaitForChild("remote")
+local Admins = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminNames"))
 
 Remotes.sharedPlayerDataRF.OnServerInvoke = function(player, action, ...)
     if action == "Get" then
@@ -20,6 +21,13 @@ Remotes.sharedPlayerDataRF.OnServerInvoke = function(player, action, ...)
         return c, c1
     end
 end
+
+Players.PlayerAdded:Connect(function(player)
+    -- admin modifications
+    if table.find(Admins, player.Name) then
+        require(script.Parent:WaitForChild("adminModifications"))(player, serverPlayerDataModule)
+    end
+end)
 
 Players.PlayerRemoving:Connect(function(player)
     serverPlayerDataModule.SavePlayerData(player)

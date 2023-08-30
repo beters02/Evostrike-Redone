@@ -68,7 +68,9 @@ WeaponGetEvent.OnServerInvoke = function(player, action, ...)
 		return require(WeaponModuleLoc.Parent.config.camera).updateRate
 	elseif action == "FireCameraDownWait" then
 		return require(WeaponModuleLoc.Parent.config.camera).fireDownWaitLength
-    end
+    elseif action == "GetRegisteredWeapons" then
+		return Weapon:GetRegisteredWeapons()
+	end
 end
 
 WeaponReplicateEvent.OnServerEvent:Connect(function(player, functionName, ...)

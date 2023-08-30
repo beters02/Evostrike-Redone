@@ -1,7 +1,13 @@
 local id = {
-    warehouse = 14504041658,
-    alpha = 14504041658,
-    lobby = 11287185880
+    mapIds = {
+        14504041658,
+        14504041658,
+        11287185880
+    }
 }
+
+id.warehouse = id.mapIds[1]
+id.alpha = id.mapIds[2]
+id.lobby = id.mapIds[3]
 
 return id

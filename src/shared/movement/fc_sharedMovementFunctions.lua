@@ -6,8 +6,6 @@ local CastVisuals = require(Framework.shfc_castvisuals.Location)
 
 local CastVisualizer = CastVisuals.new(Color3.fromRGB(255,0,0), workspace)
 
-print(CastVisuals)
-
 local module = {}
 module._storedMovementConfig = false
 

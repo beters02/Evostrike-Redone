@@ -55,22 +55,30 @@ end
 --[[
 	Logging from Roblox Console
 ]]
-LogService.MessageOut:Connect(function(msg, msgType)
+--[[LogService.MessageOut:Connect(function(msg, msgType)
 	ConsoleModule.Return(msg, msgType == Enum.MessageType.MessageWarning, msgType == Enum.MessageType.MessageError)
-end)
+end)]]
 
 
 --[[
 	Inputs for Open, Close and Typing
 ]]
 UserInputService.InputBegan:Connect(function(input)
+
+	-- open/close
 	if input.KeyCode == defaultOpenKeyCode then
 		if not ConsoleGui.Enabled then
 			Open()
 		elseif ConsoleGui.Enabled then
 			Close()
 		end
-	elseif input.KeyCode == Enum.KeyCode.Return then
+		return
+	end
+
+	if not ConsoleGui.Enabled then return end
+
+	-- typing
+	if input.KeyCode == Enum.KeyCode.Return then
 		if not ConsoleGui.Enabled then return end
 		ConsoleModule.Enter()
 	else
@@ -78,6 +86,7 @@ UserInputService.InputBegan:Connect(function(input)
 			TextBox:CaptureFocus()
 		end
 	end
+
 end)
 
 -- Typing Attribute

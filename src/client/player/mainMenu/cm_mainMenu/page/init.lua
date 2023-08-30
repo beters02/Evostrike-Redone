@@ -3,9 +3,44 @@
 ]]
 
 local page = {}
-local pageClass = {}
 page.__index = page
-pageClass.__index = pageClass
+
+--[[ Page Module Private Access Functions ]]
+
+function page.init(self) -- self = main
+
+    -- create page table for main table in cm_mainMenu
+    local _page = {}
+    _page = {}
+    _page._opened = {} -- currently opened pages
+    for i, v in pairs(page) do
+        if i == "init" or i == "new" then continue end
+        _page[i] = v
+    end
+    
+    -- initialize page location here since it is a client script
+    _page._loc = self.player.PlayerScripts.mainMenu.cm_mainMenu.page
+
+    -- init base page class
+    _page._baseClass = require(_page._loc:WaitForChild("Base"))
+
+    -- this is where we will store the locations
+    -- of all the pages for easy access
+    _page._stored = {}
+
+    for i, v in pairs(self.gui:GetChildren()) do
+
+        -- pages must be frames, and their names must end with "Frame"
+        if not v:IsA("Frame") or not string.match(v.Name, "Frame") then continue end
+
+        -- remove "Frame" from string,
+        -- create class with new name
+        _page._stored[string.gsub(v.Name, "Frame", "")] = _page._baseClass.new(self, _page, string.gsub(v.Name, "Frame", ""))
+
+    end
+
+    return setmetatable(_page, page)
+end
 
 --[[
     Page Module Public Access Functions
@@ -44,64 +79,6 @@ end
 
 function page:GetOpenPages()
     return self._opened
-end
-
---[[ Page Module Private Access Functions ]]
-
--- self = main
-function page.init(self)
-
-    -- create page table for main table in cm_mainMenu
-    local _page = {}
-    _page = {}
-    _page._opened = {} -- currently opened pages
-    for i, v in pairs(page) do
-        if i == "init" or i == "new" then continue end
-        _page[i] = v
-    end
-    
-    -- initialize page location here since it is a client script
-    _page._loc = self.player.PlayerScripts.mainMenu.cm_mainMenu.page
-
-    -- this is where we will store the locations
-    -- of all the pages for easy access
-    _page._stored = {}
-
-    for i, v in pairs(self.gui:GetChildren()) do
-
-        -- pages must be frames, and their names must end with "Frame"
-        if not v:IsA("Frame") or not string.match(v.Name, "Frame") then continue end
-
-        -- remove "Frame" from string,
-        -- create class with new name
-        _page._stored[string.gsub(v.Name, "Frame", "")] = pageClass.new(self, _page, string.gsub(v.Name, "Frame", ""))
-
-    end
-
-    return setmetatable(_page, page)
-end
-
---[[ 
-    Page Class Private Acess Functions
-]]
-
-function pageClass.new(main, pageTable, pageName)
-    local self = pageTable._loc:FindFirstChild(pageName) and require(pageTable._loc[pageName]) or {} -- check if page has it's own class
-    self.Name = pageName
-    self.Location = main.gui[pageName.."Frame"]
-
-    self._mainPageModule = page
-
-    if self.init then self = self:init(main) end
-    return setmetatable(self, pageClass)
-end
-
-function pageClass:Open()
-    self.Location.Visible = true
-end
-
-function pageClass:Close()
-    self.Location.Visible = false
 end
 
 return page

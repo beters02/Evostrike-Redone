@@ -4,11 +4,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 
 local WeaponRemotes = ReplicatedStorage:WaitForChild("weapon"):WaitForChild("remote")
 local WeaponGetEvent = WeaponRemotes.get
 local WeaponAddRemoveEvent = WeaponRemotes.addremove
 local WeaponScripts = {ServerScriptService.weapon.obj.base_client, ServerScriptService.weapon.obj.base_server}
+local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
+--local ServerPlayerData = require(Framework.sm_serverPlayerData.Location)
 
 -- [[ Module ]]
 local Weapon = {}
@@ -26,11 +29,13 @@ Weapon.StoredPlayerInventories = {}
 
     @return not ifVerified {false}
 ]]
-local function verifyWeaponSanity(weaponName: string)
+local function verifyWeaponSanity(player: Player, weaponName: string, verifyOnly: boolean|nil)
 
     local weaponObjectsFolder
     local weaponOptions
     local isKnife
+	local skinInfo = InventoryInterface:GetEquippedWeaponSkin(player, string.lower(weaponName))
+	print(skinInfo)
     
     -- verify weapon options, if found return require table
     weaponOptions = ServerScriptService.weapon.config:WaitForChild(string.lower(weaponName))
@@ -40,7 +45,7 @@ local function verifyWeaponSanity(weaponName: string)
 	end
 
 	-- req
-	weaponOptions = require(weaponOptions)
+	weaponOptions = not verifyOnly and require(weaponOptions) or true
 
 	-- check to see if given weapon name string is a "Knife"
 	-- if so, we want to grab the knife skin from DataStore,
@@ -50,10 +55,14 @@ local function verifyWeaponSanity(weaponName: string)
 	if weaponName == "Knife" then
         isKnife = true
 
+		-- TODO: if it is a default knife, this is where we will set attackdefault or defenddefault
+		if skinInfo.model == "default" then skinInfo.model = "attackdefault" end
+
+		-- set knife model
+		weaponObjectsFolder = ReplicatedStorage.weapon.obj:FindFirstChild(string.lower("knife_" .. skinInfo.model))
+
 		--[[ KNIFE SKIN TODO ]]
-		-- get skin here
-		--weaponObjectsFolder = ReplicatedStorage.weapon.obj:FindFirstChild(string.lower("knife_karambit"))
-		weaponObjectsFolder = ReplicatedStorage.weapon.obj:FindFirstChild(string.lower("knife_attackdefault"))
+		-- TODO: set knife to be attack/defend default
 	else
         isKnife = false
 		weaponObjectsFolder = ReplicatedStorage.weapon.obj:FindFirstChild(string.lower(weaponName))
@@ -64,7 +73,7 @@ local function verifyWeaponSanity(weaponName: string)
         return false
 	end
 
-    return weaponOptions, weaponObjectsFolder, isKnife
+    return weaponOptions, weaponObjectsFolder, isKnife, skinInfo
 end
 
 --[[@title 			    - checkPlayerHasWeaponInSlot
@@ -88,7 +97,7 @@ local function setPlayerWeaponInSlot(player: string, weaponName: string, weaponS
     return true
 end
 
-local function initToolAndModels(weaponName: string, weaponObjects: Folder) -- -> ClientModel, ServerModel
+local function initToolAndModels(weaponName: string, weaponObjects: Folder, skinInfo: table) -- -> ClientModel, ServerModel
     local serverModel
 	local clientModel
     local tool
@@ -98,7 +107,9 @@ local function initToolAndModels(weaponName: string, weaponObjects: Folder) -- -
 	tool.RequiresHandle = false
 	tool.Name = "Tool_" .. weaponName
 
-	model = weaponObjects.models.default
+	-- weapon skin
+	--model = weaponObjects.models.default
+	model = weaponObjects.models[skinInfo.skin]
 
 	-- set collision groups
 	for i, v in pairs(model:GetDescendants()) do
@@ -182,11 +193,13 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
     local scriptsFolder
     local tool
     local isKnife
+	local skinInfo
 
     -- sanity checks
 	if not player.Character then return false end
 
-	weaponOptions, weaponObjects, isKnife = verifyWeaponSanity(weaponName)
+	-- get weaponOptions, Objects, isKnife and equippedSkinInfo
+	weaponOptions, weaponObjects, isKnife, skinInfo = verifyWeaponSanity(player, weaponName)
     if not weaponOptions then return false end
 
 	inventorySlot = weaponOptions.inventorySlot
@@ -195,6 +208,7 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
 	task.wait()
     local currentWeaponInSlot = checkPlayerHasWeaponInSlot(player, inventorySlot)
     if currentWeaponInSlot then
+
 		-- unequip all weapons
 		-- we do this to counter any animation/movement speed bugs
 		player.Character.Humanoid:UnequipTools()
@@ -210,7 +224,7 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
     end
 
 	-- create tool & models
-    tool, clientModel, serverModel = initToolAndModels(weaponName, weaponObjects)
+    tool, clientModel, serverModel = initToolAndModels(weaponName, weaponObjects, skinInfo)
 
 	-- set player inv
     setPlayerWeaponInSlot(player, weaponName, inventorySlot, tool)
@@ -294,6 +308,17 @@ function Weapon.ClearAllPlayerInventories()
 			Weapon.ClearPlayerInventory(player)
 		end)
 	end
+end
+
+--
+
+function Weapon:GetRegisteredWeapons()
+	local wep = {}
+	for i, v in pairs(ServerScriptService.weapon.config:GetChildren()) do
+		if v:GetAttribute("Ignore") then continue end
+		table.insert(wep, v.Name)
+	end
+	return wep
 end
 
 return Weapon

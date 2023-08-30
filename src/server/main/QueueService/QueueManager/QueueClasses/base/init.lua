@@ -10,6 +10,7 @@
 ]]
 
 local DataStore = game:GetService("DataStoreService")
+local Debris = game:GetService("Debris")
 local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -229,18 +230,20 @@ function _RemovePlayerGlobal(self, player, playerdata, index)
     return true
 end
 
-function _RemovePlayerGlobalByName(self, player, index)
+function _RemovePlayerGlobalByName(self, playerName, index)
 
     local success, err = pcall(function()
-        self.datastore:SetAsync(player.Name, nil)
+        self.datastore:RemoveAsync(playerName)
         table.remove(self.stored.playerIDdata, index)
     end)
 
     if not success then
         -- Add to playerRemovingQueue to be tried again.
-        if not self.stored.playerRemovingQueue[player.Name] then
-            self.stored.playerRemovingQueue[player.Name] = {player, index}
+        if not self.stored.playerRemovingQueue[playerName] then
+            self.stored.playerRemovingQueue[playerName] = {playerName, index}
         end
+
+        warn("Could not remove player from queue " .. tostring(err))
         return false
     end
 
@@ -319,7 +322,7 @@ end
 -- @return
 function _GetTopPlayersInQueue(self, verificationData)
     if not verificationData then error("GetTopPlayersInQueue requires verification data.") end
-    if #self.stored.playerIDdata == 0 then return {} end
+    if #self.stored.playerIDdata == 0 then print("No players in queue Debug") return {} end
     local total = self.config.maxParty
 
     -- store finished var for once all threads have completed
@@ -338,11 +341,17 @@ function _GetTopPlayersInQueue(self, verificationData)
             -- now we have to check if player can actually queue
             -- if player is not on this server, we check if theyre on other server
             if not verificationData[array.key] then warn("Player " .. array.key .. " not registered in queue! No verification data stored.") continue end
-    
+            
+            -- get playerdata which contains the boolean values of whether
+            -- or not we can queue
             local playerdata
             if verificationData[array.key].IsLocal then
+
+                -- get it from a local player
                 playerdata = PlayerData.GetPlayerData(verificationData[array.key].IsLocal)
             else
+
+                -- get it from a player on another server
                 local _tick = tick() + 2 -- 2 second timeout
                 local _conn
                 _conn = MessagingService:SubscribeAsync("GetPlayerDataResult", function(data)
@@ -354,20 +363,23 @@ function _GetTopPlayersInQueue(self, verificationData)
                 _conn:Disconnect()
             end
 
-            if not playerdata then if index == _finishedIndex then _finishedGotTop = true end continue end
-    
-            _totalpartysize += 1
-    
-            local ni = #_party
-            for i, v in pairs(_party) do -- sort
-                if i > v[2] then ni = i-1 end
+            -- if we dont have player data, move on (finish if needed)
+            if not playerdata then
+                if index == _finishedIndex then
+                    _finishedGotTop = true
+                end
+
+                continue
             end
     
-            _party[ni] = array -- {key = PlayerName, value = QueueSpot}
+            local ni = #_party
+            _party[ni + 1] = array -- {key = PlayerName, value = QueueSpot}
     
             if index == _finishedIndex then
                 _finishedGotTop = true
             end
+
+            _totalpartysize += 1
         end
     end)
 
@@ -389,8 +401,10 @@ function _GetTopPlayersInQueue(self, verificationData)
     -- and put them in a table array
     if not total or total == 0 then total = #_party else total = math.min(total, #_party) end
     local _top = {}
-    for i = total, 0, -1 do
-        table.insert(_top, _party[i][1])
+
+    for i = 1, total do
+        if not _party[i] then break end
+        table.insert(_top, _party[i])
     end
 
     -- i think this will help with mem
@@ -536,10 +550,11 @@ function base:ProcessQueue(verificationData)
             return
         end
 
-        -- remove these players from queue
+        -- remove these players from queue & notify them that they have found a game
         for i, v in pairs(top) do
             if Players:FindFirstChild(v.key) then
                 self:RemovePlayer(Players[v.key])
+                self:NotifyGameFound(Players[v.key])
             else
                 self:RemovePlayerOtherServer(v.key)
             end
@@ -577,6 +592,8 @@ function base:ProcessQueue(verificationData)
                 MessagingService:PublishAsync("TeleportPlayer", "public", {ServerInstanceId = teleportInfo.JobID}:: TeleportOptions)
             end
         end
+
+        -- In Players
 
         -- private server
         if teleportInfo.PrivateCode then
@@ -621,7 +638,13 @@ end
 
 function base:GetRandomMap()
     local _map = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
-    return _map[math.random(1,#_map)]
+    return _map.mapIds[math.random(1,#_map.mapIds)]
+end
+
+function base:NotifyGameFound(player)
+    local _c = base._baseLocation.GameFoundGui:Clone()
+    _c.Parent = player.PlayerGui
+    Debris:AddItem(_c, 10)
 end
 
 --#endregion

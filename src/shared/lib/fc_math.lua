@@ -35,7 +35,6 @@ end
 function Math.absValueRandom(value: number): number
 	local r = math.round(math.random(1000,2000)/1000)
 	local v = r == 1 and -1 or 1
-	print(r, v)
 	return value * v
 end
 

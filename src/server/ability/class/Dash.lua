@@ -54,7 +54,7 @@ function Dash:Use()
     Sound.PlayReplicatedClone(self._sounds.Woosh, self.player.Character.PrimaryPart)
 
     -- play fov tween
-    local playerfov = self.m_playerdata.get("camera", "FOV")
+    local playerfov = self.m_playerdata:Get("options.camera.FOV")
 
     task.spawn(function()
         local tween = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {FieldOfView = playerfov * 1.2})

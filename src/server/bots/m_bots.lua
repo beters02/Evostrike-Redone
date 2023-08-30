@@ -45,8 +45,6 @@ function bots:Add(character, properties)
 
     -- create bot
     local _clone = character:Clone()
-    print(character)
-    print(_clone)
 
     local hum = _clone:WaitForChild("Humanoid")
     hum.BreakJointsOnDeath = false

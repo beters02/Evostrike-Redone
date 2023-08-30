@@ -62,7 +62,7 @@ function Base:StartClientCooldown()
                 self.cooldown = false
 
                 -- reset key text to key
-                self.frame.Key.Text = self.key
+                self.frame.Key.Text = Strings.convertFullNumberStringToNumberString(self.key)
 
                 -- set image color to equipped
                 self:SetIconColorEquipped(true)
