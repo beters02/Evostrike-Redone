@@ -9,8 +9,6 @@ local _initRetries = 5
 
 local store = {}
 store.__location = game:GetService("ReplicatedStorage").Services.QueueService.Class.base.store
-
-store.types = require(store.__location.types)
 store.process = require(store.__location.actionProcess)
 
 --[[
@@ -46,39 +44,32 @@ end
     Safely get the value of the datastore
 ]]
 function store:Get()
-    self.dsLastResult = store.process:Wrap(
-        function()
-            return self.datastore:GetSortedAsync(true, 100):GetCurrentPage()
-        end,
-        table.pack()
-    )
-    print(self.dsLastResult)
+    self.dsLastResult = store.process:Wrap(function()
+        return self.datastore:GetSortedAsync(true, 100):GetCurrentPage()
+    end)
     return self.dsLastResult
 end
 
 --[[
-    Safely set the value of the datastore
+    Safely "add" an index to the store
 ]]
-
-function store:Set(new)
-    
+function store:Add(key: string, value: number) -- key: playerName, value: slot
+    return store.process:Wrap(function()
+        return pcall(function() -- we use a pcall here because SetAsync doesnt return anything i dont think
+            self.datastore:SetAsync(key, value)
+        end)
+    end)
 end
 
 --[[
-    Safely add value to datastore table
+    Safely remove a value from the datastore
 ]]
-
-function store:AddToTable()
-    
+function store:Remove(value: string)
+    return store.process:Wrap(function()
+        return pcall(function()
+            self.datastore:RemoveAsync(value)
+        end)
+    end)
 end
-
---[[
-    Safely remove value from datastore table
-]]
-
-function store:RemoveFromTable()
-    
-end
-
 
 return store

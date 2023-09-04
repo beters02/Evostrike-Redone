@@ -27,7 +27,22 @@ local requestActions = {
     end
 }
 
-return function(self, player, action, ...)
+local module = {}
+
+-- this is a little hacky but we'll try it
+module.__call = function(self, ...)
+    local _t = table.pack(...)
+    local player, action = _t[1], _t[2]
+    print(player, action)
+    table.remove(_t, 1)
+    table.remove(_t, 1)
+    if not requestActions[action] then return false end
+    return requestActions[action](self, player, table.unpack(_t))
+end
+
+--[[module.request = function(self, player, action, ...)
     if not requestActions[action] then return false end
     return requestActions[action](self, player, ...)
-end
+end]]
+
+return module

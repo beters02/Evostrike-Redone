@@ -1,10 +1,23 @@
 --[[
-    FRAMEWORK INFO
+    ==== FRAMEWORK INFO ====
 
+    - Almost all modules are organized by FrameworkType, using a prefix to represent the type.
+
+    Example:
+    fc_strings = FunctionContainer strings
+    m_states = Module states
+    c_playerActions = Class playerActions
+
+    - Some modules are classes but are not labeled as so, because they dont carry the rules of a class.
     - Modules that are children of modules will not be compiled since those are not global access modules.
     - Modules that do not have the FrameworkType prefix will not be compiled.
+    See framework/Types
 
 
+    ---------------------------------------------
+    
+
+    ==== TUTORIALS: ====
 
     === GRAB SHARED LIB MODULE PREFERRED WAY === (Framework.Module.lib.examplelib)
 

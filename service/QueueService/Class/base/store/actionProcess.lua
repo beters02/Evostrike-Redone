@@ -3,16 +3,32 @@
     Will automatically do 3 retries.
 
     Use:
-    local store = process:Wrap(
-        datastore.Get,           (function with no arguments)
-        table.pack(datastore)    (packed arguments)
+    
+
+    -- no argument variables:
+    local data = process:Wrap(function()
+        return datastore:Get()
+    end)
+
+
+    -- if we have access to the argument variables now, we can use this method:
+    local result = process:Wrap(function()
+        return module:Function(arg1, arg2)
+    end)
+
+
+    -- if we dont have access or the argument variables will be changing then we can use this method:
+    local result = process:Wrap(
+        module.Function,
+        table.pack(module, arg1, arg2)
     )
+
 ]]
 
 local process = {
     updateConn = nil
 }
-local types = require(game:GetService("ReplicatedStorage").Services.QueueService.Class.base.store.types)
+local types = require(game:GetService("ReplicatedStorage").Services.QueueService.types)
 
 local _processLimit = 8
 local _processInterval = 1/32
@@ -26,6 +42,7 @@ function process:Connect()
     process.updateConn = game:GetService("RunService").Heartbeat:Connect(function()
         if tick() < _nextProcessTime then return end
         _nextProcessTime = tick() + _processInterval
+        _processQueue()
     end)
 end
 
@@ -36,6 +53,9 @@ end
 
 -- Add a new DataProcess into the environment.
 function process:Add(func, args)
+
+    -- init args
+    if not args then args = {} end
 
     -- initialize DataProcess object
     local _proc
@@ -163,6 +183,7 @@ function _processQueue()
         local success = v.Try()
         if success then
             _processingQueue[i] = nil
+            table.remove(_processing, ind)
         end
         
     end

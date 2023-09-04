@@ -1,13 +1,13 @@
+-- [[ Deathmatch Queue Class ]]
+
 local Deathmatch = {
     Name = "Deathmatch",
-
-    config = {
-        updateInterval = 5,
-    }
+    QueueInterval = 5,
 }
 
+-- Get config from Gamemode
 local gamemodecfg = require(game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("class"):WaitForChild("Deathmatch"))
-Deathmatch.config.minParty = gamemodecfg.minimumPlayers
-Deathmatch.config.maxParty = gamemodecfg.maximumPlayers
 
+Deathmatch.MaxParty = gamemodecfg.maximumPlayers
+Deathmatch.MinParty = gamemodecfg.minimumPlayers
 return Deathmatch
