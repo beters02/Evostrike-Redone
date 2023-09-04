@@ -11,7 +11,8 @@ export type QueuePlayerData = {
 -- We do this so we don't accidentally process the same player multiple times.
 export type QueueServicePlayerData = {
     Name: string,
-    Processing: boolean
+    Processing: boolean,
+    InQueue: boolean|string
 }
 
 -- Arguments table which was created by table.pack
@@ -30,6 +31,19 @@ export type DataProcess = {
     Result: BindableEvent,
     Cleanup: () -> (),
     Connections: table
+}
+
+-- Server Data
+export type ServerData = {
+    IsPrivate: boolean,
+    PrivateID: string?,
+
+    PlaceID: number,
+    Gamemode: string,
+    Players: table
+
+    -- TODO:
+    --JobID
 }
 
 return nil

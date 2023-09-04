@@ -1,5 +1,18 @@
+--[[
+    QueueClass Base.
+
+    TODO:   TeleportPlayers MessagingService
+            Notify players when they have found a match
+            Add queue to retry once it's been processed if there is less than max players
+]]
+
+local MessagingService = game:GetService("MessagingService")
+local Players = game:GetService("Players")
 local QueueService = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("QueueService")
+local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
+local ServicePlayerData = require(QueueService.ServicePlayerData)
+local Types = require(QueueService.Types)
 
 local base = {}
 base.__index = base
@@ -24,7 +37,18 @@ function base.new(class: string)
     _c = setmetatable(_c, base)
 
     -- initialize store module
-    _c.storeModule = require(base._baseLocation.store)
+    _c.storeModule = require(base._baseLocation.store).new(class)
+    _c.storeModule:Init()
+
+    -- init process module
+    _c.process = _c.storeModule.process
+
+    -- init PlayerManager
+    _c.playerManager = require(base._baseLocation.playerManager).new(_c)
+
+    -- init var
+    _c._connections = {}
+    _c.Name = class
 
     -- grab queue datastore
     local success, err = pcall(function()
@@ -32,16 +56,10 @@ function base.new(class: string)
     end)
 
     if not success then
-        error(err)
+        error(tostring(err))
         return false
     end
 
-    -- init PlayerManager
-    _c.playerManager = require(base._baseLocation.playerManager)
-    _c.playerManager:Init()
-
-    _c.AddPlayer = _c.playerManager.Add
-    _c.RemovePlayer = _c.playerManager.Remove
     return _c
 end
 
@@ -52,7 +70,7 @@ function base:Update() -- Called every interval
     task.wait(0.1)
 
     -- now we update the cached data value from datastore
-    self.playerManager:Update()
+    self.playerManager:UpdateCached()
 
     -- validate authenticity of queued players
     self.playerManager:ValidatePlayersInQueue()
@@ -62,6 +80,26 @@ function base:Update() -- Called every interval
         self:ProcessPlayers()
     end
 
+end
+
+function base:Connect()
+    local _nxt = tick()
+    self._connections.update = RunService.Heartbeat:Connect(function()
+        if tick() >= _nxt then
+            _nxt = tick() + self.QueueInterval
+            self:Update()
+        end
+    end)
+    self._connections.playerRemoving = Players.PlayerRemoving:Connect(function(player)
+        -- remove player from queue if necessary
+        if ServicePlayerData[player.Name] and ServicePlayerData[player.Name].InQueue == self.Name then
+            self.playerManager:Remove(player.Name)
+        end
+    end)
+end
+
+function base:Disconnect()
+    self._connections.update:Disconnect()
 end
 
 --
@@ -97,21 +135,24 @@ function base:ProcessPlayers()
 
     -- sort cached players in queue
     -- convert PlayerData into table<Slot>
-    for _, v in pairs(self._cachedPlayers) do
+    for _, v in pairs(self.playerManager._cachedPlayers) do
         sorted[v.Name] = v.Slot
         sortedData[v.Name] = v
     end
 
     -- sort using iterator function
-    sorted = spairs(sorted, function(t,a,b) return t[b] > t[a] end)
-
     -- replace sorted Slot with PlayerData
-    -- & convert dictionary to table
     local count = 0
-    for playerName, _ in pairs(sorted) do
+    for i, v in spairs(sorted, function(t,a,b) return t[b] > t[a] end) do
         count += 1
-        sorted[count] = sortedData[playerName]
-        sorted[playerName] = nil
+        sorted[count] = sortedData[i]
+    end
+
+    -- convert dictionary to table
+    for i, v in pairs(sorted) do
+        if type(i) == "string" then
+            sorted[i] = nil
+        end
     end
 
     -- memsave
@@ -163,18 +204,41 @@ function base:SendPlayers(players) -- players: table<QueuePlayerData>
 
     end
 
+    -- create the server
+    local serverData = self:CreateServerData(teleport._local)
+
     -- Handle local players
-    --TODO: teleport
+    TeleportService:TeleportToPrivateServer(serverData.PlaceID, serverData.PrivateID, serverData.Players, "", {RequestedGamemode = serverData.Gamemode})
 
     -- Handle server players
     -- TODO: messaging service
+    MessagingService:PublishAsync("TeleportPlayers", self._other)
+    
+end
 
+--
+
+function base:CreateServerData(players)
+    local map -- generate map ID
+    map = 9467357499
+
+    local serverData: Types.ServerData
+    serverData = {
+        IsPrivate = true,
+        PrivateID = TeleportService:ReserveServer(map),
+
+        PlaceID = map,
+        Gamemode = self.Name,
+        Players = players
+    }
+
+    return serverData
 end
 
 --
 
 function base:CanProcess()
-    return #self.playerManager:GetPlayers() > self.MinParty
+    return #self.playerManager:GetPlayers() >= self.MinParty
 end
 
 return base

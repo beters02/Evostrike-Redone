@@ -6,33 +6,56 @@
 
 local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local TeleportService = game:GetService("TeleportService")
-local PlayerData = require(Framework.sm_serverPlayerData.Location)
-local SharedRequestRemote = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("requestQueueFunction")
+local RunService = game:GetService("RunService")
+local SharedRequestRemote = game:GetService("ReplicatedStorage"):WaitForChild("Services").QueueService.Remote.shared.requestQueueFunction
 
 local QueueService = {}
+
+-- Client indexing
+if RunService:IsClient() then
+    QueueService.IsInQueue = function(player)
+    end
+    return QueueService
+end
+
 QueueService.__index = QueueService
 QueueService.__location = game:GetService("ReplicatedStorage").Services.QueueService
 QueueService.__status = "dead"
-QueueService.__localPlayerData = require(QueueService.__location.queueServicePlayerData)
-QueueService.__types = require(QueueService.__location.types)
+QueueService.__localPlayerData = require(QueueService.__location.ServicePlayerData)
+QueueService.__types = require(QueueService.__location.Types)
 
 local Remote = require(QueueService.__location.Remote)
 local Types = QueueService.__types
-QueueService.Manager = require(QueueService.__location.QueueManager)
+QueueService.Manager = require(QueueService.__location.Manager)
+
+--
+
+-- Easy access add player/remove player
+function QueueService:AddPlayer(queueName, playerName)
+    return self.Manager.Queues[queueName].playerManager:Add(playerName)
+end
+
+function QueueService:RemovePlayer(queueName, playerName)
+    return self.Manager.Queues[queueName].playerManager:Remove(playerName)
+end
 
 --
 
 function QueueService:Start()
 
+    print('Starting manager!')
+
     -- init manager
     QueueService.Manager:StartManager(QueueService)
+
+    print('Starting remote!')
 
     -- init remote function grab
     QueueService.__remote = function(...)
         return Remote(QueueService, ...)
     end
+
+    print('Starting service!')
 
     -- connect
     QueueService:Connect()
@@ -49,8 +72,6 @@ function QueueService:Stop()
     print('Queue Service Stopped!')
 end
 
---
-
 function QueueService:Connect()
     local conn = {}
 
@@ -59,7 +80,7 @@ function QueueService:Connect()
 
     -- connect LocalPlayerData
     conn.playerAdded = Players.PlayerAdded:Connect(function(player)
-        QueueService.__localPlayerData[player.Name] = {Name = player.Name, Processing = false} :: Types.QueueServicePlayerData
+        QueueService.__localPlayerData[player.Name] = {Name = player.Name, Processing = false, InQueue = false} :: Types.QueueServicePlayerData
     end)
 
     -- remove LocalPlayerData

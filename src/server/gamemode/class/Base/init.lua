@@ -5,7 +5,7 @@ local Ability = require(Framework.Ability.Location)
 local Weapon = require(Framework.Weapon.Location)
 local GamemodeClasses = game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("class")
 local CollectionService = game:GetService("CollectionService")
---local QueueService = require(Framework.sm_queueService.Location)
+local QueueService = require(game:GetService("ReplicatedStorage").Services.QueueService)
 local BotModule = require(Framework.sm_bots.Location)
 local diedMainEvent = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
 
@@ -94,7 +94,7 @@ function Base:Start()
 
     -- start queue service
     if self.queueServiceEnabled then
-        --QueueService:Start()
+        QueueService:Start()
     end
 end
 
@@ -112,7 +112,7 @@ function Base:Stop()
     --self.serverInfoUpdateConn:Disconnect()
 
     -- stop queue service
-    --QueueService:Stop()
+    QueueService:Stop()
 
     -- remove all weapons and abilities
     Ability.ClearAllPlayerInventories()

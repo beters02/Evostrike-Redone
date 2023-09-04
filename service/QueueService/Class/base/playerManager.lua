@@ -14,9 +14,11 @@
 local QueueService = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("QueueService")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
-local playerManager = {}
+local Types = require(QueueService.Types)
+local ServicePlayerData = require(QueueService.ServicePlayerData)
 
-local Types = require(QueueService.types)
+local playerManager = {}
+playerManager.__index = playerManager
 
 --[[
 ]]
@@ -25,7 +27,9 @@ function playerManager.new(parentClass)
     self.__types = parentClass.__types
     self._parentClass = parentClass
     self._process = self._parentClass.storeModule.process -- easily access DataProcess
-    self._storeModule = self._parentClass.storedModule
+    self._storeModule = self._parentClass.storeModule
+    print(self._process)
+    print(self._storeModule)
 
     -- init manager var mutables
     self.var = {}
@@ -48,10 +52,11 @@ function playerManager:Init()
 
     -- initialize cache.
     -- call :Get() from the store module.
-    self._cachedPlayers = self._storeModule:Get()
+    self:UpdateCached()
+    print(self._cachedPlayers)
 
     -- Validate
-    self:VerifyPlayersInQueue()
+    self:ValidatePlayersInQueue()
 
 end
 
@@ -66,6 +71,9 @@ function playerManager:Add(playerName: string)
     -- TODO:
     -- check if player is being processed on another server
 
+    --TODO:
+    -- set player processing var in ServicePlayerData
+
     -- init queue playerdata
     local qpd: Types.QueuePlayerData
     qpd = {
@@ -76,6 +84,8 @@ function playerManager:Add(playerName: string)
 
     -- first we add locally
     self._waitingPlayers[playerName] = qpd
+
+    print('Adding Local!')
 
     -- now we wait for the player to be added globally via playerManager:MergeWaiting()
     local added = false
@@ -92,6 +102,8 @@ function playerManager:Add(playerName: string)
         connection:Disconnect()
         return false, "Could not add to DataStore. Try again soon."
     end
+
+    ServicePlayerData[playerName].InQueue = self._parentClass.Name
 
     -- finished!
     qpd.Objects.Added:Destroy()
@@ -126,6 +138,8 @@ function playerManager:Remove(playerName: string)
             table.remove(self._cachedPlayers, i)
         end
     end
+
+    ServicePlayerData[playerName].InQueue = false
 
     -- done!
     return true
@@ -200,7 +214,7 @@ function _validatePlayersInTable(self, tab)
 
     for i, v in pairs(tab) do
 
-        if Players:FindFirstChild(v) then
+        if Players:FindFirstChild(v.Name) then
             continue
         end
 
@@ -232,7 +246,9 @@ function playerManager:MergeWaiting()
     for i, v in pairs(self._waitingPlayers) do
 
         success, err = pcall(function()
-            self._storeModule:Add(v.Name)
+            self._storeModule:Add(v.Name, #self._storeModule + 1)
+            table.insert(self._storeModule, v)
+            self._storeModule:Save()
         end)
 
         if not success then
@@ -240,13 +256,26 @@ function playerManager:MergeWaiting()
             --todo: fire Result false
         end
 
+        v.Objects.Added:Fire()
     end
 
     self._waitingPlayers = {}
 end
 
+function playerManager:UpdateCached()
+    self._cachedPlayers = self._storeModule:Get()
+    -- convert data key, value to QueuePlayerData Name Slot
+    for i, v in pairs(self._cachedPlayers) do
+        self._cachedPlayers[i] = {
+            Name = v.key,
+            Slot = v.value
+        }:: Types.QueuePlayerData
+    end
+end
+
 --[[ TODO: Combines the current DataStore with the cache'd queuePlayerStore ]]
 function playerManager:CombineStore()
+    self._cachedPlayers = self._storeModule:Get()
 end
 
 return playerManager

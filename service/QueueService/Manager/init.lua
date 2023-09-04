@@ -14,21 +14,33 @@ function QueueManager:StopManager()
     self:StopAllQueues()
 end
 
-function QueueManager:StartQueue(QueueService, QueueName)
-    local module = require(QueueService.__location.QueueManager.QueueClasses.base).new(QueueName)
-    module:Start()
-    self.Queues[QueueName] = module
-end
+--
 
-function QueueManager:StartAllQueues(QueueService)
-    for i, v in pairs(QueueService.__location.QueueManager.QueueClasses:GetChildren()) do
-        if v.Name == "base" then continue end -- Ignore BaseClass
-        self:StartQueue(QueueService, v.Name)
-    end
+function QueueManager:StartQueue(QueueService, QueueName)
+    print('Starting queue ' .. QueueName)
+
+    print(QueueService.__location.Class.base)
+    local module, err = require(QueueService.__location.Class.base).new(QueueName)
+    print(module)
+    module:Connect()
+
+    print('Conected')
+
+    self.Queues[QueueName] = module
 end
 
 function QueueManager:StopQueue(QueueService, QueueName)
     self.Queues[QueueName]:Stop()
+end
+
+--
+
+function QueueManager:StartAllQueues(QueueService)
+    print('STarting all queues')
+    for i, v in pairs(QueueService.__location.Class:GetChildren()) do
+        if v.Name == "base" then continue end -- Ignore BaseClass
+        self:StartQueue(QueueService, v.Name)
+    end
 end
 
 function QueueManager:StopAllQueues()

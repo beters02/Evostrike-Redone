@@ -28,7 +28,7 @@
 local process = {
     updateConn = nil
 }
-local types = require(game:GetService("ReplicatedStorage").Services.QueueService.types)
+local types = require(game:GetService("ReplicatedStorage").Services.QueueService.Types)
 
 local _processLimit = 8
 local _processInterval = 1/32
@@ -62,7 +62,9 @@ function process:Add(func, args)
     _proc = {
         Retries = 3,
         Status = "processing" :: types.DataProcessStatus,
-        Result = Instance.new("BindableEvent")
+        Result = Instance.new("BindableEvent"),
+        Var = {},
+        Connections = {}
     } :: types.DataProcess
 
     -- Call a function with pcall, returns packed table arguments or false.
@@ -76,6 +78,8 @@ function process:Add(func, args)
             task.delay(1, function()
                 _proc.Cleanup()
             end)
+        else
+            warn(err)
         end
         
         return ret, err
@@ -146,7 +150,7 @@ function process:Add(func, args)
             return true
         end
         
-        return packedArgs -- finished!
+        return table.unpack(packedArgs) -- finished!
     end
 
     -- Cleanup function
