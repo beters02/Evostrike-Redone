@@ -13,7 +13,7 @@ function module.GetPlayerData(player)
 
     local success, response = pcall(function()
         profile = store:GetTable(module.defaultData)
-        print(profile)
+        --print(profile)
 
         -- update defaults
         -- todo: change to data change function i made awhile ago
@@ -39,12 +39,12 @@ function module.GetPlayerData(player)
         if _updated then
             print(profile)
             module.SetPlayerData(player, profile, true)
-            print('Updated necessary defaults!')
+            --print('Updated necessary defaults!')
         end
     end)
 
     if not success then
-        print("Could not retrieve PlayerData, returning default")
+        --print("Could not retrieve PlayerData, returning default")
         return module.defaultData
     end
 
@@ -59,7 +59,7 @@ function module.SetPlayerData(player, newData, save)
     end)
 
     if not success then
-        print("Could not set PlayerData")
+        --print("Could not set PlayerData")
         return false
     end
 

@@ -9,29 +9,49 @@ local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local TeleportService = game:GetService("TeleportService")
 local PlayerData = require(Framework.sm_serverPlayerData.Location)
-local Gamemode = require(Framework.sm_gamemode.Location)
 local SharedRequestRemote = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("requestQueueFunction")
-local StoredMapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
 
 local QueueService = {}
 QueueService.__index = QueueService
-QueueService.__location = game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("QueueService")
+QueueService.__location = game:GetService("ReplicatedStorage").Services.QueueService
+QueueService.__status = "dead"
+
+--
 
 function QueueService:Start()
+
+    -- init manager
     QueueService.Manager = require(self.__location.QueueManager)
     QueueService.Manager:StartManager(QueueService)
+
+    -- init remote
+    QueueService.__remote = function(...)
+        require(self.__location.Remote)(self, ...)
+    end
+
+    -- connect
     QueueService:Connect()
-    print('Started!')
+
+    -- set running
+    QueueService.__status = "running"
+    print('Queue Service Started!')
 end
 
 function QueueService:Stop()
+    QueueService.Manager:StopManager()
+    QueueService:Disconnect()
+    QueueService.__status = "dead"
+    print('Queue Service Stopped!')
 end
 
 --
 
 function QueueService:Connect()
-    local conn = {}
 
+    -- connect Remote
+    SharedRequestRemote.OnServerInvoke = QueueService.__remote
+
+    local conn = {}
     conn.RemovePlayer = MessagingService:SubscribeAsync("RemovePlayer", function(playerName, queueName)
         if not Players:FindFirstChild(playerName) then return end
         local result, error = QueueService.Manager.Queues[queueName]:RemovePlayer(Players[playerName])
@@ -53,54 +73,20 @@ function QueueService:Connect()
         end
     end)
 
-    conn.GetServerInfo = MessagingService:SubscribeAsync("GetServerInfo", function()
-        MessagingService:PublishAsync("GetServerInfoResult", {placeid = game.PlaceId, jobid = game.JobId, gamemode = Gamemode.currentGamemode, totalPlayers = Gamemode.GetTotalPlayerCount()})
-    end)
-
-    SharedRequestRemote.OnServerInvoke = requestQueueFunc
-
     QueueService._connections = conn
-
 end
 
-function requestQueueFunc(player: Player, action: string, ...)
-    if action == "Add" then
-        if not QueueService.Manager.Queues[...] then return false end
-        return QueueService.Manager.Queues[...]:AddPlayer(player)
-    elseif action == "Remove" then
-        if not QueueService.Manager.Queues[...] then return false end
-        return QueueService.Manager.Queues[...]:RemovePlayer(player)
-    elseif action == "ClearAll" then
-        --[[for i, v in pairs(queueService) do
-            if type(v) ~= "table" then continue end
-            if v.isQueueClass then
-                v:ClearAllPlayers()
-            end
-        end]]
-    elseif action == "PrintAll" then
-        --[[for i, v in pairs(queueService) do
-            if type(v) ~= "table" then continue end
-            if v.isQueueClass then
-                v:PrintAllPlayers()
-            end
-        end]]
-    elseif action == "TeleportPrivateSolo" then
-        TeleportService:TeleportToPrivateServer(14504041658, TeleportService:ReserveServer(14504041658), {player}, false, {RequestedGamemode = "Range"})
-        return true
-    elseif action == "MapCommand" then
-        local mapName, players = ...
-
-        if not StoredMapIDs[string.lower(mapName)] then
-            return false, "Couldn't find map"
-        end
-
-        local _priv = TeleportService:ReserveServer(StoredMapIDs[string.lower(mapName)])
-        if not players then players = {player} end
-
-        TeleportService:TeleportToPrivateServer(StoredMapIDs[string.lower(mapName)], _priv, players, false, "Range")
-
-        return true
+function QueueService:Disconnect()
+    for i, v in pairs(QueueService._connections) do
+        v:Disconnect()
     end
+    QueueService._connections = {}
+end
+
+--
+
+function QueueService:IsRunning()
+    return QueueService.__status == "running"
 end
 
 return QueueService

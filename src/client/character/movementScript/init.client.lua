@@ -15,9 +15,8 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local sharedMovementFunctions = require(Framework.shfc_sharedMovementFunctions.Location)
 local States = require(Framework.shm_states.Location)
 local SoundModule = require(Framework.shm_sound.Location)
-local PlayerData = require(Framework.shm_clientPlayerData.Location)
-if not PlayerData.isInit then repeat task.wait() until PlayerData.isInit end
 local Strings = require(Framework.shfc_strings.Location)
+local PlayerData = require(Framework.shm_clientPlayerData.Location)
 
 -- [[ Define Local Variables ]]
 local Inputs
@@ -111,11 +110,15 @@ for _, s in pairs(runsndsF:GetChildren()) do
 end]]
 
 Movement.Sounds = {
-	runDefault = Movement.collider.Run_Tile,
-	landDefault = Movement.collider.Land_Tile,
-
+	runDefault = Movement.collider.Run_Tile, -- mut
 	runTile = Movement.collider.Run_Tile,
-	runMetal = Movement.collider.Run_Metal
+	runMetal = Movement.collider.Run_Metal,
+	runWood = Movement.collider.Run_Wood,
+
+	landDefault = Movement.collider.Land_Tile,
+	landTile = Movement.collider.Land_Tile,
+	landMetal = Movement.collider.Land_Metal,
+	landWood = Movement.collider.Land_Wood
 }
 
 -- LOCAL RUN VOLUME
@@ -134,7 +137,15 @@ end
 ]]
 
 -- extract configuration variables and put them in the scope
-local config = require(script.Configuration)
+--[[local config = require(script.Configuration)
+for i, v in pairs(config) do
+	Movement[i] = v
+end]]
+
+collider.Anchored = true
+local config = ReplicatedStorage.movement.get:InvokeServer()
+collider.Anchored = false
+
 for i, v in pairs(config) do
 	Movement[i] = v
 end
@@ -201,25 +212,9 @@ function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	Movement.movementVelocity.P = Movement.movementVelocityP
 
 	-- get current run sound
-	if hitMaterial == Enum.Material.Metal or hitMaterial == Enum.Material.CorrodedMetal then
-		if Movement.Sounds.runDefault ~= Movement.Sounds.runMetal then
-			if Movement.Sounds.runDefault.isPlaying then
-				SoundModule.StopReplicated(Movement.Sounds.runDefault)
-			end
-			Movement.Sounds.runDefault = Movement.Sounds.runMetal
-		end
-	else
-		if Movement.Sounds.runDefault ~= Movement.Sounds.runTile then
-			if Movement.Sounds.runDefault.isPlaying then
-				SoundModule.StopReplicated(Movement.Sounds.runDefault)
-			end
-			Movement.Sounds.runDefault = Movement.Sounds.runTile
-		end
-	end
+	Movement.RegisterGroundMaterialSounds(hitMaterial)
 
 	local runsnd = Movement.Sounds.runDefault
-	local jumpsnd
-	local landsnd = Movement.Sounds.landDefault
 
 	if jumpingAnimation.IsPlaying then
 		jumpingAnimation:Stop(0.1)
@@ -307,11 +302,14 @@ local function landFinish()
 	return nil
 end
 
-function Movement.Land(fric: number, waitTime: number)
+function Movement.Land(fric: number, waitTime: number, hitMaterial)
 
 	fric = fric or (Movement.dashing and 0.6) or Movement.landingMovementDecreaseFriction
 	waitTime = waitTime or Movement.landingMovementDecreaseLength
+	hitMaterial = hitMaterial or Enum.Material.Concrete
 	landing = true
+
+	Movement.RegisterGroundMaterialSounds(hitMaterial)
 
 	--TODO: play land sound
 	local landsnd = Movement.Sounds.landDefault
@@ -429,6 +427,27 @@ function Movement.Walk(walk: boolean)
 	end
 end
 
+function _SetGroundSound(runSound, landSound)
+	if Movement.Sounds.runDefault ~= runSound then
+		if Movement.Sounds.runDefault.isPlaying then
+			SoundModule.StopReplicated(Movement.Sounds.runDefault)
+		end
+	
+		Movement.Sounds.runDefault = runSound
+		Movement.Sounds.landDefault = landSound
+	end
+end
+
+function Movement.RegisterGroundMaterialSounds(hitMaterial)
+	if hitMaterial == Enum.Material.Metal or hitMaterial == Enum.Material.CorrodedMetal then
+		_SetGroundSound(Movement.Sounds.runMetal, Movement.Sounds.landMetal)
+	elseif hitMaterial == Enum.Material.Wood or hitMaterial == Enum.Material.WoodPlanks then
+		_SetGroundSound(Movement.Sounds.runWood, Movement.Sounds.landWood)
+	else
+		_SetGroundSound(Movement.Sounds.runTile, Movement.Sounds.landTile)
+	end
+end
+
 --[[
 	Movement Abilities
 ]]
@@ -536,7 +555,7 @@ function Movement.ProcessMovement()
 
 		-- only register land after given time in air
 		if tick() >= a + Movement.minInAirTimeRegisterLand and not landing then
-			Movement.Land()
+			Movement.Land(false, false, hitPart.Material)
 			landed:Fire()
 		else
 			
@@ -674,16 +693,25 @@ Inputs.FormattedKeys = {
 	LeftShift = 0
 }
 
-function Inputs.UpdateBindables()
-	local keybinds = PlayerData:Get("options.keybinds")
-	for i, v in pairs({jump = Inputs.Keys.Jump, crouch = Inputs.Keys.Crouch}) do
-		if v[1] ~= keybinds[i] then
-			local _currKey = v[1]
-			Inputs.Keys[Strings.firstToUpper(i)][1] = keybinds[i]
-			Inputs.FormattedKeys[_currKey] = nil
-			Inputs.FormattedKeys[Inputs.Keys[Strings.firstToUpper(i)][1]] = 0
-		end
-	end
+-- Changes the Inputs.Keys and Inputs.Formatted keys values and will update the old ones.
+-- This is the proper way to change a keybind!
+function Inputs.ChangeKey(key: string, value: string)
+	local _cap = Strings.firstToUpper(key)
+	Inputs.FormattedKeys[Inputs.Keys[_cap][1]] = nil -- remove current formatted key
+	Inputs.Keys[_cap][1] = value					 -- set Inputs.Keys value
+	Inputs.FormattedKeys[Inputs.Keys[_cap][1]] = 0   -- add key to formatted
+end
+
+function Inputs.InitKeys()
+	Inputs.ChangeKey("jump", PlayerData:Get("options.keybinds.jump"))
+	Inputs.ChangeKey("crouch", PlayerData:Get("options.keybinds.jump"))
+end
+
+function Inputs.ListenForKeyBindChanges()
+	return {
+		jump = PlayerData:Changed("options.keybinds.jump", function(new) Inputs.ChangeKey("jump", new) end),
+		crouch = PlayerData:Changed("options.keybinds.crouch", function(new) Inputs.ChangeKey("crouch", new) end)
+	}
 end
 
 function Inputs.FormatKeys()
@@ -765,7 +793,6 @@ function Update(dt)
 	currentDT = dt
 	Movement.currentDT = dt
 
-	Inputs.UpdateBindables()
 	Inputs.UpdateMovementSum()
 	Movement.ProcessMovement()
 	listenForPropertyChanged()
@@ -790,7 +817,13 @@ function Main()
 	local a = player.Character:FindFirstChildOfClass("Humanoid") or player.Character:WaitForChild("Humanoid")
 	a.PlatformStand = true
 
-	Init()
+	InitMovers()
+
+	-- this will yield if necessary
+	InitPlayerData()
+
+	-- connect key bind change listener
+	Inputs.ListenForKeyBindChanges()
 
 	-- connect script connections
 	UserInputService.InputBegan:Connect(Inputs.OnInput)
@@ -806,7 +839,7 @@ function Main()
 	end
 end
 
-function Init()
+function InitMovers()
 	local movementPosition = Instance.new("BodyPosition", collider)
 	movementPosition.Name = "movementPosition"
 	movementPosition.D = Movement.movementPositionD
@@ -824,6 +857,14 @@ function Init()
 	gravityForce.Name = "gravityForce"
 	gravityForce.force = Vector3.new(0, (1-Movement.gravity)*196.2, 0) * Movement:GetCharacterMass()
 	Movement.gravityForce = gravityForce
+end
+
+-- Set the player to be anchored until PlayerData is initialized.
+-- Resolve: Bug where players would fall through the floor on the first spawn
+function InitPlayerData()
+	collider.Anchored = true
+	PlayerData:WaitForInit()
+	collider.Anchored = false
 end
 
 Main()

@@ -1,39 +1,8 @@
 --[[ Processing Functions for m_inputs ]]
 
+local UserInputService = game:GetService("UserInputService")
+
 local process = {}
-
--- Sanity Checks
-
-local function getCantIgnoreWhen(keyAction)
-    -- ignore when
-    if keyAction.Properties.IgnoreWhen then
-        for _, ignore in pairs(keyAction.Properties.IgnoreWhen) do
-            if ignore() then
-                return true
-            end
-        end
-    end
-    return false
-end
-
-local function getCantRepeat(keyAction)
-    if keyAction.Properties.Repeats then
-        if keyAction.Var.debounce > tick() then
-            return true
-        else
-            keyAction.Var.debounce = keyAction.Properties.RepeatDelay ~= 0 and tick() + keyAction.Properties.RepeatDelay or tick()
-            return false
-        end
-    else
-        if keyAction.Var.debounce then
-            return true
-        else
-            keyAction.Var.debounce = true
-            return false
-        end
-    end
-    return false
-end
 
 -- Processing
 
@@ -84,8 +53,56 @@ function process:processKeyUp(key, keyActions)
         if keyAction.KeyUpFunction then
             keyAction.KeyUpFunction()
         end
-        
+
+        process.qsip(self, key, nil)
     end
+end
+
+-- Process all keys, called every frame
+function process.update(inputs)
+    for key, keyActions in pairs(inputs._boundKeyActions) do
+        task.spawn(function()
+            -- decide whether input is key or mouse, convert to ismousebutton or iskeydown
+            local inputPressed = keyActions._keyProperties.IsMouseKey and UserInputService.IsMouseButtonPressed or UserInputService.IsKeyDown
+            -- get the ismousekey or iskeycode enum
+            local enum = keyActions._keyProperties.IsMouseKey and Enum.UserInputType or Enum.KeyCode
+            -- process
+            process.smartProcessKey(inputs, key, inputPressed(UserInputService, enum[key]), keyActions)
+        end)
+    end
+end
+
+-- Sanity Checks
+
+function getCantIgnoreWhen(keyAction)
+    -- ignore when
+    if keyAction.Properties.IgnoreWhen then
+        for _, ignore in pairs(keyAction.Properties.IgnoreWhen) do
+            if ignore() then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function getCantRepeat(keyAction)
+    if keyAction.Properties.Repeats then
+        if keyAction.Var.debounce > tick() then
+            return true
+        else
+            keyAction.Var.debounce = keyAction.Properties.RepeatDelay ~= 0 and tick() + keyAction.Properties.RepeatDelay or tick()
+            return false
+        end
+    else
+        if keyAction.Var.debounce then
+            return true
+        else
+            keyAction.Var.debounce = true
+            return false
+        end
+    end
+    return false
 end
 
 return process

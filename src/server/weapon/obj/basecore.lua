@@ -1,5 +1,6 @@
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local States = require(Framework.shm_states.Location)
+local SharedWeaponFunctions = require(Framework.shfc_sharedWeaponFunctions.Location)
 
 local core = {}
 core.__index = core
@@ -8,7 +9,7 @@ core.__index = core
 	@return			- {void}
 ]]
 
-function core.fire(self, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions)
+function core.fire(self, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, startTick)
     local mouse = player:GetMouse()
 
     -- set var
@@ -16,14 +17,20 @@ function core.fire(self, player, weaponOptions, weaponVar, weaponCameraObject, a
 	local t = tick()
 	local mosPos = Vector2.new(mouse.X, mouse.Y)
 	local fireRegisterTime = workspace:GetServerTimeNow()
-	weaponVar.fireLoop = true
+	--weaponVar.fireLoop = true
 	weaponVar.firing = true
-	weaponVar.nextFireTime = t + weaponOptions.fireRate
+	--weaponVar.nextFireTime = t + weaponOptions.fireRate
 	weaponVar.ammo.magazine -= 1
 	weaponVar.currentBullet = (t - weaponVar.lastFireTime >= weaponOptions.recoilReset and 1 or weaponVar.currentBullet + 1)
 	weaponVar.lastFireTime = t
 	weaponCameraObject.weaponVar.currentBullet = weaponVar.currentBullet
 
+	-- Play Emitters
+	task.spawn(function()
+		SharedWeaponFunctions.ReplicateFireEmitters(weaponVar.serverModel, weaponVar.clientModel)
+	end)
+
+	-- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
 	self.util_RegisterRecoils()
 
 	-- play animations

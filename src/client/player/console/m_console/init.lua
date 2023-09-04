@@ -3,7 +3,16 @@ local Console = {
 	MaxLines = 33,
 }
 
-local Commands = require(script:WaitForChild("Commands"))
+local Commands
+local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("console"):WaitForChild("remotes")
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local Strings = require(Framework.shfc_strings.Location)
+
+
+local gui = game:GetService("Players").LocalPlayer.PlayerGui:WaitForChild("Console")
+local returnTextFrame = gui:WaitForChild("ReturnTextFrame")
+local returnTextBoxLine = returnTextFrame.TextBoxLineDefault
+local enterTextFrame = gui:WaitForChild("EnterTextFrame")
 
 Console.KeyWords = {
 	player = Color3.new(0.333333, 1, 1)
@@ -13,10 +22,18 @@ Console.CurrentLinesIndex = 0
 Console.CurrentLinesTable = {}
 Console.IsShifting = false
 
-local gui = game:GetService("Players").LocalPlayer.PlayerGui:WaitForChild("Console")
-local returnTextFrame = gui:WaitForChild("ReturnTextFrame")
-local returnTextBoxLine = returnTextFrame.TextBoxLineDefault
-local enterTextFrame = gui:WaitForChild("EnterTextFrame")
+function Console.Init(CommandsTable)
+	Commands = require(CommandsTable.general)
+	if CommandsTable.admin then
+		for i, v in pairs(require(CommandsTable.admin)) do
+			Commands[i] = v
+		end
+	end
+	Commands.GeneralModuleLocation = CommandsTable.general
+	return Commands
+end
+
+--
 
 local function robloxQuickError(msg)
 	task.spawn(function()
@@ -126,8 +143,11 @@ function Console.Enter()
 	end
 	
 	local commandTable = false
+
+	print(Commands[Strings.firstToUpper(split[1])])
+
 	for i, v in pairs(Commands) do
-		if string.lower(i) == string.lower(split[1]) and v.Public and v.Function then
+		if string.lower(i) == string.lower(split[1]) and v.Function then
 			commandTable = v
 			break
 		end

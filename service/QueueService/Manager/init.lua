@@ -10,14 +10,14 @@ function QueueManager:StartManager(QueueService)
     self:StartAllQueues(QueueService)
 end
 
+function QueueManager:StopManager()
+    self:StopAllQueues()
+end
+
 function QueueManager:StartQueue(QueueService, QueueName)
     local module = require(QueueService.__location.QueueManager.QueueClasses.base).new(QueueName)
     module:Start()
     self.Queues[QueueName] = module
-end
-
-function QueueManager:StopQueue(QueueService, QueueName)
-    self.Queues[QueueName]:Stop()
 end
 
 function QueueManager:StartAllQueues(QueueService)
@@ -25,6 +25,10 @@ function QueueManager:StartAllQueues(QueueService)
         if v.Name == "base" then continue end -- Ignore BaseClass
         self:StartQueue(QueueService, v.Name)
     end
+end
+
+function QueueManager:StopQueue(QueueService, QueueName)
+    self.Queues[QueueName]:Stop()
 end
 
 function QueueManager:StopAllQueues()

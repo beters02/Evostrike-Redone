@@ -1,24 +1,21 @@
 -- script var
-local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local RunService = game:GetService("RunService")
 local SoundModule = require(Framework.shm_sound.Location)
 local States = require(Framework.shm_states.Location)
 local PlayerData = require(Framework.shm_clientPlayerData.Location)
 
-local sharedMovementFunctions = require(Framework.shfc_sharedMovementFunctions.Location)
 local strings = require(Framework.shfc_strings.Location)
-local Math = require(Framework.shfc_math.Location)
 local vmsprings = require(Framework.shc_vmsprings.Location)
 local sharedWeaponFunctions = require(Framework.shfc_sharedWeaponFunctions.Location)
 local weaponRemotes = ReplicatedStorage:WaitForChild("weapon"):WaitForChild("remote")
 local reptemp = ReplicatedStorage:WaitForChild("temp")
 local cameraobject = require(Framework.shc_cameraObject.Location)
 local animationEventFunctions = {}
-local currentPlayingWeaponSounds = {}
 local connections = {}
+local hotVariables = {mouseDown = false}
 local hotConnections = {}
 local forcestop = false
 
@@ -28,7 +25,6 @@ local clientModel = tool:WaitForChild("ClientModelObject").Value
 local serverModel = tool.ServerModel
 local weaponName = string.gsub(tool.Name, "Tool_", "")
 local weaponRemoteFunction = tool:WaitForChild("WeaponRemoteFunction")
-local weaponRemoteEvent = tool:WaitForChild("WeaponRemoteEvent")
 local weaponGetRemote = weaponRemotes:WaitForChild("get")
 local weaponObjectsFolder = tool:WaitForChild("WeaponObjectsFolderObject").Value
 local weaponAnimationsFolder = weaponObjectsFolder.animations
@@ -50,7 +46,9 @@ local weaponVar = {
 	ammo = {
 		magazine = 1,
 		total = 1
-	}
+	},
+	serverModel = serverModel,
+	clientModel = clientModel
 }
 if not string.match(string.lower(tool.Name), "knife") then
 	weaponVar.ammo = {
@@ -83,6 +81,8 @@ local vmAnimController
 local VMEquipSpring
 local connectVMSpringEvent
 
+local defGroundMaxSpeed
+
 -- init states
 States.SetStateVariable("PlayerActions", "shooting", false)
 States.SetStateVariable("PlayerActions", "reloading", false)
@@ -94,6 +94,10 @@ States.SetStateVariable("PlayerActions", "weaponEquipped", false)
     these are not kept in a FunctionContainer because almost all of
     the functions will edit the all of the script's variables.
 ]]
+
+local function init_variables()
+	defGroundMaxSpeed = movementCommunicate.GetVar("groundMaxSpeed")
+end
 
 --[[@title 			- init_keybinds
 	
@@ -267,7 +271,7 @@ local function init_animationEvents()
 	-- play replicated weapon sound (replicate to server)
 	animationEventFunctions.PlayReplicatedSound = function(soundName, dontDestroyOnRecreate)
 		local sound = weaponSounds:FindFirstChild(soundName)
-		SoundModule.PlayReplicatedClone(sound, player.Character.HumanoidRootPart)
+		SoundModule.PlayReplicatedClone(sound, player.Character.HumanoidRootPart, true)
 	end
 	
 end
@@ -382,7 +386,6 @@ function util_processEquipAnimation()
 	task.spawn(function()
 		local _throwing = States.GetStateVariable("PlayerActions", "grenadeThrowing")
 		if _throwing then
-			print(_throwing)
 			-- find ability folder on character
 			if not player.Character:FindFirstChild("AbilityFolder_" .. _throwing) then warn("Could not cancel ability throw anim! Couldnt find ability folder") return end
 			player.Character["AbilityFolder_" .. _throwing].Scripts.base_client.communicate:Fire("StopThrowAnimation")
@@ -430,7 +433,7 @@ end
 	@return			- {void}
 ]]
 
-function util_fireWithChecks()
+function util_fireWithChecks(t)
     if not weaponVar.equipped or weaponVar.fireDebounce or weaponVar.reloading or weaponVar.ammo.magazine <= 0 then return end
 
     weaponVar.fireDebounce = true
@@ -440,8 +443,7 @@ function util_fireWithChecks()
 		util_resetSprayOriginPoint()
 	end
 
-    core_fire()
-	
+    core_fire(t)
     
     if weaponOptions.automatic then
         weaponVar.fireDebounce = false
@@ -545,7 +547,14 @@ end
 ]]
 
 function util_handleHoldMovementPenalize(equip)
+	task.wait()
 	local currAdd = movementCommunicate.GetVar("maxSpeedAdd")
+
+	-- Resolve: players spawning with hella crazy speed
+	-- sanity (currAdd should always be negative)
+	if currAdd + defGroundMaxSpeed > defGroundMaxSpeed then
+		currAdd = 0
+	end
 
 	if equip then
 		currAdd -= weaponOptions.movement.penalty
@@ -554,7 +563,6 @@ function util_handleHoldMovementPenalize(equip)
 	end
 
 	movementCommunicate.SetVar("maxSpeedAdd", currAdd)
-	--print('set new ground max speed add', currAdd)
 end
 
 --[[@title 			- util_setInfoFrameWeapon()
@@ -641,12 +649,25 @@ end
 
 function conn_mouseUp()
 	if not player.Character or hum.Health <= 0 then return end
+	hotVariables.mouseDown = false
+
+	if weaponVar.fireScheduled then
+		-- cancel fire scheduled after a full 64 tick of mouse being up
+		hotVariables.fireScheduleCancelThread = task.delay(1/64, function()
+			if weaponVar.fireScheduled and not weaponVar.mouseDown and weaponVar.firing then
+				coroutine.yield(weaponVar.fireScheduled)
+				weaponVar.fireScheduled = nil
+			end
+			coroutine.yield(hotVariables.fireScheduleCancelThread)
+			hotVariables.fireScheduleCancelThread = nil
+		end)
+	end
+
     if weaponVar.fireLoop then
         conn_disableRecoilConnections(true)
 	end
 
 	if not weaponOptions.automatic then
-		--if weaponVar.firing then repeat task.wait() until not weaponVar.firing end
 		weaponVar.fireDebounce = false
 		util_resetSprayOriginPoint()
 	end
@@ -656,31 +677,66 @@ function conn_mouseDown(t)
 	if not player.Character or hum.Health <= 0 then return end
 	t = type(t) == "number" and t or tick()
     
-    if weaponVar.fireScheduled then
-		if t >= weaponVar.fireScheduled then
-			weaponVar.fireScheduled = false
-			util_fireWithChecks()
+	hotVariables.mouseDown = true
+
+	if not weaponOptions.automatic then
+
+		-- fire input scheduling, it makes semi automatic weapons feel less clunky and more responsive
+		
+		if hotVariables.fireScheduleCancelThread then
+			coroutine.yield(hotVariables.fireScheduleCancelThread)
+			hotVariables.fireScheduleCancelThread = nil
+		end
+	
+		if weaponVar.fireScheduled then
+			return
 		end
 
-        -- if there is already a fire scheduled we dont need to do anything
-		return
-	end
+		if weaponVar.firing then
+			weaponVar.fireScheduled = task.spawn(function()
+				repeat task.wait() until not weaponVar.firing
+				util_fireWithChecks(tick())
+				weaponVar.fireScheduled = nil
+				hotVariables.fireScheduleCancelThread = nil
+			end)
+			return
+		end
 
-	-- fire input scheduling, it makes semi automatic weapons feel less clunky and more responsive
-	if weaponVar.firing or t < weaponVar.nextFireTime then
-		if not weaponVar.fireScheduled then
-			local nxt = weaponVar.nextFireTime - t
-			if nxt < 0.2 then
-				weaponVar.fireScheduled = t + nxt
+		util_fireWithChecks(t)
+	
+	else
+		
+		if not weaponVar.fireLoop then
+
+			-- initial fire
+			local startWithInit = false
+			if tick() >= weaponVar.nextFireTime then
+				startWithInit = true
+				weaponVar.nextFireTime = tick() + weaponOptions.fireRate -- set next fire time
 			end
+		
+			-- start fire loop
+			weaponVar.fireLoop = RunService.RenderStepped:Connect(function()
+				if tick() >= weaponVar.nextFireTime then
+					weaponVar.nextFireTime = tick() + weaponOptions.fireRate
+					task.spawn(function()
+						util_fireWithChecks()
+					end)
+				end
+			end)
+
+			if startWithInit then
+				util_fireWithChecks(t)
+			end
+
 		end
-		return
+
+		--[[if t < weaponVar.nextFireTime then
+			return
+		end]]
+
 	end
 
-	if weaponVar.fireScheduled then return end
-
-
-	util_fireWithChecks()
 end
 
 --[[@title 			- conn_disableRecoilConnections
@@ -692,22 +748,10 @@ end
 
 
 function conn_disableRecoilConnections(isAutomatic: boolean)
-    repeat task.wait() until not weaponVar.firing
-
-    -- sanity check for mag size
-    -- wait i dont get it, why "weaponVar.ammo.magazine <= 0"
-    -- doesn't this cause the fire loop to continue
-    -- ill leave this here incase it breaks when i remove it
-
-    --[[if (isAutomatic and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or weaponVar.ammo.magazine <= 0) then
-		return
-	end]]
-
-    if (isAutomatic and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)) then
-		return
+	if weaponVar.fireLoop then
+		weaponVar.fireLoop:Disconnect()
+		weaponVar.fireLoop = false
 	end
-
-	weaponVar.fireLoop = false
 end
 
 --[[@title 			- core_equip
@@ -717,24 +761,25 @@ end
 	@return			- {void}
 ]]
 
+--[[ == INITIATE KEYBIND ACTIONS == ]]
+
 local m_inputs = require(player.PlayerScripts.m_inputs)
-local bind = m_inputs._bindModule
+local types = m_inputs.Types
 
 function binds_connectHotBinds()
 	if not weaponVar._hotBinds then weaponVar._hotBinds = {} end
 
-	local hotHeyProp: bind.KeyActionProperties = {
+	local hotHeyProp: types.KeyActionProperties = {
 		Repeats = false,
-		IgnoreOnDead = true,
+		DestroyOnDead = true,
 		IgnoreWhen = {
 			function() return not weaponVar.equipped end
 		}
 	}
 
-	local fireKeyProp: bind.KeyActionProperties = {
-		Repeats = weaponOptions.automatic,
-		RepeatDelay = 0,
-		IgnoreOnDead = true,
+	local fireKeyProp: types.KeyActionProperties = {
+		Repeats = false,
+		DestroyOnDead = true,
 		IgnoreWhen = {
 			function() return not weaponVar.equipped end
 		}
@@ -746,7 +791,7 @@ function binds_connectHotBinds()
 		hotHeyProp,
 		{},
 		core_reload
-	):: bind.KeyAction
+	):: types.KeyAction
 
 	weaponVar._hotBinds.fire = m_inputs:Bind(
 		"MouseButton1",
@@ -755,7 +800,7 @@ function binds_connectHotBinds()
 		{},
 		conn_mouseDown,
 		conn_mouseUp
-	):: bind.KeyAction
+	):: types.KeyAction
 
 end
 
@@ -872,11 +917,11 @@ local coreself = {
 	util_playAnimation = util_playAnimation
 }
 
-core_fire = function()
+core_fire = function(t)
 	if not player.Character or hum.Health <= 0 then return end
 	if States.GetStateVariable("PlayerActions", "grenadeThrowing") then return end
 	local autoReload
-	weaponVar, autoReload = corefunc.fire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions)
+	weaponVar, autoReload = corefunc.fire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, t)
 	if autoReload then
 		task.spawn(function()
 			repeat task.wait() until tick() >= autoReload
@@ -905,6 +950,7 @@ init_keybinds()
 init_HUD()
 init_animations()
 init_animationEvents()
+init_variables()
 
 -- connect connections
 connections.equipInputBegin = UserInputService.InputBegan:Connect(conn_equipInputBegan)

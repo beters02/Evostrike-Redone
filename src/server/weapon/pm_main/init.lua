@@ -11,6 +11,7 @@ local WeaponGetEvent = WeaponRemotes.get
 local WeaponAddRemoveEvent = WeaponRemotes.addremove
 local WeaponScripts = {ServerScriptService.weapon.obj.base_client, ServerScriptService.weapon.obj.base_server}
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
+local GlobalWeaponObj = game:GetService("ReplicatedStorage").weapon:WaitForChild("obj"):WaitForChild("global")
 --local ServerPlayerData = require(Framework.sm_serverPlayerData.Location)
 
 -- [[ Module ]]
@@ -130,6 +131,17 @@ local function initToolAndModels(weaponName: string, weaponObjects: Folder, skin
 	serverModel.Parent = tool
 	clientModel.Name = "ClientModel"
 	clientModel.Parent = ReplicatedStorage:WaitForChild("temp")
+
+	-- add necessary particles
+	if string.lower(weaponName) ~= "knife" then
+		local a
+		for i, v in pairs({clientModel, serverModel}) do
+			a = GlobalWeaponObj.MuzzleFlash:Clone()
+			a.Parent = v.GunComponents.WeaponHandle.FirePoint
+			a.Enabled = false
+		end
+		
+	end
 
     return tool, clientModel, serverModel
 end

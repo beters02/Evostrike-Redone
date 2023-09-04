@@ -3,7 +3,7 @@ local wepconfig = {
 	automatic = false,
 	
 	equipLength = 0.8,
-	fireRate = 0.133,
+	fireRate = 0.15,
 	reloadLength = 1,
 	recoilReset = 0.35,
 	

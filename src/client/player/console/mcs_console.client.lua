@@ -1,24 +1,26 @@
 local player = game:GetService("Players").LocalPlayer
 if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
 
-local ConsoleModuleLocation = script.Parent:WaitForChild("m_console")
-local ConsoleModule = require(ConsoleModuleLocation)
-local CommandsLocation = ConsoleModuleLocation:WaitForChild("Commands")
-local LogService = game:GetService("LogService")
 local UserInputService = game:GetService("UserInputService")
-
-local player = game:GetService("Players").LocalPlayer
-
 local ConsoleGui = player.PlayerGui:WaitForChild("Console")
 local TextBox = ConsoleGui:WaitForChild("EnterTextFrame"):WaitForChild("TextBox")
 local CloseButton = ConsoleGui:WaitForChild("CloseButton")
-
-local ClearEvent = CommandsLocation.events.Clear
-local CloseEvent = CommandsLocation.events.Close
+local CommandRemoteFunction = game:GetService("ReplicatedStorage"):WaitForChild("console"):WaitForChild("remotes"):WaitForChild("CommandFunction")
 
 local defaultOpenKeyCode = Enum.KeyCode["F10"] -- this can be changed as needed
-
 local connections = {}
+
+-- Init Player Commands & Console Module
+
+local CommandsTable = CommandRemoteFunction:InvokeServer("InitCommandsModule")
+local ConsoleModuleLocation = script.Parent:WaitForChild("m_console")
+local ConsoleModule = require(ConsoleModuleLocation)
+CommandsTable = ConsoleModule.Init(CommandsTable)
+
+local ClearEvent = CommandsTable.GeneralModuleLocation.events.clear
+local CloseEvent = CommandsTable.GeneralModuleLocation.events.close
+
+--
 
 function Open()
 	ConsoleGui.Enabled = true

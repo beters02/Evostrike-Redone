@@ -16,7 +16,6 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local VRService = game:GetService("VRService")
 local PlayerData = require(Framework.sm_serverPlayerData.Location)
 
 local base = {}
@@ -28,7 +27,8 @@ base._var = {
     isInit = false,
     isProcessing = false,
     nextProcessTime = tick(),
-    connections = {}
+    connections = {},
+    process = {}
 }
 
 base.config = {
@@ -48,7 +48,7 @@ export type TeleportInfo = {
     PlaceID: number,
     JobID: number|nil,
     Gamemode: string|nil,
-    PrivateCode: number|nil
+    PrivateCode: string|nil
 }
 
 function base.new(class: string)
@@ -142,7 +142,6 @@ function base:RemovePlayer(player: Player)
     local playerdata = PlayerData.GetPlayerData(player)
 
     -- Check if player is already being added/removed from a queue
-    print(playerdata.states)
     if playerdata.states.isQueueAdding or playerdata.states.isQueueRemoving then
         warn("Player is already being added or removed from queue.")
         return false
@@ -268,22 +267,17 @@ end
 function base:IsPlayerInQueue(player)
     if type(player) == "string" then player = {Name = player} end
 
-    local _b = false
-    local _loc = ""
-
     -- first check local
     for i, v in pairs(self.stored.playerAddingQueue) do
-        if i == player.Name then _b = true _loc = "local" break end
+        if i == player.Name then return true, "local" end
     end
 
     -- then check global (local cache of global)
-    if not _b then
-        for i, v in pairs(self.stored.playerIDdata) do
-            if v.key == player.Name then _b = true _loc = i break end
-        end
+    for i, v in pairs(self.stored.playerIDdata) do
+        if v.key == player.Name then return true, i end
     end
     
-    return _b, _loc
+    return false
 end
 
 function base:SetPlayerDataIsQueueVar(action: string, player, playerdata, bool)
@@ -319,10 +313,26 @@ function base:SetPlayerDataIsQueueVar(action: string, player, playerdata, bool)
     return true
 end
 
--- @return
-function _GetTopPlayersInQueue(self, verificationData)
+function base:NotifyGameFound(player, waitingForPlayers)
+    local _c = base._baseLocation.GameFoundGui:Clone()
+    _c.Parent = player.PlayerGui
+    _c:WaitForChild("MainFrame"):WaitForChild("TextLabelFrame"):WaitForChild("WaitingForPlayers").Visible = waitingForPlayers or false
+    Debris:AddItem(_c, 20)
+end
+
+function base:NotifyWaitingForPlayersProgress(progress, maxProgress)
+    for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+        local gui = player.PlayerGui:FindFirstChild("GameFoundGui")
+        if gui then
+            gui.MainFrame.TextLabelFrame.WaitingForPlayers:SetAttribute("Progress", progress)
+            gui.MainFrame.TextLabelFrame.WaitingForPlayers:SetAttribute("MaxProgress", maxProgress)
+        end
+    end
+end
+
+function _GetTopPlayersInQueue(self, verificationData): (table, table) -> {key: string, value: number} -- Returns an array from the IDStore (key = PlayerName, value = Slot)
     if not verificationData then error("GetTopPlayersInQueue requires verification data.") end
-    if #self.stored.playerIDdata == 0 then print("No players in queue Debug") return {} end
+    if #self.stored.playerIDdata == 0 then --[[print("No players in queue Debug")]] return {} end
     local total = self.config.maxParty
 
     -- store finished var for once all threads have completed
@@ -413,6 +423,33 @@ function _GetTopPlayersInQueue(self, verificationData)
     return _top
 end
 
+function _ProcessTopPlayers(self, top, waiting): (table, table, boolean|nil) -> {InPlayers: table, OutPlayers: table}
+    if not top or #top == 0 then
+        warn("Could not get top players when there were enough players in queue!")
+        self._var.isProcessing = false
+        return
+    end
+
+    local sep = _SeperateInAndNotInServerPlayers(top)
+    if not sep then
+        warn("Could not seperate top table... this is stupid")
+        self._var.isProcessing = false
+        return
+    end
+
+    -- remove these players from queue & notify them that they have found a game
+    for i, v in pairs(top) do
+        if Players:FindFirstChild(v.key) then
+            self:RemovePlayer(Players[v.key])
+            self:NotifyGameFound(Players[v.key], waiting)
+        else
+            self:RemovePlayerOtherServer(v.key)
+        end
+    end
+
+    return sep
+end
+
 function _UpdatedStoredPlayersFromDataStore(self)
     self.stored.playerIDdata = self.datastore:GetSortedAsync(true, 100):GetCurrentPage()
 end
@@ -470,115 +507,25 @@ function _SeperateInAndNotInServerPlayers(party: table)
     return sep
 end
 
---#endregion
+function _TeleportPlayers(self, top, sep)
+    -- prepare teleport information
+    local teleportInfo: TeleportInfo
+    local openServer = self:CheckForOpenServers(top)
 
---#region Main
+    -- create private server
+    local _id = self:GetRandomMap()
+    teleportInfo = {
+        PlaceID = _id,
+        PrivateCode = TeleportService:ReserveServer(_id),
+        Gamemode = self.Name
+    }:: TeleportInfo
 
-function base:Start()
-    self:Connect()
-end
-
-function base:Stop()
-    self:Stop()
-end
-
-function base:Connect()
-    self._var.connections.UpdateLoop = RunService.Heartbeat:Connect(function() self:UpdateLoop() end)
-    self._var.connections.PlayerRemoving = Players.PlayerRemoving:Connect(function(player)
-        if self:IsPlayerInQueue(player) then
-            self:RemovePlayer(player)
-        end
-    end)
-end
-
-function base:Disconnect()
-    for i, v in pairs(self._var.connections) do
-        v:Disconnect()
-    end
-    self._var.connections = {}
-end
-
-function base:Update() -- Called Every [interval] Seconds
-
-    -- update players from current store
-    _UpdatedStoredPlayersFromDataStore(self)
-    task.wait()
-
-    -- merge stored queue players
-    _MergeAddQueue(self)
-    task.wait()
-
-    -- fulfill remove requests
-    _CheckRemoveQueue(self)
-    task.wait()
-
-    -- verify stored queue players are real and online
-    local verificationData = _VerifyStoredPlayers(self)
-    task.wait()
-
-    -- process
-    self:ProcessQueue(verificationData)
-    task.wait()
-
-end
-
-function base:UpdateLoop() -- Called Every Frame
-    if tick() >= self._var.nextProcessTime then
-        self._var.nextProcessTime = tick() + self.config.updateInterval
-        self:Update()
-    end
-end
-
-function base:ProcessQueue(verificationData)
-    if self._var.isProcessing then return end
-    
-    if #self.stored.playerIDdata >= self.config.minParty then
-        self._var.isProcessing = true
-
-        -- get top players & convert to in and out
-        local top = _GetTopPlayersInQueue(self, verificationData)
-        if not top or #top == 0 then
-            warn("Could not get top players when there were enough players in queue!")
-            self._var.isProcessing = false
-            return
-        end
-
-        local sep = _SeperateInAndNotInServerPlayers(top)
-        if not sep then
-            warn("Could not seperate top table... this is stupid")
-            self._var.isProcessing = false
-            return
-        end
-
-        -- remove these players from queue & notify them that they have found a game
-        for i, v in pairs(top) do
-            if Players:FindFirstChild(v.key) then
-                self:RemovePlayer(Players[v.key])
-                self:NotifyGameFound(Players[v.key])
-            else
-                self:RemovePlayerOtherServer(v.key)
-            end
-        end
-
-        -- prepare teleport information
-        local teleportInfo: TeleportInfo
-        local openServer = self:CheckForOpenServers(top)
-
-        if openServer then
-            teleportInfo = openServer
-        else
-            -- create private server
-            local _id = self:GetRandomMap()
-            teleportInfo = {
-                PlaceID = _id,
-                PrivateCode = TeleportService:ReserveServer(_id),
-                Gamemode = self.Name
-            }:: TeleportInfo
-        end
-
-        -- first teleport out players and verify that they have teleported
+    -- first teleport out players and verify that they have teleported
+    if sep.OutPlayers then
         for i, v in pairs(sep.OutPlayers) do
-            if Players:FindFirstChild(v.key) then
+            print(v)
+            if not v or not v.key or not v.array then table.remove(sep.OutPlayers, i) continue end
+            if Players:FindFirstChild(v) then
                 warn("Player is an InPlayer! Not an OutPlayer. How'd that happen?")
                 table.insert(sep.InPlayers, v)
                 continue
@@ -592,20 +539,28 @@ function base:ProcessQueue(verificationData)
                 MessagingService:PublishAsync("TeleportPlayer", "public", {ServerInstanceId = teleportInfo.JobID}:: TeleportOptions)
             end
         end
+    end
 
-        -- In Players
+    -- In Players
 
-        -- private server
-        if teleportInfo.PrivateCode then
-            TeleportService:TeleportToPrivateServer(teleportInfo.PlaceID, teleportInfo.PrivateCode, sep.InPlayers, false, {RequestedGamemode = teleportInfo.Gamemode})
-        else
-        -- public server
-            TeleportService:TeleportAsync(teleportInfo.PlaceID, sep.InPlayers, {ServerInstanceId = teleportInfo.JobID}:: TeleportOptions)
-        end
+     -- convert inPlayers to players
+    local _p = {}
+    for i, v in pairs(sep.InPlayers) do
+        table.insert(_p, Players[v])
+    end
 
-        self._var.isProcessing = false
+    -- private server
+    if teleportInfo.PrivateCode then
+        TeleportService:TeleportToPrivateServer(teleportInfo.PlaceID, teleportInfo.PrivateCode, _p, "", {RequestedGamemode = teleportInfo.Gamemode})
+    else
+    -- public server
+        TeleportService:TeleportAsync(teleportInfo.PlaceID, _p, {ServerInstanceId = teleportInfo.JobID}:: TeleportOptions)
     end
 end
+
+--#endregion
+
+--#region Queue Server Management
 
 function base:CheckForOpenServers(top) -- top = TopPlayers
     local teleportInfo = false
@@ -637,14 +592,169 @@ function base:CheckForOpenServers(top) -- top = TopPlayers
 end
 
 function base:GetRandomMap()
-    local _map = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
-    return _map.mapIds[math.random(1,#_map.mapIds)]
+    local _map = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs")).GetMapsInGamemode(self.Name)
+    return _map[math.random(1,#_map)]
 end
 
-function base:NotifyGameFound(player)
-    local _c = base._baseLocation.GameFoundGui:Clone()
-    _c.Parent = player.PlayerGui
-    Debris:AddItem(_c, 10)
+--#endregion
+
+--#region Main
+
+function base:Start()
+    self:Connect()
+end
+
+function base:Stop()
+    self:Disconnect()
+end
+
+function base:Connect()
+    self._var.connections.UpdateLoop = RunService.Heartbeat:Connect(function() self:UpdateLoop() end)
+    self._var.connections.PlayerRemoving = Players.PlayerRemoving:Connect(function(player)
+        if self:IsPlayerInQueue(player) then
+            self:RemovePlayer(player)
+        end
+    end)
+end
+
+function base:Disconnect()
+    for i, v in pairs(self._var.connections) do
+        v:Disconnect()
+    end
+    self._var.connections = {}
+end
+
+function base:ProcessQueue(verificationData)
+    if self._var.isProcessing then return end
+    self._var.isProcessing = true
+
+    -- get top players
+    local top = _GetTopPlayersInQueue(self, verificationData)
+    local sep
+
+    -- check if theres a process waiting for players
+    local _hasCombined = false
+
+    if #self._var.process > 0 then
+
+        -- attempt to combine
+        for i, v in pairs(self._var.process) do
+
+            local _commWithOtherQueue = false
+
+            -- check if there's more than one process
+            if #self._var.process > 1 then
+
+                -- attempt to combine the process tables
+                if self._var.process[i+1] then
+                    if #v.top + #self._var.process[i+1].top <= self.config.maxParty then
+
+                        -- process & combine combine
+
+                        for _, p in pairs(self._var.process[i+1].top) do -- combine "top"
+                            table.insert(v.top, p)
+                        end
+
+                        for ind, p in pairs({InPlayers = self._var.process[i+1].sep.InPlayers, OutPlayers = self._var.process[i+1].sep.OutPlayers}) do -- combine "sep"
+                            table.insert(v.sep[ind], p)
+                        end
+                        
+                        self._var.process[i+1] = nil
+                    end
+                end
+            end
+
+            -- check if amount of top players is less than max players
+            -- if so then we'll wait for players for another interval if we can
+            if #v.top + #top > self.config.maxParty or #top == 0 then
+
+                -- if we have combined or count is not max we can wait
+                if _hasCombined or v.count ~= 2 then
+                    v.count += 1
+                    self:NotifyWaitingForPlayersProgress(v.count, 2)
+                    continue
+                end
+
+                -- if we haven't combined and count is 2 then we will process and teleport the players
+                _TeleportPlayers(self, v.top, v.sep)
+                self._var.process[i] = nil
+
+                continue
+            end
+
+            -- combine players!
+            self:NotifyWaitingForPlayersProgress(2, 2)
+
+            -- process current top
+            sep = sep or _ProcessTopPlayers(self, top) -- convert to {in, out}, remove players from queue, notify that they have found a game.
+
+            -- combine tables
+            _hasCombined = true
+
+            for _, p in pairs(v.top) do -- combine "top"
+                table.insert(top, p)
+            end
+
+            for ind, p in pairs({InPlayers = v.sep.InPlayers, OutPlayers = v.sep.OutPlayers}) do -- combine "sep"
+                table.insert(sep[ind], p)
+            end
+
+            -- teleport
+            _TeleportPlayers(self, top, sep)
+
+            self._var.process[i] = nil
+            self._var.isProcessing = false
+            return
+        end
+    end
+
+    if #top >= self.config.minParty then
+
+        -- if not enough players, process & add to waiting queue
+        if #top < math.round(self.config.maxParty/2) then
+            table.insert(self._var.process, {top = top, count = 1, sep = _ProcessTopPlayers(self, top, true)})
+            self:NotifyWaitingForPlayersProgress(1, 2)
+            self._var.isProcessing = false
+            return
+        end
+
+        -- otherwise process & teleport
+        self:NotifyWaitingForPlayersProgress(0, 0)
+        _TeleportPlayers(self, top, _ProcessTopPlayers(self, top))
+    end
+
+    self._var.isProcessing = false
+end
+
+function base:Update() -- Called Every [interval] Seconds
+
+    -- update players from current store
+    _UpdatedStoredPlayersFromDataStore(self)
+    task.wait()
+
+    -- merge stored queue players
+    _MergeAddQueue(self)
+    task.wait()
+
+    -- fulfill remove requests
+    _CheckRemoveQueue(self)
+    task.wait()
+
+    -- verify stored queue players are real and online
+    local verificationData = _VerifyStoredPlayers(self)
+    task.wait()
+
+    -- process
+    self:ProcessQueue(verificationData)
+    task.wait()
+
+end
+
+function base:UpdateLoop() -- Called Every Frame
+    if tick() >= self._var.nextProcessTime then
+        self._var.nextProcessTime = tick() + self.config.updateInterval
+        self:Update()
+    end
 end
 
 --#endregion

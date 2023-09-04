@@ -5,7 +5,15 @@
 
     "ReplicatedStorage": {
       "$path": "src/shared",
-      "$ignoreUnknownInstances": true
+      "$ignoreUnknownInstances": true,
+      "Framework": {
+        "$path": "framework",
+        "$ignoreUnknownInstances": true
+      },
+      "Services": {
+        "$path": "service",
+        "$ignoreUnknownInstances": true
+      }
     },
 
     "ServerScriptService": {

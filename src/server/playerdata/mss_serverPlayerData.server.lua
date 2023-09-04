@@ -24,7 +24,7 @@ end
 
 Players.PlayerAdded:Connect(function(player)
     -- admin modifications
-    if table.find(Admins, player.Name) then
+    if Admins:IsAdmin(player) then
         require(script.Parent:WaitForChild("adminModifications"))(player, serverPlayerDataModule)
     end
 end)

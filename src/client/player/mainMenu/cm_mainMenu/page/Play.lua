@@ -151,7 +151,7 @@ function play:_connectCasualGamemodeButtons()
 
             -- request add to queue
             local success, err = requestQueueRemote:InvokeServer("Add", "Deathmatch")
-            if not success then warn("Couldn't add player to queue. Error: " .. err) end
+            if not success then warn("Couldn't add player to queue. Error: " .. tostring(err)) end
             
             -- show result text
             local newText = success and "YOU ARE IN QUEUE" or "COULD NOT ADD TO QUEUE"

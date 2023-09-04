@@ -1,7 +1,7 @@
--- Every Command will be sent with the string split table.
 local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local EmitParticles = require(Framework.shfc_emitparticle.Location)
+
 local ParticlesTable
 task.spawn(function()
 	ParticlesTable = EmitParticles.GetParticles()
@@ -9,50 +9,9 @@ end)
 
 local Commands = {}
 
-Commands.Help = {
-	Description = "Show all available commands",
-	Public = true,
-	
-	Function = function()
-		for i, v in pairs(Commands) do
-			if v.Public then
-				print(string.lower(i) .. ": " .. v.Description or "Command")
-			end
-		end
-	end,
-}
-
-Commands.Clear = { 
-	Description = "Clear the current console log",
-	Public = true,
-	
-	Function = function()
-		script.events.Clear:Fire() -- Event Function in ConsoleModule, Event Connection in Main
-	end,
-}
-
-Commands.Close = {
-	Description = "Close the console",
-	Public = true,
-	
-	Function = function()
-		script.events.Close:Fire() -- Event Function and Connection in Main
-	end,
-}
-
-Commands.Stats = {
-	Description = "Show FPS and Velocity",
-	Public = true,
-	
-	Function = function()
-		local statsGui = Players.LocalPlayer.PlayerGui.Stats
-		statsGui.Enabled = not statsGui.Enabled
-	end,
-}
-
 Commands.Emit = {
 	Description = "Emit specified particle from the part you are looking at",
-	Public = true,
+	Public = false,
 	
 	Function = function(_, particle, ...)
 		-- raycast
@@ -75,7 +34,7 @@ Commands.Emit = {
 
 Commands.SetCameraMode = {
 	Description = "Set to LockFirstPerson or Classic",
-	Public = true,
+	Public = false,
 	
 	Function = function(_, cameraType)
 		local t = Enum.CameraMode[cameraType] or false
@@ -87,7 +46,7 @@ Commands.SetCameraMode = {
 
 Commands.AddWeapon = {
 	Description = "Add specified weapon to your inventory",
-	Public = true,
+	Public = false,
 	
 	Function = function(_, weaponName)
 		game:GetService("ReplicatedStorage").weapon.remote.addremove:FireServer("Add", weaponName)
@@ -96,7 +55,7 @@ Commands.AddWeapon = {
 
 Commands.Gamemode = {
 	Description = "Set the gamemode",
-	Public = true,
+	Public = false,
 	
 	Function = function(_, gamemodeName)
 		game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName)
@@ -105,7 +64,7 @@ Commands.Gamemode = {
 
 Commands.Map = {
 	Description = "Teleport player or players to map",
-	Public = true,
+	Public = false,
 
 	Function = function(_, mapName, players)
 		if not mapName then
@@ -128,7 +87,7 @@ Commands.Map = {
 
 Commands.qs_clearqueues = {
 	Description = "Clear all queue data stores {Debug}",
-	Public = true,
+	Public = false,
 
 	Function = function()
 		game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("ClearAll")
@@ -137,7 +96,7 @@ Commands.qs_clearqueues = {
 
 Commands.qs_printqueues = {
 	Description = "Print all players that are in queues {Debug}",
-	Public = true,
+	Public = false,
 
 	Function = function()
 		game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("PrintAll")

@@ -17,7 +17,9 @@ local collisionGroups = { -- Name, CollideAll
 	playerMovement = {"PlayerMovement", true},
     playerCollide = {"PlayerCollide", true},
 	players = {"Players", false},
+    playerFeet = {"PlayerFeet", false},
     bots = {"Bots", true},
+    none = {"None", false},
     Weapons = {"Weapons", false}
 }
 
@@ -111,6 +113,7 @@ local function initRagdolls()
     PhysicsService:CollisionGroupSetCollidable(cg.ragdolls, "Default", true)
     PhysicsService:CollisionGroupSetCollidable(cg.ragdolls, "ClipBoxes", true)
     PhysicsService:CollisionGroupSetCollidable(cg.ragdolls, "BulletIgnore", true)
+    PhysicsService:CollisionGroupSetCollidable(cg.ragdolls, "PlayerCollide", true)
     PhysicsService:CollisionGroupSetCollidable(cg.deadCharacters, cg.bullets, false)
 	PhysicsService:CollisionGroupSetCollidable(cg.deadCharacters, cg.ragdolls, false)
 	PhysicsService:CollisionGroupSetCollidable(cg.deadCharacters, "PlayerMovement", false)

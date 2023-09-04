@@ -1,29 +1,12 @@
 --[[ Binding Functions for m_inputs ]]
 
 local bind = {}
-
-export type TFunction = (...any) -> (...any)
-
-export type KeyActionProperties = {
-    Repeats: boolean,
-    RepeatDelay: number?,
-    IgnoreOnDead: boolean,
-    IgnoreWhen: table?, -- table<() -> (boolean)>, will ignore when any of these functions return true
-    Var: table? -- overwrite var
-}
-
-export type KeyAction = {
-    Function: TFunction,
-    KeyUpFunction: TFunction?,
-    Args: table,
-    Var: table,
-    Properties: KeyActionProperties,
-    Unbind: TFunction
-}
+local types = require(script.Parent.types)
+local died = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE")
 
 --[[ Bind an action to a key ]]
 
-function bind:Bind(key: string, actionID: string, properties: KeyActionProperties, packedArguments: table, action: TFunction, keyUpAction: TFunction?): KeyAction
+function bind:Bind(key: string, actionID: string, properties: types.KeyActionProperties, packedArguments: table, action: types.TFunction, keyUpAction: types.TFunction?): types.KeyAction
 
     if not self._boundKeyActions[key] then
          self._boundKeyActions[key] = {_keyProperties = {IsMouseKey = string.match(key, "Mouse") and true or false}}
@@ -34,11 +17,11 @@ function bind:Bind(key: string, actionID: string, properties: KeyActionPropertie
         --warn("Automatically unbound previous action from " .. tostring(actionID))
     end
 
-    local _ka: KeyAction = {
+    local _ka: types.KeyAction = {
         Function = action,
         KeyUpFunction = keyUpAction,
         Args = packedArguments,
-        Var = {debounce = tick()},
+        Var = {debounce = tick(), enabled = true, conn = {}},
         Properties = properties,
 
         -- quick acccess unbind
@@ -57,6 +40,13 @@ function bind:Bind(key: string, actionID: string, properties: KeyActionPropertie
         end
     end
 
+    -- connect death event if necessary
+    if _ka.Properties.DestroyOnDead then
+        _ka.Var.conn.died = died.Event:Once(function()
+            _ka.Unbind()
+        end)
+    end
+
     self._boundKeyActions[key][actionID] = _ka
 
     return _ka
@@ -70,12 +60,17 @@ function bind:Unbind(key: string, actionID: string)
         error("Cannot unbind key - key is not bound!")
     end
 
-   if not self._boundKeyActions[key][actionID] then
-       error("Cannot unbind key with this actionID!")
-   end
+    if not self._boundKeyActions[key][actionID] then
+        error("Cannot unbind key with this actionID!")
+    end
+
+    if self._boundKeyActions[key][actionID].Var.conn then
+        for i, v in pairs(self._boundKeyActions[key][actionID].Var.conn) do
+            v:Disconnect()
+        end
+    end
 
    self._boundKeyActions[key][actionID] = nil
-
 end
 
 --[[ Check if a key is bound ]]

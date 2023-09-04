@@ -2,15 +2,15 @@
     "ClassName": "Folder",
     "Children": [
       {
-        "Name": "Clear",
+        "Name": "clear",
         "ClassName": "BindableEvent"
       },
       {
-        "Name": "Close",
+        "Name": "close",
         "ClassName": "BindableEvent"
       },
       {
-        "Name": "Gamemode",
+        "Name": "gamemode",
         "ClassName": "BindableEvent"
       }
     ]

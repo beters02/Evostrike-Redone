@@ -100,7 +100,6 @@ end)
 
 script:WaitForChild("communicate").Event:Connect(function(action)
     if action == "StopThrowAnimation" then
-        print('Stopping')
         if not ability._animations.throw.IsPlaying then return end
         ability._animations.throw:Stop(0.1)
     end

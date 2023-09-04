@@ -1,4 +1,4 @@
-local Debris = game:GetService("Debris")
+--[[local Debris = game:GetService("Debris")
 local player = game:GetService("Players").LocalPlayer
 local hrp = (player.Character or player.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
 hrp.Anchored = true
@@ -25,4 +25,4 @@ repeat task.wait() until debounce or tick() >= _endt
 if not debounce then
     if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
     finished()
-end
+end]]

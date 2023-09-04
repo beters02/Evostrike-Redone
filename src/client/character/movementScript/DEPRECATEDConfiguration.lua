@@ -47,7 +47,7 @@ local module = {
 	autoBunnyHop = false,
 
 	--[[ Character Settings ]]
-	playerTorsoToGround = 5,
+	playerTorsoToGround = 4,
 	movementStickDistance = 0.85,
 	crouchDownAmount = 1.6,
 	defaultCameraHeight = -0.5,

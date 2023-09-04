@@ -26,26 +26,26 @@ local module = {
 	--[[ Air Settings ]]
 	airAccelerate = 22,
 	airSpeed = 5,
-	airMaxSpeed = 33,
+	airMaxSpeed = 33, -- 33 was the sweet spot but i was hitting hops as much, 35 was too easy to hit hops
 	airMaxSpeedFriction = 4,
-	airMaxSpeedFrictionDecrease = 0.2,
+	airMaxSpeedFrictionDecrease = 1,
 
 	--[[ Jump Settings ]]
 	jumpVelocity = 29,
-	jumpTimeBeforeGroundRegister = 0.05,
+	jumpTimeBeforeGroundRegister = 0.1,
 
 	--[[ Land Settings ]]
 	minInAirTimeRegisterLand = 0.1,
-	landingMovementDecreaseLength = 0.24,
-	landingMovementDecreaseFriction = 1,
+	landingMovementDecreaseLength = 0.27,
+	landingMovementDecreaseFriction = 0.77,
 
 	--[[ Bhop Settings ]]
 	missedBhopDecrease = 0.4,
 	autoBunnyHop = false,
 
 	--[[ Character Settings ]]
-	playerTorsoToGround = 5,
-	movementStickDistance = 0.85,
+	playerTorsoToGround = 4.65,
+	movementStickDistance = 0.8,
 	crouchDownAmount = 1.6,
 	defaultCameraHeight = -0.5,
 

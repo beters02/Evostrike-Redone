@@ -1,0 +1,13 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "CommandEvent",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "CommandFunction",
+        "ClassName": "RemoteFunction"
+      }
+    ]
+  }

@@ -6,9 +6,6 @@
     with some custom functionality.
 
     Tutorial:
-
-
-
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -22,29 +19,18 @@ inputs._loc = inputs._player.PlayerScripts.m_inputs
 
 local bind = require(inputs._loc.bind) -- Imports KeyAction as bind.KeyAction
 local process = require(inputs._loc.process)
+local types = require(inputs._loc.types)
 bind._init(inputs)
 inputs._bindModule = bind
 
 inputs.Bind = bind.Bind
 inputs.Unbind = bind.Unbind
+inputs.Process = process
+inputs.Types = types
 
 function inputs._connect()
     inputs._connections.updateMain = game:GetService("RunService").RenderStepped:Connect(function()
-        for key, keyActions in pairs(inputs._boundKeyActions) do
-
-            task.spawn(function()
-                -- test
-                local inputPressed = keyActions._keyProperties.IsMouseKey and UserInputService.IsMouseButtonPressed or UserInputService.IsKeyDown
-                local enum = keyActions._keyProperties.IsMouseKey and Enum.UserInputType or Enum.KeyCode
-                process.smartProcessKey(inputs, key, inputPressed(UserInputService, enum[key]), keyActions)
-            end)
-
-            --[[if keyActions._keyProperties.IsMouseKey then
-                process.smartProcessKey(inputs, key, UserInputService:IsMouseButtonPressed(Enum.UserInputType[key]), keyActions)
-            else
-                process.smartProcessKey(inputs, key, UserInputService:IsKeyDown(Enum.KeyCode[key]), keyActions)
-            end]]
-        end
+        process.update(inputs)
     end)
 end
 

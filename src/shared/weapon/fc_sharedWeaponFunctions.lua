@@ -114,51 +114,73 @@ function module.CreateBulletHole(result)
 end
 
 function module.CreateBullet(fromChar, endPos, client)
+
+	-- get starting position
 	local tool = fromChar:FindFirstChildWhichIsA("Tool")
-	local startPos = tool.ServerModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
-	if client then
-		startPos = workspace.CurrentCamera.viewModel.Equipped.ClientModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
-	end
-	local part = BulletModel:Clone() --create bullet part
+
+	--create bullet part
+	local part = BulletModel:Clone()
 	part.Parent = workspace.Temp
 	part.Size = Vector3.new(0.1, 0.1, 0.4)
-	part.Position = startPos
+	part.Position = client and workspace.CurrentCamera.viewModel.Equipped.ClientModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
+	if not client then part.Position = tool.ServerModel.GunComponents.WeaponHandle.FirePoint.WorldPosition end
 	part.Transparency = 1
-	part.CFrame = CFrame.lookAt(startPos, endPos)
-	local tude = (startPos - endPos).magnitude --bullet speed
-	local tv = tude/1100
-	local ti = TweenInfo.new(tv) --bullet travel animation tween
-	local goal = {Position = endPos}
-	--bullet size animation tween
-	local sizeti = TweenInfo.new(.2) --time it takes for bullet to grow
-	local sizegoal = {Size = Vector3.new(0.1, 0.1, 0.7), Transparency =  0}
-	local tween = Tween:Create(part, ti, goal)
-	local sizetween = Tween:Create(part, sizeti, sizegoal)
+	part.CFrame = CFrame.lookAt(part.Position, endPos)
+	part.CollisionGroup = "None"
+
+	local tween = Tween:Create(
+		part,
+		TweenInfo.new(((part.Position - endPos).magnitude)/1100), -- bullet speed w/ arbitrary modifier
+		{Position = endPos}
+	)
+
+	-- we might not need size tween because of the new trail
+	local sizetween = Tween:Create(part, TweenInfo.new(.2), {Size = Vector3.new(0.1, 0.1, 0.7), Transparency =  0})
+
+	-- create finished event to fire
 	local finished = Instance.new("BindableEvent")
-	
+
 	task.delay(0.015, function() -- wait debug so the bullet is shown starting at the tip of the weapon
 		tween:Play() -- play tweens and destroy bullet
-		sizetween:Play()
+		--sizetween:Play()
 		tween.Completed:Wait()
-		part:Destroy()
+
+		-- we anchor and then let the trails finish
+		part.Anchored = true
+		part.Transparency = 1
+		Debris:AddItem(part, 3)
+
+		-- fire finished event
 		finished:Fire()
 		Debris:AddItem(finished, 3)
 	end)
+
 	return part, finished
+end
+
+function module._playFireEmitters(fromModel)
+	task.spawn(function()
+		fromModel.GunComponents.WeaponHandle.FirePoint.MuzzleFlash.Enabled = true
+		task.wait(0.05)
+		fromModel.GunComponents.WeaponHandle.FirePoint.MuzzleFlash.Enabled = false
+	end)
+end
+
+function module.ReplicateFireEmitters(serverModel, clientModel)
+	module._playFireEmitters(clientModel) -- client
+	WeaponRemotes.replicate:FireServer("_playFireEmitters", serverModel)
 end
 
 --[[
 	FireBullet
 
 	Replicates CreateBullet to all Clients except caster
-]]
-
+]] 
 function module.FireBullet(fromChar, result, isHumanoid)
 	if game:GetService("RunService"):IsServer() then return end
-	local endPos = result.Position
-	local bullet, bulletFinishedEvent = module.CreateBullet(fromChar, endPos, true)
+	module.CreateBullet(fromChar, result.Position, true)
 	task.spawn(function()
-		WeaponRemotes.replicate:FireServer("CreateBullet", fromChar, endPos, false)
+		WeaponRemotes.replicate:FireServer("CreateBullet", fromChar, result.Position, false)
 	end)
 	if not isHumanoid then
 		task.spawn(function()
@@ -166,9 +188,6 @@ function module.FireBullet(fromChar, result, isHumanoid)
 			WeaponRemotes.replicate:FireServer("CreateBulletHole", {Position = result.Position, Instance = result.Instance, Normal = result.Normal})
 		end)
 	end
-	bulletFinishedEvent.Event:Once(function()
-		bulletFinishedEvent:Destroy()
-	end)
 end
 
 -- Weapon Shot & Damage Registration
@@ -180,9 +199,10 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		-- register variables
         local hum = char.Humanoid
 		if hum.Health <= 0 then return false end
+
         local distance = (pos - origin).Magnitude
-        damage = weaponOptions.damage.base
-		local instance = instance
+        local damage = weaponOptions.damage.base
+
 		local calculateFalloff = true
 		local min = weaponOptions.damage.damageFalloffMinimumDamage
 		local particleFolderName = "Hit"
@@ -286,6 +306,7 @@ function module.RegisterShot(player, weaponOptions, result, origin, dir, registe
 			end
 
 		end)
+
 		return module.FireBullet(player.Character, result, isHumanoid)
 	elseif isHumanoid then
 		return util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
@@ -367,8 +388,14 @@ end
 
 -- Accuracy
 
+local movementConfig
+if RunService:IsClient() then
+	movementConfig = ReplicatedStorage.movement.get:InvokeServer()
+else
+	movementConfig = require(game:GetService("ServerScriptService"):WaitForChild("movement"):WaitForChild("config"):WaitForChild("main"))
+end
+
 function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions)
-	local movementConfig = require(player.Character.movementScript.Configuration)
 
 	local _x
 	local _y
@@ -391,8 +418,6 @@ function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions
 	if not require(Framework.shfc_sharedMovementFunctions.Location).IsGrounded(player) then
 		baseAccuracy += weaponOptions.accuracy.jump
 	end
-
-	movementConfig = nil
 	
 	return util_vec2AddWithFixedAbsrRR(Vector2.zero, _x and _x * baseAccuracy or baseAccuracy, _y and _y * baseAccuracy or baseAccuracy)
 end

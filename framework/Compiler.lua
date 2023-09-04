@@ -3,10 +3,6 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Types = require(ReplicatedStorage.Framework:WaitForChild("Types"))
 
-local compiler = {}
-
-local parse_translations
-
 --[[
     Utility
 ]]

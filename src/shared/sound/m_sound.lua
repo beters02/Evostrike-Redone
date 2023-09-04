@@ -23,9 +23,9 @@ function sound.StopReplicated(snd)
     end
 end
 
-function sound.PlayReplicatedClone(snd, whereFrom)
+function sound.PlayReplicatedClone(snd, whereFrom, playLocalOnClient)
     if RunService:IsClient() then
-        sound.PlayClone(snd, whereFrom)
+        sound.PlayClone(snd, playLocalOnClient and whereFrom.Parent.Parent or whereFrom)
         replicateRemote:FireServer("Clone", snd, whereFrom)
     else
         replicateRemote:FireAllClients("Clone", snd, whereFrom)

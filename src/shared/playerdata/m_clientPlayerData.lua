@@ -44,12 +44,11 @@ function module.verify(doWait: boolean)
     return true
 end
 
--- new get/set functions using convertPathToInstance
-
 --[[
     @title Get
 
     @summary Get a table key using PathString. Example: "options.keybinds.weaponPrimary" Only gets from local cache.
+    Automatically waits for playerdata to be initalized if it has not been already.
     If you're trying to get the stored value, call GetAsync.
 ]]
 function module:Get(path: string)
@@ -166,5 +165,8 @@ function module:Changed(path: string, callback: (newValue: any, ...any) -> ())
         end
     end)
 end
+
+function module:IsInit() return self.isInit end
+function module:WaitForInit() repeat task.wait() until self.isInit return self.Init end
 
 return module
