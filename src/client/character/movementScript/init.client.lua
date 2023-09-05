@@ -369,14 +369,16 @@ local crouchDebounce = false
 
 function Movement.Crouch(crouch: boolean)
 
-	if crouchDebounce then repeat task.wait() until not crouchDebounce end
-	crouchDebounce = true
-
 	if crouch then
 		
+		if crouchDebounce then return not crouch end
+
+		crouchDebounce = true
+		task.delay(0.07, function() crouchDebounce = false end)
+
 		-- slow player
-		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.crouchMoveSpeed)
-		Movement.groundAccelerate = Movement.crouchAccelerate
+		Movement.SetFrictionVars("crouch")
+		task.wait()
 		
 		-- play crouching animation
 		crouchingAnimation:Play(0.3)
@@ -390,8 +392,8 @@ function Movement.Crouch(crouch: boolean)
 	else
 	
 		-- unslow player
-		Movement.maxSpeedAdd = math.min(Movement.maxSpeedAdd + (Movement.groundMaxSpeed - Movement.crouchMoveSpeed), Movement.groundMaxSpeed)
-		Movement.groundAccelerate = Movement.defGroundAccelerate
+		Movement.SetFrictionVars("run")
+		task.wait()
 
 		-- stop crouching animation
 		crouchingAnimation:Stop(0.5)
@@ -403,8 +405,8 @@ function Movement.Crouch(crouch: boolean)
 		States.SetStateVariable("Movement", "crouching", false)
 
 	end
-
-	task.delay(0.04, function() crouchDebounce = false end)
+	
+	return crouch
 end
 
 --[[
@@ -413,18 +415,48 @@ end
 	@summary
 ]]
 
+local walkDebounce = false
+
 function Movement.Walk(walk: boolean)
 	if walk then
+		if walkDebounce then return not walk end
+
+		walkDebounce = true
+		task.delay(0.07, function() walkDebounce = false end)
 
 		-- slow player
-		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.walkMoveSpeed)
-
+		Movement.SetFrictionVars("walk")
+		task.wait()
 	else
-	
 		-- unslow player
-		Movement.maxSpeedAdd += (Movement.groundMaxSpeed - Movement.walkMoveSpeed)
-
+		Movement.SetFrictionVars("run")
+		task.wait()
 	end
+
+	return walk
+end
+
+function Movement.SetFrictionVars(frictionVarKey: string)
+	if not Movement.LastFrictionVar then Movement.LastFrictionVar = "run" end
+	if frictionVarKey == "crouch" then
+		Movement.LastFrictionVar = "crouch"
+		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.crouchMoveSpeed)
+		Movement.groundAccelerate = Movement.crouchAccelerate
+		Movement.friction = Movement.crouchFriction
+	elseif frictionVarKey == "walk" then
+		Movement.LastFrictionVar = "walk"
+		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.walkMoveSpeed)
+		Movement.groundAccelerate = Movement.walkAccelerate
+		Movement.friction = Movement.crouchFriction
+	elseif frictionVarKey == "run" then
+		local sub = Movement.LastFrictionVar == "crouch" and Movement.crouchMoveSpeed or Movement.walkMoveSpeed
+		Movement.LastFrictionVar = "run"
+		Movement.maxSpeedAdd += (Movement.groundMaxSpeed - sub)
+		Movement.groundAccelerate = Movement.defGroundAccelerate
+		Movement.friction = Movement.defFriction
+	end
+	print(Movement.friction)
+	print(Movement.groundAccelerate)
 end
 
 function _SetGroundSound(runSound, landSound)
@@ -586,33 +618,35 @@ function Movement.ProcessMovement()
 		-- walk since you cant crouch and
 		-- walk at the same time
 		processWalk = false
+
 		if walking then
-			walking = false
-			Movement.Walk(false)
-			task.wait()
+			walking = Movement.Walk(false)
 		end
 
 		if not crouching then
-			crouching = true
-			Movement.Crouch(true)
+			crouching = Movement.Crouch(true)
 		end
 
 	elseif crouching then
-		crouching = false
-		Movement.Crouch(false)
+		crouching = Movement.Crouch(false)
 	end
 
 	if processWalk then
 
 		-- do not process walk while crouching
 		if not crouching and not walking then
-			walking = true
-			Movement.Walk(true)
+			walking = Movement.Walk(true)
 		end
 
 	elseif walking then
-		walking = false
-		Movement.Walk(false)
+		walking = Movement.Walk(false)
+	end
+
+	-- resolve crouch/walk friction
+	if not walking and not crouching then
+		if Movement.LastFrictionVar and Movement.LastFrictionVar ~= "run" then
+			Movement.SetFrictionVars("run")
+		end
 	end
 	
 	-- set rotation
@@ -704,7 +738,7 @@ end
 
 function Inputs.InitKeys()
 	Inputs.ChangeKey("jump", PlayerData:Get("options.keybinds.jump"))
-	Inputs.ChangeKey("crouch", PlayerData:Get("options.keybinds.jump"))
+	Inputs.ChangeKey("crouch", PlayerData:Get("options.keybinds.crouch"))
 end
 
 function Inputs.ListenForKeyBindChanges()
@@ -823,6 +857,7 @@ function Main()
 	InitPlayerData()
 
 	-- connect key bind change listener
+	Inputs.InitKeys()
 	Inputs.ListenForKeyBindChanges()
 
 	-- connect script connections

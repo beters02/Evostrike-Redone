@@ -5,7 +5,8 @@ local Ability = require(Framework.Ability.Location)
 local Weapon = require(Framework.Weapon.Location)
 local GamemodeClasses = game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("class")
 local CollectionService = game:GetService("CollectionService")
-local QueueService = require(game:GetService("ReplicatedStorage").Services.QueueService)
+print(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("QueueService"))
+local QueueService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("QueueService"))
 local BotModule = require(Framework.sm_bots.Location)
 local diedMainEvent = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
 
@@ -178,6 +179,7 @@ function Base:SpawnPlayer(player)
         
         if self.playerdata[player.Name] and self.playerdata[player.Name].deathCameraScript then
             self.playerdata[player.Name].deathCameraScript:WaitForChild("Destroy"):FireClient(player)
+            print('yuh')
         end
 
         player:LoadCharacter()
@@ -222,7 +224,9 @@ function Base:Died(player)
 
     task.wait(2)
 
-    self:SpawnPlayer(player)
+    if self.status == "running" then
+        self:SpawnPlayer(player)
+    end
 end
 
 function Base:DiedCamera(player)

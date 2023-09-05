@@ -1,9 +1,18 @@
+local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Particles = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("obj"):WaitForChild("particles")
 local module = {}
 
-function module.Emit(instance, particle, emitParent, char, emitAmount, lifetime)
-	
+local function darkenColor(co)
+	local _c = {}
+	for i, v in pairs({R = co.R, G = co.G, B = co.B}) do
+		_c[i] = v * 0.8
+	end
+	return Color3.fromRGB(_c.R, _c.G, _c.B)
+end
+
+function module.Emit(instance, particle, emitParent, char, emitAmount, lifetime, isBangableWall)
+
 	-- create clone
 	local c = particle:Clone()
 	local parent = emitParent or instance
@@ -15,15 +24,34 @@ function module.Emit(instance, particle, emitParent, char, emitAmount, lifetime)
 
 	-- color
 	local co = c:FindFirstChild("PartColor")
-	if co then
-		c.Color = ColorSequence.new(instance.Color)
+	if co and co.Value then
+		co = instance.Color
+	elseif c:FindFirstChild("ColorValue") then
+		co = c.ColorValue.Value
+	else
+		co = false
+	end
+
+	-- if we can wallbang we want to make the color of the particles slightly darker
+	if isBangableWall then
+		if not co then
+			local newColor = Color3.new(0.509804, 0.396078, 0.113725)
+			co = ColorSequence.new(newColor)
+		elseif typeof(co) == "Color3" then
+			co = darkenColor(co)
+			co = ColorSequence.new(co)
+		end
+	end
+
+	if typeof(co) == "ColorSequence" then
+		c.Color = co
 	end
 
 	-- emit
 	local emitCount = emitAmount or (c:FindFirstChild("EmitCount") and c.EmitCount.Value) or 1
 	c:Emit(emitCount)
+	Debris:AddItem(c, 5)
 	
-	--print('emitted ' .. tostring(emitCount) .. " " .. tostring(instance))
 	return c
 end
 

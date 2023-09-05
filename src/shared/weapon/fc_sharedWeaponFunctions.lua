@@ -104,9 +104,15 @@ function module.CreateBulletHole(result)
 	weld.Part1 = result.Instance
 	weld.Parent = bullet_hole
 	bullet_hole.Parent = workspace.Temp
+
+	local isBangable = false
+	local _succ = pcall(function()
+		isBangable = result.IsBangableWall
+	end)
+	isBangable = _succ and isBangable or false
 	
 	task.spawn(function()
-		EmitParticle.EmitParticles(result.Instance, EmitParticle.GetBulletParticlesFromInstance(result.Instance), bullet_hole)
+		EmitParticle.EmitParticles(result.Instance, EmitParticle.GetBulletParticlesFromInstance(result.Instance), bullet_hole, nil, nil, nil, isBangable)
 	end)
 	
 	Debris:AddItem(bullet_hole, 8)
@@ -176,7 +182,7 @@ end
 
 	Replicates CreateBullet to all Clients except caster
 ]] 
-function module.FireBullet(fromChar, result, isHumanoid)
+function module.FireBullet(fromChar, result, isHumanoid, isBangable)
 	if game:GetService("RunService"):IsServer() then return end
 	module.CreateBullet(fromChar, result.Position, true)
 	task.spawn(function()
@@ -184,8 +190,8 @@ function module.FireBullet(fromChar, result, isHumanoid)
 	end)
 	if not isHumanoid then
 		task.spawn(function()
-			module.CreateBulletHole(result)
-			WeaponRemotes.replicate:FireServer("CreateBulletHole", {Position = result.Position, Instance = result.Instance, Normal = result.Normal})
+			module.CreateBulletHole({Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable})
+			WeaponRemotes.replicate:FireServer("CreateBulletHole", {Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable})
 		end)
 	end
 end
@@ -194,7 +200,7 @@ end
 
 -- Utility
 
-function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance, normal, origin) -- player = damager
+function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance, normal, origin, wallbangDamageMultiplier) -- player = damager
 		
 		-- register variables
         local hum = char.Humanoid
@@ -235,6 +241,9 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 			damage = math.max(damage - diff * (weaponOptions.damage.damageFalloffPerMeter * (type(calculateFalloff) == "number" and calculateFalloff or 1)), min)
 		end
 
+		-- wallbang multiplier
+		if wallbangDamageMultiplier then damage *= wallbangDamageMultiplier end
+
 		-- see if player will be killed after damage is applied
 		killed = hum.Health <= damage and true or false
 
@@ -244,7 +253,7 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 			char:SetAttribute("bulletRagdollNormal", -normal)
 			char:SetAttribute("bulletRagdollKillDir", (player.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Unit)
 			char:SetAttribute("lastHitPart", instance.Name)
-			
+
 			-- apply damage
             hum:TakeDamage(damage)
 
@@ -264,29 +273,35 @@ end
 	Also compensates for lag if needed
 ]]
 
-function module.RegisterShot(player, weaponOptions, result, origin, dir, registerTime)
+function module.RegisterShot(player, weaponOptions, result, origin, dir, registerTime, isHumanoid, wallbangDamageMultiplier, isBangable)
 	if not result.Instance then return false end
 
 	local particleFolderName
 	local soundFolderName
 	local hole = false
-	local isHumanoid = false
 	local damage = false
 	local killed = false
 	local _
 
 	-- if we are shooting a humanoid character
-	local char = result.Instance:FindFirstAncestorWhichIsA("Model")
-	if char and char:FindFirstChild("Humanoid") then
-		isHumanoid = true
+	local char
+	if isHumanoid == nil then
+		char = result.Instance:FindFirstAncestorWhichIsA("Model")
+		if char and char:FindFirstChild("Humanoid") then
+			isHumanoid = true
+		else
+			isHumanoid = false
+		end
+	else
+		char = isHumanoid
 	end
-
+	
 	if RunService:IsClient() then
 		task.spawn(function()
 			if not isHumanoid then return end
 
 			-- get damage, folders, killedBool
-			damage, particleFolderName, killed, _, soundFolderName = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
+			damage, particleFolderName, killed, _, soundFolderName = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
 			local instance = result.Instance
 
 			-- particles
@@ -302,14 +317,17 @@ function module.RegisterShot(player, weaponOptions, result, origin, dir, registe
 			if soundFolderName then
 				task.spawn(function()
 					module.PlayGlobalSound(player.Character, "PlayerHit", soundFolderName)
+					if killed then
+						module.PlayGlobalSound(player.Character, "PlayerKilled")
+					end
 				end)
 			end
 
 		end)
 
-		return module.FireBullet(player.Character, result, isHumanoid)
+		return module.FireBullet(player.Character, result, isHumanoid, isBangable)
 	elseif isHumanoid then
-		return util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin)
+		return util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
 	end
 
 	return false
@@ -363,6 +381,8 @@ function module.PlayGlobalSound(playFrom, ...)
 	if globalSoundFolderName == "PlayerHit" then
 		local playerHitFolderName, soundName = a, b
 		soundFolder = GlobalSounds.PlayerHit[playerHitFolderName]
+	elseif globalSoundFolderName == "PlayerKilled" then
+		soundFolder = GlobalSounds.PlayerKilled
 	end
 
 	for _, sound in pairs(soundFolder:GetChildren()) do

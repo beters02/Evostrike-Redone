@@ -8,3 +8,7 @@ game:GetService("Players").PlayerAdded:Connect(function(player)
         RagdollRE:FireClient(player, "NonPlayerInitRagdoll", v.Character)
     end]]
 end)
+
+game:GetService("ReplicatedStorage"):WaitForChild("bots"):WaitForChild("GetBots").OnServerInvoke = function(player)
+    return botmodule:GetBots()
+end

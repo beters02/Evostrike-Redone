@@ -100,6 +100,7 @@ function QueueService:Connect()
 end
 
 function QueueService:Disconnect()
+    if not QueueService._connections then return end
     for i, v in pairs(QueueService._connections) do
         v:Disconnect()
     end

@@ -11,6 +11,7 @@
         those functions are instead apart of the Queue Class. (check Class/base)
 ]]
 
+local Debris = game:GetService("Debris")
 local QueueService = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("QueueService")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -276,6 +277,16 @@ end
 --[[ TODO: Combines the current DataStore with the cache'd queuePlayerStore ]]
 function playerManager:CombineStore()
     self._cachedPlayers = self._storeModule:Get()
+end
+
+-- [[ Notify a group of online players that a match has been found ]]
+function playerManager:NotifyGameFound(players)
+    local _c
+    for i, v in pairs(players) do
+        _c = self._parentClass.GameFoundGui:Clone()
+        _c.Parent = v.PlayerGui
+        Debris:AddItem(_c, 30)
+    end
 end
 
 return playerManager

@@ -64,6 +64,7 @@ local weaponIconEquipped
 local weaponSounds
 local weaponFireKeyOptName = "Key_PrimaryFire"
 local weaponCameraObject = cameraobject.new(weaponName)
+local weaponWallbangInformation = weaponGetRemote:InvokeServer("WallbangMaterials")
 
 -- player var
 local player = game:GetService("Players").LocalPlayer
@@ -452,6 +453,38 @@ function util_fireWithChecks(t)
     end
 end
 
+--@return damageMultiplier (total damage reduction added up from recursion)
+function util_ShootWallRayRecurse(origin, direction, params, hitPart, damageMultiplier, filter)
+
+	if not filter then filter = params.FilterDescendantsInstances end
+
+	local _p = RaycastParams.new()
+	_p.CollisionGroup = params.CollisionGroup
+	_p.FilterDescendantsInstances = filter
+	_p.FilterType = Enum.RaycastFilterType.Exclude
+
+	local result = workspace:Raycast(origin, direction, _p)
+	if not result then warn("No wallbang result but player result") return false end
+
+	local hitchar = result.Instance:FindFirstAncestorWhichIsA("Model")
+	if hitchar and hitchar:FindFirstChild("Humanoid") then
+		return damageMultiplier, result, hitchar
+	end
+
+	local bangableMaterial = result.Instance:GetAttribute("Bangable") or hitchar:GetAttribute("Bangable")
+	if not bangableMaterial then return false, result end
+
+	for _, v in pairs(filter) do
+		if result.Instance == v then warn("Saved you from a life of hell my friend") return false end
+	end
+
+	-- create bullethole at wall
+	sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, origin, nil, nil, nil, nil, true)
+
+	table.insert(filter, result.Instance)
+	return util_ShootWallRayRecurse(origin, direction, _p, result.Instance, damageMultiplier - weaponWallbangInformation[bangableMaterial], filter)
+end
+
 --[[@title 			- util_RegisterRecoils
 	
 	@summary
@@ -489,18 +522,19 @@ function util_RegisterRecoils()
 		-- get total accuracy and recoil vec direction
 		local direction = sharedWeaponFunctions.GetAccuracyAndRecoilDirection(player, mray, currVecRecoil, weaponOptions, weaponVar)
 
-		-- get ray params & fire ray
-		local params = sharedWeaponFunctions.getFireCastParams(player, camera)
-		local result = workspace:Raycast(mray.Origin, direction * 250, params)
+		-- check to see if we're wallbanging
+		local wallDmgMult, hitchar, result
+		local normParams = sharedWeaponFunctions.getFireCastParams(player, camera)
+		wallDmgMult, result, hitchar = util_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
 
 		if result then
 
 			-- register client shot for bullet/blood/sound effects
-			sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, mray.Origin)
+			sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1)
 
 			-- pass ray information to server for verification and damage
 			task.spawn(function()
-				local hitRegistered, newAccVec = weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow())
+				local hitRegistered, newAccVec = weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 			end)
 
 			return true

@@ -12,20 +12,15 @@ local module = {
 	groundMaxSpeed = 21,
 
 	walkMoveSpeed = 14,
-	--walkFriction
+	walkAccelerate = 12,
 
 	crouchMoveSpeed = 10,
 	crouchFriction = 6,
-	crouchDeccelerate = 4,
-	crouchAccelerate = 16,
-
-	defGroundAccelerate = 10.2,
-	defGroundDeccelerate = 16,
-	defFriction = 7.5,
+	crouchAccelerate = 19,
 
 	--[[ Air Settings ]]
-	airAccelerate = 22,
-	airSpeed = 5,
+	airAccelerate = 35, -- 35 feels good, lets try changing airspeed. 22 def
+	airSpeed = 4, -- 5
 	airMaxSpeed = 33, -- 33 was the sweet spot but i was hitting hops as much, 35 was too easy to hit hops
 	airMaxSpeedFriction = 4,
 	airMaxSpeedFrictionDecrease = 1,
@@ -50,5 +45,9 @@ local module = {
 	defaultCameraHeight = -0.5,
 
 }
+
+module.defGroundAccelerate = module.groundAccelerate
+module.defGroundDeccelerate = module.groundDeccelerate
+module.defFriction = module.friction
 
 return module

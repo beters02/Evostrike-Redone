@@ -65,6 +65,7 @@ function Deathmatch:SpawnPlayer(player)
 
         if self.playerdata[player.Name] and self.playerdata[player.Name].deathCameraScript then
             self.playerdata[player.Name].deathCameraScript:WaitForChild("Destroy"):FireClient(player)
+            print('yuh')
         end
 
         player:LoadCharacter()
@@ -98,16 +99,18 @@ function Deathmatch:SpawnPlayer(player)
 end
 
 function Deathmatch:Died(player)
-    task.spawn(function()
-        Weapon.ClearPlayerInventory(player)
-        Ability.ClearPlayerInventory(player)
-    end)
 
     -- remove buy menu
     self:RemoveBuyMenu(player)
 
     -- give player gui (handle respawn)
     self:DiedGui(player)
+    self:DiedCamera(player)
+
+    task.spawn(function()
+        Weapon.ClearPlayerInventory(player)
+        Ability.ClearPlayerInventory(player)
+    end)
 end
 
 function Deathmatch:DiedGui(player, ignoreKiller, destroyOnDestroy) -- Handles Death GUI, Camera and Respawn

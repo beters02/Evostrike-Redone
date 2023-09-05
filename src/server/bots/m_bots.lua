@@ -4,6 +4,7 @@ local Tables = require(Framework.shfc_tables.Location)
 local RagdollRE = ReplicatedStorage:WaitForChild("ragdoll"):WaitForChild("remote"):WaitForChild("sharedRagdollRE")
 local CollectionService = game:GetService("CollectionService")
 local PlayerDiedEvent = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
+local BotAddedEvent = ReplicatedStorage:WaitForChild("bots"):WaitForChild("BotAdded")
 
 local bots = {}
 local botNames = {"Fred", "Dave", "Laney", "George", "Ardiis"}
@@ -102,6 +103,9 @@ function bots:Add(character, properties)
 
     -- move to workspace
     _clone.Parent = workspace
+
+    -- fire botadded event to all clients
+    BotAddedEvent:FireAllClients(_clone)
 
     -- create ragdolls
     RagdollRE:FireAllClients("NonPlayerInitRagdoll", _clone)

@@ -28,8 +28,10 @@ end
 
 function _playerRemovingDestroyCommandsModule(player)
     if _storedModules[player.Name] then
-        for i, v in pairs(_storedModules[player.Name].events) do
-            v:Destroy()
+        for _, a in pairs(_storedModules[player.Name]) do
+            for i, v in pairs(a) do
+                v:Destroy()
+            end
         end
         _storedModules[player.Name] = nil
     end
@@ -43,7 +45,7 @@ local _functionActions = {
 
     InitCommandsModule = _initCommandsModule,
 
-    TeleportPrivateSolo = function(player) -- todo: get mapid
+    TeleportPrivateSolo = function(player) -- todo: get mapid. for now its warehouse
         TeleportService:TeleportToPrivateServer(14504041658, TeleportService:ReserveServer(StoredMapIDs.warehouse.id), {player}, false, {RequestedGamemode = "Range"})
         return true
     end,

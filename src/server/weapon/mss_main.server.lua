@@ -70,6 +70,8 @@ WeaponGetEvent.OnServerInvoke = function(player, action, ...)
 		return require(WeaponModuleLoc.Parent.config.camera).fireDownWaitLength
     elseif action == "GetRegisteredWeapons" then
 		return Weapon:GetRegisteredWeapons()
+	elseif action == "WallbangMaterials" then
+		return require(WeaponModuleLoc.Parent.config.wallbangMaterials)
 	end
 end
 

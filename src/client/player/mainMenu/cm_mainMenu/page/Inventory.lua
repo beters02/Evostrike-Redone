@@ -26,19 +26,34 @@ function inventory:init()
     self._currentEquippedInventory = PlayerData:Get("inventory.equipped")
 
     -- initialize all default skins as frames
+    -- first check if player has all skins
+    local initAll = false
+    for i, v in pairs(self._currentStoredInventory)do
+        if v == "*" then
+            self:CreateSkinFrame(false, false, false, false, true)
+            initAll = true
+            print('yuh')
+            break
+        end
+    end
+
     local _regwep = WeaponGetRemote:InvokeServer("GetRegisteredWeapons")
     for i, v in pairs(_regwep) do
         if v == "knife" then
             --self:InitializeSkinStringAsFrame("knife_defenddefault_default")
             self:InitializeSkinStringAsFrame("knife_attackdefault_default")
+            self:InitializeSkinStringAsFrame("knife_karambit_default")
+            self:InitializeSkinStringAsFrame("knife_m9bayonet_default")
             continue
         end
         self:InitializeSkinStringAsFrame(v .. "_default")
     end
 
     -- initialize all player skins as frames
-    for i, v in pairs(self._currentStoredInventory) do
-        self:InitializeSkinStringAsFrame(v)
+    if not initAll then
+        for i, v in pairs(self._currentStoredInventory) do
+            self:InitializeSkinStringAsFrame(v)
+        end
     end
 
     -- done!
@@ -74,21 +89,42 @@ end
 
 --
 
-function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|nil, isEquipped: boolean|nil)
+function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|nil, isEquipped: boolean|nil, allSkins: boolean?)
     local frame
     local weaponModelObj
     local displayName
 
     -- check if player has access to all skins
-    -- if so, we recurse CreateSkinFrame until all skins are added.
-    local parent = weapon == "knife" and WeaponObjects:WaitForChild("knife_" .. model):WaitForChild("models") or WeaponObjects:WaitForChild(weapon):WaitForChild("models")
-    if skin == "*" then
-        for i, v in pairs(parent:GetChildren()) do
-            if not v:IsA("Model") or v.Name == "default" or v:GetAttribute("Ignore") then continue end
-            local _str = model and weapon .. "_" .. model .. "_" .. v.Name or weapon .. "_" .. skin
-            self:InitializeSkinStringAsFrame(_str)
+    -- if so, we recurse CreateSkinFrame until all skins (except default) are added.
+    if allSkins then
+
+        for _, weaponFolder in pairs(game:GetService("ReplicatedStorage").weapon.obj:GetChildren()) do
+            if weaponFolder.Name == "global" then continue end
+
+            for i, v in pairs(weaponFolder.models:GetChildren()) do
+                if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
+                    print(weaponFolder.Name)
+                    local _str = string.match(weaponFolder.Name, "knife") and "knife" .. "_" .. string.split(weaponFolder.Name, "_")[2] .. "_" .. v.Name or weaponFolder.Name .. "_" .. v.Name
+                    self:InitializeSkinStringAsFrame(_str)
+                end
+            end
         end
+
         return
+    else
+    
+        -- check if player has access to all skins to a specific weapon
+        -- if so, we recurse CreateSkinFrame until all skins are added.
+        local parent = weapon == "knife" and WeaponObjects:WaitForChild("knife_" .. model):WaitForChild("models") or WeaponObjects:WaitForChild(weapon):WaitForChild("models")
+        if skin == "*" then
+            for i, v in pairs(parent:GetChildren()) do
+                if not v:IsA("Model") or v.Name == "default" or v:GetAttribute("Ignore") then continue end
+                local _str = model and weapon .. "_" .. model .. "_" .. v.Name or weapon .. "_" .. skin
+                self:InitializeSkinStringAsFrame(_str)
+            end
+            return
+        end
+    
     end
 
     if weapon == "knife" then

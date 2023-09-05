@@ -45,11 +45,11 @@ function util_getAccuracyVector(currentBullet)
 	return sharedWeaponFunctions.getMovementInaccuracyVector2((weaponOptions.accuracy.firstBullet and currentBullet == 1) or false, player, char.HumanoidRootPart.Velocity.Magnitude, weaponOptions)
 end
 
-function util_registerShot(rayInformation, pos, origin, dir, shotRegisteredTime)
+function util_registerShot(rayInformation, pos, origin, dir, shotRegisteredTime, wallbangDamageMultiplier)
 	-- create a fake result to give to server
 	local fr = {Instance = rayInformation.instance, Position = pos, Normal = rayInformation.normal, Distance = rayInformation.distance, Material = rayInformation.material}
 	-- register shot function
-	sharedWeaponFunctions.RegisterShot(player, weaponOptions, fr, origin, dir, shotRegisteredTime)
+	sharedWeaponFunctions.RegisterShot(player, weaponOptions, fr, origin, dir, shotRegisteredTime, nil, wallbangDamageMultiplier)
 end
 
 function util_registerFireDiff()
@@ -79,7 +79,7 @@ function core_unequip()
 end
 
 local shotServerReRegistration = false
-function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegisteredTime)
+function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegisteredTime, wallbangDamageMultiplier)
 	
 	-- check client->server timer diff
 	if not util_registerFireDiff() then return end
@@ -94,7 +94,8 @@ function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegi
 		rayInformation.position,
 		rayInformation.origin,
 		rayInformation.direction,
-		shotRegisteredTime
+		shotRegisteredTime,
+		wallbangDamageMultiplier
 	)
 
 	-- if damage was inflicted, fire PlayerDamaged event/signal

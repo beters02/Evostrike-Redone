@@ -24,8 +24,9 @@ end
 
 Players.PlayerAdded:Connect(function(player)
     -- admin modifications
-    if Admins:IsAdmin(player) then
-        require(script.Parent:WaitForChild("adminModifications"))(player, serverPlayerDataModule)
+    local isAdmin, group = Admins:IsAdmin(player)
+    if isAdmin then
+        require(script.Parent:WaitForChild("adminModifications"))(player, serverPlayerDataModule, group)
     end
 end)
 

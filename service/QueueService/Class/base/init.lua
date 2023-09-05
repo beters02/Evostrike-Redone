@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local ServicePlayerData = require(QueueService.ServicePlayerData)
 local Types = require(QueueService.Types)
+local MapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
 
 local base = {}
 base.__index = base
@@ -23,6 +24,7 @@ base.Name = "Base"
 base.QueueInterval = 5
 base.MaxParty = 8
 base.MinParty = 2
+base.GameFoundGui = base._baseLocation.GameFoundGui
 
 --[[ Class ]]
 
@@ -103,6 +105,7 @@ function base:Disconnect()
 end
 
 --
+
 function spairs(t, order)
     -- collect the keys
     local keys = {}
@@ -182,6 +185,7 @@ function base:ProcessPlayers()
 end
 
 -- Send players to place
+
 function base:SendPlayers(players) -- players: table<QueuePlayerData>
 
     -- first we need to remove these players from the queue
@@ -204,6 +208,9 @@ function base:SendPlayers(players) -- players: table<QueuePlayerData>
 
     end
 
+    -- notify online players about match finding
+    self.playerManager:NotifyGameFound(teleport._local)
+
     -- create the server
     local serverData = self:CreateServerData(teleport._local)
 
@@ -219,8 +226,7 @@ end
 --
 
 function base:CreateServerData(players)
-    local map -- generate map ID
-    map = 9467357499
+    local map = self:GetMap()
 
     local serverData: Types.ServerData
     serverData = {
@@ -233,6 +239,10 @@ function base:CreateServerData(players)
     }
 
     return serverData
+end
+
+function base:GetMap()
+    return MapIDs.GetMapsInGamemode(self.Name)
 end
 
 --
