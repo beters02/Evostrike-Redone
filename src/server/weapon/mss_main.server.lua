@@ -27,20 +27,8 @@ end
 
 -- [[ CONNECT ]]
 Players.PlayerAdded:Connect(function(plr)
-    
     -- inventory
     playerAdded_initInventory(plr)
-    print("INITIALIZED " .. plr.Name .. " INVENTORY")
-
-    -- char, died
-    --[[plr.CharacterAdded:Connect(function(char)
-        local hum = char:WaitForChild("Humanoid")
-        defaultCharAdded(plr, char)
-
-        hum.Died:Once(function()
-            defaultHumDied(plr, char, hum)
-        end)
-    end)]]
 end)
 
 Players.PlayerRemoving:Connect(function(plr)

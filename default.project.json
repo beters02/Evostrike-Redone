@@ -13,6 +13,10 @@
       "Services": {
         "$path": "service",
         "$ignoreUnknownInstances": true
+      },
+      "Modules": {
+        "$path": "module",
+        "$ignoreUnknownInstances": true
       }
     },
 

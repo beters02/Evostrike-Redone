@@ -36,7 +36,6 @@ local function verifyWeaponSanity(player: Player, weaponName: string, verifyOnly
     local weaponOptions
     local isKnife
 	local skinInfo = InventoryInterface:GetEquippedWeaponSkin(player, string.lower(weaponName))
-	print(skinInfo)
     
     -- verify weapon options, if found return require table
     weaponOptions = ServerScriptService.weapon.config:WaitForChild(string.lower(weaponName))

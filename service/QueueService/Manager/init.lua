@@ -45,6 +45,7 @@ end
 
 function QueueManager:StopAllQueues()
     for i, v in pairs(self.Queues) do
+        if not v.IsQueue then continue end
         v:Stop()
     end
 end

@@ -37,9 +37,7 @@ function module.GetPlayerData(player)
         end
 
         if _updated then
-            print(profile)
             module.SetPlayerData(player, profile, true)
-            --print('Updated necessary defaults!')
         end
     end)
 

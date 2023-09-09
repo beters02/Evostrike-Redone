@@ -7,6 +7,8 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Players = game:GetService("Players")
+local States = require(Framework.shm_states.Location)
+local UIState = States.State("UI")
 
 local main = {}
 
@@ -16,34 +18,12 @@ function main.initialize(gui)
     main.player = Players.LocalPlayer
     main.gui = gui
     main.bgframe = main.gui:WaitForChild("BG")
-    main.buttsidefr = main.gui:WaitForChild("ButtonSideFR")
-    main.buttsidefrdefsize = main.buttsidefr.Size
-    main.buttsidefrdefpos = main.buttsidefr.Position
-
-    main.var = {opened = false}
-    main.initTweens()
-
-	main.buttonSideFrame.init()
+	main.topbar = main.gui:WaitForChild("TopBar")
 	
+    main.var = {opened = false}
 	main.page = require(Players.LocalPlayer.PlayerScripts.mainMenu.cm_mainMenu.page).init(main)
 
 	return main
-end
-
-function main.initTweens()
-    local bgframe = main.bgframe
-    local buttonsidefr = main.buttsidefr
-
-    main.tweens = {}
-    main.playingtweens = {}
-    main.tweens.bgOpen = TweenService:Create(bgframe.BGImage, TweenInfo.new(.2, Enum.EasingStyle.Circular), {ImageTransparency = 0})
-    main.tweens.bgClose = TweenService:Create(bgframe.BGImage, TweenInfo.new(.3, Enum.EasingStyle.Circular), {ImageTransparency = 1})
-
-    local bsfOTweenProp = {Position = UDim2.fromScale(.5, .5), AnchorPoint = Vector2.new(.5, .5), Size = UDim2.fromScale(main.buttsidefrdefsize.X.Scale + .15, main.buttsidefrdefsize.Y.Scale + .15)}
-    local bsfCTweenProp = {Position = main.buttsidefrdefpos, AnchorPoint = Vector2.new(0, 0), Size = main.buttsidefrdefsize}
-    main.tweens.bsfOpen = TweenService:Create(buttonsidefr, TweenInfo.new(.7), bsfOTweenProp)
-    main.tweens.bsfClose = TweenService:Create(buttonsidefr, TweenInfo.new(.4, Enum.EasingStyle.Circular, Enum.EasingDirection.Out), bsfCTweenProp)
-
 end
 
 -- main
@@ -53,28 +33,28 @@ function main.open()
 
 	-- prepare frames
 	main.page:CloseAllPages()
-	main.prepareButtonSideOpen()
-	main.prepareBackgroundOpen()
 
-	-- connect button side frame
-	main.buttonSideFrame.connect()
+	-- top bar
+	main.topBar.connect()
 
 	-- open menu
+	main.page:OpenPage("Home")
 	main.gui.Enabled = true
-	main.moveButtonFrameMiddle()
 
-	UserInputService.MouseIconEnabled = true
+	-- set mouse icon enabled
+	UIState:addOpenUI("MainMenu", main.gui, true)
 end
 
 function main.close()
 	main.var.opened = false
 
+	main.topBar.disconnect()
+
 	main.page:CloseAllPages()
-	main.stopAllMenuTweens()
-	main.buttonSideFrame.disconnect()
 	
 	main.gui.Enabled = false
-	UserInputService.MouseIconEnabled = false
+	
+	UIState:removeOpenUI("MainMenu")
 end
 
 function main.toggle()
@@ -117,114 +97,28 @@ function main.stopAllMenuTweens()
 	main.playingtweens = {}
 end
 
--- button side frame main util
+-- top bar
+main.topBar = {}
 
-function main.prepareButtonSideOpen()
-    local buttonsidefr = main.buttsidefr
+function main.topBar.connect()
 
-	buttonFrameMovedDefault = false
-	buttonsidefr.Size = main.buttsidefrdefsize
-	buttonsidefr.Position = main.buttsidefrdefpos
-	buttonsidefr.AnchorPoint = Vector2.new(0,0)
-end
+	main.topBar._connections = {}
 
-function main.prepareBackgroundOpen()
-	main.bgframe.BGImage.ImageTransparency = 1
-end
+	for _, topBarFrame in pairs(main.topbar:GetChildren()) do
+		if not topBarFrame:IsA("Frame") then continue end
+		local pageName = topBarFrame.Name:gsub("ButtonFrame", "")
 
-function main.moveButtonFrameDefault()
-	if not buttonFrameMovedDefault then
-		buttonFrameMovedDefault = true
-		main.playMenuTween(main.tweens.bsfClose)
-	end
-end
-
-function main.moveButtonFrameMiddle()
-	coroutine.wrap(function()
-		buttonFrameMovedDefault = false
-		main.playMenuTween(main.tweens.bgOpen)
-		main.playMenuTween(main.tweens.bsfOpen)
-	end)()
-end
-
--- button side frame
-local bsf = {}
-
-function bsf.init()
-	bsf.canvasGroup = main.buttsidefr:WaitForChild("CanvasGroup")
-	bsf.buttonData = {}
-	bsf.connections = {}
-end
-
-function bsf.connect()
-	for _, button in pairs(bsf.canvasGroup:GetChildren()) do
-		if button:IsA("TextButton") then
-
-			if bsf.buttonData[button.Name] == nil then
-				local t = {DefaultPosition = button.Position, DefaultSize = button.Size}
-				bsf.buttonData[button.Name] = t
-			end
-
-			table.insert(bsf.connections, button.MouseEnter:Connect(function()
-				bsf.hoverIn(button)
-			end))
-
-			table.insert(bsf.connections, button.MouseLeave:Connect(function()
-				bsf.hoverOut(button, bsf.buttonData[button.Name].DefaultPosition)
-			end))
-
-			table.insert(bsf.connections, button.MouseButton1Click:Connect(function()
-				bsf.click(button)
-			end))
-		end
-	end
-end
-
-function bsf.disconnect()
-	for _, conn in pairs(bsf.connections) do
-		conn:Disconnect()
-	end
-	bsf.connections = {}
-	--main.page:ClosePage("Options") -- force options update on close
-end
-
-function bsf.click(button)
-	local frameName = string.gsub(button.Name, "Button", "")
-	local frame = main.gui:FindFirstChild(frameName .. "Frame")
-
-	main.moveButtonFrameDefault()
-	button:SetAttribute("canTween", false)
-	
-	-- if the page is already open, then close it
-	local close = false
-	if main.page:GetOpenPages()[frameName] then
-		main.moveButtonFrameMiddle()
-		close = true
+		topBarFrame.TextButton.MouseButton1Click:Connect(function()
+			main.page:OpenPage(pageName)
+		end)
 	end
 
-	if close then
-		main.page:ClosePage(frameName)
-	else
-		main.page:OpenPage(frameName)
+end
+
+function main.topBar.disconnect()
+	for _, v in pairs(main.topBar._connections) do
+		v:Disconnect()
 	end
-	
-	button:SetAttribute("canTween", true)
-
-	--TODO: play menu souind
-	--game:GetService("SoundService"):PlayLocalSound(gui:WaitForChild("Sounds").selectSound)
-
-	--TODO: button animation
 end
-
-function bsf.hoverIn(button)
-	button.TextColor3 = Color3.new(0.541176, 0.541176, 0.541176)
-end
-
-function bsf.hoverOut(button, defaultPos)
-	button.TextColor3 = Color3.fromRGB(232, 241, 255)
-end
-
--- finalize
-main.buttonSideFrame = bsf
 
 return main

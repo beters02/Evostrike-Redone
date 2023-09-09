@@ -23,12 +23,13 @@ function base.new(stateName: string, defaultVar: table)
 	local self = setmetatable({}, base)
     self.stateName = stateName
 	self.var = Tables.clone(defaultVar)
+	self.changedEvent = Instance.new("BindableEvent", ReplicatedStorage.temp)
 	return self
 end
 
 function base:get(player, key)
 	if RunService:IsServer() then
-		return mainrf:InvokeClient(player, self.Name, "GetState", key)
+		return mainrf:InvokeClient(player, "getVar", self.Name, key)
 	end
 
 	return self.var[key]
@@ -36,11 +37,29 @@ end
 
 function base:set(player, key, value)
 	if RunService:IsServer() then
-		return mainrf:InvokeClient(player, self.Name, "SetState", key, value)
+		local new = mainrf:InvokeClient(player, "setVar", self.Name, key, value)
+
+		if new then
+			self.changedEvent:Fire(new)
+			return new
+		end
+
+		return false
 	end
 
 	self.var[key] = value
+	self.changedEvent:Fire(self.var[key])
 	return self.var[key]
+end
+
+-- Listen for changes, returns RBX signal
+function base:changed(callback: (...any) -> (...any))
+	return self.changedEvent.Event:Connect(callback)
+end
+
+-- Listen for changes only once, returns RBX signal
+function base:changedOnce(callback: (...any) -> (...any))
+	return self.changedEvent.Event:Once(callback)
 end
 
 return base

@@ -9,11 +9,13 @@ end)
 
 local Commands = {}
 
+-- _ == player
+
 Commands.Emit = {
 	Description = "Emit specified particle from the part you are looking at",
 	Public = false,
 	
-	Function = function(_, particle, ...)
+	Function = function(self, _, particle, ...)
 		-- raycast
 		local player = Players.LocalPlayer
 		local cam = workspace.CurrentCamera
@@ -36,7 +38,7 @@ Commands.SetCameraMode = {
 	Description = "Set to LockFirstPerson or Classic",
 	Public = false,
 	
-	Function = function(_, cameraType)
+	Function = function(self, _, cameraType)
 		local t = Enum.CameraMode[cameraType] or false
 		if not t then return end
 		
@@ -48,7 +50,7 @@ Commands.AddWeapon = {
 	Description = "Add specified weapon to your inventory",
 	Public = false,
 	
-	Function = function(_, weaponName)
+	Function = function(self, _, weaponName)
 		game:GetService("ReplicatedStorage").weapon.remote.addremove:FireServer("Add", weaponName)
 	end,	
 }
@@ -57,7 +59,7 @@ Commands.Gamemode = {
 	Description = "Set the gamemode",
 	Public = false,
 	
-	Function = function(_, gamemodeName)
+	Function = function(self, _, gamemodeName)
 		game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName)
 	end,
 }
@@ -66,7 +68,7 @@ Commands.Map = {
 	Description = "Teleport player or players to map",
 	Public = false,
 
-	Function = function(_, mapName, players)
+	Function = function(self, _, mapName, players)
 		if not mapName then
 			warn("Could not teleport, Map Name is requred!")
 			return

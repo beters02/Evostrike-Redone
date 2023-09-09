@@ -1,4 +1,4 @@
-local requestQueueRemote = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("requestQueueFunction")
+local requestQueueRemote = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("QueueService").Remote.shared.requestQueueFunction
 local getGamemodeRemote = game:GetService("ReplicatedStorage"):WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("Get")
 local TweenService = game:GetService("TweenService")
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.mainMenu.Popup)

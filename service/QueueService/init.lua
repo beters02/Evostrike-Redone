@@ -51,8 +51,9 @@ function QueueService:Start()
     print('Starting remote!')
 
     -- init remote function grab
-    QueueService.__remote = function(...)
-        return Remote(QueueService, ...)
+    QueueService.__remote = function(player, action, ...)
+        print(tostring(player.Name), action)
+        return Remote(QueueService, player, action, ...)
     end
 
     print('Starting service!')

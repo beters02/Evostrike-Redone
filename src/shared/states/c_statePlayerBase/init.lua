@@ -43,7 +43,7 @@ end
 
 function base:get(player, key)
 	if RunService:IsClient() then
-		return mainrf:InvokeServer(self.Name, "GetState", key)
+		return mainrf:InvokeServer("getVar", self.Name, key)
 	else
 		return self.stored[player.Name][key]
 	end
@@ -51,7 +51,7 @@ end
 
 function base:set(player, key, value)
 	if RunService:IsClient() then
-		return mainrf:InvokeServer(self.Name, "SetState", key, value)
+		return mainrf:InvokeServer("setVar", self.Name, key, value)
 	else
 		self.stored[player.Name][key] = value
 		return self.stored[player.Name][key]

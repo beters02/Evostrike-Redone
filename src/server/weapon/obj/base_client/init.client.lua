@@ -382,7 +382,7 @@ end
 function util_processEquipAnimation()
 
 	util_setVMTransparency(1)
-
+	
 	-- disable grenade throwing animation if neccessary
 	task.spawn(function()
 		local _throwing = States.GetStateVariable("PlayerActions", "grenadeThrowing")
@@ -580,9 +580,13 @@ end
 	@return			- {void}
 ]]
 
+local Restrictions = require(movementScript.Restrictions)
+
 function util_handleHoldMovementPenalize(equip)
 	task.wait()
 	local currAdd = movementCommunicate.GetVar("maxSpeedAdd")
+
+	--local currAdd = Restrictions:Set
 
 	-- Resolve: players spawning with hella crazy speed
 	-- sanity (currAdd should always be negative)
@@ -739,36 +743,51 @@ function conn_mouseDown(t)
 		util_fireWithChecks(t)
 	
 	else
+		if not weaponVar.accumulator then weaponVar.accumulator = 0 end
 		
 		if not weaponVar.fireLoop then
 
-			-- initial fire
+			-- register initial fire boolean
 			local startWithInit = false
+
 			if tick() >= weaponVar.nextFireTime then
 				startWithInit = true
 				weaponVar.nextFireTime = tick() + weaponOptions.fireRate -- set next fire time
+				weaponVar.accumulator = 0
+			else
+				weaponVar.accumulator = weaponVar.nextFireTime - tick()
 			end
 		
 			-- start fire loop
-			weaponVar.fireLoop = RunService.RenderStepped:Connect(function()
-				if tick() >= weaponVar.nextFireTime then
+			weaponVar.fireLoop = RunService.RenderStepped:Connect(function(dt)
+				weaponVar.accumulator += dt
+
+				while weaponVar.accumulator >= weaponOptions.fireRate do
 					weaponVar.nextFireTime = tick() + weaponOptions.fireRate
-					task.spawn(function()
-						util_fireWithChecks()
-					end)
+					weaponVar.accumulator -= weaponOptions.fireRate
+					task.spawn(util_fireWithChecks)
+
+					-- test resolve insta shoot
+					-- worked surprisngly well! let's go
+					--if weaponVar.accumulator >= weaponOptions.fireRate then task.wait(weaponVar.accumulator) end
+
+					-- still a bit fast/delayed, test #2
+					-- this is the best one
+					if weaponVar.accumulator >= weaponOptions.fireRate then task.wait(weaponVar.fireRate) end
+
+					-- better, but still a bit fast at times. 1 more try
+					-- NOPE THIS ONE IS THE WORST ONE
+					--task.wait(weaponVar.fireRate)
 				end
+
 			end)
 
+			-- initial fire if necessary
 			if startWithInit then
 				util_fireWithChecks(t)
 			end
 
 		end
-
-		--[[if t < weaponVar.nextFireTime then
-			return
-		end]]
-
 	end
 
 end
@@ -803,26 +822,20 @@ local types = m_inputs.Types
 function binds_connectHotBinds()
 	if not weaponVar._hotBinds then weaponVar._hotBinds = {} end
 
-	local hotHeyProp: types.KeyActionProperties = {
+	local hotKeyProp: types.KeyActionProperties = {
 		Repeats = false,
 		DestroyOnDead = true,
 		IgnoreWhen = {
-			function() return not weaponVar.equipped end
-		}
-	}
-
-	local fireKeyProp: types.KeyActionProperties = {
-		Repeats = false,
-		DestroyOnDead = true,
-		IgnoreWhen = {
-			function() return not weaponVar.equipped end
+			function() return not weaponVar.equipped end,
+			function() return player:GetAttribute("Typing") end,
+			function() return player.PlayerGui.MainMenu.Enabled end
 		}
 	}
 	
 	weaponVar._hotBinds.reload = m_inputs:Bind(
 		"R",
 		weaponName .. "_Reload",
-		hotHeyProp,
+		hotKeyProp,
 		{},
 		core_reload
 	):: types.KeyAction
@@ -830,7 +843,7 @@ function binds_connectHotBinds()
 	weaponVar._hotBinds.fire = m_inputs:Bind(
 		"MouseButton1",
 		weaponName .. "_Fire",
-		fireKeyProp,
+		hotKeyProp,
 		{},
 		conn_mouseDown,
 		conn_mouseUp
@@ -849,6 +862,9 @@ function binds_disconnectHotBinds()
 end
 
 function core_equip()
+	if player:GetAttribute("Typing") then return end
+	if player.PlayerGui.MainMenu.Enabled then return end
+
 	util_resetSprayOriginPoint()
     forcestop = false
     weaponVar.equipping = true
@@ -898,7 +914,9 @@ end
 ]]
 
 function core_unequip()
+
 	if not player.Character or hum.Health <= 0 then return end
+
     clientModel.Parent = reptemp
 	weaponVar.equipping = false
 	weaponVar.equipped = false
@@ -908,16 +926,19 @@ function core_unequip()
 	States.SetStateVariable("PlayerActions", "weaponEquipping", false)
 	States.SetStateVariable("PlayerActions", "reloading", false)
 	States.SetStateVariable("PlayerActions", "shooting", false)
+
+	util_setVMTransparency(1)
+
+	conn_disableHotConnections()
+	util_stopAllAnimations()
+	binds_disconnectHotBinds()
+
 	util_handleHoldMovementPenalize(false)
 	util_resetSprayOriginPoint()
-	util_setVMTransparency(1)
 
     task.spawn(function()
         weaponCameraObject:StopCurrentRecoilThread()
     end)
-	task.spawn(conn_disableHotConnections)
-	task.spawn(binds_disconnectHotBinds)
-	task.spawn(util_stopAllAnimations)
 
     util_setIconEquipped(false)
 end

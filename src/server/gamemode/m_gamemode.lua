@@ -2,7 +2,7 @@ local Gamemode = {}
 Gamemode.__index = Gamemode
 
 -- [[ CONFIGURATION ]]
-local DefaultGamemode = "Range"
+local DefaultGamemode = "Lobby"
 
 -- [[ VARIABLES ]]
 local Players = game:GetService("Players")
@@ -58,7 +58,6 @@ function Gamemode.SetGamemode(gamemode: string)
     if class._init then class = class:_init() end
 
     class.Name = gamemode
-    print(class)
 
     -- set script var
     Gamemode.currentClass = class

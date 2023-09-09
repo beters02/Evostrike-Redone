@@ -32,7 +32,6 @@ function inventory:init()
         if v == "*" then
             self:CreateSkinFrame(false, false, false, false, true)
             initAll = true
-            print('yuh')
             break
         end
     end
@@ -103,7 +102,6 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
 
             for i, v in pairs(weaponFolder.models:GetChildren()) do
                 if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
-                    print(weaponFolder.Name)
                     local _str = string.match(weaponFolder.Name, "knife") and "knife" .. "_" .. string.split(weaponFolder.Name, "_")[2] .. "_" .. v.Name or weaponFolder.Name .. "_" .. v.Name
                     self:InitializeSkinStringAsFrame(_str)
                 end
@@ -156,6 +154,23 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
 
     -- add weapons to viewport (this shit sucks)
     weaponModelObj = weaponModelObj:Clone()
+    if weaponModelObj:FindFirstChild("Server") then
+        local server = weaponModelObj.Server
+        server.Parent = weaponModelObj.Parent
+        weaponModelObj:Destroy()
+        weaponModelObj = server
+    end
+
+    weaponModelObj.PrimaryPart = weaponModelObj.GunComponents.WeaponHandle
+
+    local wepcf = CFrame.new(Vector3.new(1,0,-4))
+    if weapon == "knife" then
+        wepcf = CFrame.new(Vector3.new(1, 0, -3))
+    end
+
+    weaponModelObj:SetPrimaryPartCFrame(wepcf)
+    weaponModelObj.PrimaryPart.Orientation = Vector3.new(90, 0, 0)
+
     weaponModelObj.Parent = frame:WaitForChild("ViewportFrame")-- maybe add a world model?
 
     -- TODO: set cframes
@@ -191,6 +206,10 @@ function inventory:SetSkinFrameEquipped(skinFrame, equipped, weapon, previousSki
             if ignoreUnequip then return end
             _prev = weapon == "knife" and previousSkinfo.model.."_"..previousSkinfo.skin or previousSkinfo.skin
             _prev = self:GetSkinFrame(weapon, _prev)
+        end
+        if not _prev then
+            warn("Could not find previous skin frame to unequip")
+            return
         end
         _prev.BackgroundColor3 = _prev:GetAttribute("unequippedColor")
         _prev:SetAttribute("Equipped", false)

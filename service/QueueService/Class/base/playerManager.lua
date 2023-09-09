@@ -39,7 +39,9 @@ function playerManager.new(parentClass)
     self._cachedPlayers = {} -- cached version of players in datastore queue
 
     -- init manager configuration (var const)
-    self:Init()
+    local succ = self:Init()
+    if not succ then return false end
+
     return self
 end
 
@@ -53,12 +55,23 @@ function playerManager:Init()
 
     -- initialize cache.
     -- call :Get() from the store module.
-    self:UpdateCached()
-    print(self._cachedPlayers)
+
+    -- retry initial cache get 3 times
+    local succ, err
+    for i = 1, 3 do
+        succ, err = pcall(function() self:UpdateCached() end)
+        if succ then break end
+    end
+
+    if not succ then
+        warn("QueueService could not be initialized. DataStore cache grab error")
+        return false
+    end
 
     -- Validate
     self:ValidatePlayersInQueue()
-
+    
+    return true
 end
 
 --[[ Add a player to the queue ]]
@@ -263,6 +276,7 @@ function playerManager:MergeWaiting()
     self._waitingPlayers = {}
 end
 
+-- Pcall required
 function playerManager:UpdateCached()
     self._cachedPlayers = self._storeModule:Get()
     -- convert data key, value to QueuePlayerData Name Slot
@@ -274,7 +288,7 @@ function playerManager:UpdateCached()
     end
 end
 
---[[ TODO: Combines the current DataStore with the cache'd queuePlayerStore ]]
+--[[ TODO: Combines the current DataStore with the cache'd queuePlayerStore ]] --[[ Pcall required ]]
 function playerManager:CombineStore()
     self._cachedPlayers = self._storeModule:Get()
 end

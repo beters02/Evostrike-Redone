@@ -45,12 +45,17 @@ function base.new(class: string)
     -- init process module
     _c.process = _c.storeModule.process
 
-    -- init PlayerManager
+    -- attempt create PlayerManager
     _c.playerManager = require(base._baseLocation.playerManager).new(_c)
+    if not _c.playerManager then
+        warn("Queue class could not be created.")
+        return false
+    end
 
     -- init var
     _c._connections = {}
     _c.Name = class
+    _c.IsQueue = true
 
     -- grab queue datastore
     local success, err = pcall(function()
@@ -72,7 +77,14 @@ function base:Update() -- Called every interval
     task.wait(0.1)
 
     -- now we update the cached data value from datastore
-    self.playerManager:UpdateCached()
+    local succ, err = pcall(function()
+        self.playerManager:UpdateCached()
+    end)
+    
+    if not succ then
+        warn("Cannot update cached, trying again next cycle")
+        return
+    end
 
     -- validate authenticity of queued players
     self.playerManager:ValidatePlayersInQueue()

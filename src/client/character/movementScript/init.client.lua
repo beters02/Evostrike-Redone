@@ -146,6 +146,10 @@ collider.Anchored = true
 local config = ReplicatedStorage.movement.get:InvokeServer()
 collider.Anchored = false
 
+--[[ init estrictions ]]
+--[[local Restrictions = require(script:WaitForChild("Restrictions"))
+Restrictions.Init(config)]]
+
 for i, v in pairs(config) do
 	Movement[i] = v
 end
@@ -377,6 +381,7 @@ function Movement.Crouch(crouch: boolean)
 		task.delay(0.07, function() crouchDebounce = false end)
 
 		-- slow player
+		
 		Movement.SetFrictionVars("crouch")
 		task.wait()
 		

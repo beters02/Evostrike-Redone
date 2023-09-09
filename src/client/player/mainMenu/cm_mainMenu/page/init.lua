@@ -46,6 +46,7 @@ end
     Page Module Public Access Functions
 ]]
 
+-- Dont include "Frame" in pageName
 function page:OpenPage(pageName: string, dontCloseOtherPages: boolean)
     local class = self:FindPage(pageName)
     if class then

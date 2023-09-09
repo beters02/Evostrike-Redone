@@ -3,11 +3,16 @@ local tables = require(tl)
 local comm = {}
 comm.__index = comm
 
+-- Init var
+
 comm._sending = false
 comm._getting = false
 comm._got = false
-
 comm._debounce = false
+
+-- Init Movement Restrictions
+
+-- Data Get/Sat
 
 function comm.GetVar(key: any)
     if comm._getting then repeat task.wait() until not comm._getting end
@@ -31,7 +36,7 @@ function comm.SetVar(key: string, var: any)
     return var
 end
 
---
+-- Data Listen
 
 function comm._listenForChanges(self)
     if comm._sending then

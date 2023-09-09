@@ -51,7 +51,6 @@ function Range:AddBuyMenu(player, diedgui)
     }
     self.playerdata[player.Name].buymenu = c
 
-    print('added buy menu!')
     return c
 end
 

@@ -16,6 +16,7 @@ do
 end
 
 id.GetTotal = function() return id.count end
+
 id.GetRandom = function()
     local count = 0
     local index = math.random(1, id.count)
@@ -36,6 +37,10 @@ id.GetMapsInGamemode = function(gamemode: string)
         table.insert(maps, v.id)
     end
     return maps
+end
+
+id.GetMapId = function(map: string)
+    return id.mapIds[map].id or false
 end
 
 return id

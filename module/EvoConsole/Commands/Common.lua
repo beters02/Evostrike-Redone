@@ -1,4 +1,3 @@
--- Every Command will be sent with the string split table.
 local Players = game:GetService("Players")
 
 local Commands = {}
@@ -7,11 +6,9 @@ Commands.Help = {
 	Description = "Show all available commands",
 	Public = true,
 	
-	Function = function()
-		for i, v in pairs(Commands) do
-			if v.Public then
-				print(string.lower(i) .. ": " .. v.Description or "Command")
-			end
+	Function = function(self)
+		for i, v in pairs(self.Commands) do
+			self:Print(string.lower(i) .. ": " .. v.Description or "Command")
 		end
 	end,
 }
@@ -34,6 +31,7 @@ Commands.Close = {
 	end,
 }
 
+-- Made for Evostrike
 Commands.Stats = {
 	Description = "Show FPS and Velocity",
 	Public = true,

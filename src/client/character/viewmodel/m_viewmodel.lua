@@ -65,17 +65,34 @@ end
 -- [[ Core ]]
 
 function viewmodelModule:connect()
-    RunService:BindToRenderStep("ViewmodelCamera", Enum.RenderPriority.Camera.Value + 3, function(dt)
-        self:update(dt)
-    end)
+
+    --[[RunService:BindToRenderStep("ViewmodelCamera", Enum.RenderPriority.Camera.Value + 3, function(dt)
+        self:update(self.dt)
+    end)]]
+
+	-- test
+
+	if not self.cdt then
+		self.cdt = 1/60
+	end
+
+	RunService:BindToRenderStep("ViewmodelCamera", Enum.RenderPriority.Camera.Value + 3, function(dt)
+		self:update(self.cdt)
+	end)
+
+	self._testConn = RunService.Stepped:Connect(function(t, dt) -- we use a fixed dt maybe this fix jitter maybe not, if not lets try swapping
+		self.cdt = dt
+	end)
+
 end
 
 function viewmodelModule:disconnect()
+	--self._testConn:Disconnect()
     RunService:UnbindFromRenderStep("ViewmodelCamera")
 end
 
 function viewmodelModule:update(dt)
-	self.cdt = dt
+	--self.cdt = dt
 	self.vmhrp.CFrame = util_getVMStartCF(self)
     self.vmhrp.CFrame = self.vmhrp.CFrame:ToWorldSpace(self:bob(dt)) * self:charMoveSway(dt) * self:mouseSway(dt)
 end
