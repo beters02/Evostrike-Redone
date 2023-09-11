@@ -7,6 +7,7 @@ function pageClass.new(main, basePageTable, pageName)
     self.Location = main.gui[pageName.."Frame"]
     self._mainPageModule = basePageTable
     self._sendMessageGui = require(basePageTable._loc.Parent.sendMessageGui)
+    self._closeMain = main.close
 
     if self.init then self = self:init(main) end
     return setmetatable(self, pageClass)

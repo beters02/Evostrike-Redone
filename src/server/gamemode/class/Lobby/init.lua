@@ -1,5 +1,6 @@
 local module = {
-    queueServiceEnabled = true
+    queueServiceEnabled = true,
+    startWithMenuOpen = true,
 }
 
 return module

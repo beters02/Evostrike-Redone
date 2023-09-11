@@ -121,7 +121,7 @@ local function init_keybinds()
 
 	-- connect playerdata changed
 	PlayerData:Changed(weaponVar._keypath, function(newValue)
-		weaponVar._equipKey = weaponVar._convert(newValue)
+		weaponVar._equipKey = newValue
 		weaponVar._keyChangedBind:Fire(newValue)
 	end)
 
@@ -294,15 +294,20 @@ function util_playAnimation(location, name)
 	end)
 
 	local wacs = animation:GetMarkerReachedSignal("PlaySound"):Connect(function(param)
-		local sound: Sound = animationEventFunctions.PlaySound(param)
+		animationEventFunctions.PlaySound(param)
+	end)
+
+	local wacrs = animation:GetMarkerReachedSignal("PlayReplicatedSound"):Connect(function(param)
+		animationEventFunctions.PlayReplicatedSound(param)
 	end)
 
 	animation:Play()
-	task.delay(animation.Length, function()
-		if animation.IsPlaying then animation.Ended:Wait() end
+	animation.Stopped:Once(function()
 		wacvm:Disconnect()
 		wacs:Disconnect()
+		wacrs:Disconnect()
 	end)
+
 	return animation
 end
 
@@ -315,13 +320,25 @@ end
 
 function util_stopAllAnimations()
 	forcestop = true
-    for _, a in pairs(weaponVar.animations) do
-        for _, v in pairs(a) do
-            if v.IsPlaying then v:Stop() end
-        end
-    end
+
+	-- stop client first
+	for _, a in pairs(weaponVar.animations.client) do
+		a:Stop()
+	end
+
+	for _, a in pairs(weaponVar.animations.server) do
+		a:Stop()
+	end
+
 	task.wait(0.06)
 	forcestop = false
+end
+
+--
+function util_stopAllVMAnimations()
+	for i, v in pairs(vmAnimController:GetPlayingAnimationTracks()) do
+		v:Stop()
+	end
 end
 
 --[[@title 			- util_setVMTransparency
@@ -382,6 +399,7 @@ end
 function util_processEquipAnimation()
 
 	util_setVMTransparency(1)
+	util_stopAllVMAnimations()
 	
 	-- disable grenade throwing animation if neccessary
 	task.spawn(function()
@@ -397,7 +415,7 @@ function util_processEquipAnimation()
 
         -- we make the vm transparent so you cant see the animations bugging
         -- this may be unnecessary once i add seperate viewmodels to each weapon
-        task.delay(0.07, function()
+        task.delay(0.1, function()
             util_setVMTransparency(0)
         end)
 
@@ -533,10 +551,7 @@ function util_RegisterRecoils()
 			sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1)
 
 			-- pass ray information to server for verification and damage
-			task.spawn(function()
-				local hitRegistered, newAccVec = weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
-			end)
-
+			weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 			return true
 		end
 
@@ -675,16 +690,6 @@ function conn_disableHotConnections()
 	end
 end
 
-function conn_equipInputBegan(input, gp)
-	if not player.Character or hum.Health <= 0 then return end
-
-    if input.KeyCode == Enum.KeyCode[weaponVar._equipKey] then
-		if not weaponVar.equipping and not weaponVar.equipped then
-			hum:EquipTool(tool)
-		end
-	end
-end
-
 function conn_mouseUp()
 	if not player.Character or hum.Health <= 0 then return end
 	hotVariables.mouseDown = false
@@ -743,7 +748,7 @@ function conn_mouseDown(t)
 		util_fireWithChecks(t)
 	
 	else
-		if not weaponVar.accumulator then weaponVar.accumulator = 0 end
+	if not weaponVar.accumulator then weaponVar.accumulator = 0 end
 		
 		if not weaponVar.fireLoop then
 
@@ -773,11 +778,14 @@ function conn_mouseDown(t)
 
 					-- still a bit fast/delayed, test #2
 					-- this is the best one
-					if weaponVar.accumulator >= weaponOptions.fireRate then task.wait(weaponVar.fireRate) end
+					--if weaponVar.accumulator >= weaponOptions.fireRate then task.wait(weaponVar.fireRate) end
 
 					-- better, but still a bit fast at times. 1 more try
 					-- NOPE THIS ONE IS THE WORST ONE
 					--task.wait(weaponVar.fireRate)
+
+					if weaponVar.accumulator >= weaponOptions.fireRate then task.wait(weaponVar.fireRate) end
+					--task.wait()
 				end
 
 			end)
@@ -849,6 +857,7 @@ function binds_connectHotBinds()
 		conn_mouseUp
 	):: types.KeyAction
 
+	print('conn hotbind ' .. weaponName)
 end
 
 function binds_disconnectHotBinds()
@@ -859,25 +868,33 @@ function binds_disconnectHotBinds()
 	end
 
 	weaponVar._hotBinds = {}
+
+	task.wait()
+
+	print('disconn hotbind ' .. weaponName)
 end
 
 function core_equip()
 	if player:GetAttribute("Typing") then return end
 	if player.PlayerGui.MainMenu.Enabled then return end
 
-	util_resetSprayOriginPoint()
+	-- enable weapon icon
+	util_setIconEquipped(true)
+
+	-- var
     forcestop = false
     weaponVar.equipping = true
 	States.SetStateVariable("PlayerActions", "weaponEquipping", true)
 	States.SetStateVariable("PlayerActions", "weaponEquipped", weaponName)
 
-    -- enable hot connections (fire, reload)
-    task.spawn(conn_enableHotConnections)
-	task.spawn(binds_connectHotBinds)
+	-- connections
+	conn_enableHotConnections()
+	binds_connectHotBinds()
 
-	-- enable weapon icon
-	util_setIconEquipped(true)
-    
+	-- process equip animation and sounds next frame ( to let unequip run )
+	task.spawn(util_processEquipAnimation)
+	task.spawn(util_resetSprayOriginPoint)
+
     -- move model and set motors
     clientModel.Parent = vm.Equipped
     local gripParent = vm:FindFirstChild("RightArm") or vm.RightHand
@@ -885,25 +902,21 @@ function core_equip()
     
     -- run server equip timer
     task.spawn(function()
-        weaponRemoteFunction:InvokeServer("Timer", "Equip")
-        if weaponVar.equipping then
+        local success = weaponRemoteFunction:InvokeServer("EquipTimer")
+        if success and weaponVar.equipping then
             weaponVar.equipped = true
             weaponVar.equipping = false
 			States.SetStateVariable("PlayerActions", "weaponEquipping", false)
         end
-    end)
+	end)
 
-	-- HUD and Sound
+	-- HUD & Knife Sound
 	if weaponOptions.inventorySlot == "ternary" then -- knife
-		animationEventFunctions.PlayReplicatedSound("Equip") -- equip sound
+		animationEventFunctions.PlaySound("Equip") -- equip sound
 		util_setInfoFrameKnife()
-	else -- weapon
-		-- equip sound is played via animation events for weapons
+	else
 		util_setInfoFrameWeapon()
 	end
-
-    -- animation (sounds are processed in animationevents)
-    util_processEquipAnimation()
 
 	-- set movement speed
 	util_handleHoldMovementPenalize(true)
@@ -914,8 +927,14 @@ end
 ]]
 
 function core_unequip()
-
 	if not player.Character or hum.Health <= 0 then return end
+
+	util_setIconEquipped(false)
+	util_setVMTransparency(1)
+
+	if weaponVar.equipping then
+		weaponRemoteFunction:InvokeServer("EquipTimerCancel")
+	end
 
     clientModel.Parent = reptemp
 	weaponVar.equipping = false
@@ -927,20 +946,16 @@ function core_unequip()
 	States.SetStateVariable("PlayerActions", "reloading", false)
 	States.SetStateVariable("PlayerActions", "shooting", false)
 
-	util_setVMTransparency(1)
-
-	conn_disableHotConnections()
-	util_stopAllAnimations()
-	binds_disconnectHotBinds()
-
+	task.spawn(function()
+		util_resetSprayOriginPoint()
+		weaponCameraObject:StopCurrentRecoilThread()
+	end)
+	
 	util_handleHoldMovementPenalize(false)
-	util_resetSprayOriginPoint()
+	binds_disconnectHotBinds()
+	util_stopAllAnimations()
+	conn_disableHotConnections()
 
-    task.spawn(function()
-        weaponCameraObject:StopCurrentRecoilThread()
-    end)
-
-    util_setIconEquipped(false)
 end
 
 --[[@title 			- core_inspect
@@ -991,7 +1006,6 @@ core_reload = function()
 	weaponVar = corefunc.reload(weaponOptions, weaponVar, weaponRemoteFunction)
 end
 
-
 --[[{                                 }]
 
 
@@ -1008,7 +1022,6 @@ init_animationEvents()
 init_variables()
 
 -- connect connections
-connections.equipInputBegin = UserInputService.InputBegan:Connect(conn_equipInputBegan)
 connections.equip = tool.Equipped:Connect(core_equip)
 connections.unequip = tool.Unequipped:Connect(core_unequip)
 

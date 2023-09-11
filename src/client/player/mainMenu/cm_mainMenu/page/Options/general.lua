@@ -80,6 +80,14 @@ function general:_updateViewmodelFrame()
 end
 
 function general:_getPlayerCrosshairModule()
+	if not self.player.Character then
+		self.player.CharacterAdded:Once(function()
+			local module = require(self.player.Character:WaitForChild("crosshair"):WaitForChild("m_crosshair"))
+			if not module._isInit then repeat task.wait() until module._isInit end
+			self.crosshairModule = module
+		end)
+		return false
+	end
 	local module = require(self.player.Character:WaitForChild("crosshair"):WaitForChild("m_crosshair"))
 	if not module._isInit then repeat task.wait() until module._isInit end
 	return module

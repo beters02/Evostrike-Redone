@@ -26,7 +26,7 @@ function process:processKeyDown(key, keyActions)
         if index == "_keyProperties" then continue end
 
         -- ignore on dead
-        if (not self._player.Character or self._player.Character.Humanoid.Health <= 0) and keyAction.Properties.IgnoreOnDead then continue end
+        if (not self._player.Character or (self._player.Character.Humanoid.Health <= 0 and keyAction.Properties.IgnoreOnDead)) then continue end
 
         -- sanity
         if getCantIgnoreWhen(keyAction) then continue end

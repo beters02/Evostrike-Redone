@@ -6,6 +6,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Gamemode = require(Framework.sm_gamemode.Location)
 local SetRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("Set")
 local GetRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("Get")
+local ForceStartRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("ForceStart")
 
 SetRemote.OnServerEvent:Connect(function(player, gamemodeName)
     Gamemode.SetGamemode(gamemodeName)
@@ -15,6 +16,11 @@ GetRemote.OnServerInvoke = function(player)
     task.wait()
     return Gamemode.currentGamemode
 end
+
+ForceStartRemote.OnServerEvent:Connect(function()
+    Gamemode.currentClass:ForceStart()
+    print('yuh')
+end)
 
 local nextUpdateTick = tick()
 RunService.Heartbeat:Connect(function()

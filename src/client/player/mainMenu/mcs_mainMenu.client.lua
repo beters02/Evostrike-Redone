@@ -11,6 +11,11 @@ UserInputService.InputBegan:Connect(function(input, gp)
         if player:GetAttribute("Typing") then return end
         if player:GetAttribute("loading") then return end -- if player is loading then dont open menu
 
+        -- if player in the lobby screen and has not spawned, don't let them close the menu
+        if module.var.opened and module.gui:GetAttribute("NotSpawned") then
+            return
+        end
+
         module.toggle()
     end
 end)

@@ -109,7 +109,10 @@ local function initToolAndModels(weaponName: string, weaponObjects: Folder, skin
 
 	-- weapon skin
 	--model = weaponObjects.models.default
-	model = weaponObjects.models[skinInfo.skin]
+	local succ, err = pcall(function() model = weaponObjects.models[skinInfo.skin] end)
+	if not succ then
+		error("YOU NEED TO ADD THE WEAPON TO DEFAULTPLAYERDATA " .. tostring(err))
+	end
 
 	-- set collision groups
 	for i, v in pairs(model:GetDescendants()) do
@@ -135,7 +138,7 @@ local function initToolAndModels(weaponName: string, weaponObjects: Folder, skin
 	if string.lower(weaponName) ~= "knife" then
 		local a
 		for i, v in pairs({clientModel, serverModel}) do
-			a = GlobalWeaponObj.MuzzleFlash:Clone()
+			a = GlobalWeaponObj.emitters.MuzzleFlash:Clone()
 			a.Parent = v.GunComponents.WeaponHandle.FirePoint
 			a.Enabled = false
 		end
@@ -188,7 +191,7 @@ end
 
     @return
 ]]
-function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
+function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean?)
 
     -- init some check var
     local weaponObjects: Folder?
@@ -227,11 +230,6 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
 
 		-- now we remove the weapon
         Weapon.Remove(player, currentWeaponInSlot)
-
-		-- finally, re equip the knife if available
-		-- otherwise, equip the weapon once it's loaded
-		--[[local knife = player.Backpack:FindFirstChild("Tool_Knife")
-		if knife then player.Character.Humanoid:EquipTool(knife) else forceEquip = true end]]
     end
 
 	-- create tool & models
@@ -264,8 +262,10 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean)
 	tool.Parent = player.Backpack
 	serverScript.Enabled = true
 	
+	forceEquip = forceEquip or false
+
 	-- Add Weapon Client
-	WeaponAddRemoveEvent:FireClient(player, "Add", weaponName, weaponOptions, weaponObjects)
+	WeaponAddRemoveEvent:FireClient(player, "Add", weaponName, weaponOptions, weaponObjects, tool, forceEquip)
 
 	task.wait(0.1)
 
@@ -284,25 +284,21 @@ end
     @return
 ]]
 function Weapon.Remove(player, weaponTable)
-	if not player.Character then return end
-
 	local tool = weaponTable.Tool
-	WeaponAddRemoveEvent:FireClient(player, "Remove", tool)
-	tool:Destroy()
+	WeaponAddRemoveEvent:FireClient(player, "Remove", tool, weaponTable.Name)
 
-	-- equip knife if possible
-	local knife = checkPlayerHasWeaponInSlot(player, "ternary")
-	--[[if knife then
-		if not knife or not knife.Parent then return end
-		player.Character.Humanoid:EquipTool(knife.Tool)
-	end]]
+	pcall(function()
+		tool:Destroy()
+	end)
 
 	-- set inv slot
 	Weapon.StoredPlayerInventories[player.Name][weaponTable.Slot] = nil
-
 end
 
 function Weapon.ClearPlayerInventory(player)
+	if player.Character and player.Character.Humanoid then
+		player.Character.Humanoid:UnequipTools()
+	end
 	local currentInventory = Weapon.StoredPlayerInventories[player.Name]
 	if not currentInventory then return end
 	for i, v in pairs(currentInventory) do
@@ -314,7 +310,6 @@ end
 
 function Weapon.ClearAllPlayerInventories()
 	for _, player in pairs(Players:GetPlayers()) do
-		if not player.Character then continue end
 		task.spawn(function()
 			Weapon.ClearPlayerInventory(player)
 		end)

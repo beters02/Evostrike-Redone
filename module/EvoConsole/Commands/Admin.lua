@@ -52,7 +52,7 @@ Commands.AddWeapon = {
 	
 	Function = function(self, _, weaponName)
 		game:GetService("ReplicatedStorage").weapon.remote.addremove:FireServer("Add", weaponName)
-	end,	
+	end
 }
 
 Commands.Gamemode = {
@@ -64,26 +64,42 @@ Commands.Gamemode = {
 	end,
 }
 
+Commands.gm_forcestart = {
+	Description = "Force Start a gamemode with Bots filling in for missing players.",
+
+	Function = function()
+		game:GetService("ReplicatedStorage").gamemode.remote.ForceStart:FireServer()
+	end
+}
+
 Commands.Map = {
 	Description = "Teleport player or players to map",
 	Public = false,
 
-	Function = function(self, _, mapName, players)
+	Function = function(self, player, mapName, players, gamemode)
 		if not mapName then
 			warn("Could not teleport, Map Name is requred!")
 			return
 		end
 
-		if players then
-			if players == "all" then
-				players = Players:GetPlayers()
-			end
+		if not players or players == "false" or players == "nil" then
+			players = {player}
+		elseif players == "all" then
+			players = Players:GetPlayers()
+		else
+			warn("Invalid players " .. tostring(players))
+			players = {player}
 		end
 
-		local success, err = game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("MapCommand", mapName, players)
+		if not gamemode then
+			gamemode = "Range"
+		end
+
+		local success, err = game:GetService("ReplicatedStorage").Modules.EvoConsole.Objects.Bridge:InvokeServer("MapCommand", mapName, gamemode, players)
 		if not success then warn(err) return end
-		print("Teleporting!")
-		return
+
+		self:Print("Teleporting!")
+		return true
 	end
 }
 

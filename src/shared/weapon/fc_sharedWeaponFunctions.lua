@@ -128,8 +128,8 @@ function module.CreateBullet(fromChar, endPos, client)
 	local part = BulletModel:Clone()
 	part.Parent = workspace.Temp
 	part.Size = Vector3.new(0.1, 0.1, 0.4)
-	part.Position = client and workspace.CurrentCamera.viewModel.Equipped.ClientModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
-	if not client then part.Position = tool.ServerModel.GunComponents.WeaponHandle.FirePoint.WorldPosition end
+	if not client then part.Position = tool.ServerModel.GunComponents.WeaponHandle.FirePoint.WorldPosition else
+	part.Position = client and workspace.CurrentCamera.viewModel.Equipped.ClientModel.GunComponents.WeaponHandle.FirePoint.WorldPosition end
 	part.Transparency = 1
 	part.CFrame = CFrame.lookAt(part.Position, endPos)
 	part.CollisionGroup = "None"

@@ -40,6 +40,7 @@ end)
 for _, currplr in pairs(Players:GetPlayers()) do
     if currplr == Players.LocalPlayer then return end
     initPlayersConnections(currplr)
+    if currplr.Character then createHighlight(currplr.Character, true) end
 end
 
 BotAdded.OnClientEvent:Connect(function(botCharacter)

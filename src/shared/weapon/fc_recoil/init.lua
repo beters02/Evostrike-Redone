@@ -20,6 +20,25 @@ local sharedWeaponFunctions = require(Framework.shfc_sharedWeaponFunctions.Locat
 
 function Recoil:FireRecoil(currentBullet)
 
+    -- Resolve: Inconsistent Feeling Camera Recoil at Low FPS
+    -- Schedule recoil
+
+    -- recoil is already scheduled
+    if self.weaponVar._waiting then return end
+
+    -- recoil not scheduled and debounce active
+    if self.weaponVar._localDebounce and tick() < self.weaponVar._localDebounce then
+        self.weaponVar._waiting = true
+
+        -- schedule recoil here
+        repeat task.wait() until tick() >= self.weaponVar._localDebounce
+
+        self.weaponVar._waiting = false
+    end
+
+    -- set debounce to active
+    self.weaponVar._localDebounce = tick() + (self.weaponVar.options.fireRate - 0.002)
+
     -- update the classes current bullet
     self.weaponVar.currentBullet = currentBullet
 

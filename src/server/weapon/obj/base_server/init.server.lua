@@ -25,12 +25,29 @@ local char = player.Character or player.CharacterAdded:Wait()
 
 --[[ FUNCTIONS ]]
 
+local equipEndTime
+local equipCancel = false
+
 function remote_timer(timerType)
 	local endTime = tick()
 	local length = timerTypeKeys[timerType]
 	if not length then error("Could not find timer " .. tostring(timerType)) end
 	endTime += length
 	repeat task.wait() until tick() >= endTime
+	return true
+end
+
+function remote_equipTimerCancel()
+	equipCancel = true
+end
+
+function remote_equipTimer()
+	equipEndTime = tick() + timerTypeKeys.Equip
+	repeat task.wait() until tick() >= equipEndTime or equipCancel
+	if equipCancel then
+		equipCancel = false
+		return false
+	end
 	return true
 end
 
@@ -80,16 +97,16 @@ end
 
 local shotServerReRegistration = false
 function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegisteredTime, wallbangDamageMultiplier)
-	
+
 	-- check client->server timer diff
-	if not util_registerFireDiff() then return end
+	if not util_registerFireDiff() then return false end
 
 	-- update ammo
 	serverStoredVar.ammo.magazine -= 1
 	serverStoredVar.nextFireTime = tick() + weaponOptions.fireRate
 
 	-- if initial shot is verified, register
-	local damage, _, _, damagedChar = util_registerShot(
+	util_registerShot(
 		rayInformation,
 		rayInformation.position,
 		rayInformation.origin,
@@ -98,7 +115,6 @@ function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegi
 		wallbangDamageMultiplier
 	)
 
-	-- if damage was inflicted, fire PlayerDamaged event/signal
 	return true
 end
 
@@ -129,7 +145,7 @@ end
 --[{                                 }]]
 
 -- create actions table for remote invoking
-local actions = {Timer = remote_timer, Fire = core_fire, Reload = core_reload, GetAccuracy = util_getAccuracy}
+local actions = {Timer = remote_timer, Fire = core_fire, Reload = core_reload, GetAccuracy = util_getAccuracy, EquipTimer = remote_equipTimer, EquipTimerCancel = remote_equipTimerCancel}
 
 weaponRemoteFunction.OnServerInvoke = function(plr, action, ...)
 	return actions[action](...)

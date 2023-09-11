@@ -460,8 +460,6 @@ function Movement.SetFrictionVars(frictionVarKey: string)
 		Movement.groundAccelerate = Movement.defGroundAccelerate
 		Movement.friction = Movement.defFriction
 	end
-	print(Movement.friction)
-	print(Movement.groundAccelerate)
 end
 
 function _SetGroundSound(runSound, landSound)

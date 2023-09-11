@@ -10,18 +10,20 @@ local Range = {
 }
 
 local buyMenuGui
+local bToBuy
 
 -- Init objects and such
 function Range._init(self)
     -- Add objects
     self.objects.moduleLocation = Range.objects.baseLocation.Parent.Range
-    buyMenuGui = Range.objects.baseLocation.Parent.Deathmatch.BuyMenu
+    buyMenuGui = self.objects.moduleLocation.BuyMenu
+    bToBuy = self.objects.moduleLocation.PressBGui
     return self
 end
 
 function Range:InitPlayerData(player)
     self.playerdata[player.Name] = {
-        loadout = {weapon = {primary = "AK47", secondary = "Glock17"}, ability = {primary = "Dash", secondary = "Molly"}},
+        loadout = {weapon = {primary = "AK103", secondary = "Glock17"}, ability = {primary = "Dash", secondary = "Molly"}},
         connections = {buymenu = {}},
         deathCameraScript = false
     }
@@ -37,16 +39,24 @@ function Range:AddBuyMenu(player, diedgui)
         local remoteObject = Instance.new("ObjectValue", c)
         remoteObject.Name = "RemoteObject"
         remoteObject.Value = diedgui.Remote
+    else
+        c.MainFrame.BackButton.Visible = false
     end
 
     c.Parent = player.PlayerGui
 
+    -- add b to buy text
+    local bc = bToBuy:Clone()
+    bc.Parent = player.PlayerGui
+
     self.playerdata[player.Name].connections.buymenu = {
         c:WaitForChild("AbilitySelected").OnServerEvent:Connect(function(plr, ability, slot)
             self.playerdata[player.Name].loadout.ability[slot] = ability
+            if bc then bc:Destroy() bc = nil end -- destroy press B upon first purchase
         end),
         c:WaitForChild("WeaponSelected").OnServerEvent:Connect(function(plr, weapon, slot)
             self.playerdata[player.Name].loadout.weapon[slot] = weapon
+            if bc then bc:Destroy() bc = nil end
         end)
     }
     self.playerdata[player.Name].buymenu = c
@@ -74,7 +84,6 @@ function Range:SpawnPlayer(player)
 
         if self.playerdata[player.Name] and self.playerdata[player.Name].deathCameraScript then
             self.playerdata[player.Name].deathCameraScript:WaitForChild("Destroy"):FireClient(player)
-            print('yuh')
         end
 
         player:LoadCharacter()

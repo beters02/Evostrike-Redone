@@ -5,16 +5,20 @@ local Ability = require(Framework.Ability.Location)
 local Weapon = require(Framework.Weapon.Location)
 local GamemodeClasses = game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("class")
 local CollectionService = game:GetService("CollectionService")
-local QueueService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("QueueService"))
-local BotModule = require(Framework.sm_bots.Location)
+local BotModule = require(game:GetService("ServerScriptService"):WaitForChild("bots"):WaitForChild("m_bots"))
 local diedMainEvent = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
+local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("EvoMMWrapper"))
 
 local Base = {
     minimumPlayers = 1,
+    maximumPlayers = 8,
     startWithBarriers = false,
     playerDataEnabled = true,
     botsEnabled = false,
     queueServiceEnabled = false,
+    respawnsEnabled = true,
+    respawnLength = 2,
+    startWithMenuOpen = false,
 
     objects = {
         baseLocation = GamemodeClasses:WaitForChild("Base"),
@@ -25,10 +29,13 @@ local Base = {
         bots = GamemodeClasses.Base.Bots
     },
 
+    maps = {}, -- (init in m_gamemode) {mapName = mapID}
+
     status = "running",
     isWaiting = false,
     customDiedCallbacks = {},
-    playerdata = {}
+    playerdata = {},
+    players = {}
 }
 
 Base.__index = Base
@@ -39,24 +46,35 @@ function Base:Start()
 
     print("Gamemode " .. self.Name .. " started!")
 
-    if #Players:GetPlayers() < (self.minimumPlayers or 1) then
-        self:WaitForMinimumPlayers()
-    end
-
-    -- add any players that have already joined
-    for i, v in pairs(Players:GetPlayers()) do
-        task.spawn(function()
-            self:InitPlayerData(v)
-            self:SpawnPlayer(v)
-        end)
+    -- init current players (self.players)
+    for _, player in pairs(Players:GetPlayers()) do
+        self:InitPlayerData(player)
     end
 
     -- init player added connection
     if self.playerAddedConnection then self.playerAddedConnection:Disconnect() end
     self.playerAddedConnection = Players.PlayerAdded:Connect(function(player)
         self:InitPlayerData(player)
+    end)
+
+    -- wait for min
+    if #self.players < (self.minimumPlayers or 1) then
+        self:WaitForMinimumPlayers(self.minimumPlayers or 1)
+    end
+
+    -- set new player added connection
+    if self.playerAddedConnection then self.playerAddedConnection:Disconnect() end
+    self.playerAddedConnection = Players.PlayerAdded:Connect(function(player)
+        self:InitPlayerData(player)
         self:SpawnPlayer(player)
     end)
+
+    -- spawn players
+    for i, v in pairs(self.players) do
+        task.spawn(function()
+            self:SpawnPlayer(v)
+        end)
+    end
 
     -- init playerdata removing connection if necessary
     if self.playerDataEnabled then
@@ -68,6 +86,7 @@ function Base:Start()
                     end
                 end)
                 self.playerdata[player.Name] = nil
+                self.players[player.Name] = nil
             end
         end)
     end
@@ -94,8 +113,15 @@ function Base:Start()
 
     -- start queue service
     if self.queueServiceEnabled then
-        QueueService:Start()
+        local gamemodes = {}
+        for i, v in pairs(GamemodeClasses:GetChildren()) do
+            if v:IsA("ModuleScript") and require(v).canQueue then
+                table.insert(gamemodes, v.Name)
+            end
+        end
+        EvoMM:StartQueueService(gamemodes)
     end
+    
 end
 
 function Base:Stop()
@@ -112,7 +138,8 @@ function Base:Stop()
     --self.serverInfoUpdateConn:Disconnect()
 
     -- stop queue service
-    QueueService:Stop()
+    -- remove all queue'd players?
+    --QueueService:Stop()
 
     -- remove all weapons and abilities
     Ability.ClearAllPlayerInventories()
@@ -120,7 +147,10 @@ function Base:Stop()
 
     -- unload all characters
     for i, v in pairs(Players:GetPlayers()) do
-        v.Character.Humanoid:TakeDamage(1000)
+        if v.Character and v.Character.Humanoid then
+            v.Character.Humanoid:TakeDamage(1000)
+        end
+        
         v.Character = nil
     end
 
@@ -148,12 +178,23 @@ function Base:Stop()
     print('Gamemode Lobby Stopped')
 end
 
+-- Force Start a gamemode with Bots filling in for the missing players
+function Base:ForceStart()
+    
+    -- fill missing players with bots
+    for i = 1, self.minimumPlayers - #self.players do
+        table.insert(self.players, BotModule:Add(false, {Respawn = true, RespawnLength = 0}))
+        self:InitPlayerData(self.players[#self.players])
+    end
+
+end
+
 -- Utility Functions
 
 function Base:WaitForMinimumPlayers(min)
     repeat
         task.wait(0.5)
-    until #Players:GetPlayers() >= min
+    until #self.players >= min
 end
 
 function Base:GetTotalPlayerCount()
@@ -167,7 +208,8 @@ end
 -- Player Functions
 
 function Base:InitPlayerData(player)
-    self.playerdata[player.Name] = {deathCameraScript = false}
+    self.playerdata[player.Name] = {deathCameraScript = false, isSpawned = false}
+    if not table.find(self.players, player) then table.insert(self.players, player) end
 end
 
 function Base:SpawnPlayer(player)
@@ -175,10 +217,44 @@ function Base:SpawnPlayer(player)
         if not player:GetAttribute("Loaded") then
             repeat task.wait() until player:GetAttribute("Loaded")
         end
+
+        -- start player with main menu open if necessary
+        if self.startWithMenuOpen and not self.playerdata[player.Name].isSpawned then
+
+            -- load character gui
+            local remove = {}
+            if not player.PlayerGui:FindFirstChild("MainMenu") then
+                local _c
+                for i, v in pairs(game:GetService("StarterGui"):GetChildren()) do
+                    if v:IsA("ScreenGui") and v.Name ~= "HUD" and v.Name ~= "Stats" then
+                        _c = v:Clone()
+                        _c.Parent = player.PlayerGui
+                    end
+                end
+            end
+
+            local _c = Base.objects.baseLocation.openMenu:Clone()
+            _c.Parent = player.PlayerGui
+
+            player.PlayerGui:WaitForChild("MainMenu"):SetAttribute("NotSpawned", true)
+
+            -- wait for player to ask to spawn
+            local spwn = Instance.new("RemoteFunction", player.PlayerGui:WaitForChild("MainMenu"))
+            spwn.Name = "SpawnRemote"
+
+            spwn.OnServerInvoke = function()
+                return pcall(function()
+                    self.playerdata[player.Name].isSpawned = true
+                    player.PlayerGui:WaitForChild("MainMenu"):SetAttribute("NotSpawned", false)
+                    self:SpawnPlayer(player)
+                    Debris:AddItem(_c, 1)
+                end)
+            end
+            return
+        end
         
         if self.playerdata[player.Name] and self.playerdata[player.Name].deathCameraScript then
             self.playerdata[player.Name].deathCameraScript:WaitForChild("Destroy"):FireClient(player)
-            print('yuh')
         end
 
         player:LoadCharacter()
@@ -205,6 +281,18 @@ function Base:SpawnPlayer(player)
     end)
 end
 
+function Base:StartPlayer(player)
+    if not player:GetAttribute("Loaded") then
+        repeat task.wait() until player:GetAttribute("Loaded")
+    end
+
+    -- start player with main menu open
+    print(self.Location)
+    local _c = Base.objects.baseLocation.openMenu:Clone()
+    _c.Parent = player.PlayerGui
+    Debris:AddItem(_c, 5)
+end
+
 -- Died
 
 function Base:Died(player)
@@ -221,11 +309,13 @@ function Base:Died(player)
         extraDiedFunc(player)
     end
 
-    task.wait(2)
-
-    if self.status == "running" then
-        self:SpawnPlayer(player)
+    if self.respawnsEnabled then
+        task.wait(self.respawnLength)
+        if self.status == "running" then
+            self:SpawnPlayer(player)
+        end
     end
+
 end
 
 function Base:DiedCamera(player)

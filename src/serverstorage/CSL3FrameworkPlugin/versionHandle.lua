@@ -37,46 +37,94 @@ local function vh_convertVersionToNumber(verstr)
 	return tonumber(numstr)
 end
 
---[[local function convertNumberToVersion(num)
-	local _vstr = ""
-	local _sep = vh_seperateStringToChar(tostring(num))
-	for i = 1, 3 - tostring(num):len() do _vstr = _vstr .. "0_" end -- add zeros
-	for i, v in pairs(_sep) do
-		_vstr = _vstr .. tostring(v) .. "_" -- add other numbers
-		if i ~= #_sep then -- add trail if not last number
-			_vstr = _vstr .. "_"
+function vh.init(self, vhpushupdate, vhpullupdate, vhunpackbutton, vhpackbutton)
+    vhpushupdate.Click:Connect(function()
+		if self.vh_isupdating then
+			warn("Already updating!")
+			return
 		end
-	end
 
-	print(_vstr, "STRING")
-	return _vstr
+		if self.vh_isunpacking then
+			warn("Already unpacking!")
+			return
+		end
+		self.vh_isupdating = true
+			
+		local success, err = pcall(function()
+			vh.click(self, "pushupdate")
+		end)
+		if not success then warn("Could not update! " .. err) end
+		
+		self.vh_isupdating = false
+		return
+	end)
+
+	vhpullupdate.Click:Connect(function()
+		if self.vh_isupdating then
+			warn("Already updating!")
+			return
+		end
+
+		if self.vh_isunpacking then
+			warn("Already unpacking!")
+			return
+		end
+		self.vh_isunpacking = true
+			
+		local success, err = pcall(function()
+			vh.click(self, "pullupdate")
+		end)
+		if not success then warn("Could not unpack! " .. err) end
+		
+		self.vh_isunpacking = false
+		return
+	end)
+
+	vhunpackbutton.Click:Connect(function()
+		if self.vh_isupdating then
+			warn("Already updating!")
+			return
+		end
+
+		if self.vh_isunpacking then
+			warn("Already unpacking!")
+			return
+		end
+		self.vh_isunpacking = true
+			
+		local success, err = pcall(function()
+			vh.click(self, "unpack")
+		end)
+		if not success then warn("Could not unpack! " .. err) end
+		
+		self.vh_isunpacking = false
+		return
+	end)
+
+	vhpackbutton.Click:Connect(function()
+		if self.vh_isupdating then
+			warn("Already updating!")
+			return
+		end
+
+		if self.vh_isunpacking then
+			warn("Already unpacking!")
+			return
+		end
+		self.vh_isupdating = true
+			
+		local success, err = pcall(function()
+			vh.click(self, "pack")
+		end)
+		if not success then warn("Could not pack! " .. err) end
+		
+		self.vh_isupdating = false
+		return
+	end)
 end
 
-local function vh_addVersion(add)
-
-	local vers = FrameworkModule:GetAttribute("Version")
-	if not vers then
-		warn("Cannot add version, No version attribute set on Framework!")
-		return false
-	end
-
-	print(vers)
-
-	local _vnum = vh_convertVersionToNumber(FrameworkModule:GetAttribute("Version"))
-	print(_vnum, "ADD")
-
-	if _vnum then
-		local _vstr = ""
-		for i = 1, 3 - tostring(add+_vnum):len() do _vstr = _vstr .. "0_" end -- add zeros
-		for i = 1, tostring(_vnum):len() do _vstr = _vstr .. tostring(_vnum) .. "_" end -- add other numbers
-		print(_vstr, "STRING")
-		return _vstr
-	end
-	
-	return false
-end]]
-
-function vh.update(self)
+-- pulls current files and pushes them into a version model
+function vh.pushUpdate(self)
 	print('Update started! Check screen for GUI Prompt.')
 	
 	-- var
@@ -153,6 +201,82 @@ function vh.update(self)
 	vh.pack(self, newversion, false, packWithMap, modelPackInto)
 
 	print('Done! Check ServerStorage')
+end
+
+--[[
+	@name			pullUpdate
+	@summary		pulls files from a version model and pushes them into current files
+
+					DESTROYS *ALL* CURRENT FILES
+					*ignores*
+						gamemode: bots spawns barriers
+						game: lighting, workspace
+	@return void
+]]
+
+-- 
+function vh.pullUpdate(self)
+
+	-- make sure we have a model that can be unpacked
+	local currModel = vh.findVersionFile()
+
+	-- first we pack all current items
+	local curr = vh.pack(self, "0.0.1", true, true)
+	curr.Name = "SSS"
+
+	local leave = {}
+
+	-- then we leave any files that need to not be overwritten
+	for _, gm in pairs(curr.ServerScriptService.gamemode.class:GetChildren()) do
+
+		-- bots, spawns, barriers
+		for _, gmo in pairs({"Bots", "Spawns", "Barriers"}) do
+			if gm:FindFirstChild(gmo) then
+				if not leave[gm.Name] then leave[gm.Name] = {} end
+				table.insert(leave[gm.Name], gm.Bots) -- store in "leave" array to replace at the end
+			end
+		end
+		
+	end
+
+	-- now we unpack
+	vh.unpac(self)
+
+	-- write gamemode "leave" old to new
+	for gmname, gmtab in pairs(leave) do
+		for _, obj in pairs(gmtab) do
+			if not obj or not obj.Name then continue end
+			game:GetService("ServerScriptService").gamemode.class[gmname][obj.Name]:Destroy()
+			obj.Parent = game:GetService("ServerScriptService").gamemode.class[gmname]
+		end
+	end
+
+	-- replace current workspace with old
+	for i, v in pairs(workspace:GetChildren()) do
+		pcall(function()
+			v:Destroy()
+		end)
+	end
+
+	for i, v in pairs(curr.Workspace:GetChildren()) do
+		v.Parent = workspace
+	end
+
+	-- replace current lighting with old
+	for i, v in pairs(game:GetService("Lighting"):GetChildren()) do
+		pcall(function()
+			v:Destroy()
+		end)
+	end
+
+	for i, v in pairs(curr.Lighting:GetChildren()) do
+		v.Parent = game:GetService("Lighting")
+	end
+
+	-- destroy old
+	currModel:Destroy()
+
+	print('Update pulled!')
 end
 
 function vh.pack(self, vers: number, destroyAfter: boolean, packMap: boolean, modelPackInto: Model?)
@@ -233,23 +357,12 @@ function vh.pack(self, vers: number, destroyAfter: boolean, packMap: boolean, mo
 	
 	-- finish
 	model.Parent = game:GetService("ServerStorage")
+	return model
 end
 
 function vh.unpac(self)
-	print('yuh')
-
-	local model = false
-	for i, v in pairs(game:GetService("ServerStorage"):GetChildren()) do
-		if string.match(v.Name, "CSL^3 Framework") then
-			model = v
-			break
-		end
-	end
-
-	if not model then
-		warn("Could not find stored model!")
-		return
-	end
+	local model = vh.findVersionFile()
+	if not model then return end
 
 	for i, v in pairs(model:GetChildren()) do
 		if v:IsA("PackageLink") then continue end
@@ -285,78 +398,32 @@ end
 
 function vh.click(self, name)
 	print(name)
-	if name == "update" then
-		vh.update(self)
+	if name == "pushupdate" then
+		vh.pushUpdate(self)
+	elseif name == "pullupdate" then
+		vh.pullUpdate(self)
 	elseif name == "unpack" then
 		vh.unpac(self)
 	elseif name == "pack" then
-		vh.pack(self, "0_0_1")
+		vh.pack(self, "0_0_1", true, true)
 	end
 end
 
-function vh.init(self, vhupdatebutton, vhunpackbutton, vhpackbutton)
-    vhupdatebutton.Click:Connect(function()
-		if self.vh_isupdating then
-			warn("Already updating!")
-			return
+function vh.findVersionFile()
+	local model = false
+	for i, v in pairs(game:GetService("ServerStorage"):GetChildren()) do
+		if string.match(v.Name, "CSL^3 Framework") then
+			model = v
+			break
 		end
+	end
 
-		if self.vh_isunpacking then
-			warn("Already unpacking!")
-			return
-		end
-		self.vh_isupdating = true
-			
-		local success, err = pcall(function()
-			vh.click(self, "update")
-		end)
-		if not success then warn("Could not update! " .. err) end
-		
-		self.vh_isupdating = false
-		return
-	end)
+	if not model then
+		warn("Could not find stored model!")
+		return false
+	end
 
-	vhunpackbutton.Click:Connect(function()
-		if self.vh_isupdating then
-			warn("Already updating!")
-			return
-		end
-
-		if self.vh_isunpacking then
-			warn("Already unpacking!")
-			return
-		end
-		self.vh_isunpacking = true
-			
-		local success, err = pcall(function()
-			vh.click(self, "unpack")
-		end)
-		if not success then warn("Could not unpack! " .. err) end
-		
-		self.vh_isunpacking= false
-		return
-	end)
-
-	vhpackbutton.Click:Connect(function()
-		if self.vh_isupdating then
-			warn("Already updating!")
-			return
-		end
-
-		if self.vh_isunpacking then
-			warn("Already unpacking!")
-			return
-		end
-		self.vh_isupdating = true
-			
-		local success, err = pcall(function()
-			vh.click(self, "pack")
-		end)
-		if not success then warn("Could not pack! " .. err) end
-		
-		self.vh_isupdating = false
-		return
-	end)
+	return model
 end
 
 return vh

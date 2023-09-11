@@ -5,12 +5,13 @@ local Ability = require(Framework.Ability.Location)
 local Weapon = require(Framework.Weapon.Location)
 
 local Deathmatch = {
-    minimumPlayers = 1,
+    minimumPlayers = 2,
     maximumPlayers = 8,
     respawnLength = 4,
     startWithBarriers = false,
     playerDataEnabled = true,
     botsEnabled = false,
+    canQueue = true,
 
     playerdata = {},
     buymenu = nil
@@ -36,7 +37,7 @@ end
 
 function Deathmatch:InitPlayerData(player)
     self.playerdata[player.Name] = {
-        loadout = {weapon = {primary = "AK47", secondary = "Glock17"}, ability = {primary = "Dash", secondary = "Molly"}},
+        loadout = {weapon = {primary = "AK103", secondary = "Glock17"}, ability = {primary = "Dash", secondary = "Molly"}},
         connections = {buymenu = {}},
         var = {firstSpawn = true},
         deathCameraScript = false

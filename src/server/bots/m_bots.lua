@@ -10,11 +10,18 @@ local bots = {}
 local botNames = {"Fred", "Dave", "Laney", "George", "Ardiis"}
 local defBotProperties = {Respawn = true, RespawnLength = 3}
 
+export type BotProperties = {
+    Respawn: boolean,
+    RespawnLength: number? -- Set Respawn Length to 0 for manual respawn
+}
+
 export type Bot = {
     Name: string,
     Character: Model,
     Humanoid: Humanoid,
-    Properties: table
+    Properties: table,
+
+    LoadCharacter: (table) -> ()
 }
 
 -- Current Alive Map Bots
@@ -36,7 +43,13 @@ end
 
 --
 
-function bots:Add(character, properties)
+function bots:Add(character, properties, botObj)
+
+    local charcf = false
+    if not character then
+        character = game:GetService("StarterPlayer").StarterCharacter
+        charcf = game.ServerScriptService.gamemode.class.Base.Spawns.Default.CFrame
+    end
 
     -- init properties
     local newProp = Tables.clone(defBotProperties)
@@ -44,19 +57,51 @@ function bots:Add(character, properties)
         newProp = Tables.combine(newProp, properties) -- must be done in this order for properties to be overwritten correctly
     end
 
+    -- set bot loaded property
+    newProp.Loaded = false
+
     -- create bot
     local _clone = character:Clone()
+    if charcf then _clone.PrimaryPart.CFrame = charcf end
 
     local hum = _clone:WaitForChild("Humanoid")
     hum.BreakJointsOnDeath = false
 
     -- assign the given name or random bot name
-    local botName = newProp.Name or self.BotNames[#self.BotNames]
+    local botName = (botObj and botObj.Name) or newProp.Name or self.BotNames[#self.BotNames]
     local bni = table.find(self.BotNames, botName)
     if bni then table.remove(self.BotNames, bni) end
     _clone.Name = botName
 
-    local new_bot: Bot = {Name = botName, Character = _clone, Humanoid = hum, Properties = newProp}
+    -- create bot object
+    local new_bot: Bot = botObj or {}
+    new_bot.Name = botName
+    new_bot.Character = _clone
+    new_bot.Humanoid = hum
+    new_bot.Properties = newProp
+
+    new_bot.LoadCharacter = function(tab)
+        if newProp.Respawn and not newProp.Destroyed then
+            self:Add(character, {Name = botName or self.BotNames[math.random(1, #self.BotNames)], new_bot})
+        end
+        _clone:Destroy()
+    end
+
+    new_bot.GetAttribute = function(att)
+        return newProp[att]
+    end
+
+    new_bot.SetAttribute = function(att, new)
+        newProp[att] = new
+    end
+
+    new_bot.PlayerGui = {}
+
+    new_bot.Destroy = function()
+        newProp.Destroyed = true
+        hum:TakeDamage(1000)
+        _clone:Destroy()
+    end
 
     -- set bot collision
     task.spawn(function()
@@ -75,18 +120,24 @@ function bots:Add(character, properties)
     -- connect died event
     hum.Died:Once(function()
 
+        if newProp.Destroyed then return end
+
         -- death event
         PlayerDiedEvent:FireAllClients(_clone)
 
         table.insert(self.BotNames, botName)
         
         if not hum:GetAttribute("Removing") then
-            task.delay(newProp.RespawnLength or 3, function()
-                if newProp.Respawn and _clone then
-                    self:Add(character, {Name = botName or self.BotNames[math.random(1, #self.BotNames)]})
+
+            if newProp.Respawn then
+                if newProp.RespawnLength == 0 then
+                    return
+                else
+                    task.delay(newProp.RespawnLength or 3, function()
+                        new_bot:LoadCharacter()
+                    end)
                 end
-                _clone:Destroy()
-            end)
+            end
         end
         
         bots.Bots[botName] = nil
@@ -110,6 +161,10 @@ function bots:Add(character, properties)
     -- create ragdolls
     RagdollRE:FireAllClients("NonPlayerInitRagdoll", _clone)
     bots.Bots[botName] = new_bot
+
+    new_bot.Properties.Loaded = true
+
+    return new_bot
 end
 
 function bots:Remove(character, name)

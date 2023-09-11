@@ -3,14 +3,14 @@ local wepconfig = {
 	automatic = true,
 	
 	equipLength = 1,
-	fireRate = 0.1, -- 0.118
+	fireRate = 0.1, -- 600 rpm
 	reloadLength = 1.5,
 	recoilReset = 0.24,
 	camRecoilReset = 0.5,
 	
 	fireVectorCameraOffset = Vector2.new(5, 13), -- Side, Up
 	fireAccuracyCameraOffset = Vector2.new(1, 10), -- Side, Up
-	fireVectorCameraMax = Vector3.new(0.011, 0.0105, 0.3), -- Up, Side
+	fireVectorCameraMax = Vector3.new(0.011, 0.01, 0.3), -- Up, Side
 	
 	ammo = {
 		magazine = 30,
@@ -30,7 +30,7 @@ local wepconfig = {
 		headMultiplier = 5,
 		legMultiplier = 0.9,
 		damageFalloffPerMeter = 0.7,
-		damageFalloffDistance = 35,
+		damageFalloffDistance = 40,
 		damageFalloffMinimumDamage = 20,
 		enableHeadFalloff = false
 	},

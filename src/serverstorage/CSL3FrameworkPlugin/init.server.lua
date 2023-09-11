@@ -9,9 +9,11 @@ local toolbar = plugin:CreateToolbar("CSL ^3 Framework")
 -- Add toolbar buttons
 local mmeditButton = toolbar:CreateButton("Map Mode: Edit", "Group all workspace objects except Map and ungroup Map Model.", "rbxassetid://4458901886")
 local mmplayButton = toolbar:CreateButton("Map Mode: Play", "Regroup Map and ungroup workspace objects model.", "rbxassetid://4458901886")
-local vhupdatebutton = toolbar:CreateButton("Version Handle: Update", "Update game to new version, creates a model to distribute in ServerStorage", "rbxassetid://4458901886")
 local vhpackbutton = toolbar:CreateButton("Version Handle: Pack", "Creates a model to distribute in ServerStorage and deletes items after they are cloned", "rbxassetid://4458901886")
 local vhunpackbutton = toolbar:CreateButton("Version Handle: Unpack", "Unpacks a game model, replaces current models", "rbxassetid://4458901886")
+local vhpushupdatebutton = toolbar:CreateButton("Version Handle: Push Update", "Update game to new version, creates a model to distribute in ServerStorage", "rbxassetid://2790459043")
+local vhpullupdatebutton = toolbar:CreateButton("Version Handle: Pull Update", "Update game to new version, creates a model to distribute in ServerStorage", "rbxassetid://2790459347")
+
 
 -- Make button clickable even if 3D viewport is hidden
 mmeditButton.ClickableWhenViewportHidden = true
@@ -137,7 +139,7 @@ local vh = require(script:WaitForChild("versionHandle"))
 local function init()
 
 	-- init version handling
-	vh.init(self, vhupdatebutton, vhunpackbutton, vhpackbutton)
+	vh.init(self, vhpushupdatebutton, vhpullupdatebutton, vhunpackbutton, vhpackbutton)
 	
 	-- init map mode
 	mmeditButton.Click:Connect(function() mm_click("edit") end)

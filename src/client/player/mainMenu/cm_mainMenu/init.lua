@@ -23,6 +23,7 @@ function main.initialize(gui)
     main.var = {opened = false}
 	main.page = require(Players.LocalPlayer.PlayerScripts.mainMenu.cm_mainMenu.page).init(main)
 
+	main.isInit = true
 	return main
 end
 

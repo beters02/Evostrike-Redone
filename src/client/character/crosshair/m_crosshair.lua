@@ -47,6 +47,7 @@ function crosshair.initialize(hud)
 
     self._isInit = true
     crosshair = self
+
     return self
 end
 

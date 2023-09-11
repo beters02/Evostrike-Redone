@@ -1,6 +1,9 @@
 local RunService = game:GetService("RunService")
 if RunService:IsClient() then return {} end
 
+local StoredMapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
+local TeleportService = game:GetService("TeleportService")
+
 local listener = {
     connections = false
 }
@@ -27,6 +30,21 @@ end
 function listener:BridgeInvoke(player, action, ...)
     if action == "instantiateConsole" then
         return self:_instantiateConsole(player)
+    elseif action == "MapCommand" then
+        
+        local mapName, gamemode, players = ...
+        local mapID = StoredMapIDs.GetMapId(mapName)
+
+        if not mapID then
+            return false, "Map " .. " does not exist"
+        end
+
+        local success, err = pcall(function()
+            local priv = TeleportService:ReserveServer(mapID)
+            TeleportService:TeleportToPrivateServer(mapID, priv, players, "", {RequestedGamemode = gamemode})
+        end)
+
+        return success, err
     end
 
     return false

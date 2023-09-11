@@ -9,7 +9,12 @@ core.__index = core
 	@return			- {void}
 ]]
 
+local last = tick()
+
 function core.fire(self, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, startTick)
+
+	last = tick()
+
     local mouse = player:GetMouse()
 
     -- set var

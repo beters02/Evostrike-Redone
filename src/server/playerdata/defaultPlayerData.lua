@@ -20,7 +20,9 @@ local profile = {
 		knife = "default_default",
 		vityaz = "default",
 		ak103 = "default",
-		usp = "default"
+		usp = "default",
+		acr = "default",
+		deagle = "default"
 	}},
 
     options = {

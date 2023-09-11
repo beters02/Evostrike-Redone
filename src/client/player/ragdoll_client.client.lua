@@ -105,6 +105,9 @@ function initRagdollParts(char)
 	char.PrimaryPart = char.UpperTorso
 	charHum:Destroy()
 	char.HumanoidRootPart:Destroy()
+	if char:FindFirstChild("EnemyHighlight") then
+		char.EnemyHighlight:Destroy()
+	end
 
 	for i, v in pairs(char:GetDescendants()) do
 		if v:IsA("Motor6D") then

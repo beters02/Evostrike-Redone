@@ -58,7 +58,10 @@ function class:Open()
     --UserInputService.MouseIconEnabled = true
     States.State("UI"):addOpenUI("Console", self.console.UI, true)
 
-    self.console.UI.MainFrame.TextReturnFrame.CanvasPosition = Configuration.canvasPositionStart
+    -- start at bottom
+    self.console.UI.MainFrame.TextReturnFrame.CanvasPosition = Vector2.new(0, self.console.UI.MainFrame.TextReturnFrame.AbsoluteCanvasSize.Y)
+
+    -- vissi
     self.console.UI.Enabled = true
 
     self.player:SetAttribute("Typing", true)

@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local serverPlayerDataModule = require(script.Parent:WaitForChild("m_serverPlayerData"))
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("playerdata"):WaitForChild("remote")
-local Admins = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminNames"))
+local Admins = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminIDs"))
 
 Remotes.sharedPlayerDataRF.OnServerInvoke = function(player, action, ...)
     if action == "Get" then

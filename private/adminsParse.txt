@@ -1,0 +1,2 @@
+module.admins = {EPIXPLODE, NolanPeters505, beters, commanderfox201}
+module.playtesters = {"Fontainelocke", "LemonDaunger", "Necondy", "khfhyerf", "newacckael"}

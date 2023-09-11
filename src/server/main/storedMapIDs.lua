@@ -39,6 +39,17 @@ id.GetMapsInGamemode = function(gamemode: string)
     return maps
 end
 
+id.GetMapInfoInGamemode = function(gamemode:string)
+    local maps = {}
+    for i, v in pairs(id.mapIds) do
+        if table.find(v.gamemodeIgnore, gamemode) then
+            continue
+        end
+        maps[i] = v.id
+    end
+    return maps
+end
+
 id.GetMapId = function(map: string)
     return id.mapIds[map].id or false
 end

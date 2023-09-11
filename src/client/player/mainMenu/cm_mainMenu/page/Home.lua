@@ -1,7 +1,11 @@
-local requestQueueRemote = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("QueueService").Remote.shared.requestQueueFunction
-local getGamemodeRemote = game:GetService("ReplicatedStorage"):WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("Get")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.mainMenu.Popup)
+local EvoMM = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("EvoMMWrapper"))
+
+local getGamemodeRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("Get")
+local gamemodeChangedRemote = ReplicatedStorage.gamemode.remote.ChangedEvent
+local requestQueueFunction = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("requestQueueFunction")
 
 local ClickDebounce = 0.5
 
@@ -9,7 +13,6 @@ local play = {}
 
 function play:Open()
     self.Location.Visible = true
-
     self:_connectPlayButtons()
 end
 
@@ -23,9 +26,20 @@ end
 --
 
 function play:init()
-    self = setmetatable(self, play)
+    self = setmetatable(play, {__index = self})
     self.connections = {}
     self.var = {nextClickAllow = tick()}
+
+    -- connect gamemode changed
+    gamemodeChangedRemote.OnClientEvent:Connect(function(gamemode: string)
+        self._lastGotGamemode = gamemode
+        self:_preparePageGamemode(gamemode, true)
+    end)
+
+    -- grab the current gamemode
+    self._lastGotGamemode = getGamemodeRemote:InvokeServer()
+    self:_preparePageGamemode(self._lastGotGamemode, false)
+
     return self
 end
 
@@ -61,13 +75,43 @@ end
 
 --
 
+function play:_preparePageGamemode(gamemode: string, onChange)
+    if gamemode == "Lobby" and onChange then
+        self:_enableLoadStarterIslandButton()
+    else
+        self:_enableBackToLobbyButton()
+    end
+end
+
+function play:_enableLoadStarterIslandButton()
+    self.Location.Card_StarterIsland.Visible = true
+    self.Location.Card_BackToLobby.Visible = false
+    self._starterConn = self.Location.Card_StarterIsland.MouseButton1Click:Connect(function()
+        local success = self.Location.Parent.SpawnRemote:InvokeServer()
+        if success then
+            self._starterConn:Disconnect()
+            self._closeMain()
+            self.Location.Card_StarterIsland.Visible = false
+        end
+        self._starterConn:Disconnect()
+    end)
+end
+
+function play:_enableBackToLobbyButton()
+    self.Location.Card_StarterIsland.Visible = false
+    self.Location.Card_BackToLobby.Visible = true
+    self._backToLobbyConn = self.Location.Card_BackToLobby.MouseButton1Click:Connect(function()
+        self._closeMain()
+        requestQueueFunction:InvokeServer("TeleportPublicSolo", "Lobby")
+        self._starterConn:Disconnect()
+    end)
+end
+
+--
+
 function play:_soloButtonClick()
-    if self._playSoloDebounce and tick() < self._playSoloDebounce then return end
-    self._playSoloDebounce = tick() + 5
 
-    task.wait()
-
-    if getGamemodeRemote:InvokeServer() ~= "Lobby" then
+    if self._lastGotGamemode ~= "Lobby" then
         Popup.burst("You can only do this in the lobby!", 3)
         return
     end
@@ -77,20 +121,33 @@ function play:_soloButtonClick()
 
     local connections
     connections = {
-        self.Location.Parent.SoloPopupRequest.Card_Confirm.MouseButton1Click:Once(function()
+        self.Location.Parent.SoloPopupRequest.Card_Stable.MouseButton1Click:Once(function()
+            connections[2]:Disconnect()
+            connections[3]:Disconnect()
             Popup.burst("Teleporting!", 3)
             self.Location.Parent.SoloPopupRequest.Visible = false
-            self.Location.Parent.Enabled = false
+            self.Location.Visible = true
 
-            requestQueueRemote:InvokeServer("TeleportPrivateSolo")
+            requestQueueFunction:InvokeServer("TeleportPrivateSolo", "Stable")
             connections[1]:Disconnect()
+        end),
+        self.Location.Parent.SoloPopupRequest.Card_Unstable.MouseButton1Click:Once(function()
+            connections[1]:Disconnect()
+            connections[3]:Disconnect()
+            Popup.burst("Teleporting!", 3)
+            self.Location.Parent.SoloPopupRequest.Visible = false
+            self.Location.Visible = true
+
+            requestQueueFunction:InvokeServer("TeleportPrivateSolo", "Unstable")
+            connections[2]:Disconnect()
         end),
         self.Location.Parent.SoloPopupRequest.Card_Cancel.MouseButton1Click:Once(function()
             connections[1]:Disconnect()
+            connections[2]:Disconnect()
             self.Location.Parent.SoloPopupRequest.Visible = false
             self.Location.Visible = true
             self._playSoloDebounce = false
-            connections[2]:Disconnect()
+            connections[3]:Disconnect()
         end)
     }
 
@@ -130,8 +187,8 @@ function play:_connectCasualGamemodeButtons()
             end)
 
             -- attempt queue leave
-            local success = requestQueueRemote:InvokeServer("Remove", "Deathmatch")
-            --if not success then warn("Couldnt remove player from queue") return end
+            local success = EvoMM:RemovePlayerFromQueue(game:GetService("Players").LocalPlayer)
+            if not success then warn("Couldnt remove player from queue") return end
 
             casPage.Card_Deathmatch:SetAttribute("InQ", false)
 
@@ -150,7 +207,7 @@ function play:_connectCasualGamemodeButtons()
             tween:Play()
 
             -- request add to queue
-            local success, err = requestQueueRemote:InvokeServer("Add", "Deathmatch")
+            local success, err = EvoMM:AddPlayerToQueue(game:GetService("Players").LocalPlayer, "Deathmatch")
             if not success then warn("Couldn't add player to queue. Error: " .. tostring(err)) end
             
             -- show result text
@@ -181,5 +238,7 @@ function play:_disconnectCasualGamemodeButtons()
     if self.connections.modes then for i, v in pairs(self.connections.modes) do v:Disconnect() end end
     self.connections.modes = {}
 end
+
+--
 
 return play

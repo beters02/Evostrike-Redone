@@ -8,6 +8,14 @@
       {
         "Name": "Set",
         "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "ChangedEvent",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "ForceStart",
+        "ClassName": "RemoteEvent"
       }
     ]
   }

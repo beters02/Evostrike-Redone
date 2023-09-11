@@ -44,7 +44,7 @@ function EvoConsole:_instantiateConsole(player)
     local commandModules = {}
 
     -- insert get admin permissions here
-    if require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminNames")):IsAdmin(player) then
+    if require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminIDs")):IsAdmin(player) then
         table.insert(commandModules, CommandsFolder.Admin)
     end
 
