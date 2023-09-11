@@ -1,9 +1,9 @@
 local id = {
     mapIds = {
-        warehouse = {id = 14504041658, gamemodeIgnore = {"Deathmatch"}},
-        unstable = {id = 14689169953, gamemodeIgnore = {}},
+        warehouse = {id = 14504041658, gamemodeIgnore = {}},
+        unstable = {id = 14689169953, gamemodeIgnore = {"Deathmatch", "Range", "1v1"}},
         lobby = {id = 11287185880, gamemodeIgnore = {"Deathmatch", "Range"}},
-        facility = {id = 14632973077, gamemodeIgnore = {}}
+        facility = {id = 14632973077, gamemodeIgnore = {"Deathmatch", "Range", "1v1"}}
     }
 }
 

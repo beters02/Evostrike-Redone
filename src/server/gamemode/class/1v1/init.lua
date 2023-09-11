@@ -407,7 +407,6 @@ end
 function _1v1:WaitForMinimumPlayers()
     repeat
         task.wait(0.5)
-        print(self.players)
     until #self.players >= self.minimumPlayers
 end
 

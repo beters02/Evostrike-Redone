@@ -7,9 +7,17 @@ local module = {}
 
 function module:StartQueueService(gamemodes)
     if RunService:IsClient() then return end
+
+    MatchmakingService.ApplyCustomTeleportData = function(_, gameData)
+        return {RequestedGamemode = string.split(gameData.map, "_")[2]}
+    end
+
     for _, gamemode in pairs(gamemodes) do
+        -- init gamemode
         local req = require(game:GetService("ServerScriptService"):WaitForChild("gamemode").class[gamemode])
-        -- init maps
+        
+
+        -- init gamemode's maps
         for map, mapid in pairs(StoredMapIDs.GetMapInfoInGamemode(gamemode)) do
             MatchmakingService:SetPlayerRange(map .. "_" .. gamemode, NumberRange.new(req.minimumPlayers or 1, req.maximumPlayers or 8))
             MatchmakingService:AddGamePlace(map .. "_" .. gamemode, mapid)
@@ -44,6 +52,7 @@ end
 
 if RunService:IsServer() then
     MatchmakingService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("MatchmakingService")).GetSingleton()
+    module.MatchmakingService = MatchmakingService
     StoredMapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
     Bridge.OnServerInvoke = function(player, action, queue)
         return module[action](module, player, queue)

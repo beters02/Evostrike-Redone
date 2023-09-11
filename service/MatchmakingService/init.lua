@@ -729,10 +729,8 @@ function MatchmakingService.new(options: {	MajorVersion: string | nil;	DisableRa
 
               -- For every role queued...
               for role, queue in pairs (roleQueue) do
-                print(queue)
                 -- Get up to the maximum number of players for this map and role from the queue
-                print(Service.PlayerRanges)
-                print(map)
+
                 local values = first(queue, Service.PlayerRanges[map][role].Max)
 
                 if not values or #values == 0 then continue end

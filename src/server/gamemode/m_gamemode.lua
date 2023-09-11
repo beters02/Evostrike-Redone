@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GamemodeLoc = game:GetService("ServerScriptService"):WaitForChild("gamemode")
 local GamemodeBase = require(GamemodeLoc:WaitForChild("class"):WaitForChild("Base"))
 local StoredMapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
+local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("EvoMMWrapper"))
 
 -- disable characterautoloads on default
 Players.CharacterAutoLoads = false
@@ -22,13 +23,28 @@ Gamemode.currentClass = nil
 --[[ Init ]]
 function Gamemode.Init()
     Gamemode.playerAddedConnection = Players.PlayerAdded:Connect(function(player)
-        local g = DefaultGamemode
+        
+        local g = nil
         local data = player:GetJoinData()
 
-        data = data and data.TeleportData
-        if data and data.RequestedGamemode then
-            g = data.RequestedGamemode
+        if data then
+            if data.TeleportData and data.TeleportData.RequestedGamemode then
+                g = data.TeleportData.RequestedGamemode
+            end
         end
+
+        if not g then
+            data = EvoMM.MatchmakingService:GetUserData(player)
+            if data then
+                if data.TeleportData and data.TeleportData.RequestedGamemode then
+                    g = data.TeleportData.RequestedGamemode
+                end
+            end
+        end
+
+        if not g then g = DefaultGamemode end
+        print(data)
+        print(g)
 
         -- disconnect player added connection instantly to avoid gamemode starting twice
         Gamemode.playerAddedConnection:Disconnect()
@@ -52,6 +68,13 @@ function Gamemode.SetGamemode(gamemode: string)
         local c = Gamemode.currentClass
         c:Stop()
         task.wait()
+    end
+
+    -- init mm service
+    if gamemode ~= "Lobby" then
+        EvoMM.MatchmakingService:SetIsGameServer(true, false)
+    else
+        EvoMM.MatchmakingService:SetIsGameServer(false, false)
     end
 
     -- create gamemode class

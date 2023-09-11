@@ -6,6 +6,7 @@ local Weapon = require(Framework.Weapon.Location)
 local Range = {
     botsEnabled = true,
     playerDataEnabled = true,
+    startWithMenuOpen = false,
     playerdata = {}
 }
 
@@ -112,6 +113,8 @@ function Range:SpawnPlayer(player)
 
         -- buy menu
         self:AddBuyMenu(player)
+
+        print('Spawned! ASdA SDD')
     end)
 end
 

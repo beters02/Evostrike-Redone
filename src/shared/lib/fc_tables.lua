@@ -2,17 +2,17 @@ local Tables = {}
 Tables.__index = Tables
 
 -- Combines the elements of two tables
-function Tables.combine(table: table, value: table)
+function Tables.combine(tab: table, value: table)
     for i, v in pairs(value) do
-        if tonumber(i) then table.insert(table, v) else table[i] = v end
+        if tonumber(i) then table.insert(tab, v) else tab[i] = v end
     end
-    return table
+    return tab
 end
 
 -- Clones the table
-function Tables.clone(table: table)
+function Tables.clone(tab: table)
     local n = {}
-    for i, v in pairs(table) do
+    for i, v in pairs(tab) do
         n[i] = v
     end
     return n

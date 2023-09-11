@@ -20,21 +20,36 @@ local vm = workspace.CurrentCamera:WaitForChild("viewModel")
 local controller = {primary = false, secondary = false, ternary = false, inputs = false, currentEquipped = false} -- primary = {weaponName, tool}
 
 function equip(slot, ignoreHumEquip)
+	print('equip')
 	if not controller[slot] then return end
 	if controller.currentEquipped == slot then
 		return
 	end
-	controller.currentEquipped = slot
 	if ignoreHumEquip then return end
-	player.Character.Humanoid:EquipTool(controller[slot][2])
+	
+	local succ, err = pcall(function()
+		print(controller[slot][2].Parent)
+		task.delay(0.5, function()
+			print(controller[slot][2].Parent)
+		end)
+		player.Character.Humanoid:EquipTool(controller[slot][2])
+	end)
+
+	if succ then
+		controller.currentEquipped = slot
+	else warn(err) end
+	
 end
 
 -- Connect Weapon Events
 
+local RemoveQueued = false
+
 -- Add/Remove
 WeaponAddRemoveEvent.OnClientEvent:Connect(function(action, ...)
 	if action == "Remove" then
-		local tool, weaponName = ...
+		RemoveQueued = true
+		local tool = ...
 
 		-- if equipped
 		if tool and tool.Parent == player.Character then
@@ -57,8 +72,10 @@ WeaponAddRemoveEvent.OnClientEvent:Connect(function(action, ...)
 			end
 		end
 
+		RemoveQueued = false
 	elseif action == "Add" then
-		local weaponName, weaponOptions, weaponObjects, tool, forceEquip = ...
+		if RemoveQueued then repeat task.wait() until not RemoveQueued end
+		local weaponName, weaponOptions, _, tool, forceEquip = ...
 		controller[weaponOptions.inventorySlot] = {weaponName, tool}
 		if forceEquip then
 			equip(weaponOptions.inventorySlot, true)
@@ -107,4 +124,11 @@ UserInputService.InputBegan:Connect(function(input, gp)
 
 	processDebounce = false
 
+end)
+
+PlayerDiedBindable.Event:Connect(function()
+	for i, v in pairs(controller) do
+		if i == "inputs" then continue end
+		controller[i] = false
+	end
 end)

@@ -19,13 +19,14 @@ local requestActions = {
     ClearAll = function()
     end,
 
-    TeleportPrivateSolo = function(self, player) -- todo: get mapid. for now its warehouse
-        TeleportService:TeleportToPrivateServer(14504041658, TeleportService:ReserveServer(StoredMapIDs.mapIds.warehouse.id), {player}, false, {RequestedGamemode = "Range"})
+    TeleportPrivateSolo = function(player, map) -- todo: get mapid. for now its warehouse
+        map = map and StoredMapIDs.mapIds[string.lower(map)].id or 14504041658
+        TeleportService:TeleportToPrivateServer(map, TeleportService:ReserveServer(StoredMapIDs.mapIds.warehouse.id), {player}, false, {RequestedGamemode = "Range"})
         return true
     end,
     
-    TeleportPublicSolo = function(self, player)
-        TeleportService:Teleport(StoredMapIDs.mapIds.lobby.id, player)
+    TeleportPublicSolo = function(player, map)
+        TeleportService:Teleport(StoredMapIDs.mapIds[string.lower(map)].id, player)
         return true
     end,
 }
