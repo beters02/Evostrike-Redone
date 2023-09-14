@@ -233,7 +233,7 @@ function vh.pullUpdate(self)
 		for _, gmo in pairs({"Bots", "Spawns", "Barriers"}) do
 			if gm:FindFirstChild(gmo) then
 				if not leave[gm.Name] then leave[gm.Name] = {} end
-				table.insert(leave[gm.Name], gm.Bots) -- store in "leave" array to replace at the end
+				table.insert(leave[gm.Name], gm[gmo]) -- store in "leave" array to replace at the end
 			end
 		end
 		
@@ -246,7 +246,9 @@ function vh.pullUpdate(self)
 	for gmname, gmtab in pairs(leave) do
 		for _, obj in pairs(gmtab) do
 			if not obj or not obj.Name then continue end
-			game:GetService("ServerScriptService").gamemode.class[gmname][obj.Name]:Destroy()
+			if game:GetService("ServerScriptService").gamemode.class[gmname]:FindFirstChild(obj.Name) then
+				game:GetService("ServerScriptService").gamemode.class[gmname][obj.Name]:Destroy()
+			end
 			obj.Parent = game:GetService("ServerScriptService").gamemode.class[gmname]
 		end
 	end

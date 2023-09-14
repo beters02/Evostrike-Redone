@@ -23,7 +23,7 @@ function health:update()
 	local bar = healthBarFrame.Bar
 	local char = player.Character or player.CharacterAdded:Wait()
 	local hum = char:WaitForChild("Humanoid")
-	local currentShield = player:GetAttribute("shield")
+	local currentShield = player.Character:GetAttribute("Shield")
 	if currentShield == nil or not currentShield then currentShield = 0 end
 	
 	health = math.floor(hum.Health + currentShield)

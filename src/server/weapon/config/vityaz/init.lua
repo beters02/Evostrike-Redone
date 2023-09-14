@@ -1,4 +1,5 @@
 local wepconfig = {
+	name = "vityaz",
     inventorySlot = "primary",
 	automatic = true,
 	
@@ -27,12 +28,14 @@ local wepconfig = {
 	
 	damage = {
 		base = 19,
-		headMultiplier = 4,
+		headMultiplier = 5.5,
 		legMultiplier = 0.9,
 		damageFalloffPerMeter = 0.7,
 		damageFalloffDistance = 50,
 		damageFalloffMinimumDamage = 20,
-		enableHeadFalloff = false
+		enableHeadFalloff = false,
+		helmetMultiplier = 0.7,
+		destroysHelmet = true,
 	},
 	
 	movement = {

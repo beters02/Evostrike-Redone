@@ -88,7 +88,7 @@ function Dash:Use()
     -- play camera recoil
     self:UseCameraRecoil()
     
-    self.player.Character.movementScript.Events.Dash:Fire(Dash.strength, Dash.upstrength, Dash.jumpingUpstrengthModifier)
+    self.player.Character.MovementScript.Events.Dash:Fire(Dash.strength, Dash.upstrength, Dash.jumpingUpstrengthModifier)
 end
 
 function Dash:UseCameraRecoil()

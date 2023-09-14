@@ -1,4 +1,3 @@
-local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
 local DataStore2 = require(Framework.sm_datastore2.Location)

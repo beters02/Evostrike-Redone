@@ -9,6 +9,8 @@ local timerLabel = mainFrame:WaitForChild("TimerFrame"):WaitForChild("TextLabel"
 local yourScoreLabel = mainFrame.ScoreFrame.YourScore
 local enemyScoreLabel = mainFrame.ScoreFrame.EnemyScore
 
+enemy = enemy or {Name = "Bot"}
+
 local timer = false
 
 local function convertSecToMin(sec: number)

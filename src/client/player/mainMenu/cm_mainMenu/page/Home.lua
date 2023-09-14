@@ -1,7 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.mainMenu.Popup)
-local EvoMM = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("EvoMMWrapper"))
+local EvoMM = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
 
 local getGamemodeRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("Get")
 local gamemodeChangedRemote = ReplicatedStorage.gamemode.remote.ChangedEvent
@@ -35,10 +35,6 @@ function play:init()
         self._lastGotGamemode = gamemode
         self:_preparePageGamemode(gamemode, true)
     end)
-
-    -- grab the current gamemode
-    self._lastGotGamemode = getGamemodeRemote:InvokeServer()
-    self:_preparePageGamemode(self._lastGotGamemode, false)
 
     return self
 end
@@ -76,6 +72,7 @@ end
 --
 
 function play:_preparePageGamemode(gamemode: string, onChange)
+    task.wait()
     if gamemode == "Lobby" and onChange then
         self:_enableLoadStarterIslandButton()
     else
@@ -84,16 +81,23 @@ function play:_preparePageGamemode(gamemode: string, onChange)
 end
 
 function play:_enableLoadStarterIslandButton()
+    if self.StarterIslandLoaded then return end
+    self.StarterIslandLoaded = true
+
     self.Location.Card_StarterIsland.Visible = true
     self.Location.Card_BackToLobby.Visible = false
-    self._starterConn = self.Location.Card_StarterIsland.MouseButton1Click:Connect(function()
+    local conn
+    conn = self.Location.Card_StarterIsland.MouseButton1Click:Connect(function()
         local success = self.Location.Parent.SpawnRemote:InvokeServer()
+
         if success then
-            self._starterConn:Disconnect()
             self._closeMain()
             self.Location.Card_StarterIsland.Visible = false
+            conn:Disconnect()
+        else
+            self.StarterIslandLoaded = false
         end
-        self._starterConn:Disconnect()
+
     end)
 end
 
@@ -155,6 +159,71 @@ end
 
 --
 
+local function _casualQueueButtonClicked(self, card, queue)
+    if self.var.nextClickAllow > tick() then return end
+    self.var.nextClickAllow = tick() + ClickDebounce
+
+    -- check if player is already in queue
+    if card:GetAttribute("InQ") then
+        
+        -- show leaving queue text
+        local tween = TweenService:Create(card.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 1})
+        tween:Play()
+        
+        tween.Completed:Once(function()
+            if not tween then return end
+            card.InQueueText.TextLabel.Text = "LEAVING QUEUE..."
+            tween = TweenService:Create(card.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 0})
+            tween:Play()
+        end)
+
+        -- attempt queue leave
+        local success = EvoMM:RemovePlayerFromQueue(game:GetService("Players").LocalPlayer)
+        if not success then warn("Couldnt remove player from queue") return end
+
+        card:SetAttribute("InQ", false)
+
+        -- hude queue text
+        if tween then tween:Destroy() end
+        TweenService:Create(card.InQueueText.TextLabel, TweenInfo.new(1, Enum.EasingStyle.Cubic), {TextTransparency = 1}):Play()
+
+    else
+        -- join queue
+        card:SetAttribute("InQ", true)
+
+        -- show joining queue text
+        card.InQueueText.TextLabel.Text = "JOINING QUEUE..."
+        card.InQueueText.TextLabel.TextTransparency = 1
+        local tween = TweenService:Create(card.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 0})
+        tween:Play()
+
+        -- request add to queue
+        local success, err = EvoMM:AddPlayerToQueue(game:GetService("Players").LocalPlayer, queue)
+        if not success then warn("Couldn't add player to queue. Error: " .. tostring(err)) end
+        
+        -- show result text
+        local newText = success and "YOU ARE IN QUEUE" or "COULD NOT ADD TO QUEUE"
+        if tween then tween:Destroy() end
+        tween = TweenService:Create(card.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 1})
+        tween:Play()
+
+        task.delay(0.5, function()
+            card.InQueueText.TextLabel.Text = newText
+            tween = TweenService:Create(card.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 0})
+            tween:Play()
+        end)
+
+        if not success then
+            task.delay(3, function()
+                tween:Pause()
+                tween = TweenService:Create(card.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 1})
+                tween:Play()
+            end)
+        end
+
+    end
+end
+
 function play:_connectCasualGamemodeButtons()
     local casPage = self.Location.Parent.CasualFrame
 
@@ -168,68 +237,21 @@ function play:_connectCasualGamemodeButtons()
         self:_disconnectCasualGamemodeButtons()
     end))
 
+    -- connect queue buttons
     table.insert(self.connections.modes, casPage.Card_Deathmatch.MouseButton1Click:Connect(function()
-        if self.var.nextClickAllow > tick() then return end
-        self.var.nextClickAllow = tick() + ClickDebounce
+        _casualQueueButtonClicked(self, casPage.Card_Deathmatch, "Deathmatch")
+    end))
 
-        -- check if player is already in queue
-        if casPage.Card_Deathmatch:GetAttribute("InQ") then
-            
-            -- show leaving queue text
-            local tween = TweenService:Create(casPage.Card_Deathmatch.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 1})
-            tween:Play()
-            
-            tween.Completed:Once(function()
-                if not tween then return end
-                casPage.Card_Deathmatch.InQueueText.TextLabel.Text = "LEAVING QUEUE..."
-                tween = TweenService:Create(casPage.Card_Deathmatch.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 0})
-                tween:Play()
-            end)
+    table.insert(self.connections.modes, casPage.Card_1v1.MouseButton1Click:Connect(function()
+        _casualQueueButtonClicked(self, casPage.Card_1v1, "1v1")
+    end))
 
-            -- attempt queue leave
-            local success = EvoMM:RemovePlayerFromQueue(game:GetService("Players").LocalPlayer)
-            if not success then warn("Couldnt remove player from queue") return end
-
-            casPage.Card_Deathmatch:SetAttribute("InQ", false)
-
-            -- hude queue text
-            if tween then tween:Destroy() end
-            TweenService:Create(casPage.Card_Deathmatch.InQueueText.TextLabel, TweenInfo.new(1, Enum.EasingStyle.Cubic), {TextTransparency = 1}):Play()
-
-        else
-            -- join queue
-            casPage.Card_Deathmatch:SetAttribute("InQ", true)
-
-            -- show joining queue text
-            casPage.Card_Deathmatch.InQueueText.TextLabel.Text = "JOINING QUEUE..."
-            casPage.Card_Deathmatch.InQueueText.TextLabel.TextTransparency = 1
-            local tween = TweenService:Create(casPage.Card_Deathmatch.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 0})
-            tween:Play()
-
-            -- request add to queue
-            local success, err = EvoMM:AddPlayerToQueue(game:GetService("Players").LocalPlayer, "Deathmatch")
-            if not success then warn("Couldn't add player to queue. Error: " .. tostring(err)) end
-            
-            -- show result text
-            local newText = success and "YOU ARE IN QUEUE" or "COULD NOT ADD TO QUEUE"
-            if tween then tween:Destroy() end
-            tween = TweenService:Create(casPage.Card_Deathmatch.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 1})
-            tween:Play()
-
-            task.delay(0.5, function()
-                casPage.Card_Deathmatch.InQueueText.TextLabel.Text = newText
-                tween = TweenService:Create(casPage.Card_Deathmatch.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 0})
-                tween:Play()
-            end)
-
-            if not success then
-                task.delay(3, function()
-                    tween:Pause()
-                    tween = TweenService:Create(casPage.Card_Deathmatch.InQueueText.TextLabel, TweenInfo.new(0.5, Enum.EasingStyle.Cubic), {TextTransparency = 1})
-                    tween:Play()
-                end)
-            end
-
+    -- connect queue player amount updates
+    table.insert(self.connections.modes, EvoMM.Remote.OnClientEvent:Connect(function(action, ...)
+        if action == "SetGamemodeQueueCount" then
+            local queue: string, amount: number = ...
+            local card = casPage["Card_" .. queue]
+            card.PlayersInQueueText.TextLabel.Text = card.PlayersInQueueText.TextLabel:GetAttribute("Text") .. tostring(amount)
         end
     end))
 end

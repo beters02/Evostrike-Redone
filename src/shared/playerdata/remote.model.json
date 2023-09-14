@@ -8,6 +8,14 @@
       {
         "Name": "sharedPlayerDataRF",
         "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "sharedPlayerStatsRE",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "sharedPlayerStatsRF",
+        "ClassName": "RemoteFunction"
       }
     ]
   }

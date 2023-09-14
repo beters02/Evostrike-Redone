@@ -1,4 +1,5 @@
 local wepconfig = {
+	name = "deagle",
 	inventorySlot = "secondary",
 	automatic = false,
 	
@@ -36,6 +37,8 @@ local wepconfig = {
 		damageFalloffDistance = 27,
 		enableHeadFalloff = true,
 		headFalloffMultiplier = 0.6, -- Multiplier applied to damage falloff per meter
+		helmetMultiplier = 1,
+		destroysHelmet = true,
 	},
 
 	movement = {

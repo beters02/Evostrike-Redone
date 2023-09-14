@@ -19,7 +19,7 @@ function module:addOpenUI(uiName, ui, mouseIconEnabled)
 	-- set as new table so changed event fires
 	local new = self.var.openUIs
 	new[uiName] = {UI = ui, MouseIconEnabled = mouseIconEnabled or false}
-	return self:set("openUIs", new)
+	return self:set(self.player, "openUIs", new)
 end
 
 -- Remove an open UI from the state data
@@ -27,7 +27,11 @@ function module:removeOpenUI(uiName)
 	-- set as new table so changed event fires
 	local new = self.var.openUIs
 	new[uiName] = nil
-	return self:set("openUIs", new)
+	return self:set(self.player, "openUIs", new)
+end
+
+function module:hasOpenUI()
+	return #self:get(self.player, "openUIs") > 0
 end
 
 -- check if mouse icon should be enabled depending on currently open uis

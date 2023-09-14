@@ -25,6 +25,7 @@ local clientModel = tool:WaitForChild("ClientModelObject").Value
 local serverModel = tool.ServerModel
 local weaponName = string.gsub(tool.Name, "Tool_", "")
 local weaponRemoteFunction = tool:WaitForChild("WeaponRemoteFunction")
+local weaponRemoteEvent = tool:WaitForChild("WeaponRemoteEvent")
 local weaponGetRemote = weaponRemotes:WaitForChild("get")
 local weaponObjectsFolder = tool:WaitForChild("WeaponObjectsFolderObject").Value
 local weaponAnimationsFolder = weaponObjectsFolder.animations
@@ -73,7 +74,7 @@ local hum = char:WaitForChild("Humanoid")
 local camera = workspace.CurrentCamera
 local vm = camera:WaitForChild("viewModel")
 local mouse = player:GetMouse()
-local movementScript = char:WaitForChild("movementScript")
+local movementScript = char:WaitForChild("MovementScript")
 local movementCommunicate = require(movementScript:WaitForChild("Communicate"))
 local groundMaxSpeed = movementCommunicate.GetVar("groundMaxSpeed")
 
@@ -83,6 +84,9 @@ local VMEquipSpring
 local connectVMSpringEvent
 
 local defGroundMaxSpeed
+
+-- get controller
+local controllerModule = require(ReplicatedStorage.Modules.WeaponController.Module)
 
 -- init states
 States.SetStateVariable("PlayerActions", "shooting", false)
@@ -341,24 +345,6 @@ function util_stopAllVMAnimations()
 	end
 end
 
---[[@title 			- util_setVMTransparency
-	
-	@summary
-					- Set viewModel and descendants to specified transparency
-	@return			- {void}
-]]
-
-function util_setVMTransparency(t)
-    task.spawn(function()
-        for i, v in pairs(vm:GetDescendants()) do
-            if v:IsA("MeshPart") or v:IsA("BasePart") then
-                if v.Name == "HumanoidRootPart" or v.Name == "WeaponHandle" or v.Name == "WeaponTip" or v:GetAttribute("IgnoreTransparency") then continue end
-                v.Transparency = t
-            end
-        end
-    end)
-end
-
 --[[@title 			- util_setServerTransparency
 	
 	@summary
@@ -397,8 +383,6 @@ end
 ]]
 
 function util_processEquipAnimation()
-
-	util_setVMTransparency(1)
 	util_stopAllVMAnimations()
 	
 	-- disable grenade throwing animation if neccessary
@@ -412,12 +396,6 @@ function util_processEquipAnimation()
 	end)
 
     task.spawn(function() -- client
-
-        -- we make the vm transparent so you cant see the animations bugging
-        -- this may be unnecessary once i add seperate viewmodels to each weapon
-        task.delay(0.1, function()
-            util_setVMTransparency(0)
-        end)
 
         -- play pullout
 		local clientPullout = util_playAnimation("client", "Pullout")
@@ -497,7 +475,7 @@ function util_ShootWallRayRecurse(origin, direction, params, hitPart, damageMult
 	end
 
 	-- create bullethole at wall
-	sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, origin, nil, nil, nil, nil, true)
+	sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, origin, nil, nil, nil, nil, true, tool, clientModel)
 
 	table.insert(filter, result.Instance)
 	return util_ShootWallRayRecurse(origin, direction, _p, result.Instance, damageMultiplier - weaponWallbangInformation[bangableMaterial], filter)
@@ -548,10 +526,11 @@ function util_RegisterRecoils()
 		if result then
 
 			-- register client shot for bullet/blood/sound effects
-			sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1)
+			sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, tool, clientModel)
 
 			-- pass ray information to server for verification and damage
-			weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
+			weaponRemoteEvent:FireServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
+			--weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 			return true
 		end
 
@@ -649,25 +628,6 @@ function util_setInfoFrameKnife()
 	weaponInfoFrame.CurrentMagLabel.Visible = false
 	weaponInfoFrame.CurrentTotalAmmoLabel.Visible = false
 	weaponInfoFrame["/"].Visible = false
-end
-
---[[@title 			- conn_enableHotConnections
-	
-	@summary
-					- Enable connections that are to be disconnected upon unequip.
-                    - Reload, Fire Connections are initialized here.
-	@return			- {void}
-]]
-
-function conn_enableHotConnections()
-    --hotConnections.fireCheck = game:GetService("RunService").RenderStepped:Connect(fireCheck)
-	
-	--[[hotConnections.reloadCheck = UserInputService.InputBegan:Connect(function(input, gp)
-		if not player.Character or hum.Health <= 0 then return end
-		if input.KeyCode == Enum.KeyCode.R then
-			core_reload()
-		end
-	end)]]
 end
 
 function fireCheck()
@@ -828,55 +788,27 @@ local m_inputs = require(player.PlayerScripts.m_inputs)
 local types = m_inputs.Types
 
 function binds_connectHotBinds()
-	if not weaponVar._hotBinds then weaponVar._hotBinds = {} end
-
-	local hotKeyProp: types.KeyActionProperties = {
-		Repeats = false,
-		DestroyOnDead = true,
-		IgnoreWhen = {
-			function() return not weaponVar.equipped end,
-			function() return player:GetAttribute("Typing") end,
-			function() return player.PlayerGui.MainMenu.Enabled end
-		}
-	}
-	
-	weaponVar._hotBinds.reload = m_inputs:Bind(
-		"R",
-		weaponName .. "_Reload",
-		hotKeyProp,
-		{},
-		core_reload
-	):: types.KeyAction
-
-	weaponVar._hotBinds.fire = m_inputs:Bind(
-		"MouseButton1",
-		weaponName .. "_Fire",
-		hotKeyProp,
-		{},
-		conn_mouseDown,
-		conn_mouseUp
-	):: types.KeyAction
-
-	print('conn hotbind ' .. weaponName)
+	controllerModule.StoredWeaponController:ConnectActions(
+		function()
+			return core_fire(tick())
+		end,
+		function()
+			return core_reload()
+		end
+	)
 end
 
 function binds_disconnectHotBinds()
-	if not weaponVar._hotBinds then return end
-
-	for i, v in pairs(weaponVar._hotBinds) do
-		v.Unbind()
-	end
-
-	weaponVar._hotBinds = {}
-
-	task.wait()
-
-	print('disconn hotbind ' .. weaponName)
+	controllerModule.StoredWeaponController:DisconnectActions()
 end
 
 function core_equip()
-	if player:GetAttribute("Typing") then return end
-	if player.PlayerGui.MainMenu.Enabled then return end
+	if tool:GetAttribute("IsForceEquip") then
+		tool:SetAttribute("IsForceEquip", false)
+	else
+		if player:GetAttribute("Typing") then return end
+		if player.PlayerGui.MainMenu.Enabled then return end
+	end
 
 	-- enable weapon icon
 	util_setIconEquipped(true)
@@ -886,10 +818,6 @@ function core_equip()
     weaponVar.equipping = true
 	States.SetStateVariable("PlayerActions", "weaponEquipping", true)
 	States.SetStateVariable("PlayerActions", "weaponEquipped", weaponName)
-
-	-- connections
-	conn_enableHotConnections()
-	binds_connectHotBinds()
 
 	-- process equip animation and sounds next frame ( to let unequip run )
 	task.spawn(util_processEquipAnimation)
@@ -930,7 +858,7 @@ function core_unequip()
 	if not player.Character or hum.Health <= 0 then return end
 
 	util_setIconEquipped(false)
-	util_setVMTransparency(1)
+	controllerModule:Unequip(weaponOptions.inventorySlot)
 
 	if weaponVar.equipping then
 		weaponRemoteFunction:InvokeServer("EquipTimerCancel")
@@ -952,9 +880,7 @@ function core_unequip()
 	end)
 	
 	util_handleHoldMovementPenalize(false)
-	binds_disconnectHotBinds()
 	util_stopAllAnimations()
-	conn_disableHotConnections()
 
 end
 
@@ -987,11 +913,11 @@ local coreself = {
 	util_playAnimation = util_playAnimation
 }
 
-core_fire = function(t)
+core_fire = function()
 	if not player.Character or hum.Health <= 0 then return end
 	if States.GetStateVariable("PlayerActions", "grenadeThrowing") then return end
 	local autoReload
-	weaponVar, autoReload = corefunc.fire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, t)
+	weaponVar, autoReload = corefunc.fire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, tick())
 	if autoReload then
 		task.spawn(function()
 			repeat task.wait() until tick() >= autoReload
@@ -1005,6 +931,14 @@ core_reload = function()
 	if States.GetStateVariable("PlayerActions", "grenadeThrowing") then return end
 	weaponVar = corefunc.reload(weaponOptions, weaponVar, weaponRemoteFunction)
 end
+
+controllerModule.StoredWeaponController:GetInventoryWeaponByName(weaponName).CoreFunctions = {
+	firedown = conn_mouseDown,
+	fireup = conn_mouseUp,
+	reload = core_reload
+}
+
+print(controllerModule)
 
 --[[{                                 }]
 

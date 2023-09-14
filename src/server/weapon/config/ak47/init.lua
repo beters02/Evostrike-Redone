@@ -1,4 +1,5 @@
 local wepconfig = {
+	name = "ak47",
     inventorySlot = "primary",
 	automatic = true,
 	
@@ -32,7 +33,9 @@ local wepconfig = {
 		damageFalloffPerMeter = 0.7,
 		damageFalloffDistance = 35,
 		damageFalloffMinimumDamage = 20,
-		enableHeadFalloff = false
+		enableHeadFalloff = false,
+		helmetMultiplier = 1,
+		destroysHelmet = true,
 	},
 	
 	movement = {

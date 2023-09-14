@@ -119,47 +119,46 @@ function module.CreateBulletHole(result)
 	return bullet_hole
 end
 
-function module.CreateBullet(fromChar, endPos, client)
-
-	-- get starting position
-	local tool = fromChar:FindFirstChildWhichIsA("Tool")
+function module.CreateBullet(tool, endPos, client, fromModel)
 
 	--create bullet part
 	local part = BulletModel:Clone()
-	part.Parent = workspace.Temp
+
+	local pos
+	if fromModel then
+		pos = fromModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
+	end
+
 	part.Size = Vector3.new(0.1, 0.1, 0.4)
-	if not client then part.Position = tool.ServerModel.GunComponents.WeaponHandle.FirePoint.WorldPosition else
-	part.Position = client and workspace.CurrentCamera.viewModel.Equipped.ClientModel.GunComponents.WeaponHandle.FirePoint.WorldPosition end
+	part.Position = pos
+	part.CFrame = CFrame.new(pos)
 	part.Transparency = 1
-	part.CFrame = CFrame.lookAt(part.Position, endPos)
+	part.CFrame = CFrame.lookAt(pos, endPos)
 	part.CollisionGroup = "None"
+	part.Parent = workspace.Temp
 
 	local tween = Tween:Create(
 		part,
-		TweenInfo.new(((part.Position - endPos).magnitude)/1100), -- bullet speed w/ arbitrary modifier
+		TweenInfo.new(((pos - endPos).magnitude) * (1 / 900)), -- 900 studs a sec
 		{Position = endPos}
 	)
-
-	-- we might not need size tween because of the new trail
-	local sizetween = Tween:Create(part, TweenInfo.new(.2), {Size = Vector3.new(0.1, 0.1, 0.7), Transparency =  0})
 
 	-- create finished event to fire
 	local finished = Instance.new("BindableEvent")
 
-	task.delay(0.015, function() -- wait debug so the bullet is shown starting at the tip of the weapon
-		tween:Play() -- play tweens and destroy bullet
-		--sizetween:Play()
-		tween.Completed:Wait()
+	task.wait()
 
-		-- we anchor and then let the trails finish
-		part.Anchored = true
-		part.Transparency = 1
-		Debris:AddItem(part, 3)
+	tween:Play() -- play tweens and destroy bullet
+	tween.Completed:Wait()
 
-		-- fire finished event
-		finished:Fire()
-		Debris:AddItem(finished, 3)
-	end)
+	-- we anchor and then let the trails finish
+	part.Anchored = true
+	part.Transparency = 1
+	Debris:AddItem(part, 3)
+
+	-- fire finished event
+	finished:Fire()
+	Debris:AddItem(finished, 3)
 
 	return part, finished
 end
@@ -182,11 +181,11 @@ end
 
 	Replicates CreateBullet to all Clients except caster
 ]] 
-function module.FireBullet(fromChar, result, isHumanoid, isBangable)
+function module.FireBullet(fromChar, result, isHumanoid, isBangable, tool, fromModel)
 	if game:GetService("RunService"):IsServer() then return end
-	module.CreateBullet(fromChar, result.Position, true)
+	module.CreateBullet(tool, result.Position, true, fromModel)
 	task.spawn(function()
-		WeaponRemotes.replicate:FireServer("CreateBullet", fromChar, result.Position, false)
+		WeaponRemotes.replicate:FireServer("CreateBullet", tool, result.Position, false)
 	end)
 	if not isHumanoid then
 		task.spawn(function()
@@ -232,9 +231,6 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 			damage *= weaponOptions.damage.legMultiplier
 		end
 
-		-- round damage to remove decimals
-		damage = math.round(damage)
-
 		-- calculate damage falloff
 		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
 			local diff = distance - weaponOptions.damage.damageFalloffDistance
@@ -243,6 +239,9 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 
 		-- wallbang multiplier
 		if wallbangDamageMultiplier then damage *= wallbangDamageMultiplier end
+
+		-- round damage to remove decimals
+		damage = math.round(damage)
 
 		-- see if player will be killed after damage is applied
 		killed = hum.Health <= damage and true or false
@@ -253,6 +252,7 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 			char:SetAttribute("bulletRagdollNormal", -normal)
 			char:SetAttribute("bulletRagdollKillDir", (player.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Unit)
 			char:SetAttribute("lastHitPart", instance.Name)
+			char:SetAttribute("lastUsedWeapon", weaponOptions.name)
 
 			-- apply damage
             hum:TakeDamage(damage)
@@ -273,7 +273,7 @@ end
 	Also compensates for lag if needed
 ]]
 
-function module.RegisterShot(player, weaponOptions, result, origin, dir, registerTime, isHumanoid, wallbangDamageMultiplier, isBangable)
+function module.RegisterShot(player, weaponOptions, result, origin, dir, registerTime, isHumanoid, wallbangDamageMultiplier, isBangable, tool, fromModel)
 	if not result.Instance then return false end
 
 	local particleFolderName
@@ -315,17 +315,21 @@ function module.RegisterShot(player, weaponOptions, result, origin, dir, registe
 			
 			-- sounds
 			if soundFolderName then
-				task.spawn(function()
-					module.PlayGlobalSound(player.Character, "PlayerHit", soundFolderName)
-					if killed then
-						module.PlayGlobalSound(player.Character, "PlayerKilled")
+				if not char:GetAttribute("ClientRegisteredKilled") then
+					task.spawn(function()
+						module.PlayGlobalSound(player.Character, "PlayerHit", soundFolderName)
+					end)
+					if killed and not char:GetAttribute("ClientRegisteredKilled") then
+						char:SetAttribute("ClientRegisteredKilled", true)
+						task.spawn(function()
+							module.PlayGlobalSound(player.Character, "PlayerKilled")
+						end)
 					end
-				end)
+				end
 			end
-
 		end)
 
-		return module.FireBullet(player.Character, result, isHumanoid, isBangable)
+		return module.FireBullet(player.Character, result, isHumanoid, isBangable, tool, fromModel)
 	elseif isHumanoid then
 		return util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
 	end

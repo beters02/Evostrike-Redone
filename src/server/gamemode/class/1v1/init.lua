@@ -6,7 +6,9 @@ local Ability = require(Framework.Ability.Location)
 local Weapon = require(Framework.Weapon.Location)
 local diedMainEvent = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
 local RunService = game:GetService("RunService")
-local FadeScreenOut = require(Framework.Module.lib.m_fadescreenout)
+local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
+local MapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
+local PlayerStats = require(Framework.shm_playerstats.Location)
 
 local _1v1 = {
     minimumPlayers = 2,
@@ -20,6 +22,12 @@ local _1v1 = {
 
     startWithBarriers = true,
     barrierLength = 3,
+    canQueue = true,
+
+    shieldEnabled = true,
+    startingShield = 50,
+    startingHelmet = true,
+    startingHealth = 100,
 
     weaponPool = {
         primary = {"AK103", "ACR"},
@@ -38,41 +46,76 @@ local _1v1 = {
     buymenu = nil
 }
 
+-- Inherit doGui functions on require
+local doGui = require(game:GetService("ServerScriptService").gamemode.fc_doGui)
+local TeleportService = game:GetService("TeleportService")
+for i, v in pairs(doGui._1v1) do
+    _1v1[i] = v
+end
+
 -- Base Functions
 
 function _1v1:Start()
     print("Gamemode " .. self.Name .. " started!")
+
+    -- Set IsGameServer
+    -- Players can rejoin in this gamemode.
+    EvoMM.MatchmakingService:SetIsGameServer(true, true)
 
     -- init current players (self.players)
     for _, player in pairs(Players:GetPlayers()) do
         self:InitPlayerData(player)
     end
 
-    -- init player added connection
-    if self.playerAddedConnection then self.playerAddedConnection:Disconnect() end
-    self.playerAddedConnection = Players.PlayerAdded:Connect(function(player)
-        self:InitPlayerData(player)
-    end)
-
     -- wait for min
-    if #self.players < (self.minimumPlayers or 1) then
-        self:WaitForMinimumPlayers()
+    if #self.players < self.minimumPlayers or 1 then
+        if self.playerAddedConnection then self.playerAddedConnection:Disconnect() end
+        self.playerAddedConnection = Players.PlayerAdded:Connect(function(player)
+            self:InitPlayerData(player)
+            self:WaitingScreen(player)
+        end)
+        self:WaitingScreenAll()
+        self:WaitForMinimumPlayers()        
     end
 
-    -- init playerdata removing connection
+    self:RemoveWaitingScreenAll(false)
+
+    self.playerAddedConnection = Players.PlayerAdded:Connect(function()
+        -- spectate
+        -- for now we'll just set their camera position to somewhere on top of the map
+    end)
+
     self.playerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
         if self.playerdata[player.Name] then
+
+            -- update stats
+
+            -- remove playerdata
             pcall(function()
                 for i, v in pairs(self.playerdata[player.Name].connections) do
                     v:Disconnect()
                 end
             end)
+
             self.playerdata[player.Name] = nil
-            self.players[player.Name] = nil
+            self:RemovePlayerFromPlayers(player)
         end
+
+        if #self.players > 0 and self.players < self.minimumPlayers then
+            -- stop 1v1 and restart with "waiting for players"
+            task.delay(2, function()
+                self:Start()
+            end)
+            self:Stop()
+        elseif self.players == 0 then
+            -- stop and do not restart, server will automatically be shut down
+            self:Stop()
+        end
+
     end)
 
     -- init player died registration connection
+    -- disconnect the previous playerDied if necessary
     if self.playerDiedRegisterConn then self.playerDiedRegisterConn:Disconnect() end
     self.playerDiedRegisterConn = diedMainEvent.OnServerEvent:Connect(function(player)
         self:Died(player)
@@ -81,8 +124,10 @@ function _1v1:Start()
     -- init player round gui
     self:InitPlayerGuiAll()
 
-    -- fade screen in
-    self:FadeScreenInAll()
+    -- This will actually already be done during the waiting phase,
+    -- i'll leave it here just in case it breaks something
+    --[[fade screen in
+    --self:FadeScreenInAll()]]
 
     task.wait(1)
 
@@ -98,11 +143,11 @@ function _1v1:Stop()
     if self.playerAddedConnection then self.playerAddedConnection:Disconnect() end
     if self.isWaiting then
         --coroutine.yield(self.waitingThread)
-        return
+        -- return ???
+        self.isWaiting = false
     end
-
-    -- stop queue service
-    --QueueService:Stop()
+    
+    EvoMM.MatchmakingService:SetIsGameServer(false, false)
 
     -- remove all weapons and abilities
     Ability.ClearAllPlayerInventories()
@@ -135,10 +180,65 @@ function _1v1:Stop()
 end
 
 function _1v1:GameEnd(winner, loser)
-    
-    -- game over screen
-    -- update stats on DataStore
 
+    EvoMM.MatchmakingService:SetIsGameServer(false, false)
+
+    self:UnloadAllCharacters()
+
+    task.delay(3, function()
+        TeleportService:TeleportAsync(MapIDs.GetMapId("lobby"), self.players)
+        print('Players teleported to Lobby. Destroying server in 5 seconds.')
+        task.delay(5, function()
+            self:Stop()
+        end)
+    end)
+
+    -- update stats on DataStore
+    local currmap = MapIDs.GetCurrentMap()
+
+    -- winner
+    local function updateWinner()
+        local winnerstats = PlayerStats.Get(winner)
+        winnerstats[currmap].wins += 1
+        winnerstats[currmap].kills += self.playerdata[winner.Name].wins
+        winnerstats[currmap].deaths += self.playerdata[winner.Name].deaths
+        winnerstats[currmap].damage += self.playerdata[winner.Name].totalDamage
+        PlayerStats.Set(winner, winnerstats, true)
+    end
+
+    task.spawn(function()
+        local succ, err = pcall(updateWinner)
+        if not succ then
+            local count = 1
+            repeat
+                succ, err = pcall(updateWinner)
+                count += 1
+            until succ or count > 3
+            if not succ then warn("Could not set PlayerData " .. winner.Name .. " " .. tostring(err)) end
+        end
+    end)
+
+    -- loser
+    local function updateLoser()
+        local loserstats = PlayerStats.Get(winner)
+        loserstats[currmap].losses += 1
+        loserstats[currmap].kills += self.playerdata[loser.Name].wins
+        loserstats[currmap].deaths += self.playerdata[loser.Name].deaths
+        loserstats[currmap].damage += self.playerdata[loser.Name].totalDamage
+        PlayerStats.Set(winner, loserstats, true)
+    end
+
+    task.spawn(function()
+        local succ, err = pcall(updateLoser)
+        if not succ then
+            local count = 1
+            repeat
+                succ, err = pcall(updateLoser)
+                count += 1
+            until succ or count > 3
+            if not succ then warn("Could not set PlayerData " .. loser.Name .. " " .. tostring(err)) end
+        end
+    end)
 end
 
 -- Round Functions
@@ -196,7 +296,10 @@ function _1v1:RoundEnd(result, winner, loser) -- result: RoundOverWon or RoundOv
     end)
 
     -- let player run around for a sec
-    task.wait(3)
+    --task.wait(3)
+
+    local roundWonPostPeriodFinished = self:RoundWonScreen(winner, loser)
+    roundWonPostPeriodFinished.Event:Wait()
 
     -- fade screens
     self:FadeScreenInAll()
@@ -338,6 +441,18 @@ function _1v1:InitPlayerData(player)
     if not table.find(self.players, player) then table.insert(self.players, player) end
 end
 
+function _1v1:RemovePlayerFromPlayers(player)
+    local fi = table.find(self.players)
+    if fi then
+        table.remove(fi, self.players)
+    else
+        for i, v in pairs(self.players) do
+            if v == player then fi = true self.players[i] = nil break end
+        end
+    end
+    return fi or false, warn("Player not found")
+end
+
 function _1v1:LoadAllCharacters()
     local RandomizedSpawns, RoundWeapons, RoundAbilities = self:RoundStartGetPlayerContent()
     for i, v in pairs(self.players) do
@@ -412,6 +527,7 @@ end
 
 function _1v1:GetOtherPlayer(player)
     for i, v in pairs(self.players) do
+        if type(v) == "table" then return v end
         if v:IsA("Player") and v ~= player then return v end
     end
     return false
@@ -425,71 +541,9 @@ function _1v1:GetTotalPlayerCount()
     return _count
 end
 
--- Player Gui functions
-
-function _1v1:InitPlayerGuiAll()
-    for i, v in pairs(self.players) do
-        local _bar = self.Location.GamemodeBar:Clone()
-        self.Location.gamemodeGuiMain:Clone().Parent = _bar
-
-        local enemyobj = Instance.new("ObjectValue")
-        enemyobj.Name = "EnemyObject"
-        enemyobj.Value = self:GetOtherPlayer(v)
-        enemyobj.Parent = _bar
-
-        _bar.Parent = v.PlayerGui
-    end
-end
-
-function _1v1:UpdateGuiScoreAll()
-    for i, v in pairs(self.players) do
-        if not Players:GetPlayers(v.Name) then continue end
-        v.PlayerGui.GamemodeBar.RemoteEvent:FireClient(v, "UpdateScore", self.playerdata[v.Name].wins, self.playerdata[self:GetOtherPlayer(v).Name].wins)
-    end
-end
-
-function _1v1:StartGuiTimerAll(length)
-    for i, v in pairs(self.players) do
-        if not Players:GetPlayers(v.Name) then continue end
-        v.PlayerGui.GamemodeBar.RemoteEvent:FireClient(v, "StartTimer", length)
-    end
-end
-
-function _1v1:StopGuiTimerAll()
-    for i, v in pairs(self.players) do
-        if not Players:GetPlayers(v.Name) then continue end
-        v.PlayerGui.GamemodeBar.RemoteEvent:FireClient(v, "StopTimer")
-    end
-end
-
--- Make screen black
-function _1v1:FadeScreenInAll()
-    if not self.var.fades then self.var.fades = {} end -- save so we can fade in during spawn
-    for i, v in pairs(self.players) do
-        table.insert(self.var.fades, FadeScreenOut(v))
-        self.var.fades[#self.var.fades] = self.var.fades[#self.var.fades] :: FadeScreenOut.Fade -- just for type signature
-        self.var.fades[#self.var.fades].In:Play()
-    end
-end
-
--- Remove black screen
-function _1v1:FadeScreenOutAll()
-    if self.var.fades then
-        for i, v in pairs(self.var.fades) do
-            v.OutWrap()
-            if i == #self.var.fades then
-                task.delay(v.OutLength, function()
-                    self.var.fades = {}
-                end)
-            end
-        end
-    end
-end
-
 -- Died
 
 function _1v1:Died(player)
-
     self:DiedCamera(player)
     self:DiedGui(player)
 
@@ -497,7 +551,6 @@ function _1v1:Died(player)
         Weapon.ClearPlayerInventory(player)
         Ability.ClearPlayerInventory(player)
     end)
-
 end
 
 function _1v1:DiedCamera(player)

@@ -7,7 +7,11 @@ local Range = {
     botsEnabled = true,
     playerDataEnabled = true,
     startWithMenuOpen = false,
-    playerdata = {}
+    playerdata = {},
+    shieldEnabled = true,
+    startingShield = 50,
+    startingHelmet = true,
+    startingHealth = 100,
 }
 
 local buyMenuGui
@@ -88,7 +92,7 @@ function Range:SpawnPlayer(player)
         end
 
         player:LoadCharacter()
-        task.wait()
+        task.wait(0.25)
 
         player.Character.Humanoid.Health = 100
 
@@ -107,9 +111,9 @@ function Range:SpawnPlayer(player)
         Ability.Add(player, loadout.ability.secondary)
 
         -- add weapons
-        Weapon.Add(player, loadout.weapon.primary, true)
+        Weapon.Add(player, loadout.weapon.primary)
         Weapon.Add(player, loadout.weapon.secondary)
-        Weapon.Add(player, "Knife")
+        Weapon.Add(player, "Knife", true)
 
         -- buy menu
         self:AddBuyMenu(player)

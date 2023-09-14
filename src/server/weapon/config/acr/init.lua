@@ -1,4 +1,5 @@
 local wepconfig = {
+	name = "acr",
     inventorySlot = "primary",
 	automatic = true,
 	
@@ -27,12 +28,14 @@ local wepconfig = {
 	
 	damage = {
 		base = 23,
-		headMultiplier = 4,
+		headMultiplier = 5.3,
 		legMultiplier = 0.9,
 		damageFalloffPerMeter = 0.7,
 		damageFalloffDistance = 35,
 		damageFalloffMinimumDamage = 19,
-		enableHeadFalloff = false
+		enableHeadFalloff = false,
+		helmetMultiplier = 0.78,
+		destroysHelmet = true,
 	},
 	
 	movement = {

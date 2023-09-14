@@ -31,7 +31,7 @@ function viewmodelModule.initialize()
     self.vmhrp = self.vm:WaitForChild("HumanoidRootPart")
     
     self.movementVel = self.charhrp:WaitForChild("movementVelocity")
-    self.movementGet = self.char:WaitForChild("movementScript").Events.Get
+    self.movementGet = self.char:WaitForChild("MovementScript").Events.Get
     --local equippedWeapon = false
     self.cdt = 1/60
     

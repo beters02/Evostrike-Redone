@@ -1,4 +1,5 @@
 local wepconfig = {
+	name = "glock17",
 	inventorySlot = "secondary",
 	automatic = false,
 	
@@ -27,15 +28,17 @@ local wepconfig = {
 	},
 	
 	damage = {
-		base = 15,
+		base = 16,
 		min = 10,
 
-		headMultiplier = 3.3,
+		headMultiplier = 7,
 		legMultiplier = 0.9,
 		damageFalloffPerMeter = 1.5,
 		damageFalloffDistance = 20,
 		enableHeadFalloff = true,
 		headFalloffMultiplier = 0.6, -- Multiplier applied to damage falloff per meter
+		helmetMultiplier = 0.42,
+		destroysHelmet = false,
 	},
 
 	movement = {

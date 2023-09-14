@@ -14,6 +14,11 @@ local Deathmatch = {
     canQueue = true,
     startWithMenuOpen = false,
 
+    shieldEnabled = true,
+    startingShield = 50,
+    startingHelmet = true,
+    startingHealth = 100,
+
     playerdata = {},
     buymenu = nil
 }
@@ -71,7 +76,7 @@ function Deathmatch:SpawnPlayer(player)
         end
 
         player:LoadCharacter()
-        task.wait()
+        task.wait(0.2)
 
         player.Character.Humanoid.Health = 100
 

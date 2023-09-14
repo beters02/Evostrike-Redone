@@ -12,6 +12,7 @@ local WeaponAddRemoveEvent = WeaponRemotes.addremove
 local WeaponScripts = {ServerScriptService.weapon.obj.base_client, ServerScriptService.weapon.obj.base_server}
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
 local GlobalWeaponObj = game:GetService("ReplicatedStorage").weapon:WaitForChild("obj"):WaitForChild("global")
+local WeaponControllerModule = require(ReplicatedStorage.Modules.WeaponController.Module)
 --local ServerPlayerData = require(Framework.sm_serverPlayerData.Location)
 
 -- [[ Module ]]
@@ -192,7 +193,7 @@ end
     @return
 ]]
 function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean?)
-
+	print('ADDING ' .. tostring(weaponName))
     -- init some check var
     local weaponObjects: Folder?
     local weaponOptions: ModuleScript?
@@ -265,15 +266,8 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean?)
 	forceEquip = forceEquip or false
 
 	-- Add Weapon Client
-	WeaponAddRemoveEvent:FireClient(player, "Add", weaponName, weaponOptions, weaponObjects, tool, forceEquip)
-
-	task.wait(0.1)
-
-	-- force equip
-	if forceEquip then
-		player.Character:WaitForChild("Humanoid"):EquipTool(tool)
-	end
-
+	--WeaponAddRemoveEvent:FireClient(player, "Add", weaponName, weaponOptions, weaponObjects, tool, forceEquip)
+	WeaponControllerModule:AddWeapon(player, 10, weaponName, weaponOptions, weaponObjects, tool, clientModel, forceEquip)
     return tool
 end
 
@@ -285,7 +279,8 @@ end
 ]]
 function Weapon.Remove(player, weaponTable)
 	local tool = weaponTable.Tool
-	WeaponAddRemoveEvent:FireClient(player, "Remove", tool, weaponTable.Name)
+	--WeaponAddRemoveEvent:FireClient(player, "Remove", tool, weaponTable.Name)
+	WeaponControllerModule:RemoveWeapon(player, 3, weaponTable.Name)
 
 	pcall(function()
 		tool:Destroy()

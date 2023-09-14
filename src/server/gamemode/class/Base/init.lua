@@ -5,9 +5,10 @@ local Ability = require(Framework.Ability.Location)
 local Weapon = require(Framework.Weapon.Location)
 local GamemodeClasses = game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("class")
 local CollectionService = game:GetService("CollectionService")
-local BotModule = require(game:GetService("ServerScriptService"):WaitForChild("bots"):WaitForChild("m_bots"))
+--local BotModule = require(game:GetService("ServerScriptService"):WaitForChild("bots"):WaitForChild("m_bots"))
+local BotService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("BotService"))
 local diedMainEvent = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
-local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("EvoMMWrapper"))
+local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
 
 local Base = {
     minimumPlayers = 1,
@@ -19,6 +20,11 @@ local Base = {
     respawnsEnabled = true,
     respawnLength = 2,
     startWithMenuOpen = false,
+
+    shieldEnabled = true,
+    startingShield = 50,
+    startingHelmet = true,
+    startingHealth = 100,
 
     objects = {
         baseLocation = GamemodeClasses:WaitForChild("Base"),
@@ -34,8 +40,7 @@ local Base = {
     status = "running",
     isWaiting = false,
     customDiedCallbacks = {},
-    playerdata = {},
-    players = {}
+    playerdata = {}
 }
 
 Base.__index = Base
@@ -58,7 +63,7 @@ function Base:Start()
     end)
 
     -- wait for min
-    if #self.players < (self.minimumPlayers or 1) then
+    if #(self.players or game:GetService("Players"):GetPlayers()) < (self.minimumPlayers or 1) then
         self:WaitForMinimumPlayers(self.minimumPlayers or 1)
     end
 
@@ -67,12 +72,14 @@ function Base:Start()
     self.playerAddedConnection = Players.PlayerAdded:Connect(function(player)
         self:InitPlayerData(player)
         self:SpawnPlayer(player)
+        print('spawn plradd')
     end)
 
     -- spawn players
-    for i, v in pairs(self.players) do
+    for i, v in pairs(self.players or game:GetService("Players"):GetPlayers()) do
         task.spawn(function()
             self:SpawnPlayer(v)
+            print('spawn initial')
         end)
     end
 
@@ -86,7 +93,9 @@ function Base:Start()
                     end
                 end)
                 self.playerdata[player.Name] = nil
-                self.players[player.Name] = nil
+                if self.players then
+                    self.players[player.Name] = nil
+                end
             end
         end)
     end
@@ -100,7 +109,7 @@ function Base:Start()
     -- init bots if necessary
     if self.botsEnabled then
         for i, v in pairs(self.objects.bots:GetChildren()) do
-            BotModule:Add(v)
+            BotService:AddBot({SpawnCFrame = v.PrimaryPart.CFrame})
         end
     end
 
@@ -131,15 +140,9 @@ function Base:Stop()
 
     -- disconnect connections
     if self.playerAddedConnection then self.playerAddedConnection:Disconnect() end
-    if self.isWaiting then
-        --coroutine.yield(self.waitingThread)
-        return
-    end
-    --self.serverInfoUpdateConn:Disconnect()
+    if self.isWaiting then self.isWaiting = false end
 
-    -- stop queue service
     -- remove all queue'd players?
-    --QueueService:Stop()
 
     -- remove all weapons and abilities
     Ability.ClearAllPlayerInventories()
@@ -159,19 +162,8 @@ function Base:Stop()
         v:Destroy()
     end
 
-    -- this is being used for other items so lets make a folder in temp to clear
-    --[[for i, v in pairs(ReplicatedStorage:WaitForChild("temp"):GetChildren()) do
-        v:Destroy()
-    end]]
-
     -- destroy bots
-    for i, v in pairs(CollectionService:GetTagged("Bot")) do
-        task.spawn(function()
-            v.Humanoid:TakeDamage(1000)
-            task.wait(0.1)
-            v:Destroy()
-        end)
-    end
+    BotService:RemoveAllBots()
 
     task.wait(0.1)
 
@@ -183,7 +175,7 @@ function Base:ForceStart()
     
     -- fill missing players with bots
     for i = 1, self.minimumPlayers - #self.players do
-        table.insert(self.players, BotModule:Add(false, {Respawn = true, RespawnLength = 0}))
+        table.insert(self.players, BotService:AddBot({Respawn = true, RespawnLength = 0}))
         self:InitPlayerData(self.players[#self.players])
     end
 
@@ -194,7 +186,7 @@ end
 function Base:WaitForMinimumPlayers(min)
     repeat
         task.wait(0.5)
-    until #self.players >= min
+    until #self.players or game:GetService("Players"):GetPlayers() >= min
 end
 
 function Base:GetTotalPlayerCount()
@@ -208,6 +200,7 @@ end
 -- Player Functions
 
 function Base:InitPlayerData(player)
+    if not self.players then self.players = {} end
     self.playerdata[player.Name] = {deathCameraScript = false, isSpawned = false}
     if not table.find(self.players, player) then table.insert(self.players, player) end
 end
@@ -242,14 +235,22 @@ function Base:SpawnPlayer(player)
             local spwn = Instance.new("RemoteFunction", player.PlayerGui:WaitForChild("MainMenu"))
             spwn.Name = "SpawnRemote"
 
+            local invoked = false
+
             spwn.OnServerInvoke = function()
-                return pcall(function()
+                if invoked then return end
+                invoked = true
+                local succ, err = pcall(function()
                     self.playerdata[player.Name].isSpawned = true
                     player.PlayerGui:WaitForChild("MainMenu"):SetAttribute("NotSpawned", false)
                     self:SpawnPlayer(player)
+                    print('spawn menu')
                     Debris:AddItem(_c, 1)
                 end)
+                invoked = false
+                return succ, err
             end
+
             return
         end
         
@@ -261,7 +262,7 @@ function Base:SpawnPlayer(player)
         task.wait()
         
         local hum = player.Character:WaitForChild("Humanoid")
-        player.Character.Humanoid.Health = 100
+        player.Character.Humanoid.Health = self.startingHealth
     
         -- teleport player to spawn
         local spawnLoc = self.objects.spawns.Default
@@ -271,7 +272,9 @@ function Base:SpawnPlayer(player)
     
         Ability.Add(player, "Dash")
         Weapon.Add(player, "Knife", true)
-    
+        
+        print('starting')
+
         local conn
         conn = hum:GetPropertyChangedSignal("Health"):Connect(function()
             if self.status ~= "running" then conn:Disconnect() return end
@@ -313,6 +316,7 @@ function Base:Died(player)
         task.wait(self.respawnLength)
         if self.status == "running" then
             self:SpawnPlayer(player)
+            print('spawn died')
         end
     end
 

@@ -16,6 +16,14 @@
       {
         "Name": "playerLoadedEvent",
         "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "playerDamagedEvent",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "setShieldAll",
+        "ClassName": "BindableEvent"
       }
     ]
   }

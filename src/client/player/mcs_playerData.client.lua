@@ -12,7 +12,6 @@ local update = RunService.RenderStepped:Connect(function()
     nxt = tick() + 10
     
     clientPlayerDataModule:Save()
-    print('Auto saved settings!')
 end)
 
 game:GetService("Players").PlayerRemoving:Connect(function(plr)

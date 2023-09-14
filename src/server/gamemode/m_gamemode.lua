@@ -10,7 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GamemodeLoc = game:GetService("ServerScriptService"):WaitForChild("gamemode")
 local GamemodeBase = require(GamemodeLoc:WaitForChild("class"):WaitForChild("Base"))
 local StoredMapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
-local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("EvoMMWrapper"))
+local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
 
 -- disable characterautoloads on default
 Players.CharacterAutoLoads = false
@@ -43,8 +43,6 @@ function Gamemode.Init()
         end
 
         if not g then g = DefaultGamemode end
-        print(data)
-        print(g)
 
         -- disconnect player added connection instantly to avoid gamemode starting twice
         Gamemode.playerAddedConnection:Disconnect()

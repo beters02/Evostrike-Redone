@@ -57,6 +57,7 @@ local profile = {
 			crouchToggle = 0
 		}
     },
+
 	states = {
 		isQueueProcessing = false,
 		isQueueAdding = false,

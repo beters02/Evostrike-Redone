@@ -1,29 +1,52 @@
 local MatchmakingService
 local RunService = game:GetService("RunService")
 local Bridge = script:WaitForChild("Bridge")
+local RemoteEvent = script:WaitForChild("Remote")
 local StoredMapIDs
+local GameFoundGui = script:WaitForChild("GameFoundGui")
 
 local module = {}
+
+module.Bridge = Bridge
+module.Remote = RemoteEvent
 
 function module:StartQueueService(gamemodes)
     if RunService:IsClient() then return end
 
+    -- custom tele data
     MatchmakingService.ApplyCustomTeleportData = function(_, gameData)
         return {RequestedGamemode = string.split(gameData.map, "_")[2]}
     end
 
+    -- game found
+    MatchmakingService.FoundGame:Connect(function(player)
+        GameFoundGui:Clone().Parent = player
+    end)
+
+    -- init gamemodes
     for _, gamemode in pairs(gamemodes) do
-        -- init gamemode
         local req = require(game:GetService("ServerScriptService"):WaitForChild("gamemode").class[gamemode])
-        
 
         -- init gamemode's maps
         for map, mapid in pairs(StoredMapIDs.GetMapInfoInGamemode(gamemode)) do
             MatchmakingService:SetPlayerRange(map .. "_" .. gamemode, NumberRange.new(req.minimumPlayers or 1, req.maximumPlayers or 8))
             MatchmakingService:AddGamePlace(map .. "_" .. gamemode, mapid)
-            print('init ' .. map .. "_" .. gamemode)
         end
     end
+
+    -- update queue count
+    self._UpdateQueueCount = task.spawn(function()
+        while true do
+            task.wait(2)
+            self:PushGamemodeQueueCount("Deathmatch")
+            self:PushGamemodeQueueCount("1v1")
+        end
+    end)
+end
+
+function module:StopQueueService()
+    MatchmakingService.FoundGame:Disconnect()
+    coroutine.yield(self._UpdateQueueCount)
 end
 
 function module:AddPlayerToQueue(player, queue)
@@ -48,6 +71,33 @@ function module:RemovePlayerFromQueue(player)
         return Bridge:InvokeServer("RemovePlayerFromQueue", player)
     end
     return MatchmakingService:RemovePlayerFromQueue(player)
+end
+
+function module:GetGamemodeQueueCount(gamemode)
+    if RunService:IsClient() then
+        return Bridge:InvokeServer("GetGamemodeQueueCount", gamemode)
+    end
+
+    local counts = MatchmakingService:GetQueueCounts()
+    if not counts or type(counts) ~= "table" then return 0 end
+
+    local count = 0
+    for map, info in pairs(counts) do
+        if not info then continue end
+        if string.match(map, gamemode) then
+            for _, tab in pairs(info) do
+                for _, cnt in pairs(tab) do
+                    count += cnt
+                end
+            end
+        end
+    end
+    return count
+end
+
+function module:PushGamemodeQueueCount(gamemode)
+    if RunService:IsClient() then return end
+    RemoteEvent:FireAllClients("SetGamemodeQueueCount", gamemode, self:GetGamemodeQueueCount(gamemode))
 end
 
 if RunService:IsServer() then

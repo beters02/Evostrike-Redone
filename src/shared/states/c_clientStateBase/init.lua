@@ -24,6 +24,7 @@ function base.new(stateName: string, defaultVar: table)
     self.stateName = stateName
 	self.var = Tables.clone(defaultVar)
 	self.changedEvent = Instance.new("BindableEvent", ReplicatedStorage.temp)
+	self.player = Players.LocalPlayer
 	return self
 end
 

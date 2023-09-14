@@ -122,14 +122,16 @@ end
 local function CompileClient()
     local self = {}
     self.GetCharacterScript = function(character, scriptName)
-        local scrip
-        for i, v in pairs(character:GetChildren()) do
-            scrip = v:FindFirstChild(scriptName)
-            if scrip then break end
+        local scrip = character:FindFirstChild(scriptName)
+
+        if not scrip then
+            for _, charscript in pairs(character:GetChildren()) do
+                scrip = charscript:FindFirstChild(scriptName)
+                if scrip then break end
+            end
         end
-
+        
         if not scrip then return end -- TODO: module not found protocol
-
         return scrip
     end
     return self

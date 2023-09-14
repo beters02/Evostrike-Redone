@@ -66,13 +66,13 @@ function util_registerShot(rayInformation, pos, origin, dir, shotRegisteredTime,
 	-- create a fake result to give to server
 	local fr = {Instance = rayInformation.instance, Position = pos, Normal = rayInformation.normal, Distance = rayInformation.distance, Material = rayInformation.material}
 	-- register shot function
-	sharedWeaponFunctions.RegisterShot(player, weaponOptions, fr, origin, dir, shotRegisteredTime, nil, wallbangDamageMultiplier)
+	sharedWeaponFunctions.RegisterShot(player, weaponOptions, fr, origin, dir, shotRegisteredTime, nil, wallbangDamageMultiplier, true, tool, serverModel)
 end
 
 function util_registerFireDiff()
     local diff = serverStoredVar.nextFireTime - tick()
     if diff > 0 then
-        if diff > 0.01899 then
+        if diff > 0.04 then
             print(tostring(diff) .. " TIME UNTIL NEXT ALLOWED FIRE")
             return false
         end
@@ -123,8 +123,9 @@ function core_reload()
 	local newMag
 	local defMag = weaponOptions.ammo.magazine
 	task.spawn(function()
-		if serverStoredVar.ammo.total >= defMag then
-			newMag = defMag
+		local need = defMag - serverStoredVar.ammo.magazine
+		if serverStoredVar.ammo.total >= need then
+			newMag = serverStoredVar.ammo.magazine + need
 			serverStoredVar.ammo.total -= defMag - serverStoredVar.ammo.magazine
 		else
 			newMag = serverStoredVar.ammo.total
