@@ -170,9 +170,6 @@ function Deathmatch:DiedGui(player, ignoreKiller, destroyOnDestroy) -- Handles D
     end)
 
     died.Parent = player.PlayerGui
-
-    print("ALSKDJHAS<JKDHNSJULKSDHASKLD")
-
     return died
 end
 

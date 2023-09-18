@@ -13,6 +13,8 @@ local last = tick()
 
 function core.fire(self, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, startTick)
 
+	task.spawn(function() self.core_stopInspecting(0.05) end)
+
 	last = tick()
 
     local mouse = player:GetMouse()
@@ -69,13 +71,14 @@ end
 	@return			- {void}
 ]]
 
-function core.reload(weaponOptions, weaponVar, weaponRemoteFunction)
+function core.reload(self, weaponOptions, weaponVar, weaponRemoteFunction)
 	if weaponVar.ammo.total <= 0 or weaponVar.ammo.magazine == weaponOptions.ammo.magazine then return weaponVar end
 	if weaponVar.firing or weaponVar.reloading or not weaponVar.equipped then return weaponVar end
-
+	
 	States.SetStateVariable("PlayerActions", "reloading", true)
 	
 	task.spawn(function()
+		self.core_stopInspecting(0.05)
 		weaponVar.animations.client.Reload:Play()
 		--weaponVar.animations.server.Reload:Play() TODO: make server reload animations
 	end)

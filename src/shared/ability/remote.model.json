@@ -10,12 +10,16 @@
         "ClassName": "RemoteFunction"
       },
       {
-        "Name": "grenade",
+        "Name": "localAbilityBF",
+        "ClassName": "BindableFunction"
+      },
+      {
+        "Name": "replicate",
         "ClassName": "RemoteEvent"
       },
       {
-        "Name": "localAbilityBF",
-        "ClassName": "BindableFunction"
+        "Name": "grenade",
+        "ClassName": "RemoteEvent"
       }
     ]
   }

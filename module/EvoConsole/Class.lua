@@ -17,9 +17,19 @@ function class.new(Console, player)
     local gui, commandModules = Console:ClientToServer(player, "instantiateConsole")
 
     -- compile command modules
+    -- todo: compile in order of lowest permission to highest
+    -- for now we just do admin perms last
     self.Commands = {}
     for i, v in pairs(commandModules) do
-        self.Commands = Tables.merge(self.Commands, require(v))
+        if v.Name == "Admin" then
+            self.Commands._ADMINLAST = v
+        else
+            self.Commands = Tables.merge(self.Commands, require(v))
+        end
+    end
+    if self.Commands._ADMINLAST then
+        self.Commands = Tables.merge(self.Commands, require(self.Commands._ADMINLAST))
+        self.Commands._ADMINLAST = nil
     end
 
     -- convert objects into object of Console type

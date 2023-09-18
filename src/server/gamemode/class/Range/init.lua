@@ -34,53 +34,6 @@ function Range:InitPlayerData(player)
     }
 end
 
-function Range:AddBuyMenu(player, diedgui)
-
-    -- add buy menu
-    local c = buyMenuGui:Clone()
-
-    -- if it's a dead buy menu, add object values
-    if diedgui then
-        local remoteObject = Instance.new("ObjectValue", c)
-        remoteObject.Name = "RemoteObject"
-        remoteObject.Value = diedgui.Remote
-    else
-        c.MainFrame.BackButton.Visible = false
-    end
-
-    c.Parent = player.PlayerGui
-
-    -- add b to buy text
-    local bc = bToBuy:Clone()
-    bc.Parent = player.PlayerGui
-
-    self.playerdata[player.Name].connections.buymenu = {
-        c:WaitForChild("AbilitySelected").OnServerEvent:Connect(function(plr, ability, slot)
-            self.playerdata[player.Name].loadout.ability[slot] = ability
-            if bc then bc:Destroy() bc = nil end -- destroy press B upon first purchase
-        end),
-        c:WaitForChild("WeaponSelected").OnServerEvent:Connect(function(plr, weapon, slot)
-            self.playerdata[player.Name].loadout.weapon[slot] = weapon
-            if bc then bc:Destroy() bc = nil end
-        end)
-    }
-    self.playerdata[player.Name].buymenu = c
-
-    return c
-end
-
-function Range:RemoveBuyMenu(player)
-    if self.playerdata[player.Name].buymenu then
-        self.playerdata[player.Name].buymenu:Destroy()
-    end
-    if self.playerdata[player.Name].connections.buymenu then
-        for i, v in pairs(self.playerdata[player.Name].connections.buymenu) do
-            v:Disconnect()
-        end
-        self.playerdata[player.Name].connections.buymenu = {}
-    end
-end
-
 function Range:SpawnPlayer(player)
     task.spawn(function()
         if not player:GetAttribute("Loaded") then
@@ -117,8 +70,50 @@ function Range:SpawnPlayer(player)
 
         -- buy menu
         self:AddBuyMenu(player)
+    end)
+end
 
-        print('Spawned! ASdA SDD')
+function Range:AddBuyMenu(player)
+    if self.playerdata[player.Name].buymenu then return end
+    local c = buyMenuGui:Clone()
+    c.Parent = player.PlayerGui
+    c.ResetOnSpawn = false
+
+    self.playerdata[player.Name].connections.buymenu = {
+        c:WaitForChild("AbilitySelected").OnServerEvent:Connect(function(_, ability, slot)
+            self.playerdata[player.Name].loadout.ability[slot] = ability
+            Ability.Add(player, ability)
+        end),
+        c:WaitForChild("WeaponSelected").OnServerEvent:Connect(function(_, weapon, slot)
+            self.playerdata[player.Name].loadout.weapon[slot] = weapon
+            Weapon.Add(player, weapon)
+        end)
+    }
+
+    self.playerdata[player.Name].buymenu = c
+    return c
+end
+
+function Range:RemoveBuyMenu(player)
+    if self.playerdata[player.Name].buymenu then
+        self.playerdata[player.Name].buymenu:Destroy()
+    end
+    if self.playerdata[player.Name].connections.buymenu then
+        for i, v in pairs(self.playerdata[player.Name].connections.buymenu) do
+            v:Disconnect()
+        end
+        self.playerdata[player.Name].connections.buymenu = {}
+    end
+end
+
+function Range:Died(player)
+    -- give player gui (handle respawn)
+    self:DiedGui(player)
+    self:DiedCamera(player)
+
+    task.spawn(function()
+        Weapon.ClearPlayerInventory(player)
+        Ability.ClearPlayerInventory(player)
     end)
 end
 

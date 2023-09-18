@@ -2,6 +2,15 @@
 	Variables
 ]]
 
+export type CustomSpring = {
+	Spring: any,
+	ShoveVector: Vector3,
+	UpdateFunction: (viewmodel: table, ...any) -> (),
+
+	Shove: () -> (),
+	Remove: () -> (),
+}
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -10,12 +19,11 @@ local VMSprings = require(Framework.shc_vmsprings.Location)
 local Math =  require(Framework.shfc_math.Location)
 local Tables = require(Framework.shfc_tables.Location)
 local viewmodelModel = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj"):WaitForChild("viewModel")
-
-local _count = 0
-local _storedSprings = {}
+local PlayerDied = ReplicatedStorage.main.sharedMainRemotes.deathBE
 
 local viewmodelModule = {}
 viewmodelModule.cfg = Tables.clone(require(script.Parent:WaitForChild("config")))
+viewmodelModule.storedClass = false
 
 --[[ Init Functions ]]
 
@@ -32,14 +40,17 @@ function viewmodelModule.initialize()
     
     self.movementVel = self.charhrp:WaitForChild("movementVelocity")
     self.movementGet = self.char:WaitForChild("MovementScript").Events.Get
-    --local equippedWeapon = false
     self.cdt = 1/60
     
     -- springs
-    self:initSprings()
+    self:initDefaultSprings()
+	self:initCustomSprings()
 
     -- connect
     self:connect()
+
+	viewmodelModule.storedClass = self
+
     return self
 end
 
@@ -54,7 +65,7 @@ function viewmodelModule:createViewmodel()
 	return vm
 end
 
-function viewmodelModule:initSprings()
+function viewmodelModule:initDefaultSprings()
     self.springs = {}
     self.springs.bob = VMSprings:new(9, 50, 5, 3.5) --m, f, d, s
     self.springs.charMoveSway = VMSprings:new(9, 50, 4, 4)
@@ -62,16 +73,13 @@ function viewmodelModule:initSprings()
     self.springs.mouseSwayRotation = VMSprings:new(9, 50, 4, 4)
 end
 
+function viewmodelModule:initCustomSprings()
+	self.customsprings = {}
+end
+
 -- [[ Core ]]
 
 function viewmodelModule:connect()
-
-    --[[RunService:BindToRenderStep("ViewmodelCamera", Enum.RenderPriority.Camera.Value + 3, function(dt)
-        self:update(self.dt)
-    end)]]
-
-	-- test
-
 	if not self.cdt then
 		self.cdt = 1/60
 	end
@@ -80,21 +88,33 @@ function viewmodelModule:connect()
 		self:update(self.cdt)
 	end)
 
-	self._testConn = RunService.Stepped:Connect(function(t, dt) -- we use a fixed dt maybe this fix jitter maybe not, if not lets try swapping
+	self._fixedConnection = RunService.Stepped:Connect(function(t, dt)
 		self.cdt = dt
+	end)
+
+	self._died = PlayerDied.Event:Connect(function()
+		self:disconnect()
+		viewmodelModule.storedClass = false
 	end)
 
 end
 
 function viewmodelModule:disconnect()
-	--self._testConn:Disconnect()
     RunService:UnbindFromRenderStep("ViewmodelCamera")
+	self._fixedConnection:Disconnect()
+	self._died:Disconnect()
 end
 
 function viewmodelModule:update(dt)
-	--self.cdt = dt
 	self.vmhrp.CFrame = util_getVMStartCF(self)
     self.vmhrp.CFrame = self.vmhrp.CFrame:ToWorldSpace(self:bob(dt)) * self:charMoveSway(dt) * self:mouseSway(dt)
+
+	-- update custom springs
+	if self.customsprings then
+		for i, v: CustomSpring in pairs(self.customsprings) do
+			v.UpdateFunction(self, dt)
+		end
+	end
 end
 
 function viewmodelModule:destroy()
@@ -152,10 +172,7 @@ function viewmodelModule:charMoveSway(dt)
     --var
     local cfg = self.cfg.charmovesway
     local mod = cfg.mod
-	--local velocity = self.movementVel.Velocity.Magnitude * -.008
     local spring = self.springs.charMoveSway
-	
-	
 	
     -- get direction
 	local directive = self.charhrp.CFrame:VectorToObjectSpace(self.hum.MoveDirection)
@@ -172,15 +189,6 @@ function viewmodelModule:charMoveSway(dt)
 	else
 		velocity = 0
 	end
-
-	--[[local max = cfg.maxX
-	local ymax = cfg.maxY
-
-    -- if jumping change max
-	if self:isJumping() then
-		max = 0.2
-		ymax = 0.42
-	end]]
 
 	-- set velocity max/min
 	local velMax = 18 * -mod
@@ -241,7 +249,6 @@ function viewmodelModule:jumpSway(dt)
 
 	-- shove
 	spring:shove(shov)
-	
 	return
 end
 
@@ -255,6 +262,33 @@ function util_getVMStartCF(self)
 	end
 
 	return self.camera.CFrame + self.camera.CFrame:VectorToWorldSpace(_defoff)
+end
+
+-- [[ Custom Viewmodel Spring Functionality ]]
+
+function viewmodelModule:addCustomSpring(ID: string, overwrite: boolean, spring: any, shove: Vector3, shoveFunction: () -> (), updateFunction: (viewmodel: table, ...any) -> ())
+	if self.customsprings[ID] then
+		if not overwrite then
+			return self.customsprings[ID]
+		end
+		self:removeCustomSpring(ID)
+	end
+	self.customsprings[ID] = {
+		Spring = spring,
+		ShoveVector = shove,
+		UpdateFunction = updateFunction,
+		
+		Shove = shoveFunction,
+		Remove = function()
+			self:removeCustomSpring(ID)
+		end
+	} :: CustomSpring
+	return self.customsprings[ID]
+end
+
+function viewmodelModule:removeCustomSpring(ID: string)
+	if not self.customsprings[ID] then return end
+	self.customsprings[ID] = nil
 end
 
 return viewmodelModule

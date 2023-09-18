@@ -109,7 +109,7 @@ function Base:Start()
     -- init bots if necessary
     if self.botsEnabled then
         for i, v in pairs(self.objects.bots:GetChildren()) do
-            BotService:AddBot({SpawnCFrame = v.PrimaryPart.CFrame})
+            BotService:AddBot({SpawnCFrame = v.PrimaryPart.CFrame, StartingHealth = self.startingHealth, StartingShield = self.shieldEnabled and self.startingShield or 0, StartingHelmet = self.startingHelmet or false})
         end
     end
 
@@ -162,19 +162,39 @@ function Base:Stop()
         v:Destroy()
     end
 
+    -- clear playerdata instances
+    self:ClearPlayerData()
+
     -- destroy bots
     BotService:RemoveAllBots()
 
-    task.wait(0.1)
-
     print('Gamemode Lobby Stopped')
+end
+
+function Base:ClearPlayerData()
+    if self.playerdata then
+        _playerDataRemovalRecurse(self.playerdata)
+    end
+end
+
+function _playerDataRemovalRecurse(tab)
+    for i, v in pairs(tab) do
+        if type(v) == "table" then
+            _playerDataRemovalRecurse(v)
+            continue
+        elseif typeof(v) == "Instance" then
+            v:Destroy()
+        elseif typeof(v) == "RBXScriptSignal" then
+            v:Disconnect()
+        end
+    end
 end
 
 -- Force Start a gamemode with Bots filling in for the missing players
 function Base:ForceStart()
     
     -- fill missing players with bots
-    for i = 1, self.minimumPlayers - #self.players do
+    for i = 1, self.minimumPlayers - #(self.players or Players:GetPlayers()) do
         table.insert(self.players, BotService:AddBot({Respawn = true, RespawnLength = 0}))
         self:InitPlayerData(self.players[#self.players])
     end
@@ -186,7 +206,7 @@ end
 function Base:WaitForMinimumPlayers(min)
     repeat
         task.wait(0.5)
-    until #self.players or game:GetService("Players"):GetPlayers() >= min
+    until #(self.players or game:GetService("Players"):GetPlayers()) >= min
 end
 
 function Base:GetTotalPlayerCount()

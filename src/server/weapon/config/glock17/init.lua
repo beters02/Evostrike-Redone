@@ -28,7 +28,7 @@ local wepconfig = {
 	},
 	
 	damage = {
-		base = 16,
+		base = 20,
 		min = 10,
 
 		headMultiplier = 7,

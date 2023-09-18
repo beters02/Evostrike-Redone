@@ -37,12 +37,14 @@ local profile = {
 			dynamic = false,
 			outline = false
 		},
+
 		camera = {
 			vmX = 0,
 			vmY = 0,
 			vmZ = 0,
 			FOV = 75,
 		},
+
 		keybinds = {
 			primaryWeapon = "One",
 			secondaryWeapon = "Two",
@@ -52,6 +54,8 @@ local profile = {
 			interact = "E",
 			jump = "Space",
 			crouch = "LeftControl",
+			inspect = "T",
+			drop = "G",
 
 			aimToggle = 1, -- 1 = toggle, 0 = hold
 			crouchToggle = 0
@@ -64,6 +68,11 @@ local profile = {
 		isQueueRemoving = false,
 		isQueueDisabled = false,
 		hasBeenGivenAdminInventory = false, -- applied in adminModifications
+	},
+
+	economy = {
+		strafeCoins = 0,
+		premiumCredits = 0
 	}
 }
 

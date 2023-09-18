@@ -24,8 +24,8 @@ end
 
 Players.PlayerAdded:Connect(function(player)
     -- admin modifications
-    local isAdmin, group = Admins:IsAdmin(player)
-    if isAdmin then
+    local isHighPerm, group = Admins:IsHigherPermission(player)
+    if isHighPerm then
         require(script.Parent:WaitForChild("adminModifications"))(player, serverPlayerDataModule, group)
     end
 end)

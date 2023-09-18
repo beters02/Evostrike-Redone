@@ -21,7 +21,7 @@ local module = {
 	--[[ Air Settings ]]
 	airAccelerate = 35, -- 35 feels good, lets try changing airspeed. 22 def
 	airSpeed = 4, -- 5
-	airMaxSpeed = 33, -- 33 was the sweet spot but i was hitting hops as much, 35 was too easy to hit hops
+	airMaxSpeed = 34, -- 33 was the sweet spot but i was hitting hops as much, 35 was too easy to hit hops
 	airMaxSpeedFriction = 4,
 	airMaxSpeedFrictionDecrease = 1,
 

@@ -60,6 +60,8 @@ WeaponGetEvent.OnServerInvoke = function(player, action, ...)
 		return Weapon:GetRegisteredWeapons()
 	elseif action == "WallbangMaterials" then
 		return require(WeaponModuleLoc.Parent.config.wallbangMaterials)
+	elseif action == "AllOptions" then
+		return Weapon:GetRegisteredWeaponOptions()
 	end
 end
 

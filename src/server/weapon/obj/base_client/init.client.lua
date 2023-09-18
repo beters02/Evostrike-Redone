@@ -289,7 +289,7 @@ end
 	@return			- animation: AnimationTrack
 ]]
 
-function util_playAnimation(location, name)
+function util_playAnimation(location: "client"|"server", name: string, fadeIn: number?)
 	local animation: AnimationTrack = weaponVar.animations[location][name]
 
 	-- connect events
@@ -305,7 +305,7 @@ function util_playAnimation(location, name)
 		animationEventFunctions.PlayReplicatedSound(param)
 	end)
 
-	animation:Play()
+	animation:Play(fadeIn or nil)
 	animation.Stopped:Once(function()
 		wacvm:Disconnect()
 		wacs:Disconnect()
@@ -338,11 +338,20 @@ function util_stopAllAnimations()
 	forcestop = false
 end
 
---
 function util_stopAllVMAnimations()
 	for i, v in pairs(vmAnimController:GetPlayingAnimationTracks()) do
 		v:Stop()
 	end
+end
+
+function util_stopAllLocalAnimationsExceptHold()
+	forcestop = true
+	for _, a in pairs(weaponVar.animations.client) do
+		if a.Name == "Hold" then continue end
+		a:Stop()
+	end
+	task.wait(0.06)
+	forcestop = false
 end
 
 --[[@title 			- util_setServerTransparency
@@ -354,7 +363,7 @@ end
 
 function util_setServerTransparency(t)
     for i, v in pairs(serverModel:GetDescendants()) do
-		if v:IsA("BasePart") or v:IsA("MeshPart") then
+		if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("Texture") then
 			v.Transparency = t
 		end
 	end
@@ -455,7 +464,7 @@ function util_ShootWallRayRecurse(origin, direction, params, hitPart, damageMult
 	if not filter then filter = params.FilterDescendantsInstances end
 
 	local _p = RaycastParams.new()
-	_p.CollisionGroup = params.CollisionGroup
+	_p.CollisionGroup = "Bullets"
 	_p.FilterDescendantsInstances = filter
 	_p.FilterType = Enum.RaycastFilterType.Exclude
 
@@ -478,7 +487,7 @@ function util_ShootWallRayRecurse(origin, direction, params, hitPart, damageMult
 	sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, origin, nil, nil, nil, nil, true, tool, clientModel)
 
 	table.insert(filter, result.Instance)
-	return util_ShootWallRayRecurse(origin, direction, _p, result.Instance, damageMultiplier - weaponWallbangInformation[bangableMaterial], filter)
+	return util_ShootWallRayRecurse(origin, direction, _p, result.Instance, (damageMultiplier + weaponWallbangInformation[bangableMaterial])/2, filter)
 end
 
 --[[@title 			- util_RegisterRecoils
@@ -524,6 +533,8 @@ function util_RegisterRecoils()
 		wallDmgMult, result, hitchar = util_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
 
 		if result then
+
+			--print(result)
 
 			-- register client shot for bullet/blood/sound effects
 			sharedWeaponFunctions.RegisterShot(player, weaponOptions, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, tool, clientModel)
@@ -869,6 +880,7 @@ function core_unequip()
 	weaponVar.equipped = false
     weaponVar.firing = false
     weaponVar.reloading = false
+	weaponVar.inspecting = false
 	States.SetStateVariable("PlayerActions", "weaponEquipped", false)
 	States.SetStateVariable("PlayerActions", "weaponEquipping", false)
 	States.SetStateVariable("PlayerActions", "reloading", false)
@@ -888,8 +900,31 @@ end
 	@return			- {void}
 ]]
 
-function core_inspect()
+function core_inspect(fadeIn)
+	if not weaponVar.animations then
+		warn("What happened to the animations dude?")
+		print(weaponVar)
+		return
+	end
+	if not weaponVar.animations.client.Inspect then
+		return
+	end
+	if not weaponVar.animations.client.Hold.IsPlaying then
+		weaponVar.animations.client.Hold:Play(0.1)
+	end
+	if weaponVar.animations.client.Inspect.IsPlaying then
+		weaponVar.animations.client.Inspect.TimePosition = weaponOptions.inspectAnimationTimeSkip or 0.2
+	else
+		util_stopAllLocalAnimationsExceptHold()
+		util_playAnimation("client", "Inspect", fadeIn)
+	end
+end
 
+function core_stopInspecting(fadeOut)
+	if not weaponVar.animations.client.Inspect then
+		return
+	end
+	weaponVar.animations.client.Inspect:Stop(fadeOut)
 end
 
 --[[
@@ -910,7 +945,8 @@ corefunc = basecorefunc
 -- keys of functions that corefunc will use
 local coreself = {
 	util_RegisterRecoils = util_RegisterRecoils,
-	util_playAnimation = util_playAnimation
+	util_playAnimation = util_playAnimation,
+	core_stopInspecting = core_stopInspecting
 }
 
 core_fire = function()
@@ -929,16 +965,16 @@ end
 core_reload = function()
 	if not player.Character or hum.Health <= 0 then return end
 	if States.GetStateVariable("PlayerActions", "grenadeThrowing") then return end
-	weaponVar = corefunc.reload(weaponOptions, weaponVar, weaponRemoteFunction)
+	weaponVar = corefunc.reload(coreself, weaponOptions, weaponVar, weaponRemoteFunction)
 end
 
 controllerModule.StoredWeaponController:GetInventoryWeaponByName(weaponName).CoreFunctions = {
 	firedown = conn_mouseDown,
 	fireup = conn_mouseUp,
-	reload = core_reload
+	reload = core_reload,
+	startInspect = core_inspect,
+	stopInspect = core_stopInspecting
 }
-
-print(controllerModule)
 
 --[[{                                 }]
 

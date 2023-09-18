@@ -9,6 +9,7 @@ local RemotesLib = require(Framework.shfc_remotes.Location)
 local SharedAbilityRF = ReplicatedStorage:WaitForChild("ability").remote.sharedAbilityRF
 local FastCast = require(Framework.shc_fastcast.Location)
 local Sound = require(Framework.shm_sound.Location)
+local EvoPlayer = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoPlayer"))
 
 -- Store Ability Options for ease of access
 local Shared = {}
@@ -61,7 +62,7 @@ function Shared.FireCaster(player, mouseHit, caster, casbeh, abilityOptions)
     local bullet = cast.RayInfo.CosmeticBulletObject
     local conns = {}
     table.insert(conns, caster.LengthChanged:Connect(Shared.GrenadeOnLengthChanged))
-    table.insert(conns, caster.RayHit:Connect(function(cast, result, velocity, bullet, playerLookNormal)
+    table.insert(conns, caster.RayHit:Connect(function(c, result, velocity, b, playerLookNormal)
         if abilityOptions.abilityName == "LongFlash" then
             Shared.LongFlashRayHit(cast, result, velocity, bullet, playerLookNormal)
         elseif abilityOptions.abilityName == "Molly" then
@@ -333,7 +334,9 @@ function Shared.MollyRayHit(cast, result, grenade, abilityObjects, direction, ve
                         if tick() >= charsDamaging[char.Name].nextDamageTick then
                             if not char:FindFirstChild("Humanoid") then return end
                             charsDamaging[char.Name].nextDamageTick = Shared.AbilityOptions.Molly.damageInterval + tick()
-                            char.Humanoid:TakeDamage(Shared.AbilityOptions.Molly.damagePerInterval)
+                            char:SetAttribute("lastHitPart", "LeftFoot")
+                            char:SetAttribute("lastUsedWeapon", "Ability")
+                            EvoPlayer:TakeDamage(char, Shared.AbilityOptions.Molly.damagePerInterval)
                         end
                     end)}
                 end

@@ -1,17 +1,8 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage.Framework)
-local AbilityObjects = ReplicatedStorage:WaitForChild("ability"):WaitForChild("obj"):WaitForChild("Molly")
-local Sound = require(Framework.shm_sound.Location)
-local States = require(Framework.shm_states.Location)
-
 local HEGrenade = {
+    name = "HEGrenade",
+    isGrenade = true,
 
     -- grenade settings
-    isGrenade = true,
     grenadeThrowDelay = 0.2,
     usingDelay = 1, -- Time that player will be "using" their ability, won't be able to interact with weapons during this time
     acceleration = 10,

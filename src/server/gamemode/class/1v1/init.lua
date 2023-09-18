@@ -9,6 +9,8 @@ local RunService = game:GetService("RunService")
 local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
 local MapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
 local PlayerStats = require(Framework.shm_playerstats.Location)
+local ServerPlayerData = require(game:GetService("ServerScriptService").playerdata.m_serverPlayerData)
+local EvoPlayer = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoPlayer"))
 
 local _1v1 = {
     minimumPlayers = 2,
@@ -198,12 +200,16 @@ function _1v1:GameEnd(winner, loser)
 
     -- winner
     local function updateWinner()
-        local winnerstats = PlayerStats.Get(winner)
-        winnerstats[currmap].wins += 1
-        winnerstats[currmap].kills += self.playerdata[winner.Name].wins
-        winnerstats[currmap].deaths += self.playerdata[winner.Name].deaths
-        winnerstats[currmap].damage += self.playerdata[winner.Name].totalDamage
-        PlayerStats.Set(winner, winnerstats, true)
+        local incrementData = {
+            wins = 1,
+            matchesPlayed = 1,
+            kills = self.playerdata[winner.Name].wins,
+            deaths = self.playerdata[winner.Name].deaths,
+            damage = self.playerdata[winner.Name].totalDamage, 
+        }
+
+        PlayerStats.IncrementAllValuesInKey(winner, currmap, incrementData) -- update map stats
+        PlayerStats.IncrementAllValuesInKey(winner, "global", incrementData) -- update "global" (total) stats
     end
 
     task.spawn(function()
@@ -220,12 +226,16 @@ function _1v1:GameEnd(winner, loser)
 
     -- loser
     local function updateLoser()
-        local loserstats = PlayerStats.Get(winner)
-        loserstats[currmap].losses += 1
-        loserstats[currmap].kills += self.playerdata[loser.Name].wins
-        loserstats[currmap].deaths += self.playerdata[loser.Name].deaths
-        loserstats[currmap].damage += self.playerdata[loser.Name].totalDamage
-        PlayerStats.Set(winner, loserstats, true)
+        local incrementData = {
+            losses = 1,
+            matchesPlayed = 1,
+            kills = self.playerdata[loser.Name].wins,
+            deaths = self.playerdata[loser.Name].deaths,
+            damage = self.playerdata[loser.Name].totalDamage,
+        }
+
+        PlayerStats.IncrementAllValuesInKey(loser, currmap, incrementData) -- update map stats
+        PlayerStats.IncrementAllValuesInKey(loser, "global", incrementData) -- update "global" (total) stats
     end
 
     task.spawn(function()
@@ -244,8 +254,6 @@ end
 -- Round Functions
 
 function _1v1:RoundStart()
-
-    print('Round Starting!')
 
     -- unload all characters sanity
     self:UnloadAllCharacters()
@@ -408,6 +416,16 @@ function _GetRandomWeaponsIn(tab)
     return weapons
 end
 
+function _GetRoundShield(self)
+    local shield, helmet = self.startingShield, self.startingHelmet
+    if self.var.currentRound == 1 then
+        shield, helmet = 0, false
+    elseif self.var.currentRound == 2 then
+        shield, helmet = 50, false
+    end
+    return {shield = shield, helmet = helmet}
+end
+
 function _1v1:RoundStartGetPlayerContent() -- return: spawns, weapons
 
     local spawns = {}
@@ -431,7 +449,7 @@ function _1v1:RoundStartGetPlayerContent() -- return: spawns, weapons
     local abilities = {"Dash"}
     table.insert(abilities, math.round(math.random(1000,2000)/1000) == 1 and "LongFlash" or "Molly")
 
-    return spawns, weapons, abilities
+    return spawns, weapons, abilities, _GetRoundShield(self)
 end
 
 -- Player Functions
@@ -454,9 +472,9 @@ function _1v1:RemovePlayerFromPlayers(player)
 end
 
 function _1v1:LoadAllCharacters()
-    local RandomizedSpawns, RoundWeapons, RoundAbilities = self:RoundStartGetPlayerContent()
+    local RandomizedSpawns, RoundWeapons, RoundAbilities, RoundShield = self:RoundStartGetPlayerContent()
     for i, v in pairs(self.players) do
-        self:SpawnPlayer(v, RandomizedSpawns[i].CFrame, RoundWeapons, RoundAbilities)
+        self:SpawnPlayer(v, RandomizedSpawns[i].CFrame, RoundWeapons, RoundAbilities, RoundShield)
     end
 end
 
@@ -479,7 +497,7 @@ function _1v1:UnloadAllCharacters()
     end
 end
 
-function _1v1:SpawnPlayer(player, locationCFrame, weapons, abilities)
+function _1v1:SpawnPlayer(player, locationCFrame, weapons, abilities, shieldTable)
     task.spawn(function()
         print('spawning player ' .. player.Name)
         if not player:GetAttribute("Loaded") then
@@ -490,7 +508,9 @@ function _1v1:SpawnPlayer(player, locationCFrame, weapons, abilities)
         task.wait(0.1)
         
         local hum = player.Character:WaitForChild("Humanoid")
-        player.Character.Humanoid.Health = 100
+        player.Character.Humanoid.Health = self.startingHealth
+        EvoPlayer:SetShield(player.Character, shieldTable.shield)
+        EvoPlayer:SetHelmet(player.Character, shieldTable.helmet)
     
         -- teleport player to spawn
         player.Character.PrimaryPart.Anchored = true

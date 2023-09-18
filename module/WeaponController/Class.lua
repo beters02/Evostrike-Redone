@@ -4,6 +4,7 @@ local PlayerData
 local RBXSignals = require(Framework.Module.lib.fc_rbxsignals)
 local UIStates
 local PlayerDied = game.ReplicatedStorage:WaitForChild("main").sharedMainRemotes.deathBE
+local Config = require(script.Parent:WaitForChild("Configuration"))
 
 export type WeaponVariables = {firing: boolean, reloading: boolean, equipped: boolean, equipping: boolean}
 local WeaponVariables = {}
@@ -114,10 +115,12 @@ function controller:Connect()
         -- check if it's an equip key
         for i, v in pairs(self.Options) do
             if string.match(tostring(v), input.KeyCode.Name) then
+                if tostring(v):len() ~= input.KeyCode.Name:len() then continue end
                 self.Variables.equipDebounce = "wait"
-                task.delay(0.13, function()
+                task.delay(Config.equipSpamDelay, function()
                     self.Variables.equipDebounce = false
                 end)
+                print('equipping')
                 return self:ControllerEquip(string.gsub(i, "Key", ""))
             end
         end
@@ -153,6 +156,7 @@ end
 --
 
 function controller:AddWeapon(...)
+    self.Variables.equipDebounce = true
     local weaponName, weaponOptions, _, tool, clientModel, forceEquip = ...
     self.Inventory[weaponOptions.inventorySlot] = {
         Name = weaponName,
@@ -173,9 +177,12 @@ function controller:AddWeapon(...)
         Options = weaponOptions
     } :: WeaponControllerWeapon
     if forceEquip then
-        task.delay(0.9, function()
+        task.delay(Config.forceEquipDelay, function()
+            self.Variables.equipDebounce = false
             self:ControllerEquip(weaponOptions.inventorySlot, true)
         end)
+    else
+        self.Variables.equipDebounce = false
     end
     return true
 end
@@ -262,23 +269,25 @@ function util_processUnequipTransparency(model)
     vm.LeftHand.LeftGlove.Transparency = 1
 end
 
-function controller:ConnectActions(firedownCB, fireupCB, reloadCB)
+function controller:ConnectActions()
     if self.actions then self:DisconnectActions() end
 
     self.actions = {}
     self.actions.down = UserInputService.InputBegan:Connect(function(input, gp)
         if self.Owner:GetAttribute("Typing") or UIStates:hasOpenUI() then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            firedownCB()
+            self.EquippedWeapon.CoreFunctions.firedown()
         elseif input.KeyCode == Enum.KeyCode.R then
-            reloadCB()
+            self.EquippedWeapon.CoreFunctions.reload()
+        elseif input.KeyCode == Enum.KeyCode.T then
+            self.EquippedWeapon.CoreFunctions.startInspect()
         end
     end)
 
     self.actions.up = UserInputService.InputEnded:Connect(function(input, gp)
         if self.Owner:GetAttribute("Typing") or UIStates:hasOpenUI() then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            fireupCB()
+            self.EquippedWeapon.CoreFunctions.fireup()
         end
     end)
 end
@@ -294,6 +303,8 @@ end
 -- Equip a weapon from the controller by slot
 -- To be executed from the WeaponController
 function controller:ControllerEquip(slot, isForceEquip)
+
+    print('equipping')
 
     if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
     if self.EquippedWeapon and self.EquippedWeapon.Slot == slot then return end
@@ -318,7 +329,7 @@ function controller:ControllerEquip(slot, isForceEquip)
     self.Inventory[slot].Variables.equipping = true
 
     -- connect fire and reload
-    self:ConnectActions(self.EquippedWeapon.CoreFunctions.firedown, self.EquippedWeapon.CoreFunctions.fireup, self.EquippedWeapon.CoreFunctions.reload)
+    self:ConnectActions()
 
     --Resolve:
     --Current Parent = Null New Parent bug

@@ -322,4 +322,13 @@ function Weapon:GetRegisteredWeapons()
 	return wep
 end
 
+function Weapon:GetRegisteredWeaponOptions()
+	local wep = {}
+	for i, v in pairs(ServerScriptService.weapon.config:GetChildren()) do
+		if v:GetAttribute("Ignore") then continue end
+		wep[v.Name] = v
+	end
+	return wep
+end
+
 return Weapon

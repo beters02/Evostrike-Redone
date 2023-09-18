@@ -21,6 +21,11 @@ function killfeed.init(self)
 		function _n:setKillfeedTexts(item, killer, killed)
 			item:WaitForChild("KillerName").Text = killer.Name
 			item:WaitForChild("KilledName").Text = killed.Name
+			if killer.Name == player.Name then
+				item.KillerName.TextStrokeColor3 = item:GetAttribute("YouKilledStrokeColor")
+				item.KillerName.DefaultGradient.Enabled = false
+				item.KillerName.YourGradient.Enabled = true
+			end
 		end
 	end
     return setmetatable(_n, killfeed)
@@ -38,7 +43,7 @@ function killfeed:addItem(killer, killed)
 		
 		for i, v in pairs(self.currentItems) do
 			local currPos = v.frame.Position
-			local tween = TweenService:Create(v.frame, TweenInfo.new(0.3), {Position = UDim2.fromScale(currPos.X.Scale, currPos.Y.Scale + 0.33)})
+			local tween = TweenService:Create(v.frame, TweenInfo.new(0.3), {Position = UDim2.fromScale(currPos.X.Scale, currPos.Y.Scale + 0.163)})
 			tween:Play()
 		end
 	end

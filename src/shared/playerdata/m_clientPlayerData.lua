@@ -1,3 +1,5 @@
+--[[ Client Player Data is the module used for storing Player-Specific playerdata ]]
+
 local RunService = game:GetService("RunService")
 if RunService:IsServer() then error("m_clientPlayerData: You cannot use this module on the server.") end
 

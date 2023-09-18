@@ -36,6 +36,7 @@ function EvoConsole.ServerOnly() if not RunService:IsServer() then warn("This ca
 -- Create the Console GUI and create command modules dependant on player command access
 function EvoConsole:_instantiateConsole(player)
     if not EvoConsole.ServerOnly() then return end
+    local Permissions = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminIDs"))
 
     local gui = self.ConsoleTemplate:Clone()
     gui.Enabled = false
@@ -44,12 +45,16 @@ function EvoConsole:_instantiateConsole(player)
     local commandModules = {}
 
     -- insert get admin permissions here
-    if require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminIDs")):IsAdmin(player) then
-        table.insert(commandModules, CommandsFolder.Admin)
+    local higherPerm, group = Permissions:IsHigherPermission(player)
+    if higherPerm then
+        if group == "admin" then
+            table.insert(commandModules, CommandsFolder.Admin)
+        elseif group == "playtester" then
+            table.insert(commandModules, CommandsFolder.Playtester)
+        end
     end
 
     table.insert(commandModules, CommandsFolder.Common)
-
     return gui, commandModules
 end
 

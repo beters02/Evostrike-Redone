@@ -2,6 +2,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Classes = Framework.Ability.Location.Parent.class
 local SharedAbilityRF = ReplicatedStorage:WaitForChild("ability").remote.sharedAbilityRF
+local SharedAbilityRE = ReplicatedStorage.ability.remote.sharedAbilityRE
+local Ability = require(Framework.Module.server.ability.pm_main)
+
+local Molly = require(game:GetService("ServerScriptService").ability.class:WaitForChild("Molly"))
+
+ReplicatedStorage.ability.remote.replicate.OnServerEvent:Connect(function(player, action, ...)
+    if action == "MollyServerExplode" then
+        Molly.ServerExplode(...)
+    end
+end)
 
 local GetFunctions = {
     Class = function(abilityName)
@@ -32,3 +42,9 @@ local function Get(player, action, ...)
 end
 
 SharedAbilityRF.OnServerInvoke = Get
+
+SharedAbilityRE.OnServerEvent:Connect(function(player, action, ...)
+    if action == "Add" then
+        Ability.Add(player, ...)
+    end
+end)

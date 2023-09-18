@@ -10,6 +10,7 @@ local collisionGroups = { -- Name, CollideAll
     deadCharacters = {"DeadCharacters", true},
     bulletHoles = {"BulletHoles", true},
     bulletIgnore = {"BulletIgnore", true}, -- Bullet Ignore ClipBoxes
+    bulletAndMovementIgnore = {"BulletAndMovementIgnore", true},
     mollyDamageCast = {"MollyDamageCast", false},
     playerDamageCast = {"PlayerDamageCast", false},
     flashCast = {"FlashCast", true},
@@ -80,9 +81,15 @@ local function initMain()
 
     -- bullets & bulletholes
     PhysicsService:CollisionGroupSetCollidable(cg.bullets, cg.ragdolls, true)
+    PhysicsService:CollisionGroupSetCollidable(cg.bullets, cg.bulletIgnore, false)
     PhysicsService:CollisionGroupsAreCollidable(cg.playerDamageCast, "Players", true)
     PhysicsService:CollisionGroupsAreCollidable(cg.playerDamageCast, "PlayerFeet", true)
     PhysicsService:CollisionGroupsAreCollidable(cg.playerDamageCast, "Bots", true)
+
+    PhysicsService:CollisionGroupSetCollidable("BulletAndMovementIgnore", "Players", false)
+    PhysicsService:CollisionGroupSetCollidable("BulletAndMovementIgnore", "Bullets", false)
+    PhysicsService:CollisionGroupSetCollidable("BulletAndMovementIgnore", "PlayerMovement", false)
+    PhysicsService:CollisionGroupSetCollidable("BulletAndMovementIgnore", "PlayerFeet", false)
 
     -- abilities
     PhysicsService:CollisionGroupSetCollidable(cg.mollyDamageCast, "PlayerFeet", true)

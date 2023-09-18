@@ -7,9 +7,10 @@
 
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
-local VMSprings = require(Framework.shc_vmsprings.Location)
+local VMSprings = require(Framework.Module.lib.c_vmsprings)
 local Math = require(Framework.shfc_math.Location)
 local Strings = require(Framework.shfc_strings.Location)
+local Grenades = require(game:GetService("ReplicatedStorage").Modules.Grenades)
 
 local Base = {}
 Base.__index = Base
@@ -21,11 +22,15 @@ function Base.new(abilityClassModule)
     -- grenade base class inheritance
     if self.isGrenade then
         for i, v in pairs(require(abilityClassModule.GrenadeBase)) do
-            if not self[i] then self[i] = v end
+            if self[i] == nil then self[i] = v end
         end
+        self.grenadeClassObject = Grenades:CreateGrenade(self, game.ReplicatedStorage.ability.obj[self.name])
     end
 
     setmetatable(self, Base)
+
+    -- equip return spring
+    self:CreateEquipReturnSpring()
 
     -- init use spring if necesssary
     if self.useCameraRecoil then
@@ -127,6 +132,37 @@ function Base:UseCameraRecoil()
         self.cameraSpring:shove(-shove)
     end)
 
+end
+
+function Base:CreateEquipReturnSpring()
+    if self.throwFinishSpringShove then -- create return spring if necessary
+        local viewmodelModule = require(game:GetService("Players").LocalPlayer.Character:WaitForChild("ViewmodelScript").m_viewmodel)
+        local function vmInit()
+            local spring = VMSprings:new(4, 40, 4, 3)
+            self._equipFinishCustomSpring = viewmodelModule:addCustomSpring(self.name .. "_EquipFinish", true, spring, self.throwFinishSpringShove or Vector3.one,
+            function()
+                spring:shove(self.throwFinishSpringShove or Vector3.one)
+                --[[task.wait()
+                spring:shove(-(self.throwFinishSpringShove or Vector3.one))]]
+                print('shoved!')
+            end,
+            function(vm, dt)
+                local updated = spring:update(dt)
+                vm.vmhrp.CFrame *= CFrame.new(updated.X, updated.Y, updated.Z)
+            end)
+        end
+        if not viewmodelModule.storedClass then
+            task.spawn(function()
+                local t = tick() + 2
+                if not viewmodelModule.storedClass then repeat task.wait() until viewmodelModule.storedClass or tick() >= t end
+                if viewmodelModule.storedClass then
+                    vmInit()
+                end
+            end)
+        else
+            vmInit()
+        end
+    end
 end
 
 return Base

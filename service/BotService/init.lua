@@ -8,6 +8,7 @@ local BotAddedEvent = ReplicatedStorage:WaitForChild("bots"):WaitForChild("BotAd
 local Types = require(script:WaitForChild("Types"))
 local ServerStorage = game:GetService("ServerStorage")
 local StarterCharacterTemplate = game:GetService("StarterPlayer").StarterCharacter
+local EvoPlayer = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoPlayer"))
 
 local Bots = {}
 
@@ -35,6 +36,9 @@ function Bots:AddBot(properties)
     character.PrimaryPart.CFrame = properties.SpawnCFrame
     local hum = character:WaitForChild("Humanoid")
     hum.BreakJointsOnDeath = false
+    hum.Health = properties.StartingHealth or 100
+    EvoPlayer:SetShield(character, properties.StartingShield or 0)
+    EvoPlayer:SetHelmet(character, properties.StartingHelmet or false)
 
     -- assign the given name or random bot name
     local botName = properties.Name or self.BotNames[#self.BotNames]
@@ -49,7 +53,8 @@ function Bots:AddBot(properties)
         Character = character,
         Humanoid = hum,
         Properties = botProperties,
-        ID = id
+        ID = id,
+        IsBot = true
     }
 
     new_bot.LoadCharacter = function(tab)
@@ -180,9 +185,6 @@ function _connectBotDiedEvent(new_bot)
         PlayerDiedEvent:FireAllClients(character)
         
         if not hum:GetAttribute("Removing") then
-
-            print(new_bot.Properties)
-            
             if new_bot.Properties.Respawn then
                 if new_bot.Properties.RespawnLength == 0 then -- Manual respawn
                     return

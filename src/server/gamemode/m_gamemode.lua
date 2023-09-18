@@ -65,7 +65,8 @@ function Gamemode.SetGamemode(gamemode: string)
     if Gamemode.currentClass then
         local c = Gamemode.currentClass
         c:Stop()
-        task.wait()
+        print('Stopping gamemode')
+        task.wait(0.5)
     end
 
     -- init mm service
@@ -77,8 +78,7 @@ function Gamemode.SetGamemode(gamemode: string)
 
     -- create gamemode class
     local mod = class
-    local _c = require(class)
-    class = setmetatable(_c, GamemodeBase)
+    class = setmetatable(require(class), GamemodeBase)
 
     if class._init then class = class:_init() end
 
@@ -94,6 +94,8 @@ function Gamemode.SetGamemode(gamemode: string)
 
     -- fire gamemode changed event
     ReplicatedStorage.gamemode.remote.ChangedEvent:FireAllClients(gamemode)
+
+    task.wait(0.5)
 
     class:Start()
 end

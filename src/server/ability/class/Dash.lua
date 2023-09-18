@@ -6,11 +6,14 @@ local Math = require(Framework.shfc_math.Location)
 local Strings = require(Framework.shfc_strings.Location)
 
 local Dash = {
+    name = "Dash",
 
     -- movement settings
-    strength = 50,
+    strength = 55,
     upstrength = 25,
     jumpingUpstrengthModifier = 0.5,
+    landingMovementDecreaseFriction = 0.7,
+    landingMovementDecreaseLength = 0.33,
 
     -- gemeral settings
     cooldownLength = 5,
@@ -21,9 +24,9 @@ local Dash = {
     useCameraRecoil = {
         downDelay = 0.07,
 
-        up = "0.05-0.1rtabsr",
-        side = "0.05-0.1rtabsr",
-        shake = "0.05-0.1rtabsr",
+        up = "0.04-0.06rtabsr",
+        side = "0.04-0.06rtabsr",
+        shake = "0.04-0.06rtabsr",
 
         speed = 4,
         force = 60,

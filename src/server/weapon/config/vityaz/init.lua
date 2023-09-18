@@ -9,7 +9,7 @@ local wepconfig = {
 	recoilReset = 0.2,
 	camRecoilReset = 0.5,
 	
-	fireVectorCameraOffset = Vector2.new(5, 15), -- Side, Up
+	fireVectorCameraOffset = Vector2.new(5, 12), -- Side, Up
 	fireAccuracyCameraOffset = Vector2.new(1, 10), -- Side, Up
 	fireVectorCameraMax = Vector3.new(0.011, 0.01, 0.3), -- Up, Side
 	
@@ -27,8 +27,10 @@ local wepconfig = {
 	},
 	
 	damage = {
-		base = 19,
-		headMultiplier = 5.5,
+		base = 33,
+		min = 25,
+
+		headMultiplier = 4.8,
 		legMultiplier = 0.9,
 		damageFalloffPerMeter = 0.7,
 		damageFalloffDistance = 50,

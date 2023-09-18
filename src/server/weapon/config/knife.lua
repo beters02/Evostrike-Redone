@@ -3,6 +3,7 @@ local InitSprayPattern = require(Framework.shfc_initSprayPattern.Location)
 
 local module = {
 	inventorySlot = "ternary",
+	inspectAnimationTimeSkip = 0.225,
 	
 	totalAmmoSize = 90,
 	magazineSize = 30,

@@ -17,7 +17,8 @@ playerstats._defaultStats = {
     deaths = 0,
     wins = 0,
     losses = 0,
-    damage = 0
+    damage = 0,
+    matchesPlayed = 0
 }
 
 function playerstats.GetDefaultPlayerStats()
@@ -25,6 +26,7 @@ function playerstats.GetDefaultPlayerStats()
     for i, v in pairs(Maps.GetMaps("name")) do
         def[v] = Tables.clone(playerstats._defaultStats)
     end
+    def.global = Tables.clone(playerstats._defaultStats) -- global key for all maps
     return
 end
 
@@ -44,19 +46,27 @@ function playerstats.Get(player)
         return false
     end
 
-    -- check for new maps
+    -- check for new maps & stats
     local change = false
     for mapName, mapStats in pairs(default) do
+
+        -- new map
         if not result[mapName] then
             change = true
             result[mapName] = Tables.clone(playerstats._defaultStats)
         end
+
+        -- new stat
+        for statKey, statValue in pairs(mapStats) do
+            if not result[mapName][statKey] then
+                result[mapName][statKey] = statValue
+            end
+        end
     end
-    
+
     if change then
         playerstats.Set(player, result)
         playerstats:Save()
-        print("Player stats updated maps!")
     end
 
     return result
@@ -72,7 +82,7 @@ function playerstats.Set(player, new, save)
     end)
 
     if not success then
-        return false
+        return false, warn(err)
     end
 
     if save then
@@ -88,7 +98,15 @@ function playerstats.Save(player)
     end)
 end
 
---
-
+-- Increment all stat values in a specific key
+-- PCall is recommended for this function
+-- Use this if you want to increment stats on a map or for global. Ex: playerstats.IncrementAllValuesInKey(player, "warehouse", {kills = 1})
+function playerstats.IncrementAllValuesInKey(player, key, statIncrementData, ignoreSave) -- incrementData: {key = valueToAddToCurrent}
+    local data = playerstats.Get(player)
+    for i, v in pairs(statIncrementData) do
+        data[key][i] += v
+    end
+    return playerstats.Set(player, data, not ignoreSave)
+end
 
 return playerstats

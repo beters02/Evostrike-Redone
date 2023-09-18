@@ -1,4 +1,4 @@
--- [[ Module for organizing the usage of gamemode GUIs ]]
+                        -- [[ Module for organizing the usage of gamemode GUIs ]]
 local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local TweenService = game:GetService("TweenService")

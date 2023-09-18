@@ -6,6 +6,7 @@ local Sound = require(Framework.shm_sound.Location)
 local States = require(Framework.shm_states.Location)
 
 local Satchel = {
+    name = "Satchel",
 
     -- grenade settings
     isGrenade = true,

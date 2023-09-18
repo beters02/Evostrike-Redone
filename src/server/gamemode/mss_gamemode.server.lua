@@ -8,7 +8,13 @@ local SetRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remot
 local GetRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("Get")
 local ForceStartRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("ForceStart")
 
-SetRemote.OnServerEvent:Connect(function(player, gamemodeName)
+SetRemote.OnServerEvent:Connect(function(player, gamemodeName, permGroup)
+    if permGroup and permGroup == "playtester" then
+        if Gamemode.currentGamemode ~= "Range" and not Gamemode._wasChangedFromRange then
+            return false
+        end
+        Gamemode._wasChangedFromRange = true
+    end
     Gamemode.SetGamemode(gamemodeName)
 end)
 

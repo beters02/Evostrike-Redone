@@ -126,9 +126,9 @@ function core_reload()
 		local need = defMag - serverStoredVar.ammo.magazine
 		if serverStoredVar.ammo.total >= need then
 			newMag = serverStoredVar.ammo.magazine + need
-			serverStoredVar.ammo.total -= defMag - serverStoredVar.ammo.magazine
+			serverStoredVar.ammo.total -= need
 		else
-			newMag = serverStoredVar.ammo.total
+			newMag = serverStoredVar.ammo.total + serverStoredVar.ammo.magazine
 			serverStoredVar.ammo.total = 0
 		end
 		serverStoredVar.ammo.magazine = newMag

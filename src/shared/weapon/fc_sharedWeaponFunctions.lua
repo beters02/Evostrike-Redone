@@ -15,6 +15,8 @@ local Particles = MainObj:WaitForChild("particles")
 local EmitParticle = require(Framework.shfc_emitparticle.Location)
 local Math = require(Framework.shfc_math.Location)
 local States = require(Framework.shm_states.Location)
+local EvoPlayer = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoPlayer"))
+local BulletHitUtil = require(script.Parent:WaitForChild("fc_bulletHitUtil"))
 
 local module = {}
 
@@ -243,25 +245,27 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		-- round damage to remove decimals
 		damage = math.round(damage)
 
+		-- set ragdoll variations
+		char:SetAttribute("bulletRagdollNormal", -normal)
+		char:SetAttribute("bulletRagdollKillDir", (player.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Unit)
+		char:SetAttribute("lastHitPart", instance.Name)
+		char:SetAttribute("lastUsedWeapon", weaponOptions.name)
+		char:SetAttribute("lastUsedWeaponDestroysHelmet", weaponOptions.damage.destroysHelmet or false)
+		char:SetAttribute("lastUsedWeaponHelmetMultiplier", weaponOptions.damage.helmetMultiplier or 1)
+
+		-- apply damage
+		damage = EvoPlayer:TakeDamage(char, damage)
+
 		-- see if player will be killed after damage is applied
 		killed = hum.Health <= damage and true or false
 
         if RunService:IsServer() then
-
-			-- set ragdoll variations
-			char:SetAttribute("bulletRagdollNormal", -normal)
-			char:SetAttribute("bulletRagdollKillDir", (player.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Unit)
-			char:SetAttribute("lastHitPart", instance.Name)
-			char:SetAttribute("lastUsedWeapon", weaponOptions.name)
-
-			-- apply damage
-            hum:TakeDamage(damage)
-
 			-- apply tag so we can easily access damage information
             module.TagPlayer(char, player)
-
 		end
-	return damage, particleFolderName, killed, char, soundFolderName
+
+
+	return damage, particleFolderName, killed, char
 end
 
 -- Functions
@@ -273,13 +277,8 @@ end
 	Also compensates for lag if needed
 ]]
 
-function module.RegisterShot(player, weaponOptions, result, origin, dir, registerTime, isHumanoid, wallbangDamageMultiplier, isBangable, tool, fromModel)
-	if not result.Instance then return false end
-
-	local particleFolderName
-	local soundFolderName
-	local hole = false
-	local damage = false
+function module.RegisterShot(player, weaponOptions, result, origin, _, _, isHumanoid, wallbangDamageMultiplier, isBangable, tool, fromModel) -- _[1] = dir, _[2] = registerTime
+	if not result or not result.Instance then return false end
 	local killed = false
 	local _
 
@@ -295,46 +294,23 @@ function module.RegisterShot(player, weaponOptions, result, origin, dir, registe
 	else
 		char = isHumanoid
 	end
-	
+
 	if RunService:IsClient() then
-		task.spawn(function()
-			if not isHumanoid then return end
-
-			-- get damage, folders, killedBool
-			damage, particleFolderName, killed, _, soundFolderName = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
-			local instance = result.Instance
-
-			-- particles
+		if isHumanoid then
 			task.spawn(function()
-				if killed then
-					EmitParticle.EmitParticles(instance, Particles.Blood.Kill:GetChildren(), instance, char)
-				end
-				if not particleFolderName then return end
-				EmitParticle.EmitParticles(instance, Particles.Blood[particleFolderName]:GetChildren(), instance)
-			end)
-			
-			-- sounds
-			if soundFolderName then
-				if not char:GetAttribute("ClientRegisteredKilled") then
-					task.spawn(function()
-						module.PlayGlobalSound(player.Character, "PlayerHit", soundFolderName)
-					end)
-					if killed and not char:GetAttribute("ClientRegisteredKilled") then
-						char:SetAttribute("ClientRegisteredKilled", true)
-						task.spawn(function()
-							module.PlayGlobalSound(player.Character, "PlayerKilled")
-						end)
-					end
-				end
-			end
-		end)
 
+				-- get damage, folders, killedBool
+				-- _[1] = damage, _[2] = particleFolderName[deprecated]
+				_, _, killed = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
+	
+				BulletHitUtil.PlayerHitParticles(char, result.Instance, killed)
+				BulletHitUtil.PlayerHitSounds(char, result.Instance, killed)
+			end)
+		end
 		return module.FireBullet(player.Character, result, isHumanoid, isBangable, tool, fromModel)
-	elseif isHumanoid then
-		return util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
 	end
 
-	return false
+	return isHumanoid and util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier) or false
 end
 
 function module.TagPlayer(tagged: Model, tagger: Player)

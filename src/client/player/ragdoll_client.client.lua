@@ -28,7 +28,6 @@ local nonPlayerDolls = {}
 -- Init NonPlayer Ragdolls (Every time a new bot is spawned, create ragdoll clone)
 
 function NonPlayerInitRagdoll(character)
-	if nonPlayerDolls[character.Name] then return end
     local doll, hum, conn = CreateRagdoll(character)
 	nonPlayerDolls[character.Name] = doll
 	conn:Disconnect()
