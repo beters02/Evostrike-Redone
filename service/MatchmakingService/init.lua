@@ -959,6 +959,7 @@ function MatchmakingService.new(options: {	MajorVersion: string | nil;	DisableRa
         if Service.ApplyCustomTeleportData ~= nil then
           for i, player in ipairs(players) do
             data.customData[player.UserId] = Service.ApplyCustomTeleportData(player, gameData)
+            print(gameData)
           end
         end
 

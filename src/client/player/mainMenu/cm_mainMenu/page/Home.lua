@@ -3,8 +3,7 @@ local TweenService = game:GetService("TweenService")
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.mainMenu.Popup)
 local EvoMM = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
 
-local getGamemodeRemote = ReplicatedStorage:WaitForChild("gamemode"):WaitForChild("remote"):WaitForChild("Get")
-local gamemodeChangedRemote = ReplicatedStorage.gamemode.remote.ChangedEvent
+local GamemodeService = require(ReplicatedStorage:WaitForChild("Services").GamemodeService)
 local requestQueueFunction = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("requestQueueFunction")
 
 local ClickDebounce = 0.5
@@ -19,6 +18,7 @@ end
 function play:Close()
     self.Location.Visible = false
     self.Location.Parent.CasualFrame.Visible = false
+    self.Location.Parent.SoloPopupRequest.Visible = false
 
     self:_disconnectPlayButtons()
 end
@@ -31,9 +31,11 @@ function play:init()
     self.var = {nextClickAllow = tick()}
 
     -- connect gamemode changed
-    gamemodeChangedRemote.OnClientEvent:Connect(function(gamemode: string)
-        self._lastGotGamemode = gamemode
-        self:_preparePageGamemode(gamemode, true)
+    GamemodeService.RemoteEvent.OnClientEvent:Connect(function(action, gamemode)
+        if action == "GamemodeChanged" then
+            self._lastGotGamemode = gamemode
+            self:_preparePageGamemode(gamemode, true)
+        end
     end)
 
     return self
@@ -115,10 +117,10 @@ end
 
 function play:_soloButtonClick()
 
-    if self._lastGotGamemode ~= "Lobby" then
+    --[[if self._lastGotGamemode ~= "Lobby" then
         Popup.burst("You can only do this in the lobby!", 3)
         return
-    end
+    end]]
 
     self.Location.Visible = false
     self.Location.Parent.SoloPopupRequest.Visible = true

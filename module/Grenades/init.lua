@@ -31,6 +31,9 @@ function grenades:CreateGrenade(options: table?, objects: Folder)
 
     grenade.Destroy = function()
         Caster:Remove(Players.LocalPlayer)
+        for i, v in pairs(grenade.Connections) do
+            v:Disconnect()
+        end
     end
 
     return grenade :: Types.Grenade

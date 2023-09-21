@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local EmitParticles = require(Framework.shfc_emitparticle.Location)
+local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService"))
 
 local ParticlesTable
 task.spawn(function()
@@ -60,7 +61,10 @@ Commands.Gamemode = {
 	Public = false,
 	
 	Function = function(self, _, gamemodeName)
-		game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName)
+		print('Attempt change the mothjercucking j')
+		GamemodeService:ChangeGamemode(gamemodeName)
+		print("Post attempt change the motherufkcing ad")
+		--game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName)
 	end,
 }
 

@@ -107,10 +107,14 @@ function Range:RemoveBuyMenu(player)
 end
 
 function Range:Died(player)
-    -- give player gui (handle respawn)
-    self:DiedGui(player)
+
+    --self:DiedGui(player)
     self:DiedCamera(player)
 
+    task.delay(2, function()
+        self:SpawnPlayer(player)
+    end)
+    
     task.spawn(function()
         Weapon.ClearPlayerInventory(player)
         Ability.ClearPlayerInventory(player)

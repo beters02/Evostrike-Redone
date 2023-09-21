@@ -78,6 +78,33 @@ function Math.vector3Sub(vector, value)
 	return Vector3.new(_v.X, _v.Y, _v.Z)
 end
 
+-- norm2face - by @ DalekAndrew99 on devforums
+function Math.normalToFace(normalVector, part)
+	local TOLERANCE_VALUE = 1 - 0.001
+    local allFaceNormalIds = {
+        Enum.NormalId.Front,
+        Enum.NormalId.Back,
+        Enum.NormalId.Bottom,
+        Enum.NormalId.Top,
+        Enum.NormalId.Left,
+        Enum.NormalId.Right
+    }    
+
+    for _, normalId in pairs( allFaceNormalIds ) do
+        -- If the two vectors are almost parallel,
+        if Math.faceToNormal(part, normalId):Dot(normalVector) > TOLERANCE_VALUE then
+            return normalId -- We found it!
+        end
+    end
+    
+    return nil -- None found within tolerance.
+end
+
+-- face2norm - by @ DalekAndrew99 on devforums
+function Math.faceToNormal(part, normalId)
+    return part.CFrame:VectorToWorldSpace(Vector3.FromNormalId(normalId))
+end
+
 -- Aliases
 Math.absr = Math.absValueRandom
 Math.mmabs = Math.maxOrMinAbs
@@ -87,5 +114,7 @@ Math.v3min = Math.vector3Min
 Math.frand = Math.fixedRandomAbsRange
 Math.v3add = Math.vector3Add
 Math.v3sub = Math.vector3Sub
+Math.norm2face = Math.normalToFace
+Math.face2norm = Math.faceToNormal
 
 return Math

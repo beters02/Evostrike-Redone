@@ -3,13 +3,23 @@ local InitSprayPattern = require(Framework.shfc_initSprayPattern.Location)
 
 local module = {
 	inventorySlot = "ternary",
-	inspectAnimationTimeSkip = 0.225,
+	automatic = true,
+
+	-- model = secondToSkipTo
+	inspectAnimationTimeSkip = {
+		default = 0.03,
+		karambit = 0.225,
+		m9bayonet = 0.1
+	},
+
+	damageCastLength = 7,
 	
 	totalAmmoSize = 90,
 	magazineSize = 30,
 	
 	equipLength = 1,
-	fireRate = 0.155,
+	fireRate = 0.325,
+	secondaryFireRate = 0.75,
 	reloadLength = 1.5,
 	recoilReset = 0.3,
 	
@@ -23,23 +33,14 @@ local module = {
 		max = 0.1
 	},
 	
-	accuracy = {
-		firstBullet = true,
-		base = 3,
-		spray = 2,
-		walk = 10,
-		run = 15,
-		jump = 120
-	},
+	accuracy = {base = 1},
 	
 	damage = {
-		base = 26,
-		headMultiplier = 5,
-		legMultiplier = 0.9,
-		damageFalloffPerMeter = 1.5,
-		damageFalloffDistance = 20,
-		damageFalloffMinimumDamage = 20,
-		enableHeadFalloff = false
+		base = 27.5,
+		secondary = 50,
+		headMultiplier = 1.5,
+		primaryBackstab = 75,
+		secondaryBackstab = 150,
 	},
 
 	movement = {

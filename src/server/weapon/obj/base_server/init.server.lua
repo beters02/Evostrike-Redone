@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local Framework = require(ReplicatedStorage.Framework)
+local EvoPlayer = require(Framework.Module.shared.Modules.EvoPlayer)
 --local Signal = require(Framework.shc_signal)
 
 local sharedWeaponFunctions = require(Framework.shfc_sharedWeaponFunctions.Location)
@@ -95,6 +96,19 @@ function core_unequip()
 	player.Character.HumanoidRootPart.WeaponGrip.Part1 = nil
 end
 
+export type KnifeDamageType = "PrimaryStab" | "SecondaryStab" | "Primary" | "Secondary"
+function util_verifyKnifeDamage(knifeDamageType: KnifeDamageType, damagedHumanoid)
+	if knifeDamageType == "PrimaryStab" then
+		EvoPlayer:TakeDamage(damagedHumanoid.Parent, weaponOptions.damage.primaryBackstab)
+	elseif knifeDamageType == "SecondaryStab" then
+		EvoPlayer:TakeDamage(damagedHumanoid.Parent, weaponOptions.damage.secondaryBackstab)
+	elseif knifeDamageType == "Secondary" then
+		EvoPlayer:TakeDamage(damagedHumanoid.Parent, weaponOptions.damage.secondary)
+	else -- "Primary" is default
+		EvoPlayer:TakeDamage(damagedHumanoid.Parent, weaponOptions.damage.base)
+	end
+end
+
 local shotServerReRegistration = false
 function core_fire(currentBullet, clientAccuracyVector, rayInformation, shotRegisteredTime, wallbangDamageMultiplier)
 
@@ -146,7 +160,14 @@ end
 --[{                                 }]]
 
 -- create actions table for remote invoking
-local actions = {Timer = remote_timer, Fire = core_fire, Reload = core_reload, GetAccuracy = util_getAccuracy, EquipTimer = remote_equipTimer, EquipTimerCancel = remote_equipTimerCancel}
+local actions = {}
+actions.Timer = remote_timer
+actions.Fire = core_fire
+actions.Reload = core_reload
+actions.GetAccuracy = util_getAccuracy
+actions.EquipTimer = remote_equipTimer
+actions.EquipTimerCancel = remote_equipTimerCancel
+actions.VerifyKnifeDamage = util_verifyKnifeDamage
 
 weaponRemoteFunction.OnServerInvoke = function(plr, action, ...)
 	return actions[action](...)

@@ -5,6 +5,8 @@
     Must also have AbilityClass:UseFailed()
 ]]
 
+print('ASLKJDBNALKSDJBN')
+
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
 local VMSprings = require(Framework.Module.lib.c_vmsprings)
@@ -16,9 +18,10 @@ local Base = {}
 Base.__index = Base
 
 function Base.new(abilityClassModule)
+    print('ASLKJDBNALKSDJBN')
     if not abilityClassModule then warn("Must specify AbilityClassModule") return end
     local self = require(abilityClassModule)
-
+    print('ASLKJDBNALKSDJBN')
     -- grenade base class inheritance
     if self.isGrenade then
         for i, v in pairs(require(abilityClassModule.GrenadeBase)) do
@@ -26,20 +29,20 @@ function Base.new(abilityClassModule)
         end
         self.grenadeClassObject = Grenades:CreateGrenade(self, game.ReplicatedStorage.ability.obj[self.name])
     end
-
+    print('ASLKJDBNALKSDJBN')
     setmetatable(self, Base)
-
+    print('ASLKJDBNALKSDJBN')
     -- equip return spring
     self:CreateEquipReturnSpring()
-
+    print('ASLKJDBNALKSDJBN')
     -- init use spring if necesssary
     if self.useCameraRecoil then
         self:InitCameraRecoil()
     end
-
+    print('ASLKJDBNALKSDJBN')
     -- playerdata
     self.m_playerdata = require(Framework.shm_clientPlayerData.Location)
-
+    print('ASLKJDBNALKSDJBN')
     return self
 end
 
@@ -164,5 +167,7 @@ function Base:CreateEquipReturnSpring()
         end
     end
 end
+
+print('ASLKJDBNALKSDJBN')
 
 return Base

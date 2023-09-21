@@ -6,6 +6,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local SoundModule = require(Framework.shm_sound.Location)
 local States = require(Framework.shm_states.Location)
 local PlayerData = require(Framework.shm_clientPlayerData.Location)
+local RaycastHitbox = require(Framework.Module.lib.c_raycasthitbox)
 
 local strings = require(Framework.shfc_strings.Location)
 local vmsprings = require(Framework.shc_vmsprings.Location)
@@ -15,6 +16,7 @@ local reptemp = ReplicatedStorage:WaitForChild("temp")
 local cameraobject = require(Framework.shc_cameraObject.Location)
 local animationEventFunctions = {}
 local connections = {}
+local coreself = {}
 local hotVariables = {mouseDown = false}
 local hotConnections = {}
 local forcestop = false
@@ -86,7 +88,7 @@ local connectVMSpringEvent
 local defGroundMaxSpeed
 
 -- get controller
-local controllerModule = require(ReplicatedStorage.Modules.WeaponController.Module)
+local weaponController2 = require(char:WaitForChild("WeaponController").Interface)
 
 -- init states
 States.SetStateVariable("PlayerActions", "shooting", false)
@@ -163,11 +165,6 @@ local function init_HUD()
 	-- connect key changed bind for hud elements
 	weaponVar._keyChangedBind.Event:Connect(function(newValue)
 		weaponBar.SideBar[weaponOptions.inventorySlot .. "Key"].Text = strings.convertFullNumberStringToNumberString(newValue)
-	end)
-
-	-- disable weaponFrame on death
-	game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE").Event:Once(function()
-		weaponFrame.Visible = false
 	end)
 
 	-- enable
@@ -265,20 +262,71 @@ local function init_animationEvents()
 	weaponSounds = weaponObjectsFolder:WaitForChild("sounds")
 
 	-- play weapon sound
-	animationEventFunctions.PlaySound = function(soundName, dontDestroyOnRecreate)
+	animationEventFunctions.PlaySound = function(soundName, dontDestroyOnRecreate, isReplicated)
 		local _weaponName = weaponName
 		if dontDestroyOnRecreate then _weaponName = false end
-
 		local sound = weaponSounds:FindFirstChild(soundName)
-		return sharedWeaponFunctions.PlaySound(player.Character, _weaponName, sound)
+		if not sound then return end
+
+		if sound:IsA("Folder") then
+			for _, v in pairs(sound:GetChildren()) do
+				task.spawn(function()
+					if isReplicated then
+						SoundModule.PlayReplicatedClone(v, player.Character.HumanoidRootPart, true)
+					else
+						sharedWeaponFunctions.PlaySound(player.Character, _weaponName, v)
+					end
+				end)
+			end
+			return
+		end
+
+		if isReplicated then
+			return SoundModule.PlayReplicatedClone(sound, player.Character.HumanoidRootPart, true)
+		else
+			return sharedWeaponFunctions.PlaySound(player.Character, _weaponName, sound)
+		end
 	end
 
 	-- play replicated weapon sound (replicate to server)
 	animationEventFunctions.PlayReplicatedSound = function(soundName, dontDestroyOnRecreate)
-		local sound = weaponSounds:FindFirstChild(soundName)
-		SoundModule.PlayReplicatedClone(sound, player.Character.HumanoidRootPart, true)
+		animationEventFunctions.PlaySound(soundName, dontDestroyOnRecreate, true)
 	end
-	
+
+	coreself.animationEventFunctions = animationEventFunctions
+end
+
+-- init knife's extra variables and functiolity
+local function init_knife()
+	weaponVar._raycastHitbox = RaycastHitbox.new(clientModel:FindFirstChild("Blade") or clientModel)
+	weaponVar._raycastHitbox.Visualizer = false
+	weaponVar._raycastHitbox:SetPoints(clientModel.GunComponents.WeaponHandle, {Vector3.new(1, 0, 0), Vector3.new(5, 0, 0), Vector3.new(10, 0, 0)})
+	weaponVar._knifeParams = RaycastParams.new()
+	weaponVar._knifeParams.CollisionGroup = "Bullets"
+	weaponVar._knifeParams.FilterDescendantsInstances = {player.Character, workspace.CurrentCamera}
+	weaponVar._knifeParams.FilterType = Enum.RaycastFilterType.Exclude
+end
+
+local function init_weaponControllerWeapon()
+	if not weaponController2.CurrentController then
+		local t = tick() + 3
+		repeat task.wait() until weaponController2.CurrentController or tick() >= t
+		if not weaponController2.CurrentController then
+			error("Could not initialize WeaponController Weapon, No Weapon Controller found.")
+		end
+	end
+
+	local _actionFunctions = {
+		firedown 				= function() return conn_mouseDown(tick()) end,
+		secondaryfiredown 		= function() return conn_mouseDown(tick(), true) end,
+		fireup 					= function() return conn_mouseUp() end,
+		startinspect			= core_inspect,
+		stopinspect				= core_stopInspecting,
+		reload					= core_reload,
+		remoteEvent				= weaponRemoteEvent
+	}
+
+	weaponController2.CurrentController:AddWeapon(weaponName, weaponOptions, false, tool, clientModel, tool:GetAttribute("IsForceEquip"), _actionFunctions)
 end
 
 --[[@title 			- util_playAnimation
@@ -289,7 +337,7 @@ end
 	@return			- animation: AnimationTrack
 ]]
 
-function util_playAnimation(location: "client"|"server", name: string, fadeIn: number?)
+function util_playAnimation(location: "client"|"server", name: string, fadeIn: number?, cancelOtherActionAnimations: boolean?, cancelFadeOut: number?)
 	local animation: AnimationTrack = weaponVar.animations[location][name]
 
 	-- connect events
@@ -304,6 +352,13 @@ function util_playAnimation(location: "client"|"server", name: string, fadeIn: n
 	local wacrs = animation:GetMarkerReachedSignal("PlayReplicatedSound"):Connect(function(param)
 		animationEventFunctions.PlayReplicatedSound(param)
 	end)
+
+	if cancelOtherActionAnimations then
+		task.spawn(function()
+			
+		end)
+		util_stopAllLocalAnimationsExceptHold(cancelFadeOut or nil, {name = true})
+	end
 
 	animation:Play(fadeIn or nil)
 	animation.Stopped:Once(function()
@@ -339,19 +394,17 @@ function util_stopAllAnimations()
 end
 
 function util_stopAllVMAnimations()
-	for i, v in pairs(vmAnimController:GetPlayingAnimationTracks()) do
+	for _, v in pairs(vmAnimController:GetPlayingAnimationTracks()) do
 		v:Stop()
 	end
 end
 
-function util_stopAllLocalAnimationsExceptHold()
-	forcestop = true
+function util_stopAllLocalAnimationsExceptHold(fadeOut, except) -- except = {animName = true}
 	for _, a in pairs(weaponVar.animations.client) do
 		if a.Name == "Hold" then continue end
-		a:Stop()
+		if except and except[a.Name] then continue end
+		a:Stop(fadeOut)
 	end
-	task.wait(0.06)
-	forcestop = false
 end
 
 --[[@title 			- util_setServerTransparency
@@ -439,9 +492,9 @@ end
 	@return			- {void}
 ]]
 
-function util_fireWithChecks(t)
+function util_fireWithChecks(t, isSecondaryFire)
     if not weaponVar.equipped or weaponVar.fireDebounce or weaponVar.reloading or weaponVar.ammo.magazine <= 0 then return end
-
+	if not hotVariables.mouseDown then return end
     weaponVar.fireDebounce = true
 
 	-- reset origin point if currBullet is 1
@@ -449,7 +502,12 @@ function util_fireWithChecks(t)
 		util_resetSprayOriginPoint()
 	end
 
-    core_fire(t)
+	if isSecondaryFire then
+		core_secondaryFire()
+	else
+		core_fire(t)
+	end
+    
     
     if weaponOptions.automatic then
         weaponVar.fireDebounce = false
@@ -517,12 +575,15 @@ function util_RegisterRecoils()
 		mray = {Direction = mray.Direction, Origin = mray.Origin}
 		mray.Direction = Vector3.new(
 			mray.Direction.X,
-			--(weaponVar.originPoint.Direction.Y + mray.Direction.Y)/2 - math.min(camRecoil.X/12, weaponOptions.fireVectorCameraMax.X),
-			--(weaponVar.originPoint.Direction.Y + mray.Direction.Y)/2 + (weaponVar.totalRecoiledVector.Y/12),
-			--mray.Direction.Y - math.min(camRecoil.X/12, weaponOptions.fireVectorCameraMax.X),
 			mray.Direction.Y,
 			mray.Direction.Z
 		)
+
+		--[[
+			--(weaponVar.originPoint.Direction.Y + mray.Direction.Y)/2 - math.min(camRecoil.X/12, weaponOptions.fireVectorCameraMax.X),
+			--(weaponVar.originPoint.Direction.Y + mray.Direction.Y)/2 + (weaponVar.totalRecoiledVector.Y/12),
+			--mray.Direction.Y - math.min(camRecoil.X/12, weaponOptions.fireVectorCameraMax.X),
+		]]
 
 		-- get total accuracy and recoil vec direction
 		local direction = sharedWeaponFunctions.GetAccuracyAndRecoilDirection(player, mray, currVecRecoil, weaponOptions, weaponVar)
@@ -624,6 +685,7 @@ function util_setInfoFrameWeapon()
 	weaponInfoFrame.CurrentMagLabel.Text = tostring(weaponVar.ammo.magazine)
 	weaponInfoFrame.CurrentTotalAmmoLabel.Text = tostring(weaponVar.ammo.total)
 	weaponInfoFrame.GunNameLabel.Text = strings.firstToUpper(weaponName)
+	print('wepset')
 end
 
 --[[@title 			- util_setInfoFrameKnife()
@@ -639,6 +701,7 @@ function util_setInfoFrameKnife()
 	weaponInfoFrame.CurrentMagLabel.Visible = false
 	weaponInfoFrame.CurrentTotalAmmoLabel.Visible = false
 	weaponInfoFrame["/"].Visible = false
+	print('kset')
 end
 
 function fireCheck()
@@ -685,18 +748,18 @@ function conn_mouseUp()
 		weaponVar.fireDebounce = false
 		util_resetSprayOriginPoint()
 	end
+
 end
 
-function conn_mouseDown(t)
+function conn_mouseDown(t, secondaryMouse)
 	if not player.Character or hum.Health <= 0 then return end
 	t = type(t) == "number" and t or tick()
-    
+
 	hotVariables.mouseDown = true
 
 	if not weaponOptions.automatic then
 
 		-- fire input scheduling, it makes semi automatic weapons feel less clunky and more responsive
-		
 		if hotVariables.fireScheduleCancelThread then
 			coroutine.yield(hotVariables.fireScheduleCancelThread)
 			hotVariables.fireScheduleCancelThread = nil
@@ -709,17 +772,19 @@ function conn_mouseDown(t)
 		if weaponVar.firing then
 			weaponVar.fireScheduled = task.spawn(function()
 				repeat task.wait() until not weaponVar.firing
-				util_fireWithChecks(tick())
+				util_fireWithChecks(tick(), secondaryMouse)
 				weaponVar.fireScheduled = nil
 				hotVariables.fireScheduleCancelThread = nil
 			end)
 			return
 		end
 
-		util_fireWithChecks(t)
+		util_fireWithChecks(t, secondaryMouse)
 	
 	else
+
 	if not weaponVar.accumulator then weaponVar.accumulator = 0 end
+	local fireRate = (not secondaryMouse and weaponOptions.fireRate or weaponOptions.secondaryFireRate)
 		
 		if not weaponVar.fireLoop then
 
@@ -728,7 +793,7 @@ function conn_mouseDown(t)
 
 			if tick() >= weaponVar.nextFireTime then
 				startWithInit = true
-				weaponVar.nextFireTime = tick() + weaponOptions.fireRate -- set next fire time
+				weaponVar.nextFireTime = tick() + fireRate -- set next fire time
 				weaponVar.accumulator = 0
 			else
 				weaponVar.accumulator = weaponVar.nextFireTime - tick()
@@ -737,33 +802,19 @@ function conn_mouseDown(t)
 			-- start fire loop
 			weaponVar.fireLoop = RunService.RenderStepped:Connect(function(dt)
 				weaponVar.accumulator += dt
-
-				while weaponVar.accumulator >= weaponOptions.fireRate do
+				while weaponVar.accumulator >= weaponOptions.fireRate and hotVariables.mouseDown do
 					weaponVar.nextFireTime = tick() + weaponOptions.fireRate
 					weaponVar.accumulator -= weaponOptions.fireRate
-					task.spawn(util_fireWithChecks)
-
-					-- test resolve insta shoot
-					-- worked surprisngly well! let's go
-					--if weaponVar.accumulator >= weaponOptions.fireRate then task.wait(weaponVar.accumulator) end
-
-					-- still a bit fast/delayed, test #2
-					-- this is the best one
-					--if weaponVar.accumulator >= weaponOptions.fireRate then task.wait(weaponVar.fireRate) end
-
-					-- better, but still a bit fast at times. 1 more try
-					-- NOPE THIS ONE IS THE WORST ONE
-					--task.wait(weaponVar.fireRate)
-
-					if weaponVar.accumulator >= weaponOptions.fireRate then task.wait(weaponVar.fireRate) end
-					--task.wait()
+					task.spawn(function()
+						util_fireWithChecks(t, secondaryMouse)
+					end)
+					if weaponVar.accumulator >= fireRate then task.wait(fireRate) end
 				end
-
 			end)
 
 			-- initial fire if necessary
 			if startWithInit then
-				util_fireWithChecks(t)
+				util_fireWithChecks(t, secondaryMouse)
 			end
 
 		end
@@ -799,18 +850,9 @@ local m_inputs = require(player.PlayerScripts.m_inputs)
 local types = m_inputs.Types
 
 function binds_connectHotBinds()
-	controllerModule.StoredWeaponController:ConnectActions(
-		function()
-			return core_fire(tick())
-		end,
-		function()
-			return core_reload()
-		end
-	)
 end
 
 function binds_disconnectHotBinds()
-	controllerModule.StoredWeaponController:DisconnectActions()
 end
 
 function core_equip()
@@ -823,6 +865,16 @@ function core_equip()
 
 	-- enable weapon icon
 	util_setIconEquipped(true)
+
+	-- HUD & Knife Sound
+	if weaponOptions.inventorySlot == "ternary" then -- knife
+		print('equip knife')
+		animationEventFunctions.PlaySound("Equip") -- equip sound
+		util_setInfoFrameKnife()
+	else
+		print('equip weapon')
+		util_setInfoFrameWeapon()
+	end
 
 	-- var
     forcestop = false
@@ -849,14 +901,6 @@ function core_equip()
         end
 	end)
 
-	-- HUD & Knife Sound
-	if weaponOptions.inventorySlot == "ternary" then -- knife
-		animationEventFunctions.PlaySound("Equip") -- equip sound
-		util_setInfoFrameKnife()
-	else
-		util_setInfoFrameWeapon()
-	end
-
 	-- set movement speed
 	util_handleHoldMovementPenalize(true)
 end
@@ -869,7 +913,7 @@ function core_unequip()
 	if not player.Character or hum.Health <= 0 then return end
 
 	util_setIconEquipped(false)
-	controllerModule:Unequip(weaponOptions.inventorySlot)
+	--controllerModule:Unequip(weaponOptions.inventorySlot)
 
 	if weaponVar.equipping then
 		weaponRemoteFunction:InvokeServer("EquipTimerCancel")
@@ -888,11 +932,11 @@ function core_unequip()
 
 	task.spawn(function()
 		util_resetSprayOriginPoint()
+		util_stopAllAnimations()
 		weaponCameraObject:StopCurrentRecoilThread()
 	end)
 	
 	util_handleHoldMovementPenalize(false)
-	util_stopAllAnimations()
 
 end
 
@@ -901,22 +945,29 @@ end
 ]]
 
 function core_inspect(fadeIn)
-	if not weaponVar.animations then
-		warn("What happened to the animations dude?")
-		print(weaponVar)
-		return
-	end
-	if not weaponVar.animations.client.Inspect then
-		return
-	end
+	if not weaponVar.animations then return end
+	if not weaponVar.animations.client.Inspect then return end
+	if not weaponVar.equipped or weaponVar.equipping then return end
+
+	-- force start the hold animation if we are still pulling the weapon out
 	if not weaponVar.animations.client.Hold.IsPlaying then
-		weaponVar.animations.client.Hold:Play(0.1)
+		weaponVar.animations.client.Hold:Play()
 	end
+
+	-- time skip or play
 	if weaponVar.animations.client.Inspect.IsPlaying then
-		weaponVar.animations.client.Inspect.TimePosition = weaponOptions.inspectAnimationTimeSkip or 0.2
+		local skinModel = clientModel:GetAttribute("SkinModel")
+		if skinModel then
+			if string.match(skinModel, "default") then skinModel = "default" end
+			print(skinModel)
+			weaponVar.animations.client.Inspect.TimePosition = weaponOptions.inspectAnimationTimeSkip[string.lower(skinModel)]
+		else
+			weaponVar.animations.client.Inspect.TimePosition = (weaponOptions.inspectAnimationTimeSkip and (weaponOptions.inspectAnimationTimeSkip.default or weaponOptions.inspectAnimationTimeSkip) or 0)
+		end
+		
+		
 	else
-		util_stopAllLocalAnimationsExceptHold()
-		util_playAnimation("client", "Inspect", fadeIn)
+		util_playAnimation("client", "Inspect", fadeIn, true, fadeIn)
 	end
 end
 
@@ -932,6 +983,12 @@ end
 ]]
 
 -- inherit some functions
+task.spawn(function()
+	if weaponOptions.inventorySlot == "ternary" then
+		init_knife()
+	end
+end)
+
 local corefunc = script:FindFirstChild("corefunctions") and require(script.corefunctions) or {}
 local basecorefunc = require(script:WaitForChild("basecorefunctions"))
 
@@ -943,15 +1000,16 @@ corefunc = basecorefunc
 --
 
 -- keys of functions that corefunc will use
-local coreself = {
+coreself = {
 	util_RegisterRecoils = util_RegisterRecoils,
 	util_playAnimation = util_playAnimation,
-	core_stopInspecting = core_stopInspecting
+	core_stopInspecting = core_stopInspecting,
+	remoteEvent = weaponRemoteEvent,
 }
 
 core_fire = function()
 	if not player.Character or hum.Health <= 0 then return end
-	if States.GetStateVariable("PlayerActions", "grenadeThrowing") then return end
+	if States.GetStateVariable("PlayerActions", "grenadeThrowing") or States.State("UI"):hasOpenUI() then return end
 	local autoReload
 	weaponVar, autoReload = corefunc.fire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, tick())
 	if autoReload then
@@ -964,17 +1022,29 @@ end
 
 core_reload = function()
 	if not player.Character or hum.Health <= 0 then return end
-	if States.GetStateVariable("PlayerActions", "grenadeThrowing") then return end
+	if States.GetStateVariable("PlayerActions", "grenadeThrowing") or States.State("UI"):hasOpenUI() then return end
 	weaponVar = corefunc.reload(coreself, weaponOptions, weaponVar, weaponRemoteFunction)
 end
 
-controllerModule.StoredWeaponController:GetInventoryWeaponByName(weaponName).CoreFunctions = {
+core_secondaryFire = function()
+	if not corefunc.secondaryFire then return end
+	if not player.Character or hum.Health <= 0 then return end
+	if States.GetStateVariable("PlayerActions", "grenadeThrowing") or States.State("UI"):hasOpenUI() then return end
+	weaponVar = corefunc.secondaryFire(coreself, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, tick())
+end
+
+--[[local inventoryControllerWeapon = controllerModule.StoredWeaponController:GetInventoryWeaponByName(weaponName, true)
+if not inventoryControllerWeapon then error("Could not load " .. player.Name .. "'s WeaponController weapon_" .. weaponName .. " InventoryWeapon") end
+inventoryControllerWeapon.CoreFunctions = {
 	firedown = conn_mouseDown,
 	fireup = conn_mouseUp,
 	reload = core_reload,
 	startInspect = core_inspect,
-	stopInspect = core_stopInspecting
-}
+	stopInspect = core_stopInspecting,
+	secfiredown = function()
+		return conn_mouseDown(false, true)
+	end
+}]]
 
 --[[{                                 }]
 
@@ -990,6 +1060,7 @@ init_HUD()
 init_animations()
 init_animationEvents()
 init_variables()
+init_weaponControllerWeapon()
 
 -- connect connections
 connections.equip = tool.Equipped:Connect(core_equip)

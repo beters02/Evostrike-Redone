@@ -358,7 +358,7 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 			ctween = landFinish(ctween)
 		end
 		Movement:ApplyFriction(cnumval.Value * dt * 60)
-		task.wait()
+		task.wait(1/60)
 	end)
 
 end

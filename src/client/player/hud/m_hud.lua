@@ -90,6 +90,14 @@ function hud:DisconnectPlayer()
         v:Disconnect()
     end
     self.playerConnections = {}
+
+    for i, v in pairs({"Primary", "Secondary"}) do
+        self.gui.WeaponBar[v].Visible = false
+        self.gui.AbilityBar[v].Visible = false
+    end
+
+    self.gui.WeaponBar.Ternary.Visible = false
+
 end
 
 return hud

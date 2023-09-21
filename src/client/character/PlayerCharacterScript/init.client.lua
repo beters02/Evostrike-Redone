@@ -17,6 +17,7 @@ hum.Died:Connect(function()
     local killer = char:FindFirstChild("DamageTag") and char.DamageTag.Value or false
     DiedEvent:FireServer(killer)
     DiedBind:Fire(killer)
+    print(killer)
 end)
 
 hum.Changed:Connect(function(property)

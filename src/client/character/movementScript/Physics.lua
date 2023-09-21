@@ -1,6 +1,3 @@
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local Math = require(Framework.shfc_math.Location)
-
 local module = {}
 
 --[[
@@ -26,13 +23,11 @@ function module:ApplyFriction(modifier, decel)
 		return vel
 	end
 
-	local newVel = vel
 	local newSpeed
 	local drop = 0
 	local control
 	
 	local fric = self.friction
-	local accel = self.groundAccelerate
 	decel = decel or self.groundDeccelerate
 
 	-- apply friction
@@ -63,16 +58,7 @@ end
 function module:ApplyGroundVelocity(groundNormal)
 
 	-- update accel dir for sticking
-	self:GetAccelerationDirection()
-
-	-- test
-	local forward = groundNormal:Cross(self.collider.CFrame.RightVector)
-	local right = groundNormal:Cross(forward)
-	local forwardMove = self.currentInputSum.Forward
-    local rightMove = self.currentInputSum.Side
-    local accelDir = (forwardMove * forward + rightMove * right).Unit
-
-	if self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then accelDir = Vector3.zero end
+	local accelDir = self:GetAccelerationDirection(groundNormal)
 
 	-- apply friction
 	self:ApplyFriction(1)
@@ -85,34 +71,6 @@ function module:ApplyGroundVelocity(groundNormal)
 	self:ApplyGroundAcceleration(accelDir, wishSpeed)
 
 end
-
---[[
-	Slope Ground Velocity
-	-- get acceleration (move) direction
-	local accelDir, wallHit = self:GetAccelerationDirection() -- "wishDir"
-	
-	-- ground normal for slopes
-	--local groundResult = GroundCast(self.player.Character)
-	--local groundNormal = groundResult.Normal
-
-	-- apply friction
-	--newVelocity = self:ApplyFrictionVector(self.movementVelocity.Velocity, 1)
-	self:ApplyFriction(1)
-
-	-- set the target speed of the player
-	local wishSpeed = accelDir.Magnitude
-	wishSpeed *= self.groundMaxSpeed
-
-	-- for slopes ????????
-	--local forwardVelocity = groundNormal:Cross(CFrame.new(Vector3.zero):ToAxisAngle(Vector3.new(0, 1, 0), -90) * Vector3.new(prevVelocity.X, 0, prevVelocity.Y))
-	
-	-- calculate how much slopes should affect movement
-	--float yVelocityNew = forwardVelocity.normalized.y * new Vector3 (_surfer.moveData.velocity.x, 0f, _surfer.moveData.velocity.z).magnitude;
-	
-	-- apply acceleration
-	self:ApplyGroundAcceleration(accelDir, wishSpeed, wallHit)
-]]
-
 
 --[[
 	@title 			- ApplyGroundAcceleration
@@ -128,7 +86,6 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	local currentSpeed
 	local currentVelocity = self.movementVelocity.Velocity
 	local newVelocity = currentVelocity
-	local wallHit
 	
 	-- if no inputs, don't accelerate
 	if wishDir.Magnitude == 0 then
@@ -157,7 +114,7 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	newVelocity = Vector3.new(newVelocity.X, 0, newVelocity.Z)
 
 	-- detect if player is against wall
-	newVelocity, wallHit = self:ApplyAntiSticking(newVelocity)
+	newVelocity = self:ApplyAntiSticking(newVelocity)
 
 	-- clamp magnitude (max speed)
 	if newVelocity.Magnitude > (self.groundMaxSpeed + self.maxSpeedAdd) and not self.dashing then
@@ -181,7 +138,6 @@ function module:ApplyAirVelocity()
 	local wishSpeed
 	local currSpeed
 	local vel = self.movementVelocity.Velocity
-	local wallHit
 
 	-- get move direction
 	accelDir = self:GetAccelerationDirection()
@@ -218,20 +174,15 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	local currentSpeed
 	local addSpeed
 	local accelerationSpeed
-	local newSpeed
-	local wallHit
-
+	
 	-- apply anti sticking on collider velocity
 	-- resolves head collision ** THIS IS A MUST HAVE **
 	self.collider.Velocity = self:ApplyAntiSticking(self.collider.Velocity, true, wishSpeed - self.collider.Velocity.Magnitude)
 
 	-- if no inputs, don't accelerate
 	if wishDir.Magnitude == 0 then
-		if not self.dashing then
-			self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, true, wishSpeed - self.movementVelocity.Velocity.Magnitude)
-			return
-		end
-		wishDir = self.collider.CFrame.LookVector
+		self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, true, wishSpeed - self.movementVelocity.Velocity.Magnitude)
+		return
 	end
 
 	-- get current/add speed
@@ -251,31 +202,12 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	local newVelocity = self.movementVelocity.Velocity + accelerationSpeed * wishDir
 
 	-- if a wall was hit, dont accelerate in that direction
-	newVelocity, wallHit = self:ApplyAntiSticking(newVelocity, self.dashing, addSpeed)
+	newVelocity = self:ApplyAntiSticking(newVelocity, self.dashing, addSpeed)
 
 	-- apply acceleration
 	self.movementVelocity.Velocity = newVelocity
 
 end
-
--- if no inputs, don't accelerate
-	--[[if wishDir.Magnitude == 0 then
-		if not self.dashing then
-			self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity)
-			return
-		end
-		print('is dashing')
-		wishDir = self.movementVelocity.Velocity.Unit
-	end]]
-
--- get current/add speed
-	--[[currentSpeed = currentVelocity:Dot(wishDir)
-	addSpeed = wishSpeed - currentSpeed
-	if wishDir.Magnitude == 0 then
-		currentSpeed = self.movementVelocity.Velocity:Dot(self:ApplyAntiSticking(self.movementVelocity.Velocity))
-	else
-		currentSpeed = self.movementVelocity.Velocity:Dot(wishDir)
-	end]]
 
 --[[
 	@title 			- GetAccelerationDirection
@@ -284,25 +216,50 @@ end
 	@return wishDir: Wished direction of player
 ]]
 
-function module:GetAccelerationDirection()
-	local wishDir
-	local inputVec
-	local wallHit
+-- THIS IS IT!!!!!
+-- THANK YOU SEROEQUEL !
+-- -Bryce @ 3am when he found the yaw->direction script after his seroquel had kicked in
+--[[function getYaw(): CFrame
+	return workspace.CurrentCamera.CFrame*CFrame.Angles(-getPitch(),0,0)
+end]]
+function getYaw()
+	return workspace.CurrentCamera.CFrame*CFrame.Angles(-(math.pi/2 - math.acos(workspace.CurrentCamera.CFrame.LookVector:Dot(Vector3.new(0,1,0)))),0,0)
+end
 
-	-- if no input, direction = 0, 0, 0
-	if self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then
+function module:GetAccelerationDirection(groundNormal)
+
+	if self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then -- if no input, direction = 0, 0, 0
 		self.currentInputVec = Vector3.zero
-		return Vector3.zero
+		if self.dashing then
+			self.currentInputSum.Forward = 1
+		end
+	else
+		self.currentInputVec = Vector3.new(-self.currentInputSum.Side, 0, -self.currentInputSum.Forward).Unit -- get forward and side inputs
+	end
+	
+
+	local forward
+	local right
+	local accelDir
+	local forwardMove = self.dashing and (self.currentInputSum.Forward == 0 and 1 or false) or self.currentInputSum.Forward
+    local rightMove = self.currentInputSum.Side
+
+	if not self.dashing and self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then
+		accelDir = Vector3.zero
+	elseif groundNormal then
+		forward = groundNormal:Cross(self.collider.CFrame.RightVector)
+		right = groundNormal:Cross(forward)
+		accelDir = (forwardMove * forward + rightMove * right).Unit
+	else
+		forward = workspace.CurrentCamera.CFrame.LookVector * self.currentInputSum.Forward
+		right = (getYaw() * CFrame.Angles(0,math.rad(90),0)).LookVector * self.currentInputSum.Side
+		accelDir = (forward+right).Unit
 	end
 
-	-- get forward and side inputs
-	inputVec = Vector3.new(-self.currentInputSum.Side, 0, -self.currentInputSum.Forward).Unit
-	self.currentInputVec = inputVec
-
-	-- convert vector into worldspace
-	wishDir = self.player.Character.PrimaryPart.CFrame:VectorToWorldSpace(inputVec)
-	return wishDir
+	return accelDir
 end
+
+--
 
 function module:GetMovementVelocityForce()
 	return Vector3.new(self.movementVelocityForce, 0, self.movementVelocityForce)

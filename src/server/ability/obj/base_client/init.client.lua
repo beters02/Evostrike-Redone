@@ -2,7 +2,6 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Strings = require(Framework.shfc_strings.Location)
-local SharedAbilityRF = ReplicatedStorage.ability.remote.sharedAbilityRF
 local States = require(Framework.shm_states.Location)
 local PlayerData = require(Framework.shm_clientPlayerData.Location)
 
@@ -12,8 +11,15 @@ local keyCode
 
 -- create ability class for functions
 local abilityName = string.gsub(script.Parent.Parent.Name, "AbilityFolder_", "")
-local abilityClassModule, baseAbilityClassModule = SharedAbilityRF:InvokeServer("Class", abilityName)
-local ability = require(baseAbilityClassModule).new(abilityClassModule)
+print(abilityName)
+
+local class = ReplicatedStorage.ability.class:FindFirstChild(abilityName)
+if class then print(class) end
+if not class then print("What the fuck.") end
+
+local ability = require(ReplicatedStorage.ability.class.Base).new(class)
+print(ability)
+
 local abilityObjects = ReplicatedStorage.ability.obj:WaitForChild(abilityName)
 ability.abilityObjects = abilityObjects
 
@@ -49,6 +55,8 @@ abilityIcon = abilityFrame:WaitForChild("IconImage")
 abilityIcon.Image = abilityObjects.Images.Icon.Texture
 abilityIcon.ImageTransparency = 0
 abilityIcon.ImageColor3 = abilityFrame:GetAttribute("EquippedColor")
+abilityIcon.Visible = true
+ability.frame.Visible = true
 
 game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE").Event:Connect(function()
     abilityIcon.ImageTransparency = 1

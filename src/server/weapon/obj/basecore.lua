@@ -11,29 +11,23 @@ core.__index = core
 
 local last = tick()
 
-function core.fire(self, player, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, startTick)
-
-	task.spawn(function() self.core_stopInspecting(0.05) end)
-
-	last = tick()
-
-    local mouse = player:GetMouse()
+-- _[1] = player, _[2] = startTick
+function core.fire(self, _, weaponOptions, weaponVar, weaponCameraObject, animationEventFunctions, _)
+	--task.spawn(function() self.core_stopInspecting(0.05) end)
 
     -- set var
 	States.SetStateVariable("PlayerActions", "shooting", true)
+
 	local t = tick()
-	local mosPos = Vector2.new(mouse.X, mouse.Y)
-	local fireRegisterTime = workspace:GetServerTimeNow()
-	--weaponVar.fireLoop = true
 	weaponVar.firing = true
-	--weaponVar.nextFireTime = t + weaponOptions.fireRate
 	weaponVar.ammo.magazine -= 1
 	weaponVar.currentBullet = (t - weaponVar.lastFireTime >= weaponOptions.recoilReset and 1 or weaponVar.currentBullet + 1)
 	weaponVar.lastFireTime = t
 	weaponCameraObject.weaponVar.currentBullet = weaponVar.currentBullet
 
-	-- Play Emitters
+	-- Play Emitters and Sounds
 	task.spawn(function()
+		animationEventFunctions.PlayReplicatedSound("Fire", true)
 		SharedWeaponFunctions.ReplicateFireEmitters(weaponVar.serverModel, weaponVar.clientModel)
 	end)
 
@@ -41,13 +35,8 @@ function core.fire(self, player, weaponOptions, weaponVar, weaponCameraObject, a
 	self.util_RegisterRecoils()
 
 	-- play animations
-	self.util_playAnimation("client", "Fire")
+	self.util_playAnimation("client", "Fire", false, true)
     weaponVar.animations.server.Fire:Play()
-
-	-- play sounds
-	task.spawn(function()
-		animationEventFunctions.PlayReplicatedSound("Fire", true)
-	end)
 	
 	-- handle client fire rate & auto reload
 	local nextFire = t + weaponOptions.fireRate
@@ -60,10 +49,12 @@ function core.fire(self, player, weaponOptions, weaponVar, weaponCameraObject, a
 	-- update hud
 	weaponVar.infoFrame.CurrentMagLabel.Text = tostring(weaponVar.ammo.magazine)
 
+	-- send to auto reload im assuming
 	if weaponVar.ammo.magazine <= 0 and weaponVar.equipped then
 		return weaponVar, nextFire
 	end
 
+	-- return weaponVar since we updated ammo
 	return weaponVar
 end
 
@@ -78,8 +69,7 @@ function core.reload(self, weaponOptions, weaponVar, weaponRemoteFunction)
 	States.SetStateVariable("PlayerActions", "reloading", true)
 	
 	task.spawn(function()
-		self.core_stopInspecting(0.05)
-		weaponVar.animations.client.Reload:Play()
+		self.util_playAnimation("client", "Reload", false, true)
 		--weaponVar.animations.server.Reload:Play() TODO: make server reload animations
 	end)
 

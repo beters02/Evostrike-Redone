@@ -19,37 +19,44 @@ Players.CharacterAutoLoads = false
 playerAddedConnection = nil
 Gamemode.currentGamemode = ""
 Gamemode.currentClass = nil
+Gamemode.gamemodeProcessing = false
 
 --[[ Init ]]
 function Gamemode.Init()
     Gamemode.playerAddedConnection = Players.PlayerAdded:Connect(function(player)
+        if Gamemode.gamemodeProcessing then repeat task.wait() until not Gamemode.gamemodeProcessing end
+        if Gamemode.currentClass then return end -- game is already init
+        Gamemode.gamemodeProcessing = true
         
-        local g = nil
+        local gamemode = nil
         local data = player:GetJoinData()
 
         if data then
             if data.TeleportData and data.TeleportData.RequestedGamemode then
-                g = data.TeleportData.RequestedGamemode
+                gamemode = data.TeleportData.RequestedGamemode
             end
         end
 
-        if not g then
+        if not gamemode then
             data = EvoMM.MatchmakingService:GetUserData(player)
             if data then
                 if data.TeleportData and data.TeleportData.RequestedGamemode then
-                    g = data.TeleportData.RequestedGamemode
+                    gamemode = data.TeleportData.RequestedGamemode
                 end
             end
         end
 
-        if not g then g = DefaultGamemode end
+        if not gamemode then gamemode = DefaultGamemode end
 
         -- disconnect player added connection instantly to avoid gamemode starting twice
         Gamemode.playerAddedConnection:Disconnect()
         Gamemode.playerAddedConnection = nil
 
         -- start game as default gamemode
-        Gamemode.SetGamemode(g)
+        print(gamemode .. " - is sent to Gamemode.SetGamemode")
+        Gamemode.SetGamemode(gamemode)
+
+        Gamemode.gamemodeProcessing = false
     end)
 end
 
@@ -96,7 +103,6 @@ function Gamemode.SetGamemode(gamemode: string)
     ReplicatedStorage.gamemode.remote.ChangedEvent:FireAllClients(gamemode)
 
     task.wait(0.5)
-
     class:Start()
 end
 

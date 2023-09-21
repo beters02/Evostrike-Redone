@@ -89,14 +89,14 @@ function Recoil:FireRecoil(currentBullet)
         -- camera recoil up
         if up then
             -- set lerp time to upspeed --TODO: self.weaponVar.options.cameraUpSpeed or 0.03
-            lerpTime = 0.03
+            lerpTime = 1/60
 
             -- if iteration next tick has been reached, then update the pos
             if t >= unxt then
 
                 -- keep track of any massive frame difference, in that case
                 -- we will want to "catch" the camera up
-                diff = t / unxt
+                diff = math.max(1, t / unxt)
 
                 -- set next
                 unxt = t + lerpTime
@@ -149,7 +149,9 @@ function Recoil:FireRecoil(currentBullet)
         -- finished?
         if stop then
             self.connection:Disconnect()
-         end
+        end
+
+        
     end)
 end
 

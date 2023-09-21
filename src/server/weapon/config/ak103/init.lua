@@ -11,7 +11,7 @@ local wepconfig = {
 	
 	fireVectorCameraOffset = Vector2.new(5, 13), -- Side, Up
 	fireAccuracyCameraOffset = Vector2.new(1, 10), -- Side, Up
-	fireVectorCameraMax = Vector3.new(0.011, 0.01, 0.3), -- Up, Side
+	fireVectorCameraMax = Vector3.new(0.0135, 0.01, 0.3), -- Up, Side
 	
 	ammo = {
 		magazine = 30,

@@ -1,4 +1,4 @@
-local gamemode = require(script.Parent:WaitForChild("m_gamemode"))
+--[[local gamemode = require(script.Parent:WaitForChild("m_gamemode"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local MessagingService = game:GetService("MessagingService")
@@ -36,4 +36,4 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-gamemode.Init()
+gamemode.Init()]]

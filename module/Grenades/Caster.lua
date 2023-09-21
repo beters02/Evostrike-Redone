@@ -16,16 +16,19 @@ function Caster:CreateCaster(player)
     if not Caster._LocalStoredCaster then
         Caster._LocalStoredCaster = FastCast.new()
         Remotes.RemoteEvent:FireServer("CreateCaster")
+    else
+        Caster._DisconnectCaster()
     end
     return Caster._LocalStoredCaster
 end
 
 -- [[ Gets the Player's stored caster. Create's one if it does not exist. Will also return any cast behaviors. ]]
 function Caster:GetCaster(player, dontCreate)
-    if dontCreate then
-        return Caster._LocalStoredCaster
+    local caster = Caster._LocalStoredCaster or (dontCreate and false) or "create"
+    if caster == "create" then
+        return Caster:CreateCaster(player)
     end
-    return Caster:CreateCaster(player)
+    return caster
 end
 
 -- [[ Creates a new CastBehavior for a grenade, if there has not already been one created (for the grenade) ]]
@@ -58,10 +61,6 @@ function Caster:FireCaster(behaviorId, origin, direction, speed) -- behaviorId =
     local caster = Caster:CreateCaster(Players.LocalPlayer)
     local beh = Caster._StoredCastBehaviors[behaviorId]
     if not beh then error("No behavior found fuck") end
-    print(origin)
-    print(direction)
-    print(speed)
-    print(beh)
     return caster:Fire(origin, direction, speed, beh)
 end
 
@@ -86,7 +85,10 @@ function Caster:SetCasterRayHit(player, rayhit, grenade, casterPlayer)
 end
 
 function Caster:Remove(player)
-    return Caster._DisconnectCaster(player)
+    Caster._DisconnectCaster(player)
+    Remotes.RemoteEvent:FireServer("RemoveCaster", player.Name)
+    Caster._LocalStoredCaster = nil
+    return
 end
 
 function Caster._DisconnectCaster(player)
@@ -139,6 +141,12 @@ function otherPlayers.CreateCastBehavior(player, abilityOptions, abilityObjects)
     return casbeh
 end
 
+function otherPlayers.RemoveCaster(player)
+    if Caster._ReplicatedStoredCasters[player.Name] then
+        Caster._ReplicatedStoredCasters[player.Name]:Destroy()
+    end
+end
+
 -- ** [[ INIT MODULE SCRIPT ]] **
 
 -- [[ Init Caster Remote Functionality for Replication ]]
@@ -159,16 +167,21 @@ Remotes.RemoteEvent.OnClientEvent:Connect(function(action, ...)
         otherPlayers.CreateCastBehavior(...)
     elseif action == "FireCaster" then
         otherPlayers.FireCaster(...)
+    elseif action == "RemoveCaster" then
+        if Players.LocalPlayer == ... then return end
+        otherPlayers.RemoveCaster(...)
     end
 end)
 
 --[[ Create any casters for players that already have casters created ]]
-for i, v in pairs(Players:GetPlayers()) do
-    if v == Players.LocalPlayer then continue end
-    local playerCaster, playerBehaviors = Remotes.RemoteFunction:InvokeServer("GetCaster", v)
-    if playerCaster then
-        otherPlayers.CreateCaster(v, playerBehaviors)
+task.spawn(function()
+    for i, v in pairs(Players:GetPlayers()) do
+        if v == Players.LocalPlayer then continue end
+        local playerCaster, playerBehaviors = Remotes.RemoteFunction:InvokeServer("GetCaster", v)
+        if playerCaster then
+            otherPlayers.CreateCaster(v, playerBehaviors)
+        end
     end
-end
+end)
 
 return Caster

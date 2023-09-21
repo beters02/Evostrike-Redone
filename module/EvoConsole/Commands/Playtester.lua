@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService"))
 
 local Commands = {}
 
@@ -38,7 +39,8 @@ Commands.Gamemode = {
 	Public = false,
 	
 	Function = function(self, _, gamemodeName)
-		game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName, "playtester")
+		GamemodeService:ChangeGamemode(gamemodeName)
+		--game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName, "playtester")
 	end
 }
 

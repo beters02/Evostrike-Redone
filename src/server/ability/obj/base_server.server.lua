@@ -62,8 +62,6 @@ if abilityOptions.isGrenade then
 end
 
 Functions.ThrowGrenade = function(mouseHit: Vector3)
-	print('throwing')
-	--print(abilityOptions.RayHit)
 	local thrower = player
 	if not abilityOptions.isGrenade or not mouseHit or not thrower then return false end
 	if not Functions.CanUse() then return false end

@@ -9,8 +9,9 @@ local module = {}
 
 module.Bridge = Bridge
 module.Remote = RemoteEvent
+module.Running = false
 
-function module:StartQueueService(gamemodes)
+function module:StartQueueService(queueableGamemodes)
     if RunService:IsClient() then return end
 
     -- custom tele data
@@ -24,7 +25,7 @@ function module:StartQueueService(gamemodes)
     end)
 
     -- init gamemodes
-    for _, gamemode in pairs(gamemodes) do
+    for _, gamemode in pairs(queueableGamemodes) do
         local req = require(game:GetService("ServerScriptService"):WaitForChild("gamemode").class[gamemode])
 
         -- init gamemode's maps
@@ -35,16 +36,24 @@ function module:StartQueueService(gamemodes)
     end
 
     -- update queue count
+    self._Stop = false
     self._UpdateQueueCount = task.spawn(function()
-        while true do
+        while not self._Stop do
             task.wait(2)
             self:PushGamemodeQueueCount("Deathmatch")
             self:PushGamemodeQueueCount("1v1")
         end
     end)
+
+    module.Running = true
+
+    print('MatchmakingService Started!')
 end
 
 function module:StopQueueService()
+    if not module.Running then return end
+    module.Running = false
+    self._Stop = true
     MatchmakingService.FoundGame:Disconnect()
     coroutine.yield(self._UpdateQueueCount)
 end

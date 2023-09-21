@@ -15,6 +15,8 @@ Remotes.RemoteEvent.OnServerEvent = function(player, action, ...)
         Remotes.RemoteEvent:FireAllClients("CreateCaster", player)
     elseif action == "CreateCastBehavior" then
         Remotes.RemoteEvent:FireAllClients("CreateCastBehavior", player, ...)
+    elseif action == "RemoveCaster" then
+        Remotes.RemoteEvent:FireAllClients("RemoveCaster")
     end
 end
 

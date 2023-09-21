@@ -12,7 +12,6 @@ local WeaponAddRemoveEvent = WeaponRemotes.addremove
 local WeaponScripts = {ServerScriptService.weapon.obj.base_client, ServerScriptService.weapon.obj.base_server}
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
 local GlobalWeaponObj = game:GetService("ReplicatedStorage").weapon:WaitForChild("obj"):WaitForChild("global")
-local WeaponControllerModule = require(ReplicatedStorage.Modules.WeaponController.Module)
 --local ServerPlayerData = require(Framework.sm_serverPlayerData.Location)
 
 -- [[ Module ]]
@@ -135,6 +134,11 @@ local function initToolAndModels(weaponName: string, weaponObjects: Folder, skin
 	clientModel.Name = "ClientModel"
 	clientModel.Parent = ReplicatedStorage:WaitForChild("temp")
 
+	clientModel:SetAttribute("Skin", tostring(skinInfo.skin))
+	if skinInfo.model then
+		clientModel:SetAttribute("SkinModel", tostring(skinInfo.model))
+	end
+
 	-- add necessary particles
 	if string.lower(weaponName) ~= "knife" then
 		local a
@@ -238,6 +242,8 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean?)
 
 	-- set player inv
     setPlayerWeaponInSlot(player, weaponName, inventorySlot, tool)
+
+	tool:SetAttribute("IsForceEquip", forceEquip)
     
     -- init scripts
 	clientScript, serverScript, scriptsFolder = initScripts(tool, isKnife)
@@ -267,7 +273,7 @@ function Weapon.Add(player: Player, weaponName: string, forceEquip: boolean?)
 
 	-- Add Weapon Client
 	--WeaponAddRemoveEvent:FireClient(player, "Add", weaponName, weaponOptions, weaponObjects, tool, forceEquip)
-	WeaponControllerModule:AddWeapon(player, 10, weaponName, weaponOptions, weaponObjects, tool, clientModel, forceEquip)
+	--WeaponControllerModule:AddWeapon(player, 10, weaponName, weaponOptions, weaponObjects, tool, clientModel, forceEquip)
     return tool
 end
 
@@ -280,14 +286,17 @@ end
 function Weapon.Remove(player, weaponTable)
 	local tool = weaponTable.Tool
 	--WeaponAddRemoveEvent:FireClient(player, "Remove", tool, weaponTable.Name)
-	WeaponControllerModule:RemoveWeapon(player, 3, weaponTable.Name)
+	--WeaponControllerModule:RemoveWeapon(player, 3, weaponTable.Name)
+	game:GetService("ReplicatedStorage").Modules.WeaponController2.Remote:FireClient(player, "RemoveWeapon", weaponTable.Slot)
+
+	Weapon.StoredPlayerInventories[player.Name][weaponTable.Slot] = nil
 
 	pcall(function()
+		task.wait()
 		tool:Destroy()
 	end)
 
 	-- set inv slot
-	Weapon.StoredPlayerInventories[player.Name][weaponTable.Slot] = nil
 end
 
 function Weapon.ClearPlayerInventory(player)
@@ -305,9 +314,7 @@ end
 
 function Weapon.ClearAllPlayerInventories()
 	for _, player in pairs(Players:GetPlayers()) do
-		task.spawn(function()
-			Weapon.ClearPlayerInventory(player)
-		end)
+		Weapon.ClearPlayerInventory(player)
 	end
 end
 
