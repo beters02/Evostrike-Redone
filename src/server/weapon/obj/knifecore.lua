@@ -42,7 +42,6 @@ function core.secondaryFire(self, _, weaponOptions, weaponVar)
 	local nextFire = tick() + weaponOptions.secondaryFireRate -- fire rate
 	task.spawn(function()
 		repeat task.wait() until tick() >= nextFire
-		print('not firing')
 		weaponVar.firing = false
 		States.SetStateVariable("PlayerActions", "shooting", false)
 	end)
@@ -62,7 +61,6 @@ function _hitIsHum(instance)
 end
 
 function _knifeAttack(coreself, attackType: "Primary" | "Secondary"?, weaponOptions, weaponVar)
-	print(coreself)
 	attackType = attackType or "Primary"
 
 	local player = Players.LocalPlayer
@@ -100,7 +98,6 @@ function _knifeAttack(coreself, attackType: "Primary" | "Secondary"?, weaponOpti
 		if not damaged and humanoid then
 			if humanoid then
 				damaged = true
-				print('yes')
 				coreself.animationEventFunctions.PlayReplicatedSound(attackType .. "Stab")
 				coreself.remoteEvent:FireServer("VerifyKnifeDamage", attackType, humanoid)
 				if enabled then

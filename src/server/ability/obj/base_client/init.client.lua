@@ -11,15 +11,10 @@ local keyCode
 
 -- create ability class for functions
 local abilityName = string.gsub(script.Parent.Parent.Name, "AbilityFolder_", "")
-print(abilityName)
 
 local class = ReplicatedStorage.ability.class:FindFirstChild(abilityName)
-if class then print(class) end
-if not class then print("What the fuck.") end
 
 local ability = require(ReplicatedStorage.ability.class.Base).new(class)
-print(ability)
-
 local abilityObjects = ReplicatedStorage.ability.obj:WaitForChild(abilityName)
 ability.abilityObjects = abilityObjects
 
@@ -66,7 +61,7 @@ end)
 ability._animations = {}
 if abilityObjects:FindFirstChild("Animations") then
     for i, v in pairs(abilityObjects.Animations:GetChildren()) do
-        ability._animations[string.lower(v.Name)] = workspace.CurrentCamera.viewModel.AnimationController:LoadAnimation(v)
+        ability._animations[string.lower(v.Name)] = workspace.CurrentCamera:WaitForChild("viewModel").AnimationController:LoadAnimation(v)
     end
 end
 

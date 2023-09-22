@@ -4,7 +4,7 @@ local wepconfig = {
 	automatic = true,
 	
 	equipLength = 1,
-	fireRate = 0.0909, -- 660 rpm
+	fireRate = 0.086, -- 700 rpm
 	reloadLength = 1.5,
 	recoilReset = 0.22,
 	camRecoilReset = 0.5,

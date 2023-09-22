@@ -28,10 +28,10 @@ local UIState = require(Framework.Module.shared.states.m_states).State("UI")
 --[[ CONFIGURATION ]]
 local ForceEquipDelay = 0.9
 local EquipInputDebounce = 0.04
-local NeededKeybindKeys = {"primaryWeapon", "secondaryWeapon", "ternaryWeapon", "inspect", "drop"}
+local NeededKeybindKeys = {"primaryWeapon", "secondaryWeapon", "ternaryWeapon", "inspect", "drop", "equipLastEquippedWeapon"}
 
 local self = {}
-self.Inventory = {equipped = false, primary = false, secondary = false, ternary = false}
+self.Inventory = {equipped = false, last_equipped = false, primary = false, secondary = false, ternary = false}
 self.Connections = {}
 self.Owner = Players.LocalPlayer
 self.Processing = false
@@ -185,19 +185,20 @@ end
 
 --@summary Equip a Weapon via slot. Called when a player presses the corresponding equip key.
 function WeaponController:EquipWeapon(weaponSlot, bruteForce)
-    if not bruteForce and (not self.CanEquip) then return warn("canequip or processing, equip:", tostring(self.CanEquip), tostring(self.Processing)) end
+    --if not bruteForce and (not self.CanEquip) then return warn("canequip or processing, equip:", tostring(self.CanEquip), tostring(self.Processing)) end
 	if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
     if not bruteForce and self.Inventory.equipped and self.Inventory.equipped.Slot == weaponSlot then return warn(tostring(weaponSlot) .. " is already equipped") end
     if not self.Inventory[weaponSlot] then local t = tick() + 3 repeat task.wait() until self.Inventory[weaponSlot] or tick() >= t end
     if not self.Inventory[weaponSlot] then return warn(tostring(weaponSlot) .. " not found in inv") end
     if self.InitialWeaponAddDebounce then return end
 
-    self.CanEquip = false
+    if not self.Inventory.last_equipped then
+        self.Inventory.last_equipped = self.Inventory[weaponSlot]
+    end
 
     if self.Inventory.equipped then
         util_processUnequipTransparency(self.Inventory.equipped.ClientModel)
     end
-    --task.wait()
     self.Owner.Character.Humanoid:UnequipTools()
 
     task.spawn(function()
@@ -217,10 +218,6 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     if not self.Inventory[weaponSlot].Tool.Parent then
         repeat task.wait() until self.Inventory[weaponSlot].Tool.Parent
     end
-
-    --[[if isForceEquip then
-        self.Inventory[slot].Tool:SetAttribute("IsForceEquip", true)
-    end]]
     
     self.Owner.Character.Humanoid:EquipTool(self.Inventory.equipped.Tool)
 
@@ -229,7 +226,6 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     end)
 
     self.Processing = false
-    self.CanEquip = true
 end
 
 --@summary Unequip a Weapon via slot. Called in tool.Unequipped
@@ -239,6 +235,7 @@ function WeaponController:UnequipWeapon(weaponSlot)
     if self.Inventory.equipped == self.Inventory[weaponSlot] then
         self.Inventory.equipped = false
     end
+    self.Inventory.last_equipped = self.Inventory[weaponSlot]
 end
 
 --@summary Get the Currently Equipped Weapon
@@ -260,8 +257,8 @@ function WeaponController:WeaponControllerBaseInputBegan(input, gp)
         local kc = false
         pcall(function() kc = input.KeyCode == Enum.KeyCode[self.Keybinds[slot .. "Weapon"]] end)
         if kc then
-            self:EquipWeapon(slot)
             self.Processing = true
+            self:EquipWeapon(slot)
             return
         end
     end
@@ -282,6 +279,9 @@ function WeaponController:WeaponActionInputBegan(weapon: Types.Weapon, input, gp
         weapon.ActionFunctions.reload()
     elseif input.KeyCode == Enum.KeyCode[self.Keybinds.inspect] then
         weapon.ActionFunctions.startinspect()
+    elseif input.KeyCode == Enum.KeyCode[self.Keybinds.equipLastEquippedWeapon] then
+        if not self.Inventory.last_equipped then return end
+        self:EquipWeapon(self.Inventory.last_equipped.Slot)
     end
     task.wait()
 end

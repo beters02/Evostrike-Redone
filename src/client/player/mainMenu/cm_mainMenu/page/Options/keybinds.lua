@@ -59,6 +59,7 @@ function keybinds:_connectKeybindsFrame()
             continue
         end
 	end
+
 end
 
 function keybinds:_updateKeybindsFrame()

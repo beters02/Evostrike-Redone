@@ -15,13 +15,13 @@
 local LobbyID = 11287185880
 
 local GamemodeClasses = script:GetChildren()
-function GamemodeClasses.Find(gamemode: string) for _, v in pairs(GamemodeClasses) do if v.Name == gamemode then return v end end return false end
+function GamemodeClasses.Find(gamemode: string) for _, v in pairs(GamemodeClasses) do if not v:IsA("ModuleScript") then continue end if v.Name == gamemode then return v end end return false end
 
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local Types = require(script.Parent:WaitForChild("Types"))
-local PlayerDiedRemote = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
+local EnableMainMenuRemote = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("EnableMainMenu")
 local Teams = game:GetService("Teams")
 local TeleportService = game:GetService("TeleportService")
 local RoundTimer = require(script.Parent:WaitForChild("RoundTimer"))
@@ -42,12 +42,15 @@ local Gamemode = {} :: Types.Gamemode
 Gamemode.__index = Gamemode
 
 Gamemode.GameVariables = {
-    minimum_players = 1,
+    minimum_players = 2,
     maximum_players = 2,
     teams_enabled = false,
     players_per_team = 1,
 
     bots_enabled = false,
+
+    opt_to_spawn = false, -- should players spawn in automatically, or opt in on their own? (lobby)
+    main_menu_type = "Default", -- the string that the main menu requests upon init, and that is sent out upon gamemode changed
 
     characterAutoLoads = false,
     respawns_enabled = false,
@@ -80,6 +83,7 @@ Gamemode.GameVariables = {
     starting_helmet = true,
 
     start_with_knife = true,
+    auto_equip_strongest_weapon = true,
 
     weapon_pool = {
         light_primary = {"vityaz"},
@@ -98,7 +102,7 @@ Gamemode.GameVariables = {
 
 
     --[[starting_weapons = {
-        "glock17", "ak47"
+        secondary = "glock17", primary = "ak47"
     },]]
     starting_weapons = false,
 
@@ -138,15 +142,6 @@ function Gamemode.new(gamemode: string, customGameVar: table?)
         end
     end
 
-    -- connections sanity
-    -- shouldn't be necessary since we are cloning the module,
-    -- but leave it commented incase i need it
-    --[[if gamemodeClass.GameData and gamemodeClass.GameData.Connections then
-        for _, conn in pairs(gamemodeClass.GameData.Connections) do
-            conn:Disconnect()
-        end
-    end]]
-
     gamemodeClass = setmetatable(gamemodeClass, Gamemode)
     gamemodeClass.Name = gamemodeModule.Name
     gamemodeClass.Status = "Init"
@@ -162,7 +157,7 @@ end
 
 --@summary Start the Gamemode.
 function Gamemode:Start(isInitialGamemode: boolean?)
-    if self.Status == "Paused" then
+    if self.Status == "Paused" and self.GameVariables.rounds_enabled then
         self:StartRound()
         return
     end
@@ -174,18 +169,27 @@ function Gamemode:Start(isInitialGamemode: boolean?)
     end
 
     -- initial PlayerAdded connection (fill up to minimum players)
+    local initWhenLoadingPlayers = {}
     self.GameData.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
-        self:PlayerInit(player)
+        table.insert(initWhenLoadingPlayers, player.Name)
+        EvoPlayer:DoWhenLoaded(player, function()
+            self:PlayerInit(player)
+        end)
     end)
 
     -- init current players incase they weren't added recently
     for _, player in pairs(Players:GetPlayers()) do
-        self:PlayerInit(player)
+        if not table.find(initWhenLoadingPlayers, player.Name) then
+            table.insert(initWhenLoadingPlayers, player.Name)
+            EvoPlayer:DoWhenLoaded(player, function()
+                self:PlayerInit(player)
+            end)
+        end
     end
 
     -- i cant think of a reason not to pause the script here while we wait
     if self:PlayerGetCount() < self.GameVariables.minimum_players then
-        repeat task.wait(0.5) until self:PlayerGetCount() >= self.GameVariables.minimum_players or self.Status ~= "Running"
+        repeat task.wait(0.5) print(self:PlayerGetCount()) until self:PlayerGetCount() >= self.GameVariables.minimum_players or self.Status ~= "Running"
         if self.Status ~= "Running" then
             return
         end
@@ -268,9 +272,6 @@ function Gamemode:Stop(bruteForce)
         return false
     end
 
-    --[[Ability.ClearAllPlayerInventories()
-    Weapon.ClearAllPlayerInventories()]]
-
     if self.GameData.RoundTimer and (self.GameData.RoundTimer.Status == "Started" or self.GameData.RoundTimer.Stats == "Paused") then
         self:EndRound("Restart") -- Restart just does nothing for the RoundTimer result
     end
@@ -288,8 +289,6 @@ function Gamemode:Stop(bruteForce)
         EvoMM:StopQueueService()
     end)
 
-    print('STOPPED THE MOTHERFUCKING GAMEMODE BITCH! YOUR CODE IS BROKE!')
-
     -- probably keep track of any Gamemode related workspace objects under a tag and clear those here
     return true
 end
@@ -305,16 +304,20 @@ end
 -- This function will still run even if rounds_enabled = false, in that case the CurrentRound would just stay 1.
 -- Called in :Start() and at some point during :EndRound()
 function Gamemode:StartRound()
-    if self.GameData.Round.Status == "Started" or self.GameData.Round.Status == "PreInit" or self.GameData.Round.Status == "Running" then
-        warn("Round is already running!")
-        return false
-    end
 
-    self.GameData.Round.Status = "PreInit"
-
-    if self.GameVariables.round_end_condition == "scoreReached" then
-        for i, _ in pairs(self.PlayerData) do
-            self.PlayerData[i].Round = {Score = 0}
+    if self.GameVariables.rounds_enabled then
+        
+        if self.GameData.Round.Status == "Started" or self.GameData.Round.Status == "PreInit" or self.GameData.Round.Status == "Running" then
+            warn("Round is already running!")
+            return false
+        end
+    
+        self.GameData.Round.Status = "PreInit"
+    
+        if self.GameVariables.round_end_condition == "scoreReached" then
+            for i, _ in pairs(self.PlayerData) do
+                self.PlayerData[i].Round = {Score = 0}
+            end
         end
     end
 
@@ -324,13 +327,17 @@ function Gamemode:StartRound()
     end
 
     task.delay(1, function()
-        self.GameData.Round.Status = "Running"
-
-        self:GuiRemoveBlackScreen(false)
-        self:PlayerSpawnAll(_1v1content)
-
+        if not self.GameVariables.opt_to_spawn then
+            self:GuiRemoveBlackScreen("all", false)
+            self:PlayerSpawnAll(_1v1content)
+        else
+            self:GuiMainMenu("all", true)
+            self:GuiRemoveBlackScreen("all", false)
+        end
+        
         -- StartRoundTimer and EndRound via Timer
         if self.GameVariables.rounds_enabled then
+            self.GameData.Round.Status = "Running"
             -- start round timer
             local RoundFinished = self:StartRoundTimer()
             RoundFinished.Event:Once(function(result)
@@ -355,7 +362,6 @@ function Gamemode:StartRound()
 
         self:_PlayerDiedCore(killed, killer)
     end)
-
 end
 
 --@summary Ends a round of the game. Called automatically when the RoundTimer is done, or when the win condition is met. 
@@ -544,7 +550,7 @@ function Gamemode:PlayerInit(player)
     }
 
     if self.GameVariables.buy_menu_enabled then
-        self.PlayerData[player.Name].BuyMenuLoadout = self.GameVariables.buy_menu_starting_loadout
+        self.PlayerData[player.Name].BuyMenuLoadout = Tables.clone(self.GameVariables.buy_menu_starting_loadout)
     end
 
     if self.GameVariables.rounds_enabled then
@@ -554,7 +560,6 @@ function Gamemode:PlayerInit(player)
     if self.GameVariables.round_end_condition == "scoreReached" then
         self.PlayerData[player.Name].Round = {Score = 0}
     end
-
 end
 
 --@summary Spawn a player. Called either in PlayerSpawnAll() or during respawn on PlayerDied()
@@ -566,22 +571,36 @@ function Gamemode:PlayerSpawn(player, content, index)
     player.Character:WaitForChild("Humanoid").Health = self.GameVariables.starting_health
     local shield, helmet = self.GameVariables.starting_shield, self.GameVariables.starting_helmet
 
+    local strongestWeapon = "ternary"
+    local bml = self.PlayerData[player.Name].BuyMenuLoadout
+
+    if self.GameVariables.auto_equip_strongest_weapon then
+        if bml then
+            strongestWeapon = bml.primary and "primary" or "secondary"
+        else
+            if self.GameVariables.starting_weapons then
+                strongestWeapon = self.GameVariables.starting_weapons.primary and "primary" or "secondary"
+            end
+        end
+    end
+   
+
     if self.GameVariables.start_with_knife then
-        Weapon.Add(player, "Knife", true)
+        Weapon.Add(player, "Knife", strongestWeapon == "ternary")
     end
 
     if self.PlayerData[player.Name].BuyMenuLoadout then
-        for _, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Weapons) do
-            Weapon.Add(player, v)
+        for i, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Weapons) do
+            Weapon.Add(player, v, strongestWeapon == i)
         end
         for _, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Abilities) do
             Ability.Add(player, v)
         end
     else
         if self.GameVariables.starting_weapons then
-            for _, v in pairs(self.GameVariables.starting_weapons) do
-                Weapon.Add(player, v)
-            end    
+            for i, v in pairs(self.GameVariables.starting_weapons) do
+                Weapon.Add(player, v, strongestWeapon == i)
+            end
         end
         if self.GameVariables.starting_abilities then
             for _, v in pairs(self.GameVariables.starting_abilities) do
@@ -963,10 +982,11 @@ function Gamemode:GuiBlackScreenAll(inLength: number?, outLength: number?, await
     inLength = inLength or 0.25
     outLength = outLength or 0.25
     for _, v in pairs(self:PlayerGetAll()) do
-        local c = DefaultGuis.BlackScreen:Clone()
+        local c: ScreenGui = DefaultGuis.BlackScreen:Clone()
         c:SetAttribute("InLength", inLength)
         c:SetAttribute("OutLength", outLength)
         c.Parent = v.PlayerGui
+        c.ResetOnSpawn = false
         CollectionService:AddTag(c, "BlackScreen")
     end
     if await then
@@ -975,13 +995,22 @@ function Gamemode:GuiBlackScreenAll(inLength: number?, outLength: number?, await
 end
 
 --@summary Remove Black Screen
-function Gamemode:GuiRemoveBlackScreen(await: boolean)
+function Gamemode:GuiRemoveBlackScreen(player: Player | "all", await: boolean)
     local outLength
-    for _, ui in pairs(CollectionService:GetTagged("BlackScreen")) do
-        ui.Out:FireClient(ui.Parent.Parent)
-        outLength = ui:GetAttribute("OutLength")
-        Debris:AddItem(ui, outLength)
+    if player == "all" then
+        for _, ui in pairs(CollectionService:GetTagged("BlackScreen")) do
+            ui.Out:FireClient(ui.Parent.Parent)
+            outLength = ui:GetAttribute("OutLength")
+            Debris:AddItem(ui, 5)
+        end
+    else
+        if player.PlayerGui:FindFirstChild("BlackScreen") then
+            player.PlayerGui.BlackScreen.Out:Fire()
+            outLength = player.PlayerGui.BlackScreen:GetAttribute("OutLength")
+            Debris:AddItem(player.PlayerGui.BlackScreen, 5)
+        end
     end
+    
     if await then
         task.wait(outLength)
     end
@@ -994,5 +1023,12 @@ function Gamemode:GuiRemoveTagged(tag: string)
     end
 end
 
+--@summary Enable/disable player/all 's MainMenu
+function Gamemode:GuiMainMenu(player: Player | "all", enabled: boolean)
+    local plrs = player == "all" and self:PlayerGetAll() or {player}
+    for _, v in pairs(plrs) do
+        EnableMainMenuRemote:FireClient(v, enabled)
+    end
+end
 
 return Gamemode

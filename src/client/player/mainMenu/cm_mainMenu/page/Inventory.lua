@@ -164,16 +164,32 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     weaponModelObj.PrimaryPart = weaponModelObj.GunComponents.WeaponHandle
 
     local wepcf = CFrame.new(Vector3.new(1,0,-4))
+    local wepor = Vector3.new(90, 0, 0)
+    
     if weapon == "knife" then
-        wepcf = CFrame.new(Vector3.new(1, 0, -3))
+        if model == "karambit" then
+            wepcf = CFrame.new(Vector3.new(-0.026, -0.189, -1.399))
+        elseif model == "default" then
+            wepcf = CFrame.new(Vector3.new(0.143, -0.5, -2.1))
+            wepor = Vector3.new(0, 180, 180)
+        elseif model == "m9bayonet" then
+            wepcf = CFrame.new(Vector3.new(-0.029, -0, -1.674))
+        else
+            wepcf = CFrame.new(Vector3.new(1, 0, -3))
+        end
+    elseif weapon == "ak47" then
+        wepor = Vector3.new(90, 170, 0)
+    elseif weapon == "deagle" then
+        wepcf = CFrame.new(Vector3.new(-0.1, 0, -1.5))
+        wepor = Vector3.new(0, -180, -180)
+    elseif weapon == "glock17" then
+        wepcf = CFrame.new(Vector3.new(-0.4, 0.2, -1.4))
+        wepor = Vector3.new(0, 90, -180)
     end
 
     weaponModelObj:SetPrimaryPartCFrame(wepcf)
-    weaponModelObj.PrimaryPart.Orientation = Vector3.new(90, 0, 0)
-
+    weaponModelObj.PrimaryPart.Orientation = wepor
     weaponModelObj.Parent = frame:WaitForChild("ViewportFrame")-- maybe add a world model?
-
-    -- TODO: set cframes
 
     -- set frame colors based on equipped
     self:SetSkinFrameEquipped(frame, isEquipped, weapon, false, true)

@@ -5,9 +5,12 @@ export type Gamemode = {
     GameData: table,
     PlayerData: table,
 
-    Start: (table, ...any) -> (...any),
-    Stop: (table, ...any) -> (...any),
-    Pause: (table, ...any) -> (...any),
+    Start: (Gamemode, ...any) -> (...any),
+    Stop: (Gamemode, ...any) -> (...any),
+    Pause: (Gamemode, ...any) -> (...any),
+
+    PlayerSpawn: (Gamemode, Player) -> (),
+    PlayerSpawnAll: (Gamemode) -> ()
 }
 
 export type RoundEndCondition = "teamEliminated" | "playerEliminated" | "timerOnly" | "scoreReached"

@@ -24,6 +24,10 @@
       {
         "Name": "setShieldAll",
         "ClassName": "BindableEvent"
+      },
+      {
+        "Name": "EnableMainMenu",
+        "ClassName": "RemoteEvent"
       }
     ]
   }

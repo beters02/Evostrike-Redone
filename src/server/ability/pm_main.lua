@@ -7,7 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Players = game:GetService("Players")
 local Location = Framework.Ability.Location
-local Class = script.Parent:WaitForChild("class")
+local Class = ReplicatedStorage:WaitForChild("ability"):WaitForChild("class")
 
 function Ability.Add(player, abilityName)
     print(player, abilityName)

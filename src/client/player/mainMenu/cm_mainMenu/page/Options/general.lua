@@ -15,7 +15,7 @@ function general:_baseConnectFrame(frameTable)
 			local textButton = frame:FindFirstChildWhichIsA("TextButton")
 			if textButton then
 				table.insert(self.pageconnections, textButton.MouseButton1Click:Connect(function()
-					--generalBooleanInteract(textButton, i)
+					self:_booleanInteract(textButton, frame)
 				end))
 			end
 		end
@@ -32,6 +32,21 @@ end
 
 --
 
+function general:_updateOptionValue(prefix, key, value)
+	--main.page.options.profile[parentSettingDataPrefix][dataKey] = newValue
+	--local new, wasChanged, notChangedError = self.playerdata:Set("options." .. parentSettingDataPrefix ..  "." .. dataKey, newValue)
+	--if not wasChanged then end
+	self.playerdata:Set("options." .. prefix ..  "." .. key, value)
+
+	if prefix == "crosshair" then
+		self:_updateCrosshairFrame()
+		self.crosshairModule:updateCrosshair(key, value)
+	elseif prefix == "camera" then
+		-- fire viewmodel script event
+		self:_updateViewmodelFrame()
+	end
+end
+
 function general:_typingFocusFinished(enterPressed, button, frame, isButton)
 	local parentSettingDataPrefix = frame:FindFirstAncestorWhichIsA("Frame"):GetAttribute("DataPrefix")
 	local dataKey = frame:GetAttribute("DataName") or string.lower(string.sub(frame.Name, 3))
@@ -43,24 +58,17 @@ function general:_typingFocusFinished(enterPressed, button, frame, isButton)
 			button.Text = tostring(currValue)
 			return
 		end
-
-		--main.page.options.profile[parentSettingDataPrefix][dataKey] = newValue
-		local new, wasChanged, notChangedError = self.playerdata:Set("options." .. parentSettingDataPrefix ..  "." .. dataKey, newValue)
-		if not wasChanged then
-			
-		end
-
-		if parentSettingDataPrefix == "crosshair" then
-			self:_updateCrosshairFrame()
-			self.crosshairModule:updateCrosshair(dataKey, newValue)
-		elseif parentSettingDataPrefix == "camera" then
-			-- fire viewmodel script event
-			self:_updateViewmodelFrame()
-		end
-
+		self:_updateOptionValue(parentSettingDataPrefix, dataKey, newValue)
 	else
 		button.Text = tostring(currValue)
 	end
+end
+
+function general:_booleanInteract(textButton, frame)
+	local parentSettingDataPrefix = frame:FindFirstAncestorWhichIsA("Frame"):GetAttribute("DataPrefix")
+	local dataKey = frame:GetAttribute("DataName") or string.lower(string.sub(frame.Name, 3))
+	local currValue = self.playerdata:Get("options." .. parentSettingDataPrefix ..  "." .. dataKey)
+	self:_updateOptionValue(parentSettingDataPrefix, dataKey, not currValue)
 end
 
 function general:_updateCrosshairFrame()

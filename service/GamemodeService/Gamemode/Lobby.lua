@@ -6,6 +6,9 @@ Lobby.GameVariables = {
     teams_enabled = false,
     players_per_team = 1,
 
+    opt_to_spawn = true,
+    main_menu_type = "Lobby",
+
     characterAutoLoads = false,
     respawns_enabled = true,
     respawn_length = 1,
@@ -27,10 +30,21 @@ Lobby.GameVariables = {
     }
 }
 
+function Lobby:PlayerInit(player)
+    if self.PlayerData[player.Name] then
+        warn("GamemodeClass: Can't init player. " .. player.Name .. " is already initialized!")
+        return
+    end
+    
+    self.PlayerData[player.Name] = {
+        Player = player,
+    }
+end
+
 --@summary Called when a Player Joins during a round.
 -- if rounds_enabled = false, this is for when a player joins after the game has started.
 function Lobby:PlayerJoinedDuringRound(player)
-    self:PlayerInit(player, true)
+    self:PlayerInit(player)
     EvoPlayer:DoWhenLoaded(player, function()
         self:PlayerSpawn(player)
     end)

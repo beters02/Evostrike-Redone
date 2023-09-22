@@ -31,7 +31,7 @@ export type Weapon = {
 
 export type WeaponController = {
     Owner: Player,
-    Inventory: {equipped: Weapon | false, primary: Weapon | false, secondary: Weapon | false, ternary: Weapon | false},
+    Inventory: {equipped: Weapon | false, last_equipped: Weapon | false, primary: Weapon | false, secondary: Weapon | false, ternary: Weapon | false},
     Connections: table,
     Processing: boolean,
     CanEquip: boolean,

@@ -98,6 +98,7 @@ end
 
 export type KnifeDamageType = "PrimaryStab" | "SecondaryStab" | "Primary" | "Secondary"
 function util_verifyKnifeDamage(knifeDamageType: KnifeDamageType, damagedHumanoid)
+	if player.Character.Humanoid.Health <= 0 then return end
 	if knifeDamageType == "PrimaryStab" then
 		EvoPlayer:TakeDamage(damagedHumanoid.Parent, weaponOptions.damage.primaryBackstab)
 	elseif knifeDamageType == "SecondaryStab" then

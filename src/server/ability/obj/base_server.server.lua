@@ -7,7 +7,7 @@ local AbilityFunc = require(Framework.shfc_sharedAbilityFunctions.Location)
 
 -- ability var
 local abilityName = string.gsub(script.Parent.Parent.Name, "AbilityFolder_", "")
-local abilityOptions = require(AbilityLoc.Parent.class[abilityName])
+local abilityOptions = require(ReplicatedStorage.ability.class[abilityName])
 local abilityRemoteEvent = script.Parent.Parent.Remotes.AbilityRemoteEvent
 local abilityRemoteFunction = script.Parent.Parent.Remotes.AbilityRemoteFunction
 local abilityObjects = ReplicatedStorage.ability.obj:WaitForChild(abilityName)

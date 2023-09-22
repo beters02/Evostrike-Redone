@@ -26,7 +26,7 @@ Lobby.GameVariables = {
     starting_helmet = true,
 
     starting_weapons = {
-        "glock17", "ak103"
+        secondary = "glock17", primary = "ak103"
     },
 
     starting_abilities = {

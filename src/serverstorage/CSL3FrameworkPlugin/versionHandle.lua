@@ -225,13 +225,17 @@ function vh.pullUpdate(self)
 	curr.Name = "SSS"
 
 	local leave = {}
+	local leaveFolderNames = {"Bots", "Spawns", "Barriers", "Guis"}
 
 	-- then we leave any files that need to not be overwritten
-	for _, gm in pairs(curr.ServerScriptService.gamemode.class:GetChildren()) do
-
+	for _, gm in pairs(curr.ReplicatedStorage.Services.GamemodeService.Gamemode:GetChildren()) do
 		-- bots, spawns, barriers
-		for _, gmo in pairs({"Bots", "Spawns", "Barriers"}) do
-			if gm:FindFirstChild(gmo) then
+		for _, gmo in pairs(leaveFolderNames) do
+
+			if gm.Name == gmo then
+				if not leave.Base then leave.Base = {} end
+				table.insert(leave.Base, gm) -- store in "leave" array to replace at the end
+			elseif gm:FindFirstChild(gmo) then
 				if not leave[gm.Name] then leave[gm.Name] = {} end
 				table.insert(leave[gm.Name], gm[gmo]) -- store in "leave" array to replace at the end
 			end
@@ -244,12 +248,23 @@ function vh.pullUpdate(self)
 
 	-- write gamemode "leave" old to new
 	for gmname, gmtab in pairs(leave) do
+		if gmname == "Base" then
+			for _, obj in pairs(gmtab) do
+				if not obj or not obj.Name then continue end
+				if game:GetService("ReplicatedStorage").Services.GamemodeService.Gamemode:FindFirstChild(obj.Name) then
+					game:GetService("ReplicatedStorage").Services.GamemodeService.Gamemode[obj.Name]:Destroy()
+				end
+				obj.Parent = game:GetService("ReplicatedStorage").Services.GamemodeService.Gamemode
+			end
+			continue
+		end
+
 		for _, obj in pairs(gmtab) do
 			if not obj or not obj.Name then continue end
-			if game:GetService("ServerScriptService").gamemode.class[gmname]:FindFirstChild(obj.Name) then
-				game:GetService("ServerScriptService").gamemode.class[gmname][obj.Name]:Destroy()
+			if game:GetService("ReplicatedStorage").Services.GamemodeService.Gamemode[gmname]:FindFirstChild(obj.Name) then
+				game:GetService("ReplicatedStorage").Services.GamemodeService.Gamemode[gmname][obj.Name]:Destroy()
 			end
-			obj.Parent = game:GetService("ServerScriptService").gamemode.class[gmname]
+			obj.Parent = game:GetService("ReplicatedStorage").Services.GamemodeService.Gamemode[gmname]
 		end
 	end
 

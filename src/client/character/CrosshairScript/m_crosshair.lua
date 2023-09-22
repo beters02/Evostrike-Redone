@@ -19,6 +19,7 @@ function crosshair.initialize(hud)
     -- alternatively, you could use module:Get() or module:GetAsync()
     local clientPlayerDataModule = require(Framework.shm_clientPlayerData.Location)
 	if not clientPlayerDataModule.stored then repeat task.wait() until clientPlayerDataModule.stored end
+    self.clientModule = clientPlayerDataModule
 
     for i, v in pairs(clientPlayerDataModule.stored.options.crosshair) do
         self[i] = v
@@ -47,7 +48,6 @@ function crosshair.initialize(hud)
 
     self._isInit = true
     crosshair = self
-
     return self
 end
 
@@ -62,10 +62,14 @@ function crosshair:newFrame(): Frame
 	return frame
 end
 
-function crosshair:updateCrosshair(dataKey: string, newValue: any)
+function crosshair:updateCrosshair(dataKey: string?, newValue: any?)
   
     if dataKey and self[dataKey] then
         self[dataKey] = newValue
+    end
+
+    for i, v in pairs(self.clientModule.stored.options.crosshair) do
+        self[i] = v
     end
 
     -- update pos
@@ -77,29 +81,27 @@ function crosshair:updateCrosshair(dataKey: string, newValue: any)
 	hairs.bottom.Position = origin + verticalOffset
 	hairs.right.Position = origin + -horizontalOffset
 	hairs.left.Position = origin + horizontalOffset
-
-    if self.dot then
-        if not hairs.dot then hairs.dot = self:newFrame() end
-        hairs.dot.Position = UDim2.fromScale(0.5, 0.5)
-        hairs.dot.Size = UDim2.fromOffset(1, 1)
-    else
-        if hairs.dot then hairs.dot:Destroy() hairs.dot = nil end
-    end
+    hairs.dot.Position = self.origin
 
     -- update size and thickness
+    hairs.dot.Size = UDim2.fromOffset(self.thickness, self.thickness)
     hairs.left.Size = UDim2.fromOffset(self.size, self.thickness)
     hairs.right.Size = UDim2.fromOffset(self.size, self.thickness)
 
     -- This is the bottom and top frames so we have to make them thinner in width and larger in height
 	hairs.top.Size = UDim2.fromOffset(self.thickness, self.size)
 	hairs.bottom.Size = UDim2.fromOffset(self.thickness, self.size)
-
+    
     -- update color and outline
     for i, v in pairs(hairs) do
         v = v :: Frame
         v.BackgroundColor3 = Color3.fromRGB(self.red, self.green, self.blue)
         v.BorderSizePixel = self.outline and 1 or 0
+        v.BorderColor3 = Color3.new(0,0,0)
     end
+
+    -- set dot
+    hairs.dot.BackgroundTransparency = self.dot and 0 or 1
 
 end
 

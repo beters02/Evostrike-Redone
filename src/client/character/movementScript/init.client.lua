@@ -29,6 +29,9 @@ local camera = workspace.CurrentCamera
 local collider = character:WaitForChild("HumanoidRootPart")
 local head = character:WaitForChild("Head")
 
+-- lets anchor the character while he loads so we dont fall through the ground lol
+character.PrimaryPart.Anchored = true
+
 local cameraLook = Vector3.new()
 local cameraYaw = Vector3.new()
 local currentInputSum = {Forward = 0, Side = 0}
@@ -45,13 +48,13 @@ local inAirMovementState = false
 local onGroundMovementState = false
 local playerVelocity = Vector3.zero
 local landed = Events:WaitForChild("Landed")
-local dashModule = require(ReplicatedStorage.ability.remote.sharedAbilityRF:InvokeServer("Class", "Dash"))
+local dashModule = require(ReplicatedStorage.ability.class.Dash)
 
 local runningAnimation = hum.Animator:LoadAnimation(hum.Animations.Run)
 local jumpingAnimation = hum.Animator:LoadAnimation(hum.Animations.Jump)
 local crouchingAnimation = hum.Animator:LoadAnimation(hum.Animations.Crouch)
 
---[[ 
+--[[
 	Variables for Custom Movement Abilities
 ]]
 local dashVariables = {
@@ -623,27 +626,34 @@ function Movement.ProcessMovement()
 		processWalk = false
 
 		if walking then
-			walking = Movement.Walk(false)
+			walking = false
+			Movement.Walk(false)
 		end
 
 		if not crouching then
-			crouching = Movement.Crouch(true)
+			crouching = true
+			Movement.Crouch(true)
 		end
 
 	elseif crouching then
-		crouching = Movement.Crouch(false)
+		crouching = false
+		Movement.Crouch(false)
 	end
 
 	if processWalk then
 
 		-- do not process walk while crouching
 		if not crouching and not walking then
-			walking = Movement.Walk(true)
+			walking = true
+			Movement.Walk(true)
 		end
 
 	elseif walking then
-		walking = Movement.Walk(false)
+		walking = false
+		Movement.Walk(false)
 	end
+
+	task.wait()
 
 	-- resolve crouch/walk friction
 	if not walking and not crouching then
@@ -856,9 +866,6 @@ function Main()
 
 	InitMovers()
 
-	-- this will yield if necessary
-	InitPlayerData()
-
 	-- connect key bind change listener
 	Inputs.InitKeys()
 	Inputs.ListenForKeyBindChanges()
@@ -897,12 +904,8 @@ function InitMovers()
 	Movement.gravityForce = gravityForce
 end
 
--- Set the player to be anchored until PlayerData is initialized.
--- Resolve: Bug where players would fall through the floor on the first spawn
-function InitPlayerData()
-	collider.Anchored = true
-	PlayerData:WaitForInit()
-	collider.Anchored = false
-end
-
 Main()
+
+task.delay(1.5, function()
+	character.PrimaryPart.Anchored = false
+end)

@@ -55,6 +55,7 @@ local profile = {
 			jump = "Space",
 			crouch = "LeftControl",
 			inspect = "T",
+			equipLastEquippedWeapon = "Q",
 			drop = "G",
 
 			aimToggle = 1, -- 1 = toggle, 0 = hold

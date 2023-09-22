@@ -1,9 +1,11 @@
-local Players = game:GetService("Players")
+--[[local Players = game:GetService("Players")
 local BotAdded = game:GetService("ReplicatedStorage"):WaitForChild("bots"):WaitForChild("BotAdded")
 local GetBots = game:GetService("ReplicatedStorage"):WaitForChild("bots"):WaitForChild("GetBots")
 local Conn = {}
 
 local function createHighlight(character, isEnemy)
+    if character == Players.LocalPlayer.character then return end
+
     if character:FindFirstChild("EnemyHighlight") then
         character.EnemyHighlight:Destroy()
     end
@@ -52,4 +54,4 @@ if Bots then
     for _, currbot in pairs(Bots) do
         createHighlight(currbot, true)
     end
-end
+end]]

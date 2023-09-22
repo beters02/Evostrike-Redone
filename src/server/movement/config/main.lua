@@ -19,11 +19,11 @@ local module = {
 	crouchAccelerate = 19,
 
 	--[[ Air Settings ]]
-	airAccelerate = 35, -- 35 feels good, lets try changing airspeed. 22 def
-	airSpeed = 4, -- 5
+	airAccelerate = 55, -- 35 feels good, lets try changing airspeed. 22 def
+	airSpeed = 6, -- 5
 	airMaxSpeed = 34, -- 33 was the sweet spot but i was hitting hops as much, 35 was too easy to hit hops
-	airMaxSpeedFriction = 4,
-	airMaxSpeedFrictionDecrease = 1,
+	airMaxSpeedFriction = 6,
+	airMaxSpeedFrictionDecrease = .5, -- amount of times per 1/60sec to decrease air fric
 
 	--[[ Jump Settings ]]
 	jumpVelocity = 29,

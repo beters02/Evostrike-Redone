@@ -1,27 +1,21 @@
 local Debris = game:GetService("Debris")
-local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local RemotesLib = require(Framework.shfc_remotes.Location)
-local SharedAbilityRF = ReplicatedStorage:WaitForChild("ability").remote.sharedAbilityRF
 local FastCast = require(Framework.shc_fastcast.Location)
-local Sound = require(Framework.shm_sound.Location)
-local EvoPlayer = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoPlayer"))
-
 -- Store Ability Options for ease of access
 local Shared = {}
 Shared.AbilityOptions = {}
 Shared.AbilityObjects = {}
 
 if RunService:IsClient() then
-    Shared.AbilityOptions.LongFlash = require(SharedAbilityRF:InvokeServer("Class", "LongFlash"))
-    Shared.AbilityOptions.HEGrenade = require(SharedAbilityRF:InvokeServer("Class", "HEGrenade"))
-    Shared.AbilityOptions.Molly = require(SharedAbilityRF:InvokeServer("Class", "Molly"))
+    Shared.AbilityOptions.LongFlash = require(ReplicatedStorage.ability.class.LongFlash)
+    Shared.AbilityOptions.HEGrenade = require(ReplicatedStorage.ability.class.HEGrenade)
+    Shared.AbilityOptions.Molly = require(ReplicatedStorage.ability.class.Molly)
 else
-    local AbilityClass = Framework.Ability.Location.Parent.class
+    local AbilityClass = ReplicatedStorage.ability.class
     Shared.AbilityOptions.LongFlash = require(AbilityClass.LongFlash)
     Shared.AbilityOptions.HEGrenade = require(AbilityClass.HEGrenade)
     Shared.AbilityOptions.Molly = require(AbilityClass.Molly)

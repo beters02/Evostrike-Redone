@@ -724,20 +724,25 @@ function conn_disableHotConnections()
 	end
 end
 
-function conn_mouseUp()
+function conn_mouseUp(forceCancel)
 	if not player.Character or hum.Health <= 0 then return end
 	hotVariables.mouseDown = false
 
 	if weaponVar.fireScheduled then
-		-- cancel fire scheduled after a full 64 tick of mouse being up
-		hotVariables.fireScheduleCancelThread = task.delay(1/64, function()
-			if weaponVar.fireScheduled and not weaponVar.mouseDown and weaponVar.firing then
-				coroutine.yield(weaponVar.fireScheduled)
-				weaponVar.fireScheduled = nil
-			end
-			coroutine.yield(hotVariables.fireScheduleCancelThread)
-			hotVariables.fireScheduleCancelThread = nil
-		end)
+		if forceCancel then
+			coroutine.yield(weaponVar.fireScheduled)
+			weaponVar.fireScheduled = nil
+		else
+			-- cancel fire scheduled after a full 64 tick of mouse being up
+			hotVariables.fireScheduleCancelThread = task.delay(1/64, function()
+				if weaponVar.fireScheduled and not weaponVar.mouseDown and weaponVar.firing then
+					coroutine.yield(weaponVar.fireScheduled)
+					weaponVar.fireScheduled = nil
+				end
+				coroutine.yield(hotVariables.fireScheduleCancelThread)
+				hotVariables.fireScheduleCancelThread = nil
+			end)
+		end
 	end
 
     if weaponVar.fireLoop then
@@ -753,6 +758,17 @@ end
 
 function conn_mouseDown(t, secondaryMouse)
 	if not player.Character or hum.Health <= 0 then return end
+	local fireRate = weaponOptions.fireRate
+	print('yah')
+
+	if secondaryMouse then
+		if string.lower(weaponName) ~= "knife" then
+			warn('asdasd')
+			return
+		end
+		fireRate = weaponOptions.secondaryFireRate
+	end
+
 	t = type(t) == "number" and t or tick()
 
 	hotVariables.mouseDown = true
@@ -784,8 +800,7 @@ function conn_mouseDown(t, secondaryMouse)
 	else
 
 	if not weaponVar.accumulator then weaponVar.accumulator = 0 end
-	local fireRate = (not secondaryMouse and weaponOptions.fireRate or weaponOptions.secondaryFireRate)
-		
+	
 		if not weaponVar.fireLoop then
 
 			-- register initial fire boolean
@@ -911,6 +926,9 @@ end
 
 function core_unequip()
 	if not player.Character or hum.Health <= 0 then return end
+
+	-- Resolve: weapon firing after shooting while unequip
+	conn_mouseUp(true)
 
 	util_setIconEquipped(false)
 	--controllerModule:Unequip(weaponOptions.inventorySlot)

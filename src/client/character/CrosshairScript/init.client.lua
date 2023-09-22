@@ -9,3 +9,7 @@ module = module.initialize(hud)
 
 module:enable()
 module:connect()
+
+script:WaitForChild("UpdateCrosshair").Event:Connect(function()
+    module:updateCrosshair()
+end)

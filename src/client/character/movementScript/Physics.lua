@@ -61,7 +61,15 @@ function module:ApplyGroundVelocity(groundNormal)
 	local accelDir = self:GetAccelerationDirection(groundNormal)
 
 	-- apply friction
-	self:ApplyFriction(1)
+	
+
+	-- friction
+	if self.currentAirFriction > 0 then
+		self:ApplyFriction((math.max(self.airMaxSpeedFrictionDecrease-self.currentAirFriction, self.currentAirFriction) * .75/self.friction) * self.currentDT * 60)
+		self.currentAirFriction -= (self.airMaxSpeedFrictionDecrease * self.currentDT * 60)
+	else
+		self:ApplyFriction(1)
+	end
 
 	-- set the target speed of the player
 	local wishSpeed = accelDir.Magnitude
@@ -152,10 +160,9 @@ function module:ApplyAirVelocity()
 		self.currentAirFriction = self.airMaxSpeedFriction
 	end
 
-	-- friction
+	-- continue air friction friction
 	if self.currentAirFriction > 0 then
-		self:ApplyFriction((self.currentAirFriction/self.friction) * self.currentDT * 60)
-		self.currentAirFriction -= (self.airMaxSpeedFrictionDecrease * self.currentDT * 60)
+		self:ApplyFriction(0.01 * self.currentAirFriction * self.currentDT * 60)
 	end
 	
 	-- apply acceleration
@@ -181,8 +188,12 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 
 	-- if no inputs, don't accelerate
 	if wishDir.Magnitude == 0 then
-		self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, true, wishSpeed - self.movementVelocity.Velocity.Magnitude)
-		return
+		if self.dashing then
+			wishDir = self.collider.Velocity.Unit * wishSpeed
+		else
+			self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, true, wishSpeed - self.movementVelocity.Velocity.Magnitude)
+			return
+		end
 	end
 
 	-- get current/add speed
@@ -206,6 +217,10 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 
 	-- apply acceleration
 	self.movementVelocity.Velocity = newVelocity
+
+	if self.dashing then
+		task.wait()
+	end
 
 end
 
@@ -241,7 +256,7 @@ function module:GetAccelerationDirection(groundNormal)
 	local forward
 	local right
 	local accelDir
-	local forwardMove = self.dashing and (self.currentInputSum.Forward == 0 and 1 or false) or self.currentInputSum.Forward
+	local forwardMove = self.currentInputSum.Forward
     local rightMove = self.currentInputSum.Side
 
 	if not self.dashing and self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then

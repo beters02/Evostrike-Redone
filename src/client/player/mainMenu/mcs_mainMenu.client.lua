@@ -1,10 +1,28 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local player = game:GetService("Players").LocalPlayer
+
 if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
 
 local gui = player.PlayerGui:WaitForChild("MainMenu")
 local module = require(script.Parent.cm_mainMenu).initialize(gui)
+
+ReplicatedStorage:WaitForChild("main").sharedMainRemotes.EnableMainMenu.OnClientEvent:Connect(function(enable)
+    if enable then
+        module.open()
+    else
+        module.close()
+    end
+end)
+
+script.Parent.EnableMenuBindable.Event:Connect(function(enable)
+    if enable then
+        module.open()
+    else
+        module.close()
+    end
+end)
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if input.KeyCode == Enum.KeyCode.M then
@@ -19,3 +37,4 @@ UserInputService.InputBegan:Connect(function(input, gp)
         module.toggle()
     end
 end)
+

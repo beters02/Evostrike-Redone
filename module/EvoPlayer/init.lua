@@ -8,7 +8,8 @@ local DiedEvent = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMai
 local EvoPlayer = {}
 
 --@summary Correctly apply damage to the player, checking for shields
-function EvoPlayer:TakeDamage(character, damage)
+function EvoPlayer:TakeDamage(character, damage, damager)
+    if damager and damager.Humanoid.Health <= 0 then return end
     local shield = character:GetAttribute("Shield") or 0
     local helmet = character:GetAttribute("Helmet") or false
     local hitPart = character:GetAttribute("lastHitPart") or "Head"
@@ -35,6 +36,7 @@ function EvoPlayer:TakeDamage(character, damage)
     end
 
     if RunService:IsServer() then
+        
         character.Humanoid:TakeDamage(damage)
     end
 
@@ -44,13 +46,13 @@ end
 --@summary Set the Shield of a player.
 function EvoPlayer:SetShield(character, shield): number
     character:SetAttribute("Shield", shield)
-    return shield:: number
+    return shield :: number
 end
 
 --@summary Set the Helmet of a player.
 function EvoPlayer:SetHelmet(character, helmet): boolean
     character:SetAttribute("Helmet", helmet)
-    return helmet:: boolean
+    return helmet :: boolean
 end
 
 --@summary Do a function after a player has loaded.

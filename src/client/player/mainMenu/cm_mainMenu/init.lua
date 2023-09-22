@@ -117,6 +117,7 @@ function main.topBar.connect()
 end
 
 function main.topBar.disconnect()
+	if not main.topBar._connections then return end
 	for _, v in pairs(main.topBar._connections) do
 		v:Disconnect()
 	end

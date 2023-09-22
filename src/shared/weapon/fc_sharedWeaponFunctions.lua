@@ -254,7 +254,7 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		char:SetAttribute("lastUsedWeaponHelmetMultiplier", weaponOptions.damage.helmetMultiplier or 1)
 
 		-- apply damage
-		damage = EvoPlayer:TakeDamage(char, damage)
+		damage = EvoPlayer:TakeDamage(char, damage, player.Character)
 
 		-- see if player will be killed after damage is applied
 		killed = hum.Health <= damage and true or false

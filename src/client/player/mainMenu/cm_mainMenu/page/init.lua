@@ -5,6 +5,8 @@
 local page = {}
 page.__index = page
 
+local EnableBindable = script.Parent.Parent.EnableMenuBindable
+
 --[[ Page Module Private Access Functions ]]
 
 function page.init(self) -- self = main
