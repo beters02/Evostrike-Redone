@@ -113,7 +113,6 @@ end
 
 local function CompileServer()
     local _new = {}
-    _new.Weapon = smf_Weapon(_new)
     _new.Ability = smf_Ability(_new)
     _new = CompileTree(_new, "s", game:GetService("ServerScriptService"))
     return _new
@@ -140,13 +139,6 @@ end
 --[[
     Hard-Coded Compile Functions
 ]]
-
-function smf_Weapon()
-    local _mWeaponFold = game:GetService("ServerScriptService"):WaitForChild("weapon")
-    local _loc = _mWeaponFold.pm_main
-    local _mWeapon: Types.PlayerModule = {Access = "Server", Location = _loc, Server = _mWeaponFold.mss_main, Client = function() end}
-    return _mWeapon
-end
 
 function smf_Ability()
     local _mAbilityFold = game:GetService("ServerScriptService"):WaitForChild("ability")

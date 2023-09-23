@@ -93,4 +93,28 @@ function WeaponService:GetPlayerInventorySlot(player, slot)
     return WeaponService._PlayerData[player.Name][slot] or false
 end
 
+--[[function Weapon.ClearAllPlayerInventories()
+	for _, player in pairs(Players:GetPlayers()) do
+		Weapon.ClearPlayerInventory(player)
+	end
+end]]
+
+function WeaponService:GetRegisteredWeapons()
+	local wep = {}
+	for i, v in pairs(Weapons:GetChildren()) do
+		if v:GetAttribute("Ignore") then continue end
+		table.insert(wep, v.Name)
+	end
+	return wep
+end
+
+--[[function Weapon:GetRegisteredWeaponOptions()
+	local wep = {}
+	for i, v in pairs(ServerScriptService.weapon.config:GetChildren()) do
+		if v:GetAttribute("Ignore") then continue end
+		wep[v.Name] = v
+	end
+	return wep
+end]]
+
 return WeaponService

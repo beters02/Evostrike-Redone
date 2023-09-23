@@ -7,6 +7,7 @@ local Framework = require(ReplicatedStorage.Framework)
 local AbilityObjects = ReplicatedStorage:WaitForChild("ability"):WaitForChild("obj"):WaitForChild("LongFlash")
 local Tables = require(Framework.Module.lib.fc_tables)
 local Sound = require(Framework.shm_sound.Location)
+local FastCast = require(ReplicatedStorage.lib.c_fastcast)
 local BotService
 local AbilityReplicateRF: RemoteEvent = ReplicatedStorage.ability.remote.replicate
 if RunService:IsServer() then
@@ -70,6 +71,36 @@ local LongFlash = {
     remoteFunction = nil, -- to be added in AbilityClient upon init
     remoteEvent = nil,
 }
+
+-- Create Caster
+
+local caster
+local castBehavior
+local localConn = {}
+
+local function initCaster()
+	caster = FastCast.new()
+	castBehavior = FastCast.newBehavior()
+	castBehavior.Acceleration = Vector3.new(0, -workspace.Gravity * LongFlash.gravityModifier, 0)
+	castBehavior.AutoIgnoreContainer = false
+	castBehavior.CosmeticBulletContainer = workspace.Temp
+	castBehavior.CosmeticBulletTemplate = AbilityObjects.Models.Grenade
+    LongFlash.caster = caster
+    LongFlash.castBehavior = castBehavior
+    localConn.rayhit = LongFlash.caster.RayHit:Connect(function(...)
+        LongFlash.RayHit(caster, Players.LocalPlayer, ...)
+    end)
+    localConn.lengthchanged = LongFlash.caster.LengthChanged:Connect(function(cast, lastPoint, direction, length, velocity, bullet)
+        if bullet then
+            local bulletLength = bullet.Size.Z/2
+            local offset = CFrame.new(0, 0, -(length - bulletLength))
+            bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
+        end
+    end)
+    localConn.terminating = LongFlash.caster.CastTerminating:Connect(function()end)
+end
+
+initCaster()
 
 local function disableAllParticleEmittersAndLights(grenadeModel)
     for i, v in pairs(grenadeModel:GetChildren()) do

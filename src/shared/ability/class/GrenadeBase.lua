@@ -4,7 +4,9 @@ local Sound = require(Framework.shm_sound.Location)
 local States = require(Framework.shm_states.Location)
 local Math = require(Framework.shfc_math.Location)
 local Grenades = require(ReplicatedStorage.Modules.Grenades)
+local GrenadeRemotes = ReplicatedStorage.Modules.Grenades.Remotes
 local GrenadeTypes = Grenades.Types
+local Players = game:GetService("Players")
 
 local Grenade = {
     -- useage
@@ -22,6 +24,21 @@ local Grenade = {
     throwAnimFadeTime = 0.18,
     throwFinishSpringShove = Vector3.new(-0.4, -0.5, 0.2),
 }
+
+function Grenade:FireGrenade(hit, isReplicated, origin, direction)
+    self.uses -= 1 -- client uses
+    --self.grenadeClassObject = self.grenadeClassObject :: GrenadeTypes.Grenade
+    --self.grenadeClassObject.Fire(hit)
+
+    if not isReplicated then
+        local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
+        origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.startHeight, 0)
+        direction = (hit.Position - origin).Unit
+        GrenadeRemotes.Replicate:FireServer("GrenadeFire", self.name, origin, direction)
+    end
+
+    self.caster:Fire(origin, direction, self.speed, self.castBehavior)
+end
 
 function Grenade:Use()
 
@@ -89,9 +106,7 @@ function Grenade:Use()
 
     --if used then
     if canUse then
-        self.uses -= 1 -- client uses
-        self.grenadeClassObject = self.grenadeClassObject :: GrenadeTypes.Grenade
-        self.grenadeClassObject.Fire(hit)
+        self:FireGrenade(hit)
     end
 
     -- destroy left hand clone

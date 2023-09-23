@@ -19,7 +19,9 @@ local config = {
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local RagdollRE = ReplicatedStorage:WaitForChild("ragdoll"):WaitForChild("remote"):WaitForChild("sharedRagdollRE")
+local PlayerDied = ReplicatedStorage.main.sharedMainRemotes.deathRE
 
 local player = Players.LocalPlayer
 local playerConns = {}
@@ -31,9 +33,20 @@ function NonPlayerInitRagdoll(character)
     local doll, hum, conn = CreateRagdoll(character)
 	nonPlayerDolls[character.Name] = doll
 	conn:Disconnect()
-	conn = hum.Died:Once(function()
+	conn = RunService.RenderStepped:Connect(function()
+		if hum then
+			local lastRegistered = hum.Parent:GetAttribute("LastRegisteredHealth")
+			if (lastRegistered and lastRegistered <= 0) or not hum or hum.Health <= 0 then
+				DiedRagdoll(character, doll)
+				nonPlayerDolls[character.Name] = nil
+				conn:Disconnect()
+			end
+			return
+		end
+		
 		DiedRagdoll(character, doll)
 		nonPlayerDolls[character.Name] = nil
+		conn:Disconnect()
 	end)
 end
 
@@ -68,8 +81,12 @@ function CreateRagdoll(character)
 
     -- connect died event
     local hum = character:WaitForChild("Humanoid")
-    local conn = hum.Died:Once(function()
-        DiedRagdoll(character, ragdoll)
+    local conn
+	conn = PlayerDied.OnClientEvent:Connect(function(player)
+		if player.Name == character.Name then
+			DiedRagdoll(character, ragdoll)
+			conn:Disconnect()
+		end
     end)
 	return ragdoll, hum, conn
 end

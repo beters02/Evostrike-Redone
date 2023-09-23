@@ -37,11 +37,15 @@ function EvoPlayer:TakeDamage(character, damage, damager)
         end
     end
 
+    local lastHealth = math.max(0, (character:GetAttribute("LastRegisteredHealth") or character.Humanoid.Health) - damage)
+    character:SetAttribute("LastRegisteredHealth", lastHealth)
+    local killed = lastHealth <= 0
+
     if RunService:IsServer() then
         character.Humanoid:TakeDamage(damage)
     end
 
-    return damage
+    return damage, killed
 end
 
 --@summary Set the Shield of a player.

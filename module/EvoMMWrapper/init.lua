@@ -26,7 +26,9 @@ function module:StartQueueService(queueableGamemodes)
 
     -- init gamemodes
     for _, gamemode in pairs(queueableGamemodes) do
-        local req = require(game:GetService("ServerScriptService"):WaitForChild("gamemode").class[gamemode])
+        local req = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService").Gamemode:FindFirstChild(gamemode)
+        if not req then continue end
+        req = require(req)
 
         -- init gamemode's maps
         for map, mapid in pairs(StoredMapIDs.GetMapInfoInGamemode(gamemode)) do

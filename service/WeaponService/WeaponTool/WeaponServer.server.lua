@@ -67,7 +67,6 @@ function ServerFire(currentBullet, clientAccuracyVector, rayInformation, shotReg
 
 	-- update ammo
 	Variables.ammo.magazine -= 1
-	Variables.nextFireTime = tick() + Options.fireRate
 
     -- create a fake result to give to RegisterShot
 	local fr = {
@@ -77,6 +76,7 @@ function ServerFire(currentBullet, clientAccuracyVector, rayInformation, shotReg
         Distance = rayInformation.distance,
         Material = rayInformation.material
     }
+
 	SharedWeaponFunctions.RegisterShot(player, Options, fr, rayInformation.origin, rayInformation.direction, shotRegisteredTime, nil, wallbangDamageMultiplier, true, tool, serverModel)
 	return true
 end

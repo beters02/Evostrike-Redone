@@ -254,16 +254,12 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		char:SetAttribute("lastUsedWeaponHelmetMultiplier", weaponOptions.damage.helmetMultiplier or 1)
 
 		-- apply damage
-		damage = EvoPlayer:TakeDamage(char, damage, player.Character)
-
-		-- see if player will be killed after damage is applied
-		killed = hum.Health <= damage and true or false
+		damage, killed = EvoPlayer:TakeDamage(char, damage, player.Character)
 
         if RunService:IsServer() then
 			-- apply tag so we can easily access damage information
             module.TagPlayer(char, player)
 		end
-
 
 	return damage, particleFolderName, killed, char
 end
@@ -296,16 +292,13 @@ function module.RegisterShot(player, weaponOptions, result, origin, _, _, isHuma
 	end
 
 	if RunService:IsClient() then
-		if isHumanoid then
-			task.spawn(function()
 
-				-- get damage, folders, killedBool
-				-- _[1] = damage, _[2] = particleFolderName[deprecated]
-				_, _, killed = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
-	
-				BulletHitUtil.PlayerHitParticles(char, result.Instance, killed)
-				BulletHitUtil.PlayerHitSounds(char, result.Instance, killed)
-			end)
+		if isHumanoid then
+			-- get damage, folders, killedBool
+			-- _[1] = damage, _[2] = particleFolderName[deprecated]
+			_, _, killed = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
+			BulletHitUtil.PlayerHitParticles(char, result.Instance, killed)
+			BulletHitUtil.PlayerHitSounds(char, result.Instance, killed)
 		end
 		return module.FireBullet(player.Character, result, isHumanoid, isBangable, tool, fromModel)
 	end

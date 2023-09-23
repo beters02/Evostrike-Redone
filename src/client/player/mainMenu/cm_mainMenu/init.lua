@@ -15,6 +15,7 @@ local main = {}
 -- init
 
 function main.initialize(gui)
+	print('yes')
     main.player = Players.LocalPlayer
     main.gui = gui
     main.bgframe = main.gui:WaitForChild("BG")
@@ -24,6 +25,7 @@ function main.initialize(gui)
 	main.page = require(Players.LocalPlayer.PlayerScripts.mainMenu.cm_mainMenu.page).init(main)
 
 	main.isInit = true
+	print('yes')
 	return main
 end
 

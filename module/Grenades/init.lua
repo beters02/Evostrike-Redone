@@ -10,24 +10,14 @@ local Caster = require(script:WaitForChild("Caster"))
 local grenades = {}
 grenades.Types = Types
 
-function grenades:CreateGrenade(options: table?, objects: Folder)
+function grenades:CreateGrenade(abilityModule: table, objects: Folder)
     local grenade: Types.Grenade = {
-        Caster = Caster:GetCaster(Players.LocalPlayer),
-        Behavior = Caster:GetCastBehavior(Players.LocalPlayer, options, objects),
-        Options = Types.GrenadeOptions.new(options.name, options),
+        Caster = abilityModule.caster,
+        Behavior = abilityModule.castBehavior,
+        Options = Types.GrenadeOptions.new(abilityModule.name, abilityModule),
         Connections = {},
         CurrentGrenadeObject = nil
     }
-
-    Caster:SetCasterRayHit(Players.LocalPlayer, options.RayHit, grenade, Players.LocalPlayer)
-
-    grenade.Fire = function(mouseHit)
-        local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
-        local origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, grenade.Options.startHeight, 0)
-        local direction = (mouseHit.Position - origin).Unit
-        local cast = Caster:FireCaster(grenade.Options.behaviorId, origin, direction, direction * grenade.Options.speed)
-        grenade.CurrentGrenadeObject = cast.RayInfo.CosmeticBulletObject
-    end
 
     grenade.Destroy = function()
         Caster:Remove(Players.LocalPlayer)

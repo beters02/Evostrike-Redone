@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local Remotes = script.Parent:WaitForChild("Remotes")
 
 local Server = {}
@@ -19,5 +20,15 @@ Remotes.RemoteEvent.OnServerEvent = function(player, action, ...)
         Remotes.RemoteEvent:FireAllClients("RemoveCaster")
     end
 end
+
+Remotes.Replicate.OnServerEvent:Connect(function(player, action, ...)
+    if action == "GrenadeFire" then
+        local abilityName, origin, direction = ...
+        for i, v in pairs(Players:GetPlayers()) do
+            if v == player then continue end
+            Remotes.Replicate:FireClient(v, action, abilityName, origin, direction)
+        end
+    end
+end)
 
 return Server

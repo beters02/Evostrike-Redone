@@ -8,6 +8,7 @@ local EvoPlayer = require(ReplicatedStorage.Modules.EvoPlayer)
 local AbilityReplicateRF: RemoteFunction = ReplicatedStorage.ability.remote.replicate
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local FastCast = require(ReplicatedStorage.lib.c_fastcast)
 
 local Molly = {
     name = "Molly",
@@ -64,6 +65,36 @@ local Molly = {
     remoteEvent = nil,
 }
 
+-- Create Caster
+
+local caster
+local castBehavior
+local localConn = {}
+
+local function initCaster()
+	caster = FastCast.new()
+	castBehavior = FastCast.newBehavior()
+	castBehavior.Acceleration = Vector3.new(0, -workspace.Gravity * Molly.gravityModifier, 0)
+	castBehavior.AutoIgnoreContainer = false
+	castBehavior.CosmeticBulletContainer = workspace.Temp
+	castBehavior.CosmeticBulletTemplate = AbilityObjects.Models.Grenade
+    Molly.caster = caster
+    Molly.castBehavior = castBehavior
+    localConn.rayhit = Molly.caster.RayHit:Connect(function(...)
+        Molly.RayHit(caster, Players.LocalPlayer, ...)
+    end)
+    localConn.lengthchanged = Molly.caster.LengthChanged:Connect(function(cast, lastPoint, direction, length, velocity, bullet)
+        if bullet then
+            local bulletLength = bullet.Size.Z/2
+            local offset = CFrame.new(0, 0, -(length - bulletLength))
+            bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
+        end
+    end)
+    localConn.terminating = Molly.caster.CastTerminating:Connect(function()end)
+end
+
+initCaster()
+
 function Molly.GetParams()
     local op = OverlapParams.new()
     op.CollisionGroup = "MollyDamageCast"
@@ -117,7 +148,6 @@ function Molly.CreateCirclePart(position)
 end
 
 function Molly.RayHit(grenadeClassObject, casterPlayer, caster, result, velocity, behavior, playerLookNormal)
-    if not grenadeClassObject or not grenadeClassObject.CurrentGrenadeObject then warn("RayHit tried playing on wrong grenade.") return end
 
     local grenade = grenadeClassObject.CurrentGrenadeObject
     local explode = true

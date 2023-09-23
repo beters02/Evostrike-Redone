@@ -57,8 +57,6 @@ end
 -- init Grenade caster if ability is a grenade
 local caster, casbeh
 if abilityOptions.isGrenade then
-	caster, casbeh = AbilityFunc.InitCaster(char, abilityOptions, abilityObjects)
-	grenadeEvent:FireAllClients("Create", abilityOptions, abilityObjects)
 end
 
 Functions.ThrowGrenade = function(mouseHit: Vector3)

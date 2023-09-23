@@ -260,6 +260,7 @@ function Gamemode:Start(isInitialGamemode: boolean?)
     end)]]
 
     self:StartRound()
+    print('GAMEMODE STARETED')
 end
 
 --@summary Pause the Gamemode.

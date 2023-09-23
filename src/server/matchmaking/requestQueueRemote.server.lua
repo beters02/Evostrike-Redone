@@ -1,17 +1,17 @@
 local TeleportService = game:GetService("TeleportService")
 local StoredMapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
-local Gamemode = require(game:GetService("ServerScriptService"):WaitForChild("gamemode"):WaitForChild("m_gamemode"))
 local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
+local GamemodeService = require(game.ReplicatedStorage:WaitForChild("Services"):WaitForChild("GamemodeService"))
 
 local remote = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("requestQueueFunction")
 
 local requestActions = {
     Add = function(player, ...)
-        if not Gamemode.currentGamemode == "Lobby" then return end
+        if GamemodeService.Gamemode.Name ~= "Lobby" then return end
         return EvoMM:AddPlayerToQueue(player, ...)
     end,
     Remove = function(player, ...)
-        if not Gamemode.currentGamemode == "Lobby" then return end
+        if GamemodeService.Gamemode.Name ~= "Lobby" then return end
         return EvoMM:RemovePlayerFromQueue(player)
     end,
     PrintAll = function()

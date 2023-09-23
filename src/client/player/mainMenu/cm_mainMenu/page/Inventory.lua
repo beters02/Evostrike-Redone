@@ -1,8 +1,8 @@
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local PlayerData = require(Framework.shm_clientPlayerData.Location)
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
-local WeaponObjects = game:GetService("ReplicatedStorage"):WaitForChild("weapon"):WaitForChild("obj")
-local WeaponGetRemote = WeaponObjects.Parent:WaitForChild("remote"):WaitForChild("get")
+local WeaponModules = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("WeaponService"):WaitForChild("Weapon")
+local WeaponGetRemote = game.ReplicatedStorage.weapon:WaitForChild("remote"):WaitForChild("get")
 local Strings = require(Framework.shfc_strings.Location)
 
 local inventory = {}
@@ -113,7 +113,7 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     
         -- check if player has access to all skins to a specific weapon
         -- if so, we recurse CreateSkinFrame until all skins are added.
-        local parent = weapon == "knife" and WeaponObjects:WaitForChild("knife_" .. model):WaitForChild("models") or WeaponObjects:WaitForChild(weapon):WaitForChild("models")
+        local parent = weapon == "knife" and WeaponModules.knife.Assets:WaitForChild(model).Models or WeaponModules:WaitForChild(weapon).Assets.Models
         if skin == "*" then
             for i, v in pairs(parent:GetChildren()) do
                 if not v:IsA("Model") or v.Name == "default" or v:GetAttribute("Ignore") then continue end
@@ -126,10 +126,10 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     end
 
     if weapon == "knife" then
-        weaponModelObj = WeaponObjects:WaitForChild("knife_" .. model):WaitForChild("models"):WaitForChild(skin)
+        weaponModelObj = WeaponModules.knife.Assets:WaitForChild(model).Models:WaitForChild(skin)
         displayName = (model == "attackdefault" and "Attack Default Knife") or (model == "defenddefault" and "Defend Default Knife") or Strings.firstToUpper(model)
     else
-        weaponModelObj = WeaponObjects:WaitForChild(weapon):WaitForChild("models"):WaitForChild(skin)
+        weaponModelObj = WeaponModules:WaitForChild(weapon).Assets.Models:WaitForChild(skin)
         displayName = Strings.firstToUpper(weapon)
     end
 

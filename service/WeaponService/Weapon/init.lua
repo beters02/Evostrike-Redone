@@ -14,11 +14,7 @@ local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWe
 local PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
 
-local weaponWallbangInformation
-
-if RunService:IsClient() then
-    weaponWallbangInformation = ReplicatedStorage:WaitForChild("weapon"):WaitForChild("remote"):WaitForChild("get"):InvokeServer("WallbangMaterials")
-end
+local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
 function Weapon.new(weapon: string, tool: Tool)
     local weaponModule = require(ReplicatedStorage.Services.WeaponService):GetWeaponModule(weapon)

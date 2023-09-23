@@ -17,7 +17,7 @@ function CameraObject.new(weaponName)
 
     -- initialize variables
     self.camera = workspace.CurrentCamera
-	self.weaponVar = {options = WeaponGet:InvokeServer("Options", weaponName), recoiling = false, modifier = 1, currentBullet = 1, totalRecoiledVector = Vector3.zero, thread = false}
+	self.weaponVar = {options = require(ReplicatedStorage.Services.WeaponService.Weapon[string.lower(weaponName)]).Configuration, recoiling = false, modifier = 1, currentBullet = 1, totalRecoiledVector = Vector3.zero, thread = false}
     self.weaponVar.camReset = self.weaponVar.options.cameraRecoilReset or self.weaponVar.options.recoilReset
     self.weaponVar.camModifier = 1
     self.weaponVar.vecModifier = 1
