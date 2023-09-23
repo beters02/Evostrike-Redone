@@ -2,8 +2,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local WeaponFolder = ReplicatedStorage:WaitForChild("weapon")
-local GlobalSounds = WeaponFolder:WaitForChild("obj"):WaitForChild("global"):WaitForChild("sounds")
+local GlobalSounds = ReplicatedStorage.Services.WeaponService.ServiceAssets.Sounds
 local Debris = game:GetService("Debris")
 local EmitParticle = require(Framework.shfc_emitparticle.Location)
 local MainObj = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj")
@@ -29,7 +28,7 @@ function _PlaySound(playFrom, weaponName, sound) -- if not weaponName, sound wil
 	c.Name = weaponName .. "_" .. sound.Name
 	c.Parent = playFrom
 	c:Play()
-	Debris:AddItem(c, c.TimeLength + 0.06)
+	Debris:AddItem(c, c.TimeLength + 2)
 	return c
 end
 
@@ -49,7 +48,7 @@ function util.PlayerHitSounds(character, hitPartInstance, wasKilled)
     if wasKilled then
         character:SetAttribute("ClientKillSoundPlayed", true)
         task.spawn(function()
-            _PlayAllSoundsIn(GlobalSounds.PlayerKilled)
+            _PlayAllSoundsIn(GlobalSounds.PlayerKilled, character)
         end)
     end
 

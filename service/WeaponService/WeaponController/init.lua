@@ -114,7 +114,6 @@ end
 
 --@summary Remove a Weapon from the Controller
 function WeaponController:RemoveWeapon(weaponSlot)
-    print('Removing')
     if self.Inventory.equipped.Slot == weaponSlot then
         self.Humanoid:UnequipTools()
     end

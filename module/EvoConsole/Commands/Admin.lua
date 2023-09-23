@@ -51,8 +51,8 @@ Commands.AddWeapon = {
 	Description = "Add specified weapon to your inventory",
 	Public = false,
 	
-	Function = function(self, _, weaponName)
-		game:GetService("ReplicatedStorage").weapon.remote.addremove:FireServer("Add", weaponName)
+	Function = function(self, player, weapon)
+		require(game:GetService("ReplicatedStorage").Services.WeaponService):AddWeapon(player, weapon)
 	end
 }
 
@@ -122,18 +122,6 @@ Commands.qs_printqueues = {
 
 	Function = function()
 		game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("PrintAll")
-	end
-}
-
-Commands.wc_add = {
-	Description = "Add a weapon via WeaponController",
-	Public = false,
-
-	Function = function(self, player, weapon)
-		print(self)
-		print(player)
-		print(weapon)
-		require(game:GetService("ReplicatedStorage").Services.WeaponService):AddWeapon(player, weapon)
 	end
 }
 

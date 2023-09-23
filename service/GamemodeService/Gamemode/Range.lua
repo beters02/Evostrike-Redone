@@ -20,7 +20,7 @@ Lobby.GameVariables = {
 
     kick_players_on_end = false,
 
-    can_players_damage = false,
+    can_players_damage = true,
     starting_health = 100,
     starting_shield = 50,
     starting_helmet = true,

@@ -4,12 +4,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local DiedEvent = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
+local GamemodeServiceModule = ReplicatedStorage.Services:WaitForChild("GamemodeService")
 
 local EvoPlayer = {}
 
 --@summary Correctly apply damage to the player, checking for shields
 function EvoPlayer:TakeDamage(character, damage, damager)
-    if damager and damager.Humanoid.Health <= 0 then return end
+    if damager and damager.Humanoid.Health <= 0 then return 0 end
+    if not EvoPlayer:CanDamage() then return 0 end
     local shield = character:GetAttribute("Shield") or 0
     local helmet = character:GetAttribute("Helmet") or false
     local hitPart = character:GetAttribute("lastHitPart") or "Head"
@@ -36,7 +38,6 @@ function EvoPlayer:TakeDamage(character, damage, damager)
     end
 
     if RunService:IsServer() then
-        
         character.Humanoid:TakeDamage(damage)
     end
 
@@ -69,6 +70,10 @@ function EvoPlayer:DoWhenLoaded(player, callback)
         return
     end
     return callback()
+end
+
+function EvoPlayer:CanDamage()
+    return GamemodeServiceModule:GetAttribute("CanDamage")
 end
 
 --#region Handle Player Death @server

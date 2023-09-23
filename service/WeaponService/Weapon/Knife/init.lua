@@ -119,12 +119,14 @@ function Knife:Attack(attackType: AttackType)
 			self:PlayReplicatedSound(attackType .. "Stab")
 			if Math.normalToFace(stabResult.Normal, stabResult.Instance) == Enum.NormalId.Back
 			and (string.match(stabResult.Instance.Name, "Torso") or string.match(stabResult.Instance.Name, "RootPart")) then -- client registered backstab!
+			print('stabbed')
 				self:PlayAnimation("client", attackType .. "Stab", true) -- play primary/secondary backstab animation
 				self.RemoteEvent:FireServer("VerifyKnifeDamage", attackType .. "Stab", hum)
 			else
 				self:PlayAnimation("client", (attackType or "Primary") .. "Attack", true)  -- just play slash animation & slash hit sound
 				self.RemoteEvent:FireServer("VerifyKnifeDamage", attackType, hum)
 			end
+			return
 		end
 	end
 

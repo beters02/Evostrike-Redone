@@ -124,13 +124,15 @@ WeaponRemoteFunction.OnServerInvoke = function(_plr, action, ...)
         return EquipTimerCancel()
     elseif action == "Reload" then
         return ServerReload()
-    end
+	end
 end
 
 WeaponRemoteEvent.OnServerEvent:Connect(function(_plr, action, ...)
     if action == "Fire" then
         ServerFire(...)
-    end
+	elseif action == "VerifyKnifeDamage" then
+		VerifyKnifeDamage(...)
+	end
 end)
 
 tool.Equipped:Connect(ServerEquip)

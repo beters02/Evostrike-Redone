@@ -127,6 +127,8 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
 
     GamemodeService.Gamemode = _gamemode
 
+    script:SetAttribute("CanDamage", _gamemode.GameVariables.can_players_damage or false)
+
     RemoteEvent:FireAllClients("GamemodeChanged", gamemode)
 
     if start then

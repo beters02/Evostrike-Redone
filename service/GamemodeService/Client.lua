@@ -52,4 +52,8 @@ function GMClient:AttemptPlayerSpawn()
     return GMClient.RemoteFunction:InvokeServer("AttemptPlayerSpawn")
 end
 
+function GMClient:CanDamage()
+    return GMClient.RemoteFunction:InvokeServer("GetCurrentGamemodeCanDamage")
+end
+
 return GMClient
