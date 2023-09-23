@@ -197,8 +197,11 @@ end
 
 function _doCommand(self, commandSplit: table)
 
+    print('yuh')
+
     -- verify command string was found
     if not commandSplit or not commandSplit[1] then -- split[1] == command
+    print('yuh')
         return self:Error("Could not get command from string")
 	end
 	
@@ -210,12 +213,12 @@ function _doCommand(self, commandSplit: table)
 			break
 		end
 	end
-	
+	print('yuh')
 	-- cant find command
 	if not commandTable then
         return self:Error("Could not find command " .. commandSplit[1])
 	end
-	
+	print('yuh')
 	-- remove action string to single out and send arguments
     table.remove(commandSplit, 1)
 	

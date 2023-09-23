@@ -26,12 +26,13 @@ local Teams = game:GetService("Teams")
 local TeleportService = game:GetService("TeleportService")
 local RoundTimer = require(script.Parent:WaitForChild("RoundTimer"))
 local Framework = require(game.ReplicatedStorage:WaitForChild("Framework"))
-local Weapon = require(Framework.Module.server.weapon.pm_main)
+--local Weapon = require(Framework.Module.server.weapon.pm_main)
+local WeaponService = require(game.ReplicatedStorage.Services.WeaponService)
 local Ability = require(Framework.Module.server.ability.pm_main)
 local EvoPlayer = require(game.ReplicatedStorage.Modules.EvoPlayer)
 local EvoMM = require(game.ReplicatedStorage.Modules.EvoMMWrapper)
 local Tables = require(Framework.Module.lib.fc_tables)
-local BotService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("BotService"))
+local BotService = require(game.ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService"))
 
 local DefaultSpawns = script:WaitForChild("Spawns")
 local DefaultGuis = script:WaitForChild("Guis")
@@ -586,12 +587,12 @@ function Gamemode:PlayerSpawn(player, content, index)
    
 
     if self.GameVariables.start_with_knife then
-        Weapon.Add(player, "Knife", strongestWeapon == "ternary")
+        WeaponService:AddWeapon(player, "Knife", strongestWeapon == "ternary")
     end
 
     if self.PlayerData[player.Name].BuyMenuLoadout then
         for i, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Weapons) do
-            Weapon.Add(player, v, strongestWeapon == i)
+            WeaponService:AddWeapon(player, v, strongestWeapon == i)
         end
         for _, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Abilities) do
             Ability.Add(player, v)
@@ -599,7 +600,7 @@ function Gamemode:PlayerSpawn(player, content, index)
     else
         if self.GameVariables.starting_weapons then
             for i, v in pairs(self.GameVariables.starting_weapons) do
-                Weapon.Add(player, v, strongestWeapon == i)
+                WeaponService:AddWeapon(player, v, strongestWeapon == i)
             end
         end
         if self.GameVariables.starting_abilities then
@@ -615,7 +616,7 @@ function Gamemode:PlayerSpawn(player, content, index)
 
     if self.Name == "1v1" then
         for _, v in pairs(content.weapons) do
-            Weapon.Add(player, v)
+            WeaponService:AddWeapon(player, v)
         end
         task.delay(0.9, function()
             for _, v in pairs(content.abilities) do
@@ -932,19 +933,15 @@ function Gamemode:GuiAddBuyMenu(player: Player | "all")
             self.PlayerData[player.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
             if self.GameVariables.buy_menu_add_bought_instant then
                 Ability.Add(player, abilityName)
-                print(abilityName)
             end
         end)
 
         self.PlayerData[player.Name].BuyMenuConnections.Weapon = c.WeaponSelected.OnServerEvent:Connect(function(_, weaponName, weaponSlot)
             self.PlayerData[player.Name].BuyMenuLoadout.Weapons[weaponSlot] = weaponName
             if self.GameVariables.buy_menu_add_bought_instant then
-                Weapon.Add(player, weaponName)
+                WeaponService:AddWeapon(player, weaponName)
             end
         end)
-
-        print('Added BITCAJUKSDHALKJSD')
-
     end
 end
 

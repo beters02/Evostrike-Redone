@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local States = require(Framework.shm_states.Location)
 local Math = require(Framework.Module.lib.fc_math)
-local RaycastHitbox = require(Framework.Module.lib.c_raycasthitbox)
 
 local core = {knife = true}
 core.__index = core

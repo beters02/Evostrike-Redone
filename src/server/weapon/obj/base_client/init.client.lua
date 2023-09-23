@@ -68,7 +68,6 @@ local weaponSounds
 local weaponFireKeyOptName = "Key_PrimaryFire"
 local weaponCameraObject = cameraobject.new(weaponName)
 local weaponWallbangInformation = weaponGetRemote:InvokeServer("WallbangMaterials")
-
 -- player var
 local player = game:GetService("Players").LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()

@@ -125,4 +125,16 @@ Commands.qs_printqueues = {
 	end
 }
 
+Commands.wc_add = {
+	Description = "Add a weapon via WeaponController",
+	Public = false,
+
+	Function = function(self, player, weapon)
+		print(self)
+		print(player)
+		print(weapon)
+		require(game:GetService("ReplicatedStorage").Services.WeaponService):AddWeapon(player, weapon)
+	end
+}
+
 return Commands
