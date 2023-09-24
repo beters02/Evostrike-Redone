@@ -7,5 +7,7 @@ local UIState = States.State("UI")
 
 -- Connect Mouse Icon Update
 UIState:changed(function()
-    UserInputService.MouseIconEnabled = UIState:shouldMouseBeEnabled()
+    local should = UIState:shouldMouseBeEnabled()
+    UserInputService.MouseIconEnabled = should
+    UserInputService.MouseBehavior = should and Enum.MouseBehavior.Default or Enum.MouseBehavior.LockCenter
 end)

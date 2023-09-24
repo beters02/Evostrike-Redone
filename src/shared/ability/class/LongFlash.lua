@@ -13,6 +13,7 @@ local AbilityReplicateRF: RemoteEvent = ReplicatedStorage.ability.remote.replica
 if RunService:IsServer() then
     BotService = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService"))
 end
+local GrenadeRemotes = ReplicatedStorage.Modules.Grenades.Remotes
 
 local LongFlash = {
     name = "LongFlash",
@@ -27,9 +28,9 @@ local LongFlash = {
     grenadeThrowDelay = 0.2,
 
     -- grenade
-    acceleration = 10,
+    acceleration = 16,
     speed = 150,
-    gravityModifier = 0.2,
+    gravityModifier = 0.4,
     startHeight = 2,
 
     -- animation / holding
@@ -71,6 +72,19 @@ local LongFlash = {
     remoteFunction = nil, -- to be added in AbilityClient upon init
     remoteEvent = nil,
 }
+
+-- Test
+if RunService:IsClient() then
+    RunService.RenderStepped:Connect(function()
+        task.wait(1)
+        for i, v in pairs({"speed", "gravityModifier", "acceleration"}) do
+            local r = ReplicatedStorage:GetAttribute("v")
+            if r and LongFlash[v] ~= r then
+                LongFlash[v] = r
+            end
+        end
+    end)
+end
 
 -- Create Caster
 
@@ -116,6 +130,22 @@ local function disableAllParticleEmittersAndLights(grenadeModel)
             disableAllParticleEmittersAndLights(v)
         end
     end
+end
+
+function LongFlash:FireGrenade(hit, isReplicated, origin, direction)
+    self.uses -= 1 -- client uses
+    --self.grenadeClassObject = self.grenadeClassObject :: GrenadeTypes.Grenade
+    --self.grenadeClassObject.Fire(hit)
+
+    if not isReplicated then
+        local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
+        origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.startHeight, 0)
+        direction = (hit.Position - origin).Unit
+        GrenadeRemotes.Replicate:FireServer("GrenadeFire", self.name, origin, direction)
+    end
+
+    local cast = self.caster:Fire(origin, direction, self.speed, self.castBehavior)
+    LongFlash.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
 end
 
 function LongFlash.BlindBots(pos)
@@ -197,9 +227,8 @@ function LongFlash.CanSee(part)
 end
 
 function LongFlash.RayHit(grenadeClassObject, casterPlayer, caster, result, velocity, behavior, playerLookNormal)
-    if not grenadeClassObject or not grenadeClassObject.CurrentGrenadeObject then warn("RayHit tried playing on wrong grenade.") return end
 
-    local grenadeModel = grenadeClassObject.CurrentGrenadeObject
+    local grenadeModel = LongFlash.currentGrenadeObject
 
     -- send grenade outward
     local outDirection = result.Normal * LongFlash.anchorDistance

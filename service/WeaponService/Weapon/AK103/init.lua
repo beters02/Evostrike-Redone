@@ -42,7 +42,7 @@ AK103.Configuration = {
 	},
 	
 	movement = {
-		penalty = 2.6,
+		penalty = -2.6,
 		hitTagAmount = 6
 	},
 

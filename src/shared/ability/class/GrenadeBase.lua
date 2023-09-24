@@ -25,21 +25,6 @@ local Grenade = {
     throwFinishSpringShove = Vector3.new(-0.4, -0.5, 0.2),
 }
 
-function Grenade:FireGrenade(hit, isReplicated, origin, direction)
-    self.uses -= 1 -- client uses
-    --self.grenadeClassObject = self.grenadeClassObject :: GrenadeTypes.Grenade
-    --self.grenadeClassObject.Fire(hit)
-
-    if not isReplicated then
-        local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
-        origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.startHeight, 0)
-        direction = (hit.Position - origin).Unit
-        GrenadeRemotes.Replicate:FireServer("GrenadeFire", self.name, origin, direction)
-    end
-
-    self.caster:Fire(origin, direction, self.speed, self.castBehavior)
-end
-
 function Grenade:Use()
 
     -- set state var
@@ -79,7 +64,9 @@ function Grenade:Use()
     end
 
     -- play throw animation
+    print('playing throw animation')
     self._animations.throw:Play(self.throwAnimFadeTime or 0.18)
+    print(self._animations.throw)
 
     -- equip finish
     task.delay(self._animations.throw.Length + ((self.throwAnimFadeTime or 0.18)*1.45), function()

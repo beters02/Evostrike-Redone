@@ -9,6 +9,7 @@ local AbilityReplicateRF: RemoteFunction = ReplicatedStorage.ability.remote.repl
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local FastCast = require(ReplicatedStorage.lib.c_fastcast)
+local GrenadeRemotes = ReplicatedStorage.Modules.Grenades.Remotes
 
 local Molly = {
     name = "Molly",
@@ -95,6 +96,22 @@ end
 
 initCaster()
 
+function Molly:FireGrenade(hit, isReplicated, origin, direction)
+    self.uses -= 1 -- client uses
+    --self.grenadeClassObject = self.grenadeClassObject :: GrenadeTypes.Grenade
+    --self.grenadeClassObject.Fire(hit)
+
+    if not isReplicated then
+        local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
+        origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.startHeight, 0)
+        direction = (hit.Position - origin).Unit
+        GrenadeRemotes.Replicate:FireServer("GrenadeFire", self.name, origin, direction)
+    end
+
+    local cast = self.caster:Fire(origin, direction, self.speed, self.castBehavior)
+    Molly.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
+end
+
 function Molly.GetParams()
     local op = OverlapParams.new()
     op.CollisionGroup = "MollyDamageCast"
@@ -149,12 +166,9 @@ end
 
 function Molly.RayHit(grenadeClassObject, casterPlayer, caster, result, velocity, behavior, playerLookNormal)
 
-    local grenade = grenadeClassObject.CurrentGrenadeObject
+    local grenade = Molly.currentGrenadeObject
     local explode = true
     local touchedConn
-
-    print(grenadeClassObject)
-    print(casterPlayer)
 
     local position = result.Position
 	local normal = result.Normal

@@ -13,6 +13,7 @@ function killfeed.init(self)
     _n.itemframe = _n.frame:WaitForChild("ItemFrame")
 	_n.currentItems = {}
 	_n.upLength = self.upLength or 5
+	_n.yours = self.yours
 	if self.yours then
 		function _n:setKillfeedTexts(item, killer, killed)
 			item:WaitForChild("KillText").Text = "Killed " .. tostring(killed.Name)
@@ -43,7 +44,7 @@ function killfeed:addItem(killer, killed)
 		
 		for i, v in pairs(self.currentItems) do
 			local currPos = v.frame.Position
-			local tween = TweenService:Create(v.frame, TweenInfo.new(0.3), {Position = UDim2.fromScale(currPos.X.Scale, currPos.Y.Scale + 0.163)})
+			local tween = TweenService:Create(v.frame, TweenInfo.new(0.3), {Position = UDim2.fromScale(currPos.X.Scale, currPos.Y.Scale + (self.yours and 0.25 or 0.163))})
 			tween:Play()
 		end
 	end

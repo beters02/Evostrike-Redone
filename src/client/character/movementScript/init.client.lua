@@ -98,7 +98,9 @@ local Movement = {
 	movementVelocityForce = 300000,
 
 	dashing = false,
-	currentAirFriction = 0
+	currentAirFriction = 0,
+
+
 	
 }
 Movement.__index = Movement
@@ -162,6 +164,7 @@ Movement.rayYLength = Movement.playerTorsoToGround + Movement.movementStickDista
 
 -- Total max speed add modifier (for weapon slowing)
 Movement.maxSpeedAdd = 0
+Movement.equippedWeaponPenalty = 0
 
 -- update camera height
 hum.CameraOffset = Vector3.new(0, Movement.defaultCameraHeight, 0)

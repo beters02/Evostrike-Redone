@@ -31,7 +31,11 @@ function module:removeOpenUI(uiName)
 end
 
 function module:hasOpenUI()
-	return #self:get(self.player, "openUIs") > 0
+	local count = 0
+	for _, v in pairs(self:get(self.players, "openUIs")) do
+		if v then return true end
+	end
+	return false
 end
 
 -- check if mouse icon should be enabled depending on currently open uis

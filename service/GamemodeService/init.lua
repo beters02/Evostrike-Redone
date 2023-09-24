@@ -21,7 +21,7 @@ if RunService:IsClient() then
 end
 
 -- [[ SERVICE CONFIGURATION ]]
-local default_gamemode = "Lobby"
+local default_gamemode = "Deathmatch"
 local LobbyID = 11287185880
 --
 
@@ -82,7 +82,7 @@ function GamemodeService:Start()
 
     else
 
-        startingGamemode = "Lobby"
+        startingGamemode = "Deathmatch"
         
     end
 
@@ -163,7 +163,7 @@ function GamemodeService:ConnectClientRemotes()
         elseif action == "GetMenuType" then
             return GamemodeService.Gamemode ~= "None" and GamemodeService.Gamemode.GameVariables.main_menu_type or "Default"
         elseif action == "AttemptPlayerSpawn" then
-            if type(GamemodeService.Gamemode) ~= "table" or GamemodeService.Gamemode.Name ~= "Lobby" then print(tostring(GamemodeService.Gamemode)) return false, tostring(GamemodeService.Gamemode) end -- For now, this feature is only enabled on the Lobby.
+            if type(GamemodeService.Gamemode) ~= "table" or (GamemodeService.Gamemode.Name ~= "Lobby" and GamemodeService.Gamemode.Name ~= "Deathmatch") then print(tostring(GamemodeService.Gamemode)) return false, tostring(GamemodeService.Gamemode) end -- For now, this feature is only enabled on the Lobby.
             GamemodeService.Gamemode:PlayerSpawn(player)
             return true
         end

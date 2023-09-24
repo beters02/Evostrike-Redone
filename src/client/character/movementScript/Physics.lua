@@ -73,7 +73,7 @@ function module:ApplyGroundVelocity(groundNormal)
 
 	-- set the target speed of the player
 	local wishSpeed = accelDir.Magnitude
-	wishSpeed *= (self.groundMaxSpeed + self.maxSpeedAdd)
+	wishSpeed *= (self.groundMaxSpeed + self.maxSpeedAdd + self.equippedWeaponPenalty)
 	
 	-- apply acceleration
 	self:ApplyGroundAcceleration(accelDir, wishSpeed)
@@ -125,8 +125,8 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	newVelocity = self:ApplyAntiSticking(newVelocity)
 
 	-- clamp magnitude (max speed)
-	if newVelocity.Magnitude > (self.groundMaxSpeed + self.maxSpeedAdd) and not self.dashing then
-		newVelocity = newVelocity.Unit * math.min(newVelocity.Magnitude, (self.groundMaxSpeed + self.maxSpeedAdd))
+	if newVelocity.Magnitude > (self.groundMaxSpeed + self.maxSpeedAdd + self.equippedWeaponPenalty) and not self.dashing then
+		newVelocity = newVelocity.Unit * math.min(newVelocity.Magnitude, (self.groundMaxSpeed + self.maxSpeedAdd + self.equippedWeaponPenalty))
 	end
 
 	-- apply acceleration
@@ -156,7 +156,7 @@ function module:ApplyAirVelocity()
 
 	-- set air friction if max speed is reached
 	currSpeed = vel.Magnitude
-	if currSpeed > (self.airMaxSpeed + (self.maxSpeedAdd * 0.8)) and not self.dashing then
+	if currSpeed > (self.airMaxSpeed + (self.maxSpeedAdd + self.equippedWeaponPenalty * 0.8)) and not self.dashing then
 		self.currentAirFriction = self.airMaxSpeedFriction
 	end
 

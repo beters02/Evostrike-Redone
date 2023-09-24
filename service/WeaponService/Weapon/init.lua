@@ -178,18 +178,12 @@ function Weapon:Unequip()
 	States.SetStateVariable("PlayerActions", "reloading", false)
 	States.SetStateVariable("PlayerActions", "shooting", false)
 
-	if self.Variables.equipping then
-		self.RemoteFunction:InvokeServer("EquipTimerCancel")
-	end
-
     self.Variables.equipping = false
 
 	task.spawn(function()
         self:_StopAllActionAnimations()
         self.CameraObject:StopCurrentRecoilThread()
 	end)
-
-    self.Controller:HandleHoldMovementPenalty(self.Slot, false)
 end
 
 function Weapon:Remove()
@@ -310,7 +304,6 @@ function Weapon:ConnectActions()
     self.Connections.ActionsDown = UserInputService.InputBegan:Connect(function(input, gp)
         if UIState:hasOpenUI() or gp or (not self.Variables.equipped and not self.Variables.equipping) then return end
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            print('MouseDowning')
             self:MouseDown()
         elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
             self:SecondaryFire()
@@ -357,7 +350,6 @@ function Weapon:MouseDown(isSecondary: boolean?)
 
     -- if a fire is scheduled, no need to do anything.
     if self.Variables.fireScheduled then
-        print(self.Variables.fireScheduled)
         return
     end
 
@@ -657,7 +649,8 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
 	end
 
 	-- create bullethole at wall
-	SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, nil, nil, true, self.Tool, self.ClientModel)
+    SharedWeaponFunctions.CreateBulletHole(result)
+	--SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, nil, nil, true, self.Tool, self.ClientModel)
 
 	table.insert(filter, result.Instance)
 	return self:_ShootWallRayRecurse(origin, direction, _p, result.Instance, (damageMultiplier + weaponWallbangInformation[bangableMaterial])/2, filter)

@@ -64,8 +64,6 @@ end
 function class:Open()
     self:ConnectCommandRegister()
 
-    --UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-    --UserInputService.MouseIconEnabled = true
     States.State("UI"):addOpenUI("Console", self.console.UI, true)
 
     -- start at bottom
@@ -82,9 +80,8 @@ end
 function class:Close()
     self:DisconnectCommandRegister()
 
-    --UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-    --UserInputService.MouseIconEnabled = false
     States.State("UI"):removeOpenUI("Console")
+    print('removed')
 
     self.console.UI.Enabled = false
     self.player:SetAttribute("Typing", false)

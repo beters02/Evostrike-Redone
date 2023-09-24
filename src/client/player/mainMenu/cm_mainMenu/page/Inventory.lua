@@ -1,3 +1,7 @@
+--[[
+    When creating a new knife, make sure to init in the init function
+]]
+
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local PlayerData = require(Framework.shm_clientPlayerData.Location)
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
@@ -39,10 +43,18 @@ function inventory:init()
     local _regwep = WeaponGetRemote:InvokeServer("GetRegisteredWeapons")
     for i, v in pairs(_regwep) do
         if v == "knife" then
+
+            for _, knife in pairs({"karambit", "m9bayonet", "butterfly"}) do
+                for _, skin in pairs(self._currentStoredInventory) do
+                    if string.match(knife, skin) or skin == "*" then
+                        self:InitializeSkinStringAsFrame("knife_" .. knife .. "_default")
+                        break
+                    end
+                end
+            end
+
             --self:InitializeSkinStringAsFrame("knife_defenddefault_default")
             self:InitializeSkinStringAsFrame("knife_attackdefault_default")
-            self:InitializeSkinStringAsFrame("knife_karambit_default")
-            self:InitializeSkinStringAsFrame("knife_m9bayonet_default")
             continue
         end
         self:InitializeSkinStringAsFrame(v .. "_default")

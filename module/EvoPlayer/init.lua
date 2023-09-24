@@ -11,7 +11,7 @@ local EvoPlayer = {}
 --@summary Correctly apply damage to the player, checking for shields
 function EvoPlayer:TakeDamage(character, damage, damager)
     if damager and damager.Humanoid.Health <= 0 then return 0 end
-    if not EvoPlayer:CanDamage() then return 0 end
+    if not EvoPlayer:CanDamage(character) then return 0 end
     local shield = character:GetAttribute("Shield") or 0
     local helmet = character:GetAttribute("Helmet") or false
     local hitPart = character:GetAttribute("lastHitPart") or "Head"
@@ -37,9 +37,16 @@ function EvoPlayer:TakeDamage(character, damage, damager)
         end
     end
 
-    local lastHealth = math.max(0, (character:GetAttribute("LastRegisteredHealth") or character.Humanoid.Health) - damage)
-    character:SetAttribute("LastRegisteredHealth", lastHealth)
-    local killed = lastHealth <= 0
+    local killed
+
+    if RunService:IsClient() then
+        local lastHealth = math.max(0, (character:GetAttribute("LastRegisteredHealth") or character.Humanoid.Health) - damage)
+        character:SetAttribute("LastRegisteredHealth", lastHealth)
+        killed = lastHealth <= 0
+    else
+        killed = character.Humanoid.Health - damage <= 0
+    end
+    
 
     if RunService:IsServer() then
         character.Humanoid:TakeDamage(damage)
@@ -76,8 +83,33 @@ function EvoPlayer:DoWhenLoaded(player, callback)
     return callback()
 end
 
-function EvoPlayer:CanDamage()
-    return GamemodeServiceModule:GetAttribute("CanDamage")
+function EvoPlayer:CanDamage(character: Model?)
+    local can = GamemodeServiceModule:GetAttribute("CanDamage")
+    if can and character then
+        can = not character:GetAttribute("SpawnInvincibility")
+    end
+    return can
+end
+
+function EvoPlayer:SetSpawnInvincibility(character: Model, enabled: boolean, length: number?)
+    local ff = character:FindFirstChild("ForceField")
+    if enabled then
+        if ff then ff:Destroy() end
+        ff = Instance.new("ForceField", character)
+        character:SetAttribute("SpawnInvincibility", true)
+        if length then
+            task.delay(length, function()
+                EvoPlayer:SetSpawnInvincibility(character, false)
+            end)
+        end
+    else
+        if ff then
+            ff:Destroy()
+        end
+        if character:GetAttribute("SpawnInvincibility") then
+            character:SetAttribute("SpawnInvincibility", false)
+        end
+    end
 end
 
 --#region Handle Player Death @server

@@ -56,6 +56,7 @@ Gamemode.GameVariables = {
     characterAutoLoads = false,
     respawns_enabled = false,
     respawn_length = 3,
+    spawn_invincibility = 3, -- set to false for none
 
     rounds_enabled = true,
     round_length = 60,
@@ -112,6 +113,8 @@ Gamemode.GameVariables = {
     },]]
     starting_abilities = false,
 
+    spawn_objects = DefaultSpawns,
+
 }
 
 --@summary Create a new GamemodeClass.
@@ -143,7 +146,9 @@ function Gamemode.new(gamemode: string, customGameVar: table?)
         end
     end
 
-    gamemodeClass = setmetatable(gamemodeClass, Gamemode)
+    local GamemodeClone = Tables.clone(Gamemode)
+    Gamemode.GameVariables = nil
+    gamemodeClass = setmetatable(gamemodeClass, GamemodeClone)
     gamemodeClass.Name = gamemodeModule.Name
     gamemodeClass.Status = "Init"
 
@@ -260,7 +265,6 @@ function Gamemode:Start(isInitialGamemode: boolean?)
     end)]]
 
     self:StartRound()
-    print('GAMEMODE STARETED')
 end
 
 --@summary Pause the Gamemode.
@@ -356,12 +360,10 @@ function Gamemode:StartRound()
             if self.GameData.Round.Status ~= "Running" then
                 return
             end
-
             self.GameData.Round.Status = "Verify"
             self:_PlayerDiedCore(killed, killer)
             return
         end
-
         self:_PlayerDiedCore(killed, killer)
     end)
 end
@@ -551,8 +553,11 @@ function Gamemode:PlayerInit(player)
         Deaths = 0
     }
 
+    print(self.GameVariables)
     if self.GameVariables.buy_menu_enabled then
+        print('yuh')
         self.PlayerData[player.Name].BuyMenuLoadout = Tables.clone(self.GameVariables.buy_menu_starting_loadout)
+        print('yuh')
     end
 
     if self.GameVariables.rounds_enabled then
@@ -568,24 +573,30 @@ end
 function Gamemode:PlayerSpawn(player, content, index)
     player:LoadCharacter()
     task.wait()
-    player.Character:SetPrimaryPartCFrame(content and content.spawns[index].CFrame or DefaultSpawns.Default.CFrame)
+
+    if self.Name == "1v1" then
+        player.Character:SetPrimaryPartCFrame(content and content.spawns[index].CFrame)
+    else
+        player.Character:SetPrimaryPartCFrame(self:PlayerGetSpawnPoint(player))
+    end
 
     player.Character:WaitForChild("Humanoid").Health = self.GameVariables.starting_health
     local shield, helmet = self.GameVariables.starting_shield, self.GameVariables.starting_helmet
-
+    if self.GameVariables.spawn_invincibility then
+        EvoPlayer:SetSpawnInvincibility(player.Character, true, self.GameVariables.spawn_invincibility)
+    end
     local strongestWeapon = "ternary"
     local bml = self.PlayerData[player.Name].BuyMenuLoadout
 
     if self.GameVariables.auto_equip_strongest_weapon then
         if bml then
-            strongestWeapon = bml.primary and "primary" or "secondary"
+            strongestWeapon = bml.Weapons.primary and "primary" or "secondary"
         else
             if self.GameVariables.starting_weapons then
                 strongestWeapon = self.GameVariables.starting_weapons.primary and "primary" or "secondary"
             end
         end
     end
-   
 
     if self.GameVariables.start_with_knife then
         WeaponService:AddWeapon(player, "Knife", strongestWeapon == "ternary")
@@ -593,6 +604,7 @@ function Gamemode:PlayerSpawn(player, content, index)
 
     if self.PlayerData[player.Name].BuyMenuLoadout then
         for i, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Weapons) do
+            print(v)
             WeaponService:AddWeapon(player, v, strongestWeapon == i)
         end
         for _, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Abilities) do
@@ -629,6 +641,10 @@ function Gamemode:PlayerSpawn(player, content, index)
 
     EvoPlayer:SetShield(player.Character, shield)
     EvoPlayer:SetHelmet(player.Character, helmet)
+end
+
+function Gamemode:PlayerGetSpawnPoint(player)
+    return DefaultSpawns.Default.CFrame
 end
 
 --@summary Remove a player from the gamemode. Called on PlayerRemoving
@@ -690,7 +706,6 @@ function Gamemode._PlayerDiedCore(self, player, killer)
     if self.GameVariables.respawns_enabled then
         task.delay(self.GameVariables.respawn_length, function()
             self:PlayerSpawn(player)
-            print("Respawning!!!")
         end)
     end
 
@@ -736,9 +751,18 @@ function Gamemode._PlayerDiedCore(self, player, killer)
             end
         end
         if self.GameVariables.round_end_condition == "scoreReached" then
+            if not killer then
+                if self.GameVariables.rounds_enabled then
+                    self.GameData.Round.Status = "Running"
+                end
+                return end
             if self.PlayerData[killer.Name].Round.Score == self.GameVariables.round_score_to_win_round then
                 return self:EndRound("RoundOverWon", killer, player)
             end
+        end
+
+        if self.GameVariables.rounds_enabled then
+            self.GameData.Round.Status = "Running"
         end
         return true
     end
@@ -930,7 +954,6 @@ function Gamemode:GuiAddBuyMenu(player: Player | "all")
         end
 
         self.PlayerData[player.Name].BuyMenuConnections.Ability = c.AbilitySelected.OnServerEvent:Connect(function(_, abilityName, abilitySlot)
-            print(abilityName)
             self.PlayerData[player.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
             if self.GameVariables.buy_menu_add_bought_instant then
                 Ability.Add(player, abilityName)
@@ -938,6 +961,8 @@ function Gamemode:GuiAddBuyMenu(player: Player | "all")
         end)
 
         self.PlayerData[player.Name].BuyMenuConnections.Weapon = c.WeaponSelected.OnServerEvent:Connect(function(_, weaponName, weaponSlot)
+            print(weaponName)
+            print(weaponSlot)
             self.PlayerData[player.Name].BuyMenuLoadout.Weapons[weaponSlot] = weaponName
             if self.GameVariables.buy_menu_add_bought_instant then
                 WeaponService:AddWeapon(player, weaponName)

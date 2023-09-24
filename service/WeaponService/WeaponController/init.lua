@@ -22,7 +22,7 @@ local Tables = require(Framework.Module.lib.fc_tables)
 local PlayerDiedBind = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE")
 local UserInputService = game:GetService("UserInputService")
 local PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
-local Remote = ReplicatedStorage.Modules.WeaponController2.Remote
+local Remote = ReplicatedStorage.Services.WeaponService.Events.RemoteEvent
 local UIState = require(Framework.Module.shared.states.m_states).State("UI")
 local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon)
 
@@ -44,7 +44,6 @@ function WeaponController.new()
     self.InitialWeaponAddDebounce = false
     self.CurrentController = nil
     self.MovementCommunicate = require(self.Owner.Character:WaitForChild("MovementScript"):WaitForChild("Communicate"))
-
     self.GroundMaxSpeed = self.MovementCommunicate.GetVar("groundMaxSpeed")
 
     -- init keybinds
@@ -58,6 +57,8 @@ function WeaponController.new()
         end)
     end
 
+    self = setmetatable(self, WeaponController)
+
     self.PlayerDiedConnect = PlayerDiedBind.Event:Connect(function()
         self:Remove()
     end)
@@ -69,12 +70,12 @@ function WeaponController.new()
     self.Connections.RemoveWeapon = Remote.OnClientEvent:Connect(function(action, weaponSlot)
         if action == "RemoveWeapon" then
             if self.Inventory[weaponSlot] then
-                self.Inventory[weaponSlot].Remove()
+                self.Inventory[weaponSlot]:Remove()
             end
         end
     end)
 
-    return setmetatable(self, WeaponController) :: Types.WeaponController
+    return self
 end
 
 --@summary Disconnect the Connections of a WeaponController. (Cannot undo)
@@ -99,6 +100,7 @@ end
 function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: boolean?)
     local wepObject: Types.Weapon = Weapon.new(weapon, tool)
     self.Inventory[wepObject.Slot] = wepObject
+    print(self.Connections)
 
     if forceEquip then
         self.InitialWeaponAddDebounce = true
@@ -205,8 +207,8 @@ end
 
 --@summary Listen for Equip input. Always connected.
 function WeaponController:WeaponControllerBaseInputBegan(input, gp)
-    if UIState:hasOpenUI() or gp then return end
-    if tick() < self.BaseInputDebounce then return end
+    if UIState:hasOpenUI() or gp then warn('open')return end
+    if tick() < self.BaseInputDebounce then warn('deb')return end
 
     if input.KeyCode == Enum.KeyCode[self.Keybinds.equipLastEquippedWeapon] then
         if not self.Inventory.last_equipped then return end
@@ -218,6 +220,7 @@ function WeaponController:WeaponControllerBaseInputBegan(input, gp)
             local kc = false
             pcall(function() kc = input.KeyCode == Enum.KeyCode[self.Keybinds[slot .. "Weapon"]] end)
             if kc then
+                print('equip')
                 self.BaseInputDebounce = tick() + EquipInputDebounce
                 self:EquipWeapon(slot)
                 return
@@ -229,21 +232,9 @@ function WeaponController:WeaponControllerBaseInputBegan(input, gp)
 end
 
 --@summary Handle the movement speed reduction given by a weapon
-function WeaponController:HandleHoldMovementPenalty(slot: string, equip: boolean)
-	local currAdd = self.MovementCommunicate.GetVar("maxSpeedAdd")
-	if currAdd + self.GroundMaxSpeed > self.GroundMaxSpeed then
-		currAdd = 0
-	end
-
-    local wep = self.Inventory[slot]
-
-	if equip then
-		currAdd -= wep.Options.movement.penalty
-	else
-		currAdd += wep.Options.movement.penalty
-	end
-
-	self.MovementCommunicate.SetVar("maxSpeedAdd", currAdd)
+function WeaponController:HandleHoldMovementPenalty(slot: string)
+	local wep = self.Inventory[slot]
+    self.MovementCommunicate.SetVar("equippedWeaponPenalty", wep.Options.movement.penalty)
 end
 
 --@summary Request Equip -> Request Unequip Equipped -> Set Equipped WeaponModel Transparency thru Coro, set VM Transparency normally

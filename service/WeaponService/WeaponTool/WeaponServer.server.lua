@@ -65,6 +65,10 @@ function ServerFire(currentBullet, clientAccuracyVector, rayInformation, shotReg
 	-- check client->server timer diff
 	--if not util_registerFireDiff() then return false end
 
+	if character:GetAttribute("SpawnInvincibility") then
+		EvoPlayer:SetSpawnInvincibility(character, false)
+	end
+
 	-- update ammo
 	Variables.ammo.magazine -= 1
 
@@ -84,6 +88,9 @@ end
 export type KnifeDamageType = "PrimaryStab" | "SecondaryStab" | "Primary" | "Secondary"
 function VerifyKnifeDamage(knifeDamageType: KnifeDamageType, damagedHumanoid)
 	if player.Character.Humanoid.Health <= 0 then return end
+	if character:GetAttribute("SpawnInvincibility") then
+		EvoPlayer:SetSpawnInvincibility(character, false)
+	end
 	if knifeDamageType == "PrimaryStab" then
 		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.primaryBackstab)
 	elseif knifeDamageType == "SecondaryStab" then

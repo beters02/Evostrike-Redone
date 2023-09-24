@@ -58,10 +58,11 @@ game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMa
 end)
 
 -- init animations
+task.wait(0.1)
 ability._animations = {}
 if abilityObjects:FindFirstChild("Animations") then
     for i, v in pairs(abilityObjects.Animations:GetChildren()) do
-        ability._animations[string.lower(v.Name)] = workspace.CurrentCamera:WaitForChild("viewModel").AnimationController:LoadAnimation(v)
+        ability._animations[string.lower(v.Name)] = workspace.CurrentCamera.viewModel.AnimationController:LoadAnimation(v)
     end
 end
 
@@ -102,8 +103,8 @@ ability.remoteEvent.OnClientEvent:Connect(function(action, ...)
 end)
 
 script:WaitForChild("communicate").Event:Connect(function(action)
-    if action == "StopThrowAnimation" then
+    --[[if action == "StopThrowAnimation" then
         if not ability._animations.throw.IsPlaying then return end
         ability._animations.throw:Stop(0.1)
-    end
+    end]]
 end)

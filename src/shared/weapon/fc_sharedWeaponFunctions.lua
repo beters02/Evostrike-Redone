@@ -273,7 +273,7 @@ end
 	Also compensates for lag if needed
 ]]
 
-function module.RegisterShot(player, weaponOptions, result, origin, _, _, isHumanoid, wallbangDamageMultiplier, isBangable, tool, fromModel) -- _[1] = dir, _[2] = registerTime
+function module.RegisterShot(player, weaponOptions, result, origin, _, _, isHumanoid, wallbangDamageMultiplier, isBangable, tool, fromModel, ignoreBangable) -- _[1] = dir, _[2] = registerTime
 	if not result or not result.Instance then return false end
 	local killed = false
 	local _
@@ -300,6 +300,7 @@ function module.RegisterShot(player, weaponOptions, result, origin, _, _, isHuma
 			BulletHitUtil.PlayerHitParticles(char, result.Instance, killed)
 			BulletHitUtil.PlayerHitSounds(char, result.Instance, killed)
 		end
+		
 		return module.FireBullet(player.Character, result, isHumanoid, isBangable, tool, fromModel)
 	end
 

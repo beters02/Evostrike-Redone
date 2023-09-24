@@ -15,6 +15,14 @@ function Ability.Add(player, abilityName)
     print(class)
     if not class then return end
 
+    local char = player.Character or player.CharacterAdded:Wait()
+    local abilitiesFolder = char:FindFirstChild("Abilities")
+    if not abilitiesFolder then
+        abilitiesFolder = Instance.new("Folder")
+        abilitiesFolder.Name = "Abilities"
+        abilitiesFolder.Parent = player.Character
+    end
+
     -- create abilityFolder
     local folder = Instance.new("Folder")
     folder.Name = "AbilityFolder_" .. abilityName
@@ -48,10 +56,21 @@ function Ability.Add(player, abilityName)
     baseClass.Name = "BaseAbilityModule"
     baseClass.Parent = cc
 
+    local slot = require(class).inventorySlot
+    folder:SetAttribute("Slot", slot)
+
+    for _, v in pairs(abilitiesFolder:GetChildren()) do
+        if v:GetAttribute("Slot") == slot then
+            v:Destroy()
+        end
+    end
+
+    
+
     local baseGrenadeClass = Class.GrenadeBase:Clone()
     baseGrenadeClass.Parent = classClone
     
-    folder.Parent = player.Character or player.CharacterAdded:Wait()
+    folder.Parent = abilitiesFolder
     scriptsFolder:WaitForChild("base_server").Enabled = true
 
     print('Added class ! ' .. tostring(abilityName))

@@ -14,7 +14,7 @@ local abilityObjects = ReplicatedStorage.ability.obj:WaitForChild(abilityName)
 
 local grenadeEvent = ReplicatedStorage.ability.remote.grenade :: RemoteEvent
 local serverStoredVar = {uses = abilityOptions.uses, cooldown = false}
-local char = script.Parent.Parent.Parent
+local char = script.Parent.Parent.Parent.Parent
 local player = game:GetService("Players"):GetPlayerFromCharacter(char)
 
 --[[

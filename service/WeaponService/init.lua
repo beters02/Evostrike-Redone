@@ -44,6 +44,7 @@ function WeaponService:AddWeapon(player: Player, weapon: string, forceEquip: boo
     -- server inventory management
     local weaponSlot = require(weaponModule).Configuration.inventorySlot
     if WeaponService:GetPlayerInventorySlot(player, weaponSlot) then
+        print('yup server pre')
         WeaponService:RemoveWeapon(player, weaponSlot)
     end
 
@@ -62,9 +63,15 @@ end
 function WeaponService:RemoveWeapon(player: Player, slot: string)
     if not player.Character then return end
     local weapon = WeaponService:GetPlayerInventorySlot(player, slot)
+    print('yup server pre post')
     if not weapon then return end
-    weapon:Destroy()
-    WeaponService:SetPlayerInventoryWeaponFromSlot(player, false, slot)
+    print('yup server post')
+    RemoteEvent:FireClient(player, "RemoveWeapon", slot)
+    print('yup server event')
+    task.delay(1/60, function()
+        weapon:Destroy()
+        WeaponService:SetPlayerInventoryWeaponFromSlot(player, false, slot)
+    end)
 end
 
 --

@@ -2,6 +2,8 @@
 --  Players need to reach a score of 100 to win the game. Respawns are enabled.
 --  (Players will recieve 1 game point after getting 100 kills in the round, winning them the game.)
 
+local Players = game:GetService("Players")
+
 local Deathmatch = {}
 
 Deathmatch.GameVariables = {
@@ -10,14 +12,16 @@ Deathmatch.GameVariables = {
     teams_enabled = false,
     players_per_team = 1,
     
+    opt_to_spawn = true,
     buy_menu_enabled = true,
+    main_menu_type = "Lobby",
 
     characterAutoLoads = false,
-    respawns_enabled = false,
+    respawns_enabled = true,
     respawn_length = 3,
 
     rounds_enabled = true,
-    round_length = 60,
+    round_length = 60 * 5,
     round_end_condition = "scoreReached",
     round_end_timer_assign = "roundScore",
 
@@ -41,15 +45,38 @@ Deathmatch.GameVariables = {
     starting_helmet = true
 }
 
-local spawnPoints = {Vector3.new(5, 0, 5), Vector3.new(10, 0, 5), Vector3.new(5, 0, 10), Vector3.new(10, 0, 10)}
-function Deathmatch:GetSpawnPoint()
-    return spawnPoints[math.random(1,#spawnPoints)]
-end
+function Deathmatch:PlayerGetSpawnPoint()
+    local points = {}
+    local lowest
+    local spawns
 
--- Override the default PlayerSpawn function
-function Deathmatch:PlayerSpawn(player)
-    player:LoadCharacter()
-    player.Character:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(self:GetSpawnPoint())
+    -- if we have a small player count, we want to only spawn
+    -- them in zone 1 which will be a smaller area of the map
+
+    -- get spawn location in zones based on amount of players in game
+    if self:PlayerGetCount() <= 0.5 * self.GameVariables.maximum_players then
+        spawns = self.GameVariables.spawn_objects.Zone1:GetChildren()
+    else
+        spawns = self.GameVariables.spawn_objects:GetDescendants()
+    end
+
+    for i, v in pairs(Players:GetPlayers()) do
+        if not v.Character then continue end
+
+        for _, spwn in pairs(spawns) do
+            if not spwn:IsA("Part") then continue end
+
+            if not points[spwn.Name] then points[spwn.Name] = 10000 end
+            points[spwn.Name] -= (v.Character.HumanoidRootPart.CFrame.Position - spwn.CFrame.Position).Magnitude
+
+            if not lowest or points[spwn.Name] < lowest[2] then
+                lowest = {spwn, points[spwn.Name]}
+            end
+        end
+    end
+
+    lowest = lowest and lowest[1] or spawns[math.random(1, #spawns)]
+    return lowest.CFrame
 end
 
 -- Don't do anything special when a player kills themself
