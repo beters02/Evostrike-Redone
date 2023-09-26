@@ -13,6 +13,8 @@ Lobby.GameVariables = {
     respawns_enabled = true,
     respawn_length = 1,
 
+    leaderboard_enabled = true,
+
     rounds_enabled = false,
 
     queueFrom_enabled = true, -- Can a player queue while in this gamemode?

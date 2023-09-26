@@ -20,6 +20,10 @@ hum.Died:Connect(function()
     print(killer)
 end)
 
+-- Initialize Player Damaged Animations
+local _pha = ReplicatedStorage.Services.WeaponService.ServiceAssets.Animations.PlayerHit
+local playerHit = hum:WaitForChild("Animator"):LoadAnimation(_pha)
+
 hum.Changed:Connect(function(property)
     if property == "Health" then
         if hum.Health < health then
@@ -27,6 +31,7 @@ hum.Changed:Connect(function(property)
         end
         health = hum.Health
     end
+    playerHit:Play(0.8)
 end)
 
 -- Initialize Camera Variables

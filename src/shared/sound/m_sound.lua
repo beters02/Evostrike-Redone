@@ -5,12 +5,12 @@ local replicateRemote = game:GetService("ReplicatedStorage"):WaitForChild("sound
 local sound = {}
 sound.__index = sound
 
-function sound.PlayReplicated(snd)
+function sound.PlayReplicated(snd, volume)
     if RunService:IsClient() then
         snd:Play() -- play sound for player
-        replicateRemote:FireServer("Play", snd) -- replicate to others
+        replicateRemote:FireServer("Play", snd, volume) -- replicate to others
     else
-        replicateRemote:FireAllClients("Play", snd)
+        replicateRemote:FireAllClients("Play", snd, volume)
     end
 end
 

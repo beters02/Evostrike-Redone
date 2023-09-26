@@ -64,9 +64,8 @@ function Grenade:Use()
     end
 
     -- play throw animation
-    print('playing throw animation')
     self._animations.throw:Play(self.throwAnimFadeTime or 0.18)
-    print(self._animations.throw)
+    self._animations.serverthrow:Play(self.throwAnimFadeTime or 0.18)
 
     -- equip finish
     task.delay(self._animations.throw.Length + ((self.throwAnimFadeTime or 0.18)*1.45), function()
@@ -90,8 +89,6 @@ function Grenade:Use()
     -- grenade usage
     --local used = self.remoteFunction:InvokeServer("ThrowGrenade", hit)
     local canUse = self.remoteFunction:InvokeServer("CanUse")
-
-    --if used then
     if canUse then
         self:FireGrenade(hit)
     end

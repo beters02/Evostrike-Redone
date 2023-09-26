@@ -22,7 +22,8 @@ local profile = {
 		ak103 = "default",
 		usp = "default",
 		acr = "default",
-		deagle = "default"
+		deagle = "default",
+		intervention = "default"
 	}},
 
     options = {
@@ -69,6 +70,7 @@ local profile = {
 		isQueueRemoving = false,
 		isQueueDisabled = false,
 		hasBeenGivenAdminInventory = false, -- applied in adminModifications
+		hasBeenGivenInventoryReset1 = false,
 	},
 
 	economy = {

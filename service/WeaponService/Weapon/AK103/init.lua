@@ -22,6 +22,7 @@ AK103.Configuration = {
 	accuracy = {
 		firstBullet = 2,
 		base = 7,
+		crouch = 13,
 		walk = 200,
 		run = 200,
 		jump = 150

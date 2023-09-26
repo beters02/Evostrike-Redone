@@ -37,6 +37,7 @@ function base:get(player, key)
 end
 
 function base:set(player, key, value)
+	value = value or false
 	if RunService:IsServer() then
 		local new = mainrf:InvokeClient(player, "setVar", self.Name, key, value)
 

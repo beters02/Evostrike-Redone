@@ -26,7 +26,7 @@ Deathmatch.GameVariables = {
     round_end_timer_assign = "roundScore",
 
     -- if scoreReached
-    round_score_to_win_round = 100,
+    round_score_to_win_round = 500,
     round_score_increment_condition = "kills", -- other
 
     overtime_enabled = false,
@@ -57,26 +57,31 @@ function Deathmatch:PlayerGetSpawnPoint()
     if self:PlayerGetCount() <= 0.5 * self.GameVariables.maximum_players then
         spawns = self.GameVariables.spawn_objects.Zone1:GetChildren()
     else
-        spawns = self.GameVariables.spawn_objects:GetDescendants()
+        spawns = {self.GameVariables.spawn_objects.Zone1:GetChildren(), self.GameVariables.spawn_objects.Zone2:GetChildren()}
     end
 
-    for i, v in pairs(Players:GetPlayers()) do
+    for _, v in pairs(Players:GetPlayers()) do
         if not v.Character then continue end
 
         for _, spwn in pairs(spawns) do
-            if not spwn:IsA("Part") then continue end
+            if spwn:IsA("Part") then
+                if not points[spwn.Name] then points[spwn.Name] = 10000 end
+                points[spwn.Name] -= (v.Character.HumanoidRootPart.CFrame.Position - spwn.CFrame.Position).Magnitude
 
-            if not points[spwn.Name] then points[spwn.Name] = 10000 end
-            points[spwn.Name] -= (v.Character.HumanoidRootPart.CFrame.Position - spwn.CFrame.Position).Magnitude
-
-            if not lowest or points[spwn.Name] < lowest[2] then
-                lowest = {spwn, points[spwn.Name]}
+                if not lowest or points[spwn.Name] < lowest[2] then
+                    lowest = {spwn, points[spwn.Name]}
+                end
             end
         end
     end
 
     lowest = lowest and lowest[1] or spawns[math.random(1, #spawns)]
     return lowest.CFrame
+end
+
+function Deathmatch:PlayerJoinedDuringRound(player)
+    self:PlayerInit(player)
+    self:GuiMainMenu(player, true)
 end
 
 -- Don't do anything special when a player kills themself

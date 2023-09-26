@@ -56,4 +56,8 @@ function GMClient:CanDamage()
     return GMClient.RemoteFunction:InvokeServer("GetCurrentGamemodeCanDamage")
 end
 
+function GMClient:GetPlayerData()
+    return GMClient.RemoteFunction:InvokeServer("GetPlayerData")
+end
+
 return GMClient

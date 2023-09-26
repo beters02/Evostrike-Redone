@@ -14,8 +14,19 @@
 -- [[ CONFIGURATION ]]
 local LobbyID = 11287185880
 
-local GamemodeClasses = script:GetChildren()
-function GamemodeClasses.Find(gamemode: string) for _, v in pairs(GamemodeClasses) do if not v:IsA("ModuleScript") then continue end if v.Name == gamemode then return v end end return false end
+local GamemodeClasses = {}
+for i, v in pairs(script:GetChildren()) do
+    if v:IsA("ModuleScript") then
+        table.insert(GamemodeClasses, v)
+    end
+end
+
+function GamemodeClasses.Find(gamemode: string) for _, v in pairs(GamemodeClasses) do 
+    if v.Name == gamemode then
+        return v end
+    end
+    return false
+end
 
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
@@ -37,6 +48,7 @@ local BotService = require(game.ReplicatedStorage:WaitForChild("Services"):WaitF
 local DefaultSpawns = script:WaitForChild("Spawns")
 local DefaultGuis = script:WaitForChild("Guis")
 local DefaultBots = script:WaitForChild("Bots")
+local DefaultLeaderboard = script:WaitForChild("Leaderboard")
 local BindableEvent = script.Parent:WaitForChild("BindableEvent")
 
 local Gamemode = {} :: Types.Gamemode
@@ -102,6 +114,7 @@ Gamemode.GameVariables = {
         Abilities = {primary = "Dash", secondary = "LongFlash"}
     },
 
+    leaderboard_enabled = true,
 
     --[[starting_weapons = {
         secondary = "glock17", primary = "ak47"
@@ -147,7 +160,7 @@ function Gamemode.new(gamemode: string, customGameVar: table?)
     end
 
     local GamemodeClone = Tables.clone(Gamemode)
-    Gamemode.GameVariables = nil
+    GamemodeClone.GameVariables = nil
     gamemodeClass = setmetatable(gamemodeClass, GamemodeClone)
     gamemodeClass.Name = gamemodeModule.Name
     gamemodeClass.Status = "Init"
@@ -231,8 +244,16 @@ function Gamemode:Start(isInitialGamemode: boolean?)
     self:GuiInit("all")
 
     if self.GameVariables.bots_enabled then
+        local botprop = {SpawnCFrame = true}
+        if self.GameVariables.starting_shield then
+            botprop.StartingShield = self.GameVariables.starting_shield
+        end
+        if self.GameVariables.starting_helmet then
+            botprop.StartingHelmet = true
+        end
         for _, v in pairs(DefaultBots:GetChildren()) do
-            BotService:AddBot({SpawnCFrame = v.PrimaryPart.CFrame})
+            botprop.SpawnCFrame = v.PrimaryPart.CFrame
+            BotService:AddBot(botprop)
         end
     end
 
@@ -284,7 +305,6 @@ function Gamemode:Stop(bruteForce)
 
     for _, v in pairs(self.GameData.Connections) do
         v:Disconnect()
-        print("DISCONNECTING " .. tostring(v))
     end
 
     self:GuiBlackScreenAll(0.5, 0.3, true)
@@ -434,7 +454,6 @@ end
 function Gamemode:RoundOverWon(winner, loser)
     -- add a nice gui to all players, then wait 3 seconds before starting the next round.
     self:GuiRoundOver("all", winner, loser)
-    print('yes')
     task.wait(3)
 end
 
@@ -553,11 +572,8 @@ function Gamemode:PlayerInit(player)
         Deaths = 0
     }
 
-    print(self.GameVariables)
     if self.GameVariables.buy_menu_enabled then
-        print('yuh')
         self.PlayerData[player.Name].BuyMenuLoadout = Tables.clone(self.GameVariables.buy_menu_starting_loadout)
-        print('yuh')
     end
 
     if self.GameVariables.rounds_enabled then
@@ -604,7 +620,6 @@ function Gamemode:PlayerSpawn(player, content, index)
 
     if self.PlayerData[player.Name].BuyMenuLoadout then
         for i, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Weapons) do
-            print(v)
             WeaponService:AddWeapon(player, v, strongestWeapon == i)
         end
         for _, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Abilities) do
@@ -625,6 +640,10 @@ function Gamemode:PlayerSpawn(player, content, index)
 
     if self.GameVariables.buy_menu_enabled then
         self:GuiAddBuyMenu(player)
+    end
+
+    if self.GameVariables.leaderboard_enabled and not player:WaitForChild("PlayerGui"):FindFirstChild("Leaderboard") then
+        self:GuiAddLeaderboard(player)
     end
 
     if self.Name == "1v1" then
@@ -714,6 +733,16 @@ function Gamemode._PlayerDiedCore(self, player, killer)
         for _, v in pairs(tagged) do
             v:Destroy()
         end
+    end
+
+    if killer then
+        self.PlayerData[killer.Name].Kills += 1
+    end
+
+    self.PlayerData[player.Name].Deaths += 1
+
+    if self.GameVariables.leaderboard_enabled then
+        self:GuiUpdateLeaderboardAll()
     end
 
     if self.GameVariables.buy_menu_enabled then
@@ -897,7 +926,7 @@ function Gamemode:GuiInit(plr: Player | "all")
             enemyobj.Name = "EnemyObject"
             enemyobj.Value = self:PlayerGetOtherPlayer(player)
             enemyobj.Parent = c
-            c.Parent = player.PlayerGui
+            c.Parent = player:WaitForChild("PlayerGui")
         end
     end
 end
@@ -905,11 +934,10 @@ end
 --@summary Update the default gamemode bar for all players.
 function Gamemode:GuiUpdateGamemodeBarAll(updateType: "UpdateScore" | "StartTimer" | "StopTimer", ...)
     for _, plrdata in pairs(self.PlayerData) do
-        local gui = plrdata.Player.PlayerGui:FindFirstChild("GamemodeBar")
+        local gui = plrdata.Player:WaitForChild("PlayerGui"):FindFirstChild("GamemodeBar")
         if gui then
             if updateType == "UpdateScore" then
                 gui.RemoteEvent:FireClient(plrdata.Player, "UpdateScore", plrdata.Score, self:PlayerGetOtherPlayerData(plrdata.Player).Score)
-                print('updating score!')
             else
                 gui.RemoteEvent:FireClient(plrdata.Player, updateType, ...)
             end
@@ -923,7 +951,7 @@ function Gamemode:GuiAddScreenGui(screenGui: ScreenGui, player: Player | "all", 
     for i, v in pairs(plrs) do
         local c = screenGui:Clone()
         c.Enabled = true
-        c.Parent = v.PlayerGui
+        c.Parent = v:WaitForChild("PlayerGui")
         if tag then
             CollectionService:AddTag(c, tag)
         end
@@ -936,36 +964,34 @@ function Gamemode:GuiAddBuyMenu(player: Player | "all")
     for _, v in pairs(plrs) do
         local c = DefaultGuis.BuyMenu:Clone()
         c.Enabled = false
-        c.Parent = v.PlayerGui
+        c.Parent = v:WaitForChild("PlayerGui")
 
-        if self.PlayerData[player.Name].BuyMenu then
-            self.PlayerData[player.Name].BuyMenu:Destroy()
+        if self.PlayerData[v.Name].BuyMenu then
+            self.PlayerData[v.Name].BuyMenu:Destroy()
         end
 
-        self.PlayerData[player.Name].BuyMenu = c
+        self.PlayerData[v.Name].BuyMenu = c
         
-        if not self.PlayerData[player.Name].BuyMenuConnections then
-            self.PlayerData[player.Name].BuyMenuConnections = {}
-        elseif #self.PlayerData[player.Name].BuyMenuConnections > 0 then
-            for conni, conn in pairs(self.PlayerData[player.Name].BuyMenuConnections) do
+        if not self.PlayerData[v.Name].BuyMenuConnections then
+            self.PlayerData[v.Name].BuyMenuConnections = {}
+        elseif #self.PlayerData[v.Name].BuyMenuConnections > 0 then
+            for conni, conn in pairs(self.PlayerData[v.Name].BuyMenuConnections) do
                 conn:Disconnect()
-                self.PlayerData[player.Name].BuyMenuConnections[conni] = nil
+                self.PlayerData[v.Name].BuyMenuConnections[conni] = nil
             end
         end
 
-        self.PlayerData[player.Name].BuyMenuConnections.Ability = c.AbilitySelected.OnServerEvent:Connect(function(_, abilityName, abilitySlot)
-            self.PlayerData[player.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
+        self.PlayerData[v.Name].BuyMenuConnections.Ability = c.AbilitySelected.OnServerEvent:Connect(function(_, abilityName, abilitySlot)
+            self.PlayerData[v.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
             if self.GameVariables.buy_menu_add_bought_instant then
-                Ability.Add(player, abilityName)
+                Ability.Add(v, abilityName)
             end
         end)
 
-        self.PlayerData[player.Name].BuyMenuConnections.Weapon = c.WeaponSelected.OnServerEvent:Connect(function(_, weaponName, weaponSlot)
-            print(weaponName)
-            print(weaponSlot)
-            self.PlayerData[player.Name].BuyMenuLoadout.Weapons[weaponSlot] = weaponName
+        self.PlayerData[v.Name].BuyMenuConnections.Weapon = c.WeaponSelected.OnServerEvent:Connect(function(_, weaponName, weaponSlot)
+            self.PlayerData[v.Name].BuyMenuLoadout.Weapons[weaponSlot] = weaponName
             if self.GameVariables.buy_menu_add_bought_instant then
-                WeaponService:AddWeapon(player, weaponName)
+                WeaponService:AddWeapon(v, weaponName)
             end
         end)
     end
@@ -993,7 +1019,7 @@ function Gamemode:GuiWaitingForPlayers(player: Player | "all", tag: string?)
     local plrs = player == "all" and self:PlayerGetAll() or {player}
     for i, v in pairs(plrs) do
         local c = DefaultGuis.WaitingForPlayers:Clone()
-        c.Parent = v.PlayerGui
+        c.Parent = v:WaitForChild("PlayerGui")
         if tag then
             CollectionService:AddTag(c, tag)
         end
@@ -1008,7 +1034,7 @@ function Gamemode:GuiBlackScreenAll(inLength: number?, outLength: number?, await
         local c: ScreenGui = DefaultGuis.BlackScreen:Clone()
         c:SetAttribute("InLength", inLength)
         c:SetAttribute("OutLength", outLength)
-        c.Parent = v.PlayerGui
+        c.Parent = v:WaitForChild("PlayerGui")
         c.ResetOnSpawn = false
         CollectionService:AddTag(c, "BlackScreen")
     end
@@ -1027,10 +1053,10 @@ function Gamemode:GuiRemoveBlackScreen(player: Player | "all", await: boolean)
             Debris:AddItem(ui, 5)
         end
     else
-        if player.PlayerGui:FindFirstChild("BlackScreen") then
-            player.PlayerGui.BlackScreen.Out:Fire()
-            outLength = player.PlayerGui.BlackScreen:GetAttribute("OutLength")
-            Debris:AddItem(player.PlayerGui.BlackScreen, 5)
+        if player:WaitForChild("PlayerGui"):FindFirstChild("BlackScreen") then
+            player:WaitForChild("PlayerGui").BlackScreen.Out:Fire()
+            outLength = player:WaitForChild("PlayerGui").BlackScreen:GetAttribute("OutLength")
+            Debris:AddItem(player:WaitForChild("PlayerGui").BlackScreen, 5)
         end
     end
     
@@ -1051,6 +1077,38 @@ function Gamemode:GuiMainMenu(player: Player | "all", enabled: boolean)
     local plrs = player == "all" and self:PlayerGetAll() or {player}
     for _, v in pairs(plrs) do
         EnableMainMenuRemote:FireClient(v, enabled)
+    end
+end
+
+--@summary Update the leaderboard for all players
+function Gamemode:GuiUpdateLeaderboardAll()
+    for _, v in pairs(self.PlayerData) do
+
+        local function updateLeaderboard()
+            if v.Player:WaitForChild("PlayerGui"):FindFirstChild("Leaderboard") then
+                v.Player:WaitForChild("PlayerGui").Leaderboard:WaitForChild("UpdateLeaderboardEvent"):FireAllClients(self.PlayerData)
+            end
+        end
+
+        local succ, err = pcall(function()
+            updateLeaderboard()
+        end)
+
+        if not succ then
+            task.wait(1)
+            updateLeaderboard()
+        end
+    end
+end
+
+--@summary Add the leaderboard to player or alls
+function Gamemode:GuiAddLeaderboard(player: Player | "all")
+    local plrs = player == "all" and self:PlayerGetAll() or {player}
+    for _, v in pairs(plrs) do
+        local gui = DefaultLeaderboard:WaitForChild("Leaderboard"):Clone()
+        local scripts = {DefaultLeaderboard:WaitForChild("KeyboardInputConnect"):Clone(), DefaultLeaderboard:WaitForChild("UpdateLeaderboard"):Clone()}
+        scripts[1].Parent, scripts[2].Parent = gui, gui
+        gui.Parent = v:WaitForChild("PlayerGui")
     end
 end
 

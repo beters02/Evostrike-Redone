@@ -10,9 +10,7 @@ local Location = Framework.Ability.Location
 local Class = ReplicatedStorage:WaitForChild("ability"):WaitForChild("class")
 
 function Ability.Add(player, abilityName)
-    print(player, abilityName)
     local class = Class:FindFirstChild(abilityName)
-    print(class)
     if not class then return end
 
     local char = player.Character or player.CharacterAdded:Wait()
@@ -72,15 +70,12 @@ function Ability.Add(player, abilityName)
     
     folder.Parent = abilitiesFolder
     scriptsFolder:WaitForChild("base_server").Enabled = true
-
-    print('Added class ! ' .. tostring(abilityName))
 end
 
 function Ability.ClearPlayerInventory(player)
     for _, v in pairs(player.Character:GetChildren()) do
         if not string.match(v.Name, "AbilityFolder") then continue end
         v:Destroy()
-        print('DESTROYING ABILITY')
     end
 end
 

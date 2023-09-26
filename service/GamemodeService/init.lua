@@ -101,12 +101,12 @@ end
 --@summary      Change the current gamemode.
 --@param        gamemode: string        [the name of the gamemode]
 --@param        start: boolean = true   [start on class creation]
-function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitialGamemode: boolean?): Types.Gamemode
+function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitialGamemode: boolean?, bruteForce: boolean?): Types.Gamemode
     if start == nil then start = true end
     local currentGamemodeRunning = false
 
     if type(GamemodeService.Gamemode) ~= "string" then -- GamemodeService.Gamemode = "None" if not initialized.
-        if GamemodeService.Gamemode.Name == gamemode then
+        if GamemodeService.Gamemode.Name == gamemode and not bruteForce then
             warn(ErrorDef.CouldNotChangeGamemode .. tostring(gamemode) .. " is already the current gamemode!")
             return
         end
@@ -166,6 +166,8 @@ function GamemodeService:ConnectClientRemotes()
             if type(GamemodeService.Gamemode) ~= "table" or (GamemodeService.Gamemode.Name ~= "Lobby" and GamemodeService.Gamemode.Name ~= "Deathmatch") then print(tostring(GamemodeService.Gamemode)) return false, tostring(GamemodeService.Gamemode) end -- For now, this feature is only enabled on the Lobby.
             GamemodeService.Gamemode:PlayerSpawn(player)
             return true
+        elseif action == "GetPlayerData" then
+            return type(self.Gamemode) ~= "string" and self.Gamemode.PlayerData
         end
     end
 end
@@ -174,10 +176,9 @@ end
 function GamemodeService:ConnectServerBindables()
     GamemodeService.Connections.ServerBindable = BindableEvent.Event:Connect(function(action)
         if action == "GameRestart" then
+            print('Restart Received!')
             local currGamemode = GamemodeService.Gamemode.Name
-            GamemodeService.Gamemode:Stop()
-            task.wait(0.5)
-            GamemodeService:ChangeMode(currGamemode, true)
+            GamemodeService:ChangeMode(currGamemode, true, false, true)
         end
     end)
 end

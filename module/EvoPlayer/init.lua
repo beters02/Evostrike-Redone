@@ -22,6 +22,7 @@ function EvoPlayer:TakeDamage(character, damage, damager)
         if helmet then
             if destroysHelmet then
                 character:SetAttribute("Helmet", false)
+                character:SetAttribute("HelmetBroken", true)
             end
             damage *= helmetMultiplier
         end

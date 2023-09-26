@@ -2,11 +2,10 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local GlobalSounds = ReplicatedStorage.Services.WeaponService.ServiceAssets.Sounds
 local Debris = game:GetService("Debris")
 local EmitParticle = require(Framework.shfc_emitparticle.Location)
-local MainObj = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj")
-local Particles = MainObj:WaitForChild("particles")
+local GlobalSounds = ReplicatedStorage.Services.WeaponService.ServiceAssets.Sounds
+local Particles = ReplicatedStorage.Services.WeaponService.ServiceAssets.Emitters
 
 local util = {}
 
@@ -39,12 +38,17 @@ function _PlayAllSoundsIn(where: Folder, playFrom: any, ignoreNames: table)
 	end
 end
 
-function util.PlayerHitSounds(character, hitPartInstance, wasKilled)
+function util.PlayerHitSounds(character, hitPartInstance, wasKilled) -- Player Hit Sounds is played Last, just after PlayerHitParticles.
     if character:GetAttribute("ClientKillSoundPlayed") then return end
+
+    if not wasKilled then
+        local lrh = character:GetAttribute("LastRegisteredHealth")
+        wasKilled = (lrh and lrh <= 0)
+    end
 
     -- get soundfolder from wasKilled or Head/Body
     local soundFolder
-    local ignore
+
     if wasKilled then
         character:SetAttribute("ClientKillSoundPlayed", true)
         task.spawn(function()
@@ -52,10 +56,15 @@ function util.PlayerHitSounds(character, hitPartInstance, wasKilled)
         end)
     end
 
+    local ignore = false
+
     if string.match(string.lower(hitPartInstance.Name), "head") then
         soundFolder = GlobalSounds.PlayerHit.Headshot
-        if not character:GetAttribute("Helmet") then -- ignore helmet sound for no helmet
-            ignore = {helmet = "helmet"}
+        if character:GetAttribute("HelmetBroken") then
+            character:SetAttribute("HelmetBroken", false)
+            ignore = {headshot1 = not wasKilled}
+        else
+            ignore = {helmet = true, helmet1 = true}
         end
     else
         soundFolder = GlobalSounds.PlayerHit.Bodyshot
@@ -67,6 +76,12 @@ function util.PlayerHitSounds(character, hitPartInstance, wasKilled)
 end
 
 function util.PlayerHitParticles(character, hitPartInstance, wasKilled)
+
+    if not wasKilled then
+        local lrh = character:GetAttribute("LastRegisteredHealth")
+        wasKilled = (lrh and lrh <= 0)
+    end
+
     -- kill particles
     if wasKilled then
         task.spawn(function() EmitParticle.EmitParticles(hitPartInstance, Particles.Blood.Kill:GetChildren(), hitPartInstance, character) end)
@@ -75,10 +90,15 @@ function util.PlayerHitParticles(character, hitPartInstance, wasKilled)
     -- hit body/head particles
     local particleFolder
     if string.match(string.lower(hitPartInstance.Name), "head") then
-        particleFolder = Particles.Blood.Headshot
+        if character:GetAttribute("HelmetBroken") then
+            particleFolder = Particles.Blood.Headshot.Helmet
+        else
+            particleFolder = Particles.Blood.Headshot.NoHelmet
+        end
     else
         particleFolder = Particles.Blood.Hit
     end
+
     task.spawn(function() EmitParticle.EmitParticles(hitPartInstance, particleFolder:GetChildren(), hitPartInstance) end)
 end
 

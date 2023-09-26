@@ -22,7 +22,6 @@ function Recoil:FireRecoil(currentBullet)
 
     -- Resolve: Inconsistent Feeling Camera Recoil at Low FPS
     -- Schedule recoil
-
     -- recoil is already scheduled
     if self.weaponVar._waiting then return end
 
@@ -150,7 +149,6 @@ function Recoil:FireRecoil(currentBullet)
         if stop then
             self.connection:Disconnect()
         end
-
         
     end)
 end

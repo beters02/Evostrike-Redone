@@ -7,6 +7,8 @@ local replicateRemote = game:GetService("ReplicatedStorage"):WaitForChild("sound
 replicateRemote.OnClientEvent:Connect(function(action, sound, whereFrom)
     if not sound then return end
     if action == "Play" then
+        local volume = whereFrom
+        if volume then sound.Volume = volume end
         sound:Play()
     elseif action == "Clone" then
         local c = sound:Clone()

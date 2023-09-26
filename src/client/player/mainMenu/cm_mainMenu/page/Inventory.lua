@@ -109,13 +109,23 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     -- if so, we recurse CreateSkinFrame until all skins (except default) are added.
     if allSkins then
 
-        for _, weaponFolder in pairs(game:GetService("ReplicatedStorage").weapon.obj:GetChildren()) do
-            if weaponFolder.Name == "global" then continue end
+        for _, weaponFolder in pairs(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon:GetChildren()) do
+            weaponFolder = weaponFolder.Assets
 
-            for i, v in pairs(weaponFolder.models:GetChildren()) do
-                if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
-                    local _str = string.match(weaponFolder.Name, "knife") and "knife" .. "_" .. string.split(weaponFolder.Name, "_")[2] .. "_" .. v.Name or weaponFolder.Name .. "_" .. v.Name
-                    self:InitializeSkinStringAsFrame(_str)
+            if weaponFolder.Parent.Name == "knife" then
+                for _, knifeFolder in pairs(weaponFolder:GetChildren()) do
+                    for _, v in pairs(knifeFolder.Models:GetChildren()) do
+                        if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
+                            self:InitializeSkinStringAsFrame("knife" .. "_" .. knifeFolder.Name .. "_" .. v.Name)
+                        end
+                    end
+                end
+            else
+                for _, v in pairs(weaponFolder.Models:GetChildren()) do
+                    if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
+                        local _str = weaponFolder.Name .. "_" .. v.Name
+                        self:InitializeSkinStringAsFrame(_str)
+                    end
                 end
             end
         end

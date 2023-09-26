@@ -83,9 +83,8 @@ end
 
 -- Called when Primary/Secondary Fire
 function Knife:Fire(AttackType: AttackType)
-	print(AttackType)
-	if not self.Variables.equipped and self.Variables.equipping then return warn("NOT EQUIPPED") end
-	if self.Variables.firing then return warn("FIRING") end
+	if not self.Variables.equipped and self.Variables.equipping then return end
+	if self.Variables.firing then return end
 	self.Variables.firing = true
 	States.SetStateVariable("PlayerActions", "shooting", true)
 
@@ -119,7 +118,6 @@ function Knife:Attack(attackType: AttackType)
 			self:PlayReplicatedSound(attackType .. "Stab")
 			if Math.normalToFace(stabResult.Normal, stabResult.Instance) == Enum.NormalId.Back
 			and (string.match(stabResult.Instance.Name, "Torso") or string.match(stabResult.Instance.Name, "RootPart")) then -- client registered backstab!
-			print('stabbed')
 				self:PlayAnimation("client", attackType .. "Stab", true) -- play primary/secondary backstab animation
 				self.RemoteEvent:FireServer("VerifyKnifeDamage", attackType .. "Stab", hum)
 			else

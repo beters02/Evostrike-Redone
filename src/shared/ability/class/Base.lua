@@ -146,7 +146,6 @@ function Base:CreateEquipReturnSpring()
                 spring:shove(self.throwFinishSpringShove or Vector3.one)
                 --[[task.wait()
                 spring:shove(-(self.throwFinishSpringShove or Vector3.one))]]
-                print('shoved!')
             end,
             function(vm, dt)
                 local updated = spring:update(dt)
@@ -166,7 +165,5 @@ function Base:CreateEquipReturnSpring()
         end
     end
 end
-
-print('ASLKJDBNALKSDJBN')
 
 return Base

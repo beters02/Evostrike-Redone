@@ -4,9 +4,8 @@ if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAtt
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local SharedAbilityRF = ReplicatedStorage.ability.remote.sharedAbilityRF
-local RunService = game:GetService("RunService")
 local SharedAbilityFunc = require(Framework.shfc_sharedAbilityFunctions.Location)
-
+local Replicate = ReplicatedStorage:WaitForChild("ability"):WaitForChild("remote"):WaitForChild("replicate")
 
 local character = player.Character or player.CharacterAdded:Wait()
 local camera = workspace.CurrentCamera
@@ -89,5 +88,11 @@ grenadeEvent.OnClientEvent:Connect(function(action, ...)
         initClientGrenadeCaster(...)
     elseif action == "Fire" then
         fireClientGrenadeCaster(...)
+    end
+end)
+
+Replicate.OnClientEvent:Connect(function(action, abilityName, origin, direction)
+    if action == "GrenadeFire" then
+        require(game.ReplicatedStorage.ability.class[abilityName]):FireGrenade(false, true, origin, direction)
     end
 end)

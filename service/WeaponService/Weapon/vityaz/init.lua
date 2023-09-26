@@ -22,9 +22,10 @@ local wepconfig = {
 		accuracy = {
 			firstBullet = 4,
 			base = 10,
+			crouch = 12,
 			walk = 97,
 			run = 100,
-			jump = 150
+			jump = 150,
 		},
 		
 		damage = {
@@ -42,7 +43,7 @@ local wepconfig = {
 		},
 		
 		movement = {
-			penalty = 2.6,
+			penalty = -2.6,
 			hitTagAmount = 6
 		},
 

@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Tables = require(ReplicatedStorage.lib.fc_tables)
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local States = require(Framework.Module.shared.states.m_states)
 local UIState = States.State("UI")
@@ -24,7 +25,8 @@ function Weapon.new(weapon: string, tool: Tool)
     self.Options = self.Configuration
     self.Slot = self.Configuration.inventorySlot
     self.Connections = {}
-    self.Variables = {equipped = false, equipping = false, firing = false, reloading = false, inspecting = false, mousedown = false, fireScheduled = false, fireScheduleCancelThread = false, fireDebounce = false, currentBullet = 1, accumulator = 0, fireLoop = false, nextFireTime = tick(), lastFireTime = tick()}
+    self.Variables = {equipped = false, equipping = false, firing = false, reloading = false, inspecting = false, mousedown = false, fireScheduled = false, fireScheduleCancelThread = false,
+    fireDebounce = false, currentBullet = 1, accumulator = 0, fireLoop = false, nextFireTime = tick(), lastFireTime = tick(), scoping = false, rescope = false, scopeTweens = false, scopedWhenShot = false}
     if self.Options.ammo then
         self.Variables.ammo = {magazine = self.Options.ammo.magazine, total = self.Options.ammo.total}
     end
@@ -75,6 +77,19 @@ function Weapon.new(weapon: string, tool: Tool)
 	self.Variables.weaponBar = self.Player.PlayerGui:WaitForChild("HUD").WeaponBar
 	self.Variables.weaponFrame = self.Variables.weaponBar:WaitForChild(Strings.firstToUpper(self.Options.inventorySlot))
 	self.Variables.infoFrame = self.Player.PlayerGui.HUD.InfoCanvas.MainFrame.WeaponFrame
+
+    if self.Options.scope then
+        self.Variables.scopeGui = self.Module.Assets.Guis.ScopeGui:Clone()
+        self.Variables.scopeGui:WaitForChild("BlackFrame").BackgroundTransparency = 1
+        self.Variables.scopeGui.Enabled = false
+        self.Variables.scopeGui.Parent = self.Player.PlayerGui
+
+        self.Variables.scopeTweens = {
+            TweenService:Create(self.Variables.scopeGui.BlackFrame, TweenInfo.new(0.05), {BackgroundTransparency = 0}),
+            TweenService:Create(self.Variables.scopeGui.BlackFrame, TweenInfo.new(self.Options.scopeLength - 0.05), {BackgroundTransparency = 1}),
+            TweenService:Create(self.Variables.scopeGui.ScopeLabel, TweenInfo.new(self.Options.scopeLength * 0.8), {ImageTransparency = 1})
+        }
+    end
 
 	-- init icons
 	self.Variables.weaponIconEquipped = self.Variables.weaponFrame:WaitForChild("EquippedIconLabel")
@@ -165,8 +180,16 @@ function Weapon:Unequip()
     if not self.Character or self.Humanoid.Health <= 0 then return end
 
     self:MouseUp(true)
-
     self:SetIconEquipped(false)
+
+    if self.Options.scope then
+        if self.Variables.scoping then
+            self:ScopeOut()
+        end
+        self.Variables.scoping = false
+        self.Variables.rescope = false
+        self.Variables.scopedWhenShot = false
+    end
 
     self.ClientModel.Parent = game:GetService("ReplicatedStorage").temp
 	self.Variables.equipped = false
@@ -215,6 +238,23 @@ function Weapon:PrimaryFire()
 		SharedWeaponFunctions.ReplicateFireEmitters(self.Tool.ServerModel, self.ClientModel)
 	end)
 
+    -- Unscope + rescope if necessary
+    if self.Options.scope then
+        if self.Variables.scoping then
+            self.Variables.rescope = true
+            self.Variables.scopedWhenShot = true
+            self:ScopeOut()
+            task.delay(self.Options.fireRate - 0.03, function()
+                if self.Variables.rescope then
+                    self:ScopeIn()
+                end
+            end)
+        else
+            self.Variables.rescope = false
+            self.Variables.scopedWhenShot = false
+        end
+    end
+
 	-- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
 	self:RegisterRecoils()
 
@@ -246,11 +286,32 @@ end
 
 function Weapon:SecondaryFire()
     if not self.Variables.equipped and self.Variables.equipping then return end
+    if self.Options.scope then
+        if self.Variables.scoping then
+            if self.Controller.Keybinds.aimToggle == 1 then
+                self:ScopeOut()
+            end
+            return
+        end
+
+        self:ScopeIn()
+    end
 end
 
 function Weapon:Reload()
-    if self.Variables.ammo.total <= 0 or self.Variables.ammo.magazine == self.Options.ammo.magazine then print("TOO MUCH AMMO") return end
-	if self.Variables.firing or self.Variables.reloading or not self.Variables.equipped then print("FARTS") return end
+    if self.Variables.ammo.total <= 0 or self.Variables.ammo.magazine == self.Options.ammo.magazine then return end
+	if self.Variables.firing or self.Variables.reloading or not self.Variables.equipped then return end
+    if self.Variables.scoping and self.Options.scope then
+        if not self.Variables.rescope then
+            self.Variables.rescope = true
+            task.delay(self.Options.reloadLength - 0.03, function()
+                if self.Variables.rescope then
+                    self:ScopeIn()
+                end
+            end)
+        end
+        self:ScopeOut()
+    end
 	
 	States.SetStateVariable("PlayerActions", "reloading", true)
 	
@@ -300,6 +361,48 @@ end
 
 --
 
+function Weapon:ScopeIn()
+    self.Variables.scoping = true
+
+    for _, tween in pairs(self.Variables.scopeTweens) do
+        tween:Cancel()
+    end
+
+    self.Variables.scopeGui.BlackFrame.BackgroundTransparency = 1
+    self.Variables.scopeGui.ScopeLabel.ImageTransparency = 1
+    self.Variables.scopeGui.Enabled = true
+
+    local currfov = PlayerData:Get("options.camera.FOV")
+    self.Variables.scopeTweens[4] = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(self.Options.scopeLength), {FieldOfView = currfov * 0.5})
+    self.Variables.scopeTweens[5] = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(self.Options.scopeLength * 0.8), {FieldOfView = currfov})
+    self.Variables.scopeTweens[4]:Play()
+
+    self.Variables.scopeTweens[1]:Play()
+    self.Variables.scopeTweens[1].Completed:Wait()
+    self.Variables.scopeGui.ScopeLabel.ImageTransparency = 0
+    self.Variables.scopeTweens[2]:Play()
+
+end
+
+function Weapon:ScopeOut()
+    self.Variables.scoping = false
+
+    for _, tween in pairs(self.Variables.scopeTweens) do
+        tween:Cancel()
+    end
+
+    self.Variables.scopeTweens[3]:Play()
+    self.Variables.scopeTweens[5]:Play()
+
+    self.Variables.scopeTweens[5].Completed:Once(function()
+        if not self.Variables.scoping then
+            self.Variables.scopeGui.Enabled = false
+        end
+    end)
+end
+
+--
+
 function Weapon:ConnectActions()
     self.Connections.ActionsDown = UserInputService.InputBegan:Connect(function(input, gp)
         if UIState:hasOpenUI() or gp or (not self.Variables.equipped and not self.Variables.equipping) then return end
@@ -318,7 +421,7 @@ function Weapon:ConnectActions()
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             self:MouseUp()
         elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-            --self:SecondaryFireRelease()
+            self:Mouse2Up()
         end
     end)
     task.wait()
@@ -448,6 +551,12 @@ function Weapon:MouseUp(forceCancel: boolean?)
 		self.Variables.fireDebounce = false
 		--util_resetSprayOriginPoint()
 	end
+end
+
+function Weapon:Mouse2Up()
+    if self.Options.scope and self.Variables.scoping and self.Controller.Keybinds.aimToggle == 0 then
+        self:ScopeOut()
+    end
 end
 
 --

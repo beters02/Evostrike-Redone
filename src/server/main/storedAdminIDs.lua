@@ -1,7 +1,7 @@
 local RunService = game:GetService("RunService")
 local module = {}
-module.admins = {21877101, 116360953, 17648696, 436587030}
-module.playtesters = {4904406825, 3268320054, 195532543, 409986024, 3393977735, 189284282}
+module.admins = {21877101, 116360953, 17648696, 436587030, 4904406825}
+module.playtesters = {3268320054, 195532543, 409986024, 3393977735, 189284282}
 
 -- Check if player is above the default permission group
 function module:IsHigherPermission(player: Player)

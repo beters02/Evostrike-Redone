@@ -31,7 +31,6 @@ Functions.Timer = function(timerType)
 	endTime += length
 	repeat task.wait() until tick() >= endTime
 	abilityRemoteEvent:FireClient(player, "CooldownFinished")
-	print('server cooldown finisehd')
 	return true
 end
 

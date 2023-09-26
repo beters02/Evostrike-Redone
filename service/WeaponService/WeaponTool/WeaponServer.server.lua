@@ -23,6 +23,10 @@ end
 function ServerEquip()
     task.spawn(EquipTimer)
 
+	if character:GetAttribute("SpawnInvincibility") then
+		EvoPlayer:SetSpawnInvincibility(character, false)
+	end
+
     local weaponHandle = serverModel.GunComponents.WeaponHandle
 	local grip = Instance.new("Motor6D")
 	grip.Name = "RightGrip"

@@ -13,9 +13,10 @@ local UserInputService = game:GetService('UserInputService')
 local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local States = require(Framework.shm_states.Location)
-local SoundModule = require(Framework.shm_sound.Location)
+local SoundModule = require(Framework.Module.shared.sound.m_sound)
 local Strings = require(Framework.shfc_strings.Location)
 local PlayerData = require(Framework.shm_clientPlayerData.Location)
+local MovementState = States.State("Movement")
 
 -- [[ Define Local Variables ]]
 local Inputs
@@ -126,8 +127,11 @@ Movement.Sounds = {
 	landWood = Movement.collider.Land_Wood
 }
 
--- LOCAL RUN VOLUME
-local runv = 0.6
+local localRunVolume = 0.5
+local runv = localRunVolume
+
+local serverRunVolume = 1
+
 Movement.Sounds.runDefault.Volume = runv
 
 Movement.GetIgnoreDescendantInstances = function()
@@ -232,7 +236,7 @@ function Movement.Run(hitPosition, hitNormal, hitMaterial)
 
 	-- Running Sounds
 	if Movement.movementVelocity.Velocity.Magnitude > Movement.walkMoveSpeed + math.round((Movement.groundMaxSpeed - Movement.walkMoveSpeed)/2) then
-		if not runsnd.IsPlaying then SoundModule.PlayReplicated(runsnd) end
+		if not runsnd.IsPlaying then SoundModule.PlayReplicated(runsnd, serverRunVolume) end
 	else
 		if runsnd.IsPlaying then SoundModule.StopReplicated(runsnd) end
 	end
@@ -246,7 +250,7 @@ function Movement.Run(hitPosition, hitNormal, hitMaterial)
 
 	if not onGroundMovementState then
 		onGroundMovementState = true
-		States.SetStateVariable("Movement", "grounded", true, player)
+		MovementState:set(player, "grounded", true)
 	end
 
 end
@@ -301,7 +305,7 @@ local cconn
 
 local function landFinish()
 	landing = false
-	States.SetStateVariable("Movement", "landing", false, player)
+	MovementState:set(player, "landing", false)
 	ctween[3]:Disconnect()
 	ctween[4]:Disconnect()
 	ctween[1]:Destroy()
@@ -336,7 +340,7 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 	end)
 
 	-- STATES
-	States.SetStateVariable("Movement", "landing", true, player)
+	MovementState:set(player, "landing", true)
 
 	-- friction tween
 	if cconn then cconn:Disconnect() end
@@ -398,7 +402,8 @@ function Movement.Crouch(crouch: boolean)
 		hum.CameraOffset = Vector3.new(0, -Movement.crouchDownAmount, 0)
 
 		-- movement state
-		States.SetStateVariable("Movement", "crouching", true)
+
+		MovementState:set(player, "crouching", true)
 
 	else
 	
@@ -413,7 +418,7 @@ function Movement.Crouch(crouch: boolean)
 		hum.CameraOffset = Vector3.new(0, Movement.defaultCameraHeight, 0)
 
 		-- movement state
-		States.SetStateVariable("Movement", "crouching", false)
+		MovementState:set(player, "crouching", false)
 
 	end
 	
@@ -529,7 +534,6 @@ function Movement.Dash()
 	task.spawn(function()
 		landed.Event:Wait()
 		Movement.dashing = false
-		--print('dashing finisehd!')
 	end)
 	
 	--Movement.Land(0.6)
@@ -565,7 +569,7 @@ function Movement.ProcessMovement()
 	end
 
 	-- attempt resolve players flying out of the map
-	if Movement.movementVelocity.Velocity.Magnitude > 70 or Movement.collider.Velocity.Magnitude > 70 then
+	if Movement.movementVelocity.Velocity.Magnitude > 100 or Movement.collider.Velocity.Magnitude > 100 then
 		Movement.movementVelocity.Velocity = Vector3.zero
 		Movement.collider.Velocity = Vector3.zero
 		--Movement.movementPosition.Position = lastSavedHitPos
@@ -600,10 +604,11 @@ function Movement.ProcessMovement()
 			landed:Fire()
 		else
 			
-			-- if we didn't register a land, we jump
+			-- if we didn't register a land, we run (shouldnt happen)
 			Movement.Run(hitPosition, hitNormal, hitPart.Material)
 			return
 		end
+
 	end
 	
 	-- [[ JUMP & CROUCH INPUT REGISTRATION ]]
@@ -706,7 +711,7 @@ function Movement.ProcessMovement()
 				-- this is so the function wont overload the server with remotes
 				inAirMovementState = true
 				onGroundMovementState = false
-				States.SetStateVariable("Movement", "grounded", false, player)
+				MovementState:set(player, "grounded", false)
 			end
 		end
 

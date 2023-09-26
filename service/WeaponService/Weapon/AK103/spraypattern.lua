@@ -10,7 +10,7 @@ local sprayPattern = {
 		{"range_5_0.12-1", 0.2, 0.3, 0.3, false, 0.18},
 		{0, 0.4, 0.66, "range_7_0.6-1"},
 		{0, "range_7_0.7-2.2", "const_7_1.1"},
-		{0, 0, 0, false, false, 0.4},
+		{0, 0, 0, false, false, 0.45},
 		{1, 0, 0},
 		{1, 0, 0},
 		{"range_14_1.3-neg1.3", "const_30_0", 0},

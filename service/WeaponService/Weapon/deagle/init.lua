@@ -21,6 +21,7 @@ local wepconfig = {
 		accuracy = {
 			firstBullet = 5,
 			base = 25,
+			crouch = 35,
 			spray = 2,
 			walk = 170,
 			run = 170,
@@ -44,7 +45,7 @@ local wepconfig = {
 		},
 
 		movement = {
-			penalty = 2.2,
+			penalty = -2.2,
 			hitTagAmount = 6
 		},
 

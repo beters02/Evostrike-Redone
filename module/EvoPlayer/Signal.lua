@@ -28,7 +28,6 @@ function Signal.new(fireRemoveDelay: number?)
     self._fireRemoveDelay = fireRemoveDelay or 0.1
 
     function self:Connect(callback, once) -- returns a SignalConnection
-        print(#self._connections)
         local ID = #self._connections + 1
         local sc: SignalConnection = {
             ID = ID,
@@ -37,7 +36,6 @@ function Signal.new(fireRemoveDelay: number?)
             Once = once or false,
         }
         table.insert(self._connections, ID, sc)
-        print(#self._connections)
         if not self._connections.main and #self._connections >= 0 then
             self._connections.main = RunService.Heartbeat:Connect(function()
                 if #self._connections == 0 then self:Disconnect() end
@@ -67,7 +65,6 @@ function Signal.new(fireRemoveDelay: number?)
             v:Disconnect()
         end
         self._connections = {}
-        print('Disconnected!')
     end
 
     function self:Fire(...)

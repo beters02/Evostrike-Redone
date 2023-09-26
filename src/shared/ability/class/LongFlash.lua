@@ -13,7 +13,7 @@ local AbilityReplicateRF: RemoteEvent = ReplicatedStorage.ability.remote.replica
 if RunService:IsServer() then
     BotService = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService"))
 end
-local GrenadeRemotes = ReplicatedStorage.Modules.Grenades.Remotes
+local AbilityReplicate = ReplicatedStorage.ability.remote.replicate
 
 local LongFlash = {
     name = "LongFlash",
@@ -141,7 +141,7 @@ function LongFlash:FireGrenade(hit, isReplicated, origin, direction)
         local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
         origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.startHeight, 0)
         direction = (hit.Position - origin).Unit
-        GrenadeRemotes.Replicate:FireServer("GrenadeFire", self.name, origin, direction)
+        AbilityReplicate:FireServer("GrenadeFire", self.name, origin, direction)
     end
 
     local cast = self.caster:Fire(origin, direction, self.speed, self.castBehavior)

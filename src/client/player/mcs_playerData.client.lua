@@ -10,8 +10,6 @@ local nxt = tick()
 local update = RunService.RenderStepped:Connect(function()
     if tick() < nxt then return end
     nxt = tick() + 10
-    
-    clientPlayerDataModule:Save()
 end)
 
 game:GetService("Players").PlayerRemoving:Connect(function(plr)

@@ -119,7 +119,6 @@ local function client_init_clientStateClasses()
     -- init classes
     _ccs = util_getClassesFromLocation(classloc, class)
     states._clientClassStore = _ccs
-    print(states._clientClassStore)
 end
 
 --[[

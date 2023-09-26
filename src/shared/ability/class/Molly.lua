@@ -9,7 +9,7 @@ local AbilityReplicateRF: RemoteFunction = ReplicatedStorage.ability.remote.repl
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local FastCast = require(ReplicatedStorage.lib.c_fastcast)
-local GrenadeRemotes = ReplicatedStorage.Modules.Grenades.Remotes
+local AbilityReplicate = ReplicatedStorage.ability.remote.replicate
 
 local Molly = {
     name = "Molly",
@@ -103,9 +103,32 @@ function Molly:FireGrenade(hit, isReplicated, origin, direction)
 
     if not isReplicated then
         local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
+
+        -- cast initial ray to ensure grenade doesnt go through walls/floor
+        local params = RaycastParams.new()
+        --params.CollisionGroup = "Bullets"
+        params.FilterDescendantsInstances = {Players.LocalPlayer.Character, workspace.CurrentCamera}
+        params.FilterType = Enum.RaycastFilterType.Exclude
+
+        local mos = Players.LocalPlayer:GetMouse()
+        local mray = workspace.CurrentCamera:ScreenPointToRay(mos.X, mos.Y)
+        local initresult = workspace:Raycast(mray.Origin, mray.Direction * 7, params)
+        if initresult then
+            Molly.currentGrenadeObject = AbilityObjects.Models.Grenade:Clone()
+            Molly.currentGrenadeObject.CollisionGroup = "Default"
+            Molly.currentGrenadeObject.CanCollide = true
+            Molly.currentGrenadeObject.Position = Players.LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, self.startHeight, 0)
+            Molly.currentGrenadeObject.Velocity = startLv * 1.5
+            Molly.currentGrenadeObject.Parent = workspace
+
+            -- then we just send ray hit instead
+            self.RayHit(false, Players.LocalPlayer, false, initresult, startLv * 1.5)
+            return
+        end
+
         origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.startHeight, 0)
         direction = (hit.Position - origin).Unit
-        GrenadeRemotes.Replicate:FireServer("GrenadeFire", self.name, origin, direction)
+        AbilityReplicate:FireServer("GrenadeFire", self.name, origin, direction)
     end
 
     local cast = self.caster:Fire(origin, direction, self.speed, self.castBehavior)
@@ -178,6 +201,7 @@ function Molly.RayHit(grenadeClassObject, casterPlayer, caster, result, velocity
     if result.Normal ~= Vector3.new(0,1,0) then
         explode = false
         grenade.CanCollide = true
+        grenade.CollisionGroup = "Default"
         grenade.Velocity = reflected * 0.3
 
         -- listen for bouncing

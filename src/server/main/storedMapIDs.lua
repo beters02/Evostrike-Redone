@@ -1,12 +1,12 @@
 local id = {
     mapIds = {
-        stable = {id = 14504041658, gamemodeIgnore = {"Deathmatch", "Range", "1v1"}},
-        unstable = {id = 14689169953, gamemodeIgnore = {"Deathmatch", "Range", "1v1"}},
+        stable = {id = 14504041658, gamemodeIgnore = {"Deathmatch", "1v1"}},
+        unstable = {id = 14689169953, gamemodeIgnore = {"Deathmatch", "1v1"}},
 
-        lobby = {id = 11287185880, gamemodeIgnore = {"Deathmatch", "Range", "1v1"}},
         warehouse = {id = 14504041658, gamemodeIgnore = {}},
-        facility = {id = 14632973077, gamemodeIgnore = {"Deathmatch", "Range", "1v1"}},
-        apartments = {id = 11674745036, gamemodeIgnore = {"Deathmatch", "Range", "1v1"}}
+        apartments = {id = 11674745036, gamemodeIgnore = {"Deathmatch"}},
+        lobby = {id = 11287185880, gamemodeIgnore = {"Deathmatch", "1v1"}},
+        facility = {id = 14632973077, gamemodeIgnore = {"Deathmatch", "1v1"}},
     }
 }
 

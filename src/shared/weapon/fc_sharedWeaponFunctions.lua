@@ -129,6 +129,8 @@ function module.CreateBullet(tool, endPos, client, fromModel)
 	local pos
 	if fromModel then
 		pos = fromModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
+	else
+		pos = tool.ServerModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
 	end
 
 	part.Size = Vector3.new(0.1, 0.1, 0.4)
@@ -278,6 +280,10 @@ function module.RegisterShot(player, weaponOptions, result, origin, _, _, isHuma
 	local killed = false
 	local _
 
+	if not fromModel then
+		fromModel = tool:WaitForChild("ServerModel")
+	end
+
 	-- if we are shooting a humanoid character
 	local char
 	if isHumanoid == nil then
@@ -400,12 +406,15 @@ function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions
 	
 	-- movement speed inacc
 	local movementSpeed = player.Character.HumanoidRootPart.Velocity.Magnitude
-	if States.GetStateVariable("Movement", "crouching") then
-		baseAccuracy *= 1.5
-	elseif (movementSpeed > 6 or States.GetStateVariable("Movement", "landing")) and movementSpeed < movementConfig.walkMoveSpeed then
+	local mstate = States.State("Movement")
+	local rspeed = movementConfig.walkMoveSpeed + math.round((movementConfig.groundMaxSpeed - movementConfig.walkMoveSpeed)/2)
+
+	if mstate:get(player, "landing") or (movementSpeed > 14 and movementSpeed < rspeed) then
 		baseAccuracy = weaponOptions.accuracy.walk
-	elseif movementSpeed >= movementConfig.walkMoveSpeed + math.round((movementConfig.groundMaxSpeed - movementConfig.walkMoveSpeed)/2) then
+	elseif movementSpeed >= rspeed then
 		baseAccuracy = weaponOptions.accuracy.run
+	elseif mstate:get(player, "crouching") then
+		baseAccuracy = weaponOptions.accuracy.crouch
 	end
 	
 	-- jump inacc
@@ -417,27 +426,35 @@ function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions
 end
 
 function module.CalculateAccuracy(player, recoilVector3, weaponOptions, storedVar) -- cvec2 is client accuracy re-registration
-	local acc
 
 	-- get base accuracy & apply movement inaccuracy
-
 	-- spread weapons rely on weapon accuracy for it's functionality,
 	-- so we will apply that here if necessary.
+	
+	local baseAccuracy
 
-	local baseAccuracy = storedVar.currentBullet == 1 and weaponOptions.accuracy.firstBullet or weaponOptions.accuracy.base
-	if storedVar.currentBullet ~= 1 and weaponOptions.accuracy.spread then
-		baseAccuracy = {baseAccuracy, recoilVector3.X, recoilVector3.X}
+	if weaponOptions.scope then
+		baseAccuracy = storedVar.scopedWhenShot and weaponOptions.accuracy.base or weaponOptions.accuracy.unScopedBase
+	else
+		if storedVar.currentBullet == 1 then
+			baseAccuracy = weaponOptions.accuracy.firstBullet and weaponOptions.accuracy.firstBullet or weaponOptions.accuracy.base
+		else
+			if weaponOptions.accuracy.spread then
+				baseAccuracy = {weaponOptions.accuracy.base, recoilVector3.X, recoilVector3.X}
+			else
+				baseAccuracy = weaponOptions.accuracy.base
+			end
+		end
 	end
 
-	acc = module.GetMovementInaccuracyVector2(
+	local acc = module.GetMovementInaccuracyVector2(
 		player,
 		baseAccuracy,
 		weaponOptions
 	)
-
+	
 	-- randomize acc abs
 	acc = Vector2.new(Math.absr(acc.X), Math.absr(acc.Y))
-
 	return acc
 end
 

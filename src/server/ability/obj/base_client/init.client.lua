@@ -4,6 +4,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Strings = require(Framework.shfc_strings.Location)
 local States = require(Framework.shm_states.Location)
 local PlayerData = require(Framework.shm_clientPlayerData.Location)
+local UIState = States.State("UI")
 
 local player = game:GetService("Players").LocalPlayer
 local key
@@ -62,7 +63,11 @@ task.wait(0.1)
 ability._animations = {}
 if abilityObjects:FindFirstChild("Animations") then
     for i, v in pairs(abilityObjects.Animations:GetChildren()) do
-        ability._animations[string.lower(v.Name)] = workspace.CurrentCamera.viewModel.AnimationController:LoadAnimation(v)
+        if string.match(v.Name, "Server") then
+            ability._animations[string.lower(v.Name)] = player.Character.Humanoid.Animator:LoadAnimation(v)
+        else
+            ability._animations[string.lower(v.Name)] = workspace.CurrentCamera.viewModel.AnimationController:LoadAnimation(v)
+        end
     end
 end
 
@@ -78,6 +83,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if debounce then return end
     if (string.match(keyCode, "Mouse") and input.UserInputType == Enum.UserInputType[keyCode]) or input.KeyCode == Enum.KeyCode[keyCode] then
         if ability.uses <= 0 or ability.cooldown then return end
+        if UIState:hasOpenUI() or player:GetAttribute("Typing") then return end
         if ability.isGrenade then
             if States.GetStateVariable("PlayerActions", "shooting") then return end
             if States.GetStateVariable("PlayerActions", "weaponEquipping") then return end

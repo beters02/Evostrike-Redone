@@ -29,7 +29,7 @@ local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponServi
 --[[ CONFIGURATION ]]
 local ForceEquipDelay = 0.9
 local EquipInputDebounce = 0.04
-local NeededKeybindKeys = {"primaryWeapon", "secondaryWeapon", "ternaryWeapon", "inspect", "drop", "equipLastEquippedWeapon"}
+local NeededKeybindKeys = {"primaryWeapon", "secondaryWeapon", "ternaryWeapon", "inspect", "drop", "equipLastEquippedWeapon", "aimToggle"}
 local util_vmParts = {"LeftLowerArm", "LeftUpperArm", "RightUpperArm", "RightLowerArm"}
 
 function WeaponController.new()
@@ -100,7 +100,6 @@ end
 function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: boolean?)
     local wepObject: Types.Weapon = Weapon.new(weapon, tool)
     self.Inventory[wepObject.Slot] = wepObject
-    print(self.Connections)
 
     if forceEquip then
         self.InitialWeaponAddDebounce = true
@@ -126,10 +125,10 @@ end
 function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     --if not bruteForce and (not self.CanEquip) then return warn("canequip or processing, equip:", tostring(self.CanEquip), tostring(self.Processing)) end
     --if not bruteForce and self.Inventory.equipped and self.Inventory.equipped.Slot == weaponSlot then return warn(tostring(weaponSlot) .. " is already equipped") end
-	if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then print('CHARACTER UNVERIFY')  return end
-    if not self:IsWeaponInSlot(weaponSlot) then return warn("No weapon in slot " .. weaponSlot) end
-    if not bruteForce and self:IsWeaponEquipped(weaponSlot) then print('ISEQUIPPED') return end
-    if self.InitialWeaponAddDebounce then print('INITIAL DEBOUNCE')  return end
+	if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
+    if not self:IsWeaponInSlot(weaponSlot) then return end
+    if not bruteForce and self:IsWeaponEquipped(weaponSlot) then return end
+    if self.InitialWeaponAddDebounce then return end
 
     -- last equipped
     if not self.Inventory.last_equipped then
@@ -207,8 +206,8 @@ end
 
 --@summary Listen for Equip input. Always connected.
 function WeaponController:WeaponControllerBaseInputBegan(input, gp)
-    if UIState:hasOpenUI() or gp then warn('open')return end
-    if tick() < self.BaseInputDebounce then warn('deb')return end
+    if UIState:hasOpenUI() or gp then return end
+    if tick() < self.BaseInputDebounce then return end
 
     if input.KeyCode == Enum.KeyCode[self.Keybinds.equipLastEquippedWeapon] then
         if not self.Inventory.last_equipped then return end
@@ -220,7 +219,6 @@ function WeaponController:WeaponControllerBaseInputBegan(input, gp)
             local kc = false
             pcall(function() kc = input.KeyCode == Enum.KeyCode[self.Keybinds[slot .. "Weapon"]] end)
             if kc then
-                print('equip')
                 self.BaseInputDebounce = tick() + EquipInputDebounce
                 self:EquipWeapon(slot)
                 return
