@@ -1,3 +1,14 @@
+-- [[ FRAMEWORK TYPES ]]
+
+export type Service = {}
+export type Controller = {}
+
+--
+--[[ END FRAMEWORK TYPES ]]
+
+--[[ DEPRECATED FRAMEWORK TYPES ]]
+--#region
+
 --[[
     [Module] = A ModuleScript that contains more than 1 function and that involves connections.
     - A [Module] will **sometimes** have a [ModuleServerScript] __and/or__ a [ModuleClientScript]
@@ -67,5 +78,7 @@ export type FunctionContainer = {
     [GameObject] = Any object that can be found within the game framework. (Modules, Folders)
     [ScriptGameObject] = A [GameObject] that is a script and not a ModuleScript.
 ]]
+
+--#endregion
 
 return nil

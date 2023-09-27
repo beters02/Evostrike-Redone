@@ -8,8 +8,8 @@ Lobby.GameVariables = {
     buy_menu_enabled = true,
     buy_menu_add_bought_instant = true,
     buy_menu_starting_loadout = {
-        Weapons = {primary = "ak103", secondary = "glock17"},
-        Abilities = {primary = "Dash", secondary = "LongFlash"}
+        Weapons = {primary = false, secondary = false},
+        Abilities = {primary = false, secondary = false}
     },
 
     bots_enabled = true,

@@ -620,9 +620,11 @@ function Gamemode:PlayerSpawn(player, content, index)
 
     if self.PlayerData[player.Name].BuyMenuLoadout then
         for i, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Weapons) do
+            if not v then continue end
             WeaponService:AddWeapon(player, v, strongestWeapon == i)
         end
         for _, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Abilities) do
+            if not v then continue end
             Ability.Add(player, v)
         end
     else

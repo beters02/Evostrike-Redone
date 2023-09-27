@@ -1,17 +1,10 @@
 --[[
     ==== FRAMEWORK INFO ====
 
-    - Almost all modules are organized by FrameworkType, using a prefix to represent the type.
-
-    Example:
-    fc_strings = FunctionContainer strings
-    m_states = Module states
-    c_playerActions = Class playerActions
-
-    - Some modules are classes but are not labeled as so, because they dont carry the rules of a class.
-    - Modules that are children of modules will not be compiled since those are not global access modules.
-    - Modules that do not have the FrameworkType prefix will not be compiled.
-    See framework/Types
+    -- As of update 0.5.7, FrameworkTypes are going to be deprecated.
+    
+    -- I am going to be using the Service - Controller structure now
+    -- since it causes much less clutter than what I had before.
 
 
     ---------------------------------------------
@@ -19,7 +12,7 @@
 
     ==== TUTORIALS: ====
 
-    === GRAB SHARED LIB MODULE PREFERRED WAY === (Framework.Module.lib.examplelib)
+    === GRAB SHARED LIBRARY MODULE PREFERRED WAY === (Framework.Module.lib.examplelib)
 
     1. Call require(Framework.Module.lib.exampleLib)
 
@@ -67,7 +60,6 @@ end
     Types and Game Scopes (Client, Server, Shared) are included.
 ]]
 
-local RunService = game:GetService("RunService")
 local FrameworkLocation = game:GetService("ReplicatedStorage"):WaitForChild("Framework")
 local Types = require(FrameworkLocation:WaitForChild("Types"))
 
@@ -79,5 +71,8 @@ Framework = combine(Framework, require(FrameworkLocation:WaitForChild("Compiler"
 
 -- Compile Explicit Access Functions
 Framework.Module = setmetatable(require(FrameworkLocation.ExplicitCompiler), Framework)
+
+-- Services
+Framework.Service = game:GetService("ReplicatedStorage"):WaitForChild("Services")
 
 return Framework

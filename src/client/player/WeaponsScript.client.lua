@@ -9,11 +9,9 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 -- Wait for character to load initially ( i actually forget why we have to wait for character )
 local _ = player.Character or player.CharacterAdded:Wait()
 
-local WeaponRemotes = ReplicatedStorage:WaitForChild("weapon"):WaitForChild("remote")
-local WeaponReplicateEvent = WeaponRemotes:WaitForChild("replicate")
 local SharedWeaponFunc = require(Framework.shfc_sharedWeaponFunctions.Location)
 
 -- Connect Replicate Event
-WeaponReplicateEvent.OnClientEvent:Connect(function(functionName, ...)
+ReplicatedStorage.Services.WeaponService.Events.Replicate.OnClientEvent:Connect(function(functionName, ...)
 	return SharedWeaponFunc[functionName](...)
 end)

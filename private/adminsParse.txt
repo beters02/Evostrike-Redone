@@ -1,2 +1,2 @@
-module.admins = {EPIXPLODE, NolanPeters505, beters, commanderfox201}
-module.playtesters = {"Fontainelocke", "LemonDaunger", "Necondy", "khfhyerf", "newacckael"}
+module.admins = {EPIXPLODE, NolanPeters505, beters, commanderfox201, Fontainelocke}
+module.playtesters = {"", "LemonDaunger", "Necondy", "khfhyerf", "newacckael"}

@@ -125,4 +125,15 @@ Commands.qs_printqueues = {
 	end
 }
 
+--
+
+Commands.as_add = {
+	Description = "Add an ability using AbilityService (new)",
+	Public = false,
+
+	Function = function(_, player, ability)
+		require(game.ReplicatedStorage.Services.AbilityService):AddAbility(player, ability)
+	end
+}
+
 return Commands

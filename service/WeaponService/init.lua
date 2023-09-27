@@ -5,6 +5,8 @@ local WeaponService = {}
 local Weapons = script:WaitForChild("Weapon")
 local WeaponTool = require(script:WaitForChild("WeaponTool"))
 local RemoteEvent = script:WaitForChild("Events").RemoteEvent
+local RemoteFunction = script.Events.RemoteFunction
+local Replicate = script.Events.Replicate
 
 WeaponService._Connections = {}
 WeaponService._PlayerData = {}
@@ -19,8 +21,19 @@ function WeaponService:Start()
             self:RemoveWeapon(player, ...)
         end
     end)
+    RemoteFunction.OnServerInvoke = function(player, action, ...)
+        if action == "GetRegisteredWeapons" then
+            return WeaponService:GetRegisteredWeapons()
+        end
+    end
     WeaponService._Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
         self:InitPlayer(player)
+    end)
+    WeaponService._Connections.Replicate = Replicate.OnServerEvent:Connect(function(player, functionName, ...)
+        for _, v in pairs(game:GetService("Players"):GetPlayers()) do
+            if v == player then continue end
+            Replicate:FireClient(v, functionName, ...)
+        end
     end)
 end
 

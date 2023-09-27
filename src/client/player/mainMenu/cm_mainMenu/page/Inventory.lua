@@ -6,7 +6,8 @@ local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Fra
 local PlayerData = require(Framework.shm_clientPlayerData.Location)
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
 local WeaponModules = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("WeaponService"):WaitForChild("Weapon")
-local WeaponGetRemote = game.ReplicatedStorage.weapon:WaitForChild("remote"):WaitForChild("get")
+local WeaponService = require(Framework.Service.WeaponService)
+--local WeaponGetRemote = game.ReplicatedStorage.weapon:WaitForChild("remote"):WaitForChild("get")
 local Strings = require(Framework.shfc_strings.Location)
 
 local inventory = {}
@@ -40,7 +41,7 @@ function inventory:init()
         end
     end
 
-    local _regwep = WeaponGetRemote:InvokeServer("GetRegisteredWeapons")
+    local _regwep = WeaponService:GetRegisteredWeapons()
     for i, v in pairs(_regwep) do
         if v == "knife" then
 
