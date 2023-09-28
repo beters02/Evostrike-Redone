@@ -1,11 +1,11 @@
 local player = game:GetService("Players").LocalPlayer
 if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
 
+local UserInputService = game:GetService("UserInputService")
 local Framework = require(game:GetService("ReplicatedStorage").Framework)
 local statesloc = game:GetService("ReplicatedStorage"):WaitForChild("states")
 local states = require(Framework.shm_states.Location)
 local mainrf: RemoteFunction = statesloc:WaitForChild("remote").mainrf
-local connections = {}
 
 function init_connections()
     mainrf.OnClientInvoke = remote_main
@@ -27,3 +27,14 @@ function remote_main(action, ...)
         return remote_setStateVar(...)
     end
 end
+
+-- responsible for handling UI state properties
+-- ex: if a UI is enabled in which the MouseIcon is enabled with, the MouseIcon stays enabled
+local UIState = states.State("UI")
+
+-- Connect Mouse Icon Update
+UIState:changed(function()
+    local should = UIState:shouldMouseBeEnabled()
+    UserInputService.MouseIconEnabled = should
+    UserInputService.MouseBehavior = should and Enum.MouseBehavior.Default or Enum.MouseBehavior.LockCenter
+end)

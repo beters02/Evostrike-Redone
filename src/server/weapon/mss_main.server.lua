@@ -1,5 +1,3 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local Weapon = require(Framework.Weapon.Location)
 local WeaponModuleLoc = Framework.Weapon.Location
@@ -7,36 +5,10 @@ local WeaponRemotes = game:GetService("ReplicatedStorage"):WaitForChild("weapon"
 local WeaponAddRemoveEvent = WeaponRemotes:WaitForChild("addremove")
 local WeaponGetEvent = WeaponRemotes:WaitForChild("get")
 local WeaponReplicateEvent = WeaponRemotes:WaitForChild("replicate")
-local WeaponGetServerFunc = WeaponRemotes:WaitForChild("serverget")
-
--- [[ INVENTORY ]]
-local function playerAdded_initInventory(player)
-    Weapon.StoredPlayerInventories[player.Name] = {primary = nil, secondary = nil, ternary = nil}
-end
-
-local function playerRemoving_destroyInventory(player)
-    Weapon.StoredPlayerInventories[player.Name] = nil
-end
-
---[[ PLAYER ]]
-function defaultCharAdded(player, char)
-end
-
-function defaultHumDied(player, char, hum)
-end
-
--- [[ CONNECT ]]
-Players.PlayerAdded:Connect(function(plr)
-    -- inventory
-    playerAdded_initInventory(plr)
-end)
-
-Players.PlayerRemoving:Connect(function(plr)
-    playerRemoving_destroyInventory(plr)
-end)
 
 -- Connect Weapon Events
 WeaponAddRemoveEvent.OnServerEvent:Connect(function(player, action, ...)
+	error("DEPRECATED")
 	if action == "Add" then
 		Weapon.Add(player, ...)
 	elseif action == "Remove" then
@@ -45,6 +17,7 @@ WeaponAddRemoveEvent.OnServerEvent:Connect(function(player, action, ...)
 end)
 
 WeaponGetEvent.OnServerInvoke = function(player, action, ...)
+	error("DEPRECATED")
 	if action == "Options" then
 		local weaponOptions = WeaponModuleLoc.Parent.config:FindFirstChild(string.lower(...))
 		if not weaponOptions then
@@ -66,6 +39,7 @@ WeaponGetEvent.OnServerInvoke = function(player, action, ...)
 end
 
 WeaponReplicateEvent.OnServerEvent:Connect(function(player, functionName, ...)
+	error("DEPRECATED")
 	for i, v in pairs(game:GetService("Players"):GetPlayers()) do
 		if v == player then continue end
 		WeaponReplicateEvent:FireClient(v, functionName, ...)

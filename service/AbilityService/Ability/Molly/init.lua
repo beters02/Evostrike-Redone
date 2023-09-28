@@ -2,7 +2,7 @@ local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
-local Sound = require(Framework.shm_sound.Location)
+local Sound = require(Framework.Module.shared.sound.m_sound)
 local EvoPlayer = require(ReplicatedStorage.Modules.EvoPlayer)
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -11,6 +11,10 @@ local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
 local States = require(Framework.Module.shared.states.m_states)
 local AbilityObjects = Framework.Service.AbilityService.Ability.Molly.Assets
 local Math = require(Framework.Module.lib.fc_math)
+
+local PlayerActionsState
+if RunService:IsClient() then PlayerActionsState = States.State("PlayerActions") end
+
 
 local Molly = {
     Configuration = {
@@ -75,16 +79,35 @@ local function initCaster()
     Molly.caster.RayHit:Connect(function(...)
         Molly.RayHit(caster, Players.LocalPlayer, ...)
     end)
-    Molly.caster.LengthChanged:Connect(function(_, lastPoint, direction, length, _, bullet) -- cast, lastPoint, direction, length, velocity, bullet
+    local orientation = 0
+    Molly.caster.LengthChanged:Connect(function(_, lastPoint, direction, length, velocity, bullet) -- cast, lastPoint, direction, length, velocity, bullet
         if bullet then
+            orientation += 2
             local bulletLength = bullet.Size.Z/2
-            local offset = CFrame.new(0, 0, -(length - bulletLength))
+            local offset = CFrame.new(0, 0, -(length - bulletLength)) * CFrame.Angles(math.rad(orientation * math.clamp(velocity.Magnitude, 5, 17)), 0, 0)
             bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
         end
     end)
     Molly.caster.CastTerminating:Connect(function()end)
 end
 initCaster()
+
+local function getLocalParams()
+    local locparams = RaycastParams.new()
+    locparams.CollisionGroup = "Grenades"
+    locparams.FilterType = Enum.RaycastFilterType.Exclude
+    locparams.FilterDescendantsInstances = {workspace.CurrentCamera, Players.LocalPlayer.Character}
+    return locparams
+end
+
+local function getOtherParams(thrower)
+    local otherCastParams = RaycastParams.new()
+    otherCastParams.CollisionGroup = "Grenades"
+    otherCastParams.FilterType = Enum.RaycastFilterType.Exclude
+    otherCastParams.FilterDescendantsInstances = {thrower.Character}
+    return otherCastParams
+end
+
 --
 
 --@override
@@ -106,10 +129,10 @@ end
 
 --@summary Required Ability Function Use
 function Molly:Use()
-    -- set state var
-    States.SetStateVariable("PlayerActions", "grenadeThrowing", self.abilityName)
+
+    PlayerActionsState:set("grenadeThrowing", true)
     task.delay(self.Variables.usingDelay, function()
-        States.SetStateVariable("PlayerActions", "grenadeThrowing", false)
+        PlayerActionsState:set("grenadeThrowing", false)
     end)
 
     Sound.PlayReplicatedClone(AbilityObjects.Sounds.Equip, self.Player.Character.PrimaryPart)
@@ -163,7 +186,7 @@ function Molly:Use()
 end
 
 --@summary Required Grenade Function FireGrenade
-function Molly:FireGrenade(hit, isReplicated, origin, direction)
+function Molly:FireGrenade(hit, isReplicated, origin, direction, thrower)
     if not isReplicated then
         local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
 
@@ -192,6 +215,9 @@ function Molly:FireGrenade(hit, isReplicated, origin, direction)
         direction = (hit.Position - origin).Unit
         Replicate:FireServer("GrenadeFire", self.Options.name, origin, direction)
     end
+
+    local castParams = thrower and getOtherParams(thrower) or getLocalParams()
+    self.castBehavior.RaycastParams = castParams
 
     local cast = self.caster:Fire(origin, direction, self.Options.speed, self.castBehavior)
     Molly.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
@@ -327,7 +353,7 @@ function Molly.ServerExplode(position)
     Sound.PlayClone(AbilityObjects.Sounds.InitialFire, circlepart)
     Sound.PlayClone(AbilityObjects.Sounds.Fire, circlepart)
 
-    local t = tick() + Molly.mollyLength
+    local t = tick() + Molly.Configuration.mollyLength
     local conn
     local charsDamaging = {}
     local charsRegisteredDamagingThisCycle = {}
@@ -354,10 +380,12 @@ function Molly.ServerExplode(position)
                     charsDamaging[char.Name] = {nextDamageTick = tick(), connection = RunService.Heartbeat:Connect(function()
                         if tick() >= charsDamaging[char.Name].nextDamageTick then
                             if not char:FindFirstChild("Humanoid") then return end
-                            charsDamaging[char.Name].nextDamageTick = Molly.damageInterval + tick()
+                            charsDamaging[char.Name].nextDamageTick = Molly.Configuration.damageInterval + tick()
                             char:SetAttribute("lastHitPart", "LeftFoot")
                             char:SetAttribute("lastUsedWeapon", "Ability")
-                            EvoPlayer:TakeDamage(char, Molly.damagePerInterval)
+                            EvoPlayer:TakeDamage(char, Molly.Configuration.damagePerInterval)
+                            Sound.PlayReplicatedClone(AbilityObjects.Sounds.BurnHigh, char, true)
+                            Sound.PlayReplicatedClone(AbilityObjects.Sounds.BurnLow, char, true)
                         end
                     end)}
                 end
@@ -392,22 +420,22 @@ function Molly.ServerCleanUpParts(visualizerPart, damagerPart, animTable)
             task.spawn(function()
                 for _, v in pairs(visualizerPart:GetChildren()) do
                     if v:IsA("Sound") then
-                        TweenService:Create(v, TweenInfo.new(Molly.mollyFadeLength), {Volume = 0})
+                        TweenService:Create(v, TweenInfo.new(Molly.Configuration.mollyFadeLength), {Volume = 0})
                     end
                 end
             end)
 
             task.delay(0.1, function()
-                TweenService:Create(visualizerPart, TweenInfo.new(Molly.mollyFadeLength), {Transparency = 1}):Play()
+                TweenService:Create(visualizerPart, TweenInfo.new(Molly.Configuration.mollyFadeLength), {Transparency = 1}):Play()
             end)
 
             if visualizerPart:FindFirstChild("Attachment") then
                 for _, v in pairs(visualizerPart.Attachment:GetChildren()) do
-                    TweenService:Create(v, TweenInfo.new(Molly.mollyFadeLength), {Rate = 0}):Play()
+                    TweenService:Create(v, TweenInfo.new(Molly.Configuration.mollyFadeLength), {Rate = 0}):Play()
                 end
             end
 
-            task.wait(Molly.mollyFadeLength + 2)
+            task.wait(Molly.Configuration.mollyFadeLength + 2)
 
             visualizerPart:Destroy()
             damagerPart:Destroy()

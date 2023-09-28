@@ -22,7 +22,8 @@ local collisionGroups = { -- Name, CollideAll
     playerFeet = {"PlayerFeet", false},
     bots = {"Bots", true},
     none = {"None", false},
-    Weapons = {"Weapons", false}
+    Weapons = {"Weapons", false},
+    grenades = {"Grenades", true}
 }
 
 -- this is so shit but convert collisionGroups tables back to table<string>
@@ -93,7 +94,6 @@ local function initMain()
 
     -- abilities
     PhysicsService:CollisionGroupSetCollidable(cg.mollyDamageCast, "PlayerFeet", true)
-    PhysicsService:CollisionGroupSetCollidable(cg.flashCast, "ClipBoxes", false)
     PhysicsService:CollisionGroupSetCollidable(cg.flashCast, "Weapons", false)
 
     -- map
@@ -116,6 +116,24 @@ local function initMain()
     PhysicsService:CollisionGroupSetCollidable("PlayerFeet", "Bots", false)
     PhysicsService:CollisionGroupSetCollidable("Players", "Bots", false)
     PhysicsService:CollisionGroupSetCollidable("Players", "Bullets", true)
+
+    -- flash cast
+    PhysicsService:CollisionGroupSetCollidable(cg.flashCast, "Players", true)
+    PhysicsService:CollisionGroupSetCollidable(cg.flashCast, "PlayerFeet", true)
+    PhysicsService:CollisionGroupSetCollidable(cg.flashCast, "Bots", true)
+    PhysicsService:CollisionGroupSetCollidable(cg.flashCast, cg.playerMovement, false)
+    PhysicsService:CollisionGroupSetCollidable(cg.flashCast, cg.deadCharacters, false)
+    PhysicsService:CollisionGroupSetCollidable(cg.flashCast, "BulletAndMovementIgnore", false)
+
+    -- grenades
+    PhysicsService:CollisionGroupSetCollidable("Grenades", cg.ragdolls, true)
+    PhysicsService:CollisionGroupSetCollidable("Grenades", "Bullets", false)
+    PhysicsService:CollisionGroupSetCollidable("Grenades", "Grenades", false)
+    PhysicsService:CollisionGroupSetCollidable("Grenades", cg.bulletIgnore, false)
+    PhysicsService:CollisionGroupSetCollidable("Grenades", cg.playerMovement, false)
+    PhysicsService:CollisionGroupSetCollidable("Grenades", "Players", false)
+    PhysicsService:CollisionGroupSetCollidable("Grenades", "PlayerFeet", false)
+    
 	
 end
 

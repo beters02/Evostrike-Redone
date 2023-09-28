@@ -56,6 +56,15 @@ Commands.AddWeapon = {
 	end
 }
 
+Commands.AddAbility = {
+	Description = "Add specified ability to your inventory",
+	Public = false,
+
+	Function = function(self, player, ability)
+		require(game:GetService("ReplicatedStorage").Services.AbilityService):AddAbility(player, ability)
+	end
+}
+
 Commands.Gamemode = {
 	Description = "Set the gamemode",
 	Public = false,

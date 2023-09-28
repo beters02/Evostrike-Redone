@@ -49,7 +49,7 @@ local inAirMovementState = false
 local onGroundMovementState = false
 local playerVelocity = Vector3.zero
 local landed = Events:WaitForChild("Landed")
-local dashModule = require(ReplicatedStorage.ability.class.Dash)
+local dashModule = require(ReplicatedStorage.Services.AbilityService.Ability.Dash)
 
 local runningAnimation = hum.Animator:LoadAnimation(hum.Animations.Run)
 local jumpingAnimation = hum.Animator:LoadAnimation(hum.Animations.Jump)
@@ -318,8 +318,8 @@ end
 
 function Movement.Land(fric: number, waitTime: number, hitMaterial)
 
-	fric = fric or (Movement.dashing and dashModule.landingMovementDecreaseFriction) or Movement.landingMovementDecreaseFriction
-	waitTime = waitTime or (Movement.dashing and dashModule.landingMovementDecreaseLength) or Movement.landingMovementDecreaseLength
+	fric = fric or (Movement.dashing and dashModule.Configuration.landingMovementDecreaseFriction) or Movement.landingMovementDecreaseFriction
+	waitTime = waitTime or (Movement.dashing and dashModule.Configuration.landingMovementDecreaseLength) or Movement.landingMovementDecreaseLength
 	hitMaterial = hitMaterial or Enum.Material.Concrete
 	landing = true
 

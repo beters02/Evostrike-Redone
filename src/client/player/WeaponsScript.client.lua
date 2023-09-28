@@ -10,8 +10,16 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local _ = player.Character or player.CharacterAdded:Wait()
 
 local SharedWeaponFunc = require(Framework.shfc_sharedWeaponFunctions.Location)
+local Shared = require(Framework.Service.WeaponService.Shared)
 
 -- Connect Replicate Event
+-- TEMP: Will Prefer WeaponService.Shared over sharedWeaponFunctions
 ReplicatedStorage.Services.WeaponService.Events.Replicate.OnClientEvent:Connect(function(functionName, ...)
-	return SharedWeaponFunc[functionName](...)
+
+	-- TEMP: While converting sharedWeaponFunctions to WeaponService.Shared
+	local func = Shared[functionName] or SharedWeaponFunc[functionName]
+	if not func then warn(tostring(functionName) .. " is not a SharedWeaponFunction.") return end
+
+	return func(...)
 end)
+

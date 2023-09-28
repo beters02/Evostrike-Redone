@@ -77,10 +77,9 @@ function WeaponService:RemoveWeapon(player: Player, slot: string)
     local weapon = WeaponService:GetPlayerInventorySlot(player, slot)
     if not weapon then return end
     RemoteEvent:FireClient(player, "RemoveWeapon", slot)
-    task.delay(1/60, function()
-        weapon:Destroy()
-        WeaponService:SetPlayerInventoryWeaponFromSlot(player, false, slot)
-    end)
+    task.wait(1/60)
+    weapon:Destroy()
+    WeaponService:SetPlayerInventoryWeaponFromSlot(player, false, slot)
 end
 
 --
@@ -109,11 +108,23 @@ function WeaponService:GetPlayerInventorySlot(player, slot)
     return WeaponService._PlayerData[player.Name][slot] or false
 end
 
---[[function Weapon.ClearAllPlayerInventories()
+function WeaponService:ClearPlayerInventory(player)
+    if player.Character then
+        RemoteEvent:FireClient(player, "ClearInventory")
+        if self._PlayerData[player.Name] then
+            for i, v in pairs(self._PlayerData[player.Name]) do
+                if v then v:Destroy() end
+                self._PlayerData[i] = false
+            end
+        end
+    end
+end
+
+function WeaponService:ClearAllPlayerInventories()
 	for _, player in pairs(Players:GetPlayers()) do
-		Weapon.ClearPlayerInventory(player)
+        WeaponService:ClearPlayerInventory(player)
 	end
-end]]
+end
 
 function WeaponService:GetRegisteredWeapons()
 	local wep = {}
@@ -123,14 +134,5 @@ function WeaponService:GetRegisteredWeapons()
 	end
 	return wep
 end
-
---[[function Weapon:GetRegisteredWeaponOptions()
-	local wep = {}
-	for i, v in pairs(ServerScriptService.weapon.config:GetChildren()) do
-		if v:GetAttribute("Ignore") then continue end
-		wep[v.Name] = v
-	end
-	return wep
-end]]
 
 return WeaponService

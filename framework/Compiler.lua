@@ -111,12 +111,6 @@ local function CompileShared()
     return _new
 end
 
-local function CompileServer()
-    local _new = {}
-    _new.Ability = smf_Ability(_new)
-    _new = CompileTree(_new, "s", game:GetService("ServerScriptService"))
-    return _new
-end
 
 local function CompileClient()
     local self = {}
@@ -136,15 +130,10 @@ local function CompileClient()
     return self
 end
 
---[[
-    Hard-Coded Compile Functions
-]]
-
-function smf_Ability()
-    local _mAbilityFold = game:GetService("ServerScriptService"):WaitForChild("ability")
-    local _loc = _mAbilityFold.pm_main
-    local _mAbility: Types.PlayerModule = {Access = "Server", Location = _loc, Server = _mAbilityFold.mss_main, Client = function() end}
-    return _mAbility
+local function CompileServer()
+    local _new = {}
+    _new = CompileTree(_new, "s", game:GetService("ServerScriptService"))
+    return _new
 end
 
 --[[
@@ -154,8 +143,6 @@ end
 local compiled = CompileShared()
 if RunService:IsServer() then
     compiled = combine(compiled, CompileServer())
-    --compiled = combine(compiled, smf_Weapon())
-    --compiled = combine(compiled, smf_Ability())
 elseif RunService:IsClient() then
     compiled = combine(compiled, CompileClient())
 end

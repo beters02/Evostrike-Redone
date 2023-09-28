@@ -10,11 +10,12 @@ local UserInputService = game:GetService("UserInputService")
 local States = require(Framework.Module.shared.states.m_states)
 local UIState = States.State("UI")
 local Types = require(script.Parent.Types)
-local SoundModule = require(Framework.shm_sound.Location)
+local SoundModule = require(Framework.Module.shared.sound.m_sound)
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
 local PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
-
+local DiedBind = ReplicatedStorage.main.sharedMainRemotes.deathBE
+local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
 function Weapon.new(weapon: string, tool: Tool)
@@ -40,6 +41,7 @@ function Weapon.new(weapon: string, tool: Tool)
     self.ServerEquipEvent = self.Tool.WeaponServerEquippedEvent
     self.RemoteEvent = self.Tool.WeaponRemoteEvent
     self.CameraObject = require(ReplicatedStorage.Services.WeaponService.WeaponCamera).new(weapon)
+    self.Variables.CrosshairModule = require(self.Character:WaitForChild("CrosshairScript"):WaitForChild("m_crosshair"))
 
     if self.init then
         self:init()
@@ -79,16 +81,7 @@ function Weapon.new(weapon: string, tool: Tool)
 	self.Variables.infoFrame = self.Player.PlayerGui.HUD.InfoCanvas.MainFrame.WeaponFrame
 
     if self.Options.scope then
-        self.Variables.scopeGui = self.Module.Assets.Guis.ScopeGui:Clone()
-        self.Variables.scopeGui:WaitForChild("BlackFrame").BackgroundTransparency = 1
-        self.Variables.scopeGui.Enabled = false
-        self.Variables.scopeGui.Parent = self.Player.PlayerGui
-
-        self.Variables.scopeTweens = {
-            TweenService:Create(self.Variables.scopeGui.BlackFrame, TweenInfo.new(0.05), {BackgroundTransparency = 0}),
-            TweenService:Create(self.Variables.scopeGui.BlackFrame, TweenInfo.new(self.Options.scopeLength - 0.05), {BackgroundTransparency = 1}),
-            TweenService:Create(self.Variables.scopeGui.ScopeLabel, TweenInfo.new(self.Options.scopeLength * 0.8), {ImageTransparency = 1})
-        }
+        Weapon.ScopeInit(self)
     end
 
 	-- init icons
@@ -114,6 +107,8 @@ function Weapon.new(weapon: string, tool: Tool)
     self.Connections.Unequip = self.Tool.Unequipped:Connect(function()
         self.Controller:UnequipWeapon(self.Slot)
     end)
+
+    
 
     -- hide server model
     for _, v in pairs(self.Tool:WaitForChild("ServerModel"):GetDescendants()) do
@@ -361,44 +356,125 @@ end
 
 --
 
-function Weapon:ScopeIn()
-    self.Variables.scoping = true
+function Weapon:ScopeInit()
+    self.Variables.scopeGui = self.Module.Assets.Guis.ScopeGui:Clone()
+    self.Variables.scopeGui:WaitForChild("BlackFrame").BackgroundTransparency = 1
+    self.Variables.scopeGui.Enabled = false
+    self.Variables.scopeGui.Parent = self.Player.PlayerGui
 
-    for _, tween in pairs(self.Variables.scopeTweens) do
-        tween:Cancel()
+    -- Player Died ScopeOut function
+    DiedBind.Event:Once(function()
+        if self.Variables.scoping then
+            self:ScopeOut()
+        end
+    end)
+
+    -- Scope Tween Scope
+    self.Variables.ScopeTweens = {
+        Tweens = {},
+        Tables = {ScopeLabelOut = {}},
+        Functions = {}
+    }
+
+    -- ScopeLabel and Frames Var
+    local sgui = self.Variables.scopeGui
+    self.Variables.ScopeGuis = {
+        Label = sgui.ScopeLabel,
+        Frames = {sgui.SideFrameR, sgui.SideFrameL, sgui.SideFrameT, sgui.SideFrameB}
+    }
+
+    -- Init ScopeLabel Tweens
+    table.insert(self.Variables.ScopeTweens.Tables.ScopeLabelOut, TweenService:Create(sgui.ScopeLabel, TweenInfo.new(self.Options.scopeLength * 0.4), {ImageTransparency = 1}))
+    for _, frame in pairs(self.Variables.ScopeGuis.Frames) do
+        table.insert(self.Variables.ScopeTweens.Tables.ScopeLabelOut, TweenService:Create(frame, TweenInfo.new(self.Options.scopeLength * 0.4), {BackgroundTransparency = 1}))
     end
 
+    -- Init Scope BlackFrame Tweens
+    self.Variables.ScopeTweens.Tweens.BlackFrameInFirst = TweenService:Create(self.Variables.scopeGui.BlackFrame, TweenInfo.new(0.05), {BackgroundTransparency = 0})
+    self.Variables.ScopeTweens.Tweens.BlackFrameInLast =  TweenService:Create(self.Variables.scopeGui.BlackFrame, TweenInfo.new(self.Options.scopeLength - 0.05), {BackgroundTransparency = 1})
+
+    --@function Scope Gui In
+    self.Variables.ScopeTweens.Functions.In = function()
+        self.Variables.ScopeTweens.Tweens.BlackFrameInFirst:Play()
+        self.Variables.ScopeTweens.Tweens.BlackFrameInFirst.Completed:Wait()
+        Weapon.SetScopeLabelTransparency(self, 0)
+        Weapon._SetClientModelTransparency(self, 1)
+        UserInputService.MouseDeltaSensitivity = self.Variables.Sensitivity * 0.5
+        self.Variables.CrosshairModule:disable()
+        self.Variables.ScopeTweens.Tweens.BlackFrameInLast:Play()
+    end
+    
+    --@function Scope Gui Out
+    self.Variables.ScopeTweens.Functions.Out = function()
+        Weapon._SetClientModelTransparency(self, 0)
+        UserInputService.MouseDeltaSensitivity = self.Variables.Sensitivity
+        self.Variables.CrosshairModule:enable()
+        for _, outTween in pairs(self.Variables.ScopeTweens.Tables.ScopeLabelOut) do
+            outTween:Play()
+        end
+    end
+
+    self.Variables.Sensitivity = UserInputService.MouseDeltaSensitivity
+
+end
+
+function Weapon:ScopeIn()
+    self.Variables.scoping = true
+    self:PlayReplicatedSound("ScopeIn")
+
+    self:CancelScopeTweens()
+
     self.Variables.scopeGui.BlackFrame.BackgroundTransparency = 1
-    self.Variables.scopeGui.ScopeLabel.ImageTransparency = 1
+    self:SetScopeLabelTransparency(1)
     self.Variables.scopeGui.Enabled = true
 
+    -- fov tweens
     local currfov = PlayerData:Get("options.camera.FOV")
-    self.Variables.scopeTweens[4] = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(self.Options.scopeLength), {FieldOfView = currfov * 0.5})
-    self.Variables.scopeTweens[5] = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(self.Options.scopeLength * 0.8), {FieldOfView = currfov})
-    self.Variables.scopeTweens[4]:Play()
+    self.Variables.currFov = currfov
+    self.Variables.ScopeTweens.Tweens.FOVIn = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(self.Options.scopeLength), {FieldOfView = currfov * 0.5})
+    self.Variables.ScopeTweens.Tweens.FOVOut = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(self.Options.scopeLength * 0.8), {FieldOfView = currfov})
+    self.Variables.ScopeTweens.Tweens.FOVIn:Play()
 
-    self.Variables.scopeTweens[1]:Play()
-    self.Variables.scopeTweens[1].Completed:Wait()
-    self.Variables.scopeGui.ScopeLabel.ImageTransparency = 0
-    self.Variables.scopeTweens[2]:Play()
+    -- scope gui tweens
+    self.Variables.ScopeTweens.Functions.In()
 
 end
 
 function Weapon:ScopeOut()
     self.Variables.scoping = false
+    self:PlayReplicatedSound("ScopeOut")
 
-    for _, tween in pairs(self.Variables.scopeTweens) do
-        tween:Cancel()
-    end
+    self:CancelScopeTweens()
 
-    self.Variables.scopeTweens[3]:Play()
-    self.Variables.scopeTweens[5]:Play()
+    -- Scope
+    self.Variables.ScopeTweens.Functions.Out()
 
-    self.Variables.scopeTweens[5].Completed:Once(function()
+    -- FOV
+    self.Variables.ScopeTweens.Tweens.FOVOut:Play()
+    self.Variables.ScopeTweens.Tweens.FOVOut.Completed:Once(function()
         if not self.Variables.scoping then
             self.Variables.scopeGui.Enabled = false
         end
     end)
+end
+
+function Weapon:CancelScopeTweens()
+    for _, tab in pairs(self.Variables.ScopeTweens.Tables) do
+        for _, tween in pairs(tab) do
+            tween:Cancel()
+        end
+    end
+
+    for _, tween in pairs(self.Variables.ScopeTweens.Tweens) do
+        tween:Cancel()
+    end
+end
+
+function Weapon:SetScopeLabelTransparency(t)
+    self.Variables.ScopeGuis.Label.ImageTransparency = t
+    for _, frame in pairs(self.Variables.ScopeGuis.Frames) do
+        frame.BackgroundTransparency = t
+    end
 end
 
 --
@@ -673,6 +749,15 @@ function Weapon:_StopAllActionAnimations()
 
 	task.wait(0.06)
 	self.Variables.forcestop = false
+end
+
+function Weapon:_SetClientModelTransparency(t)
+    for i, v in pairs(self.ClientModel:GetDescendants()) do
+        if v:IsA("Part") or v:IsA("MeshPart") or v:IsA("Texture") then
+            if v.Name == "WeaponHandle" or v:GetAttribute("Ignore") then continue end
+            v.Transparency = t
+        end
+    end
 end
 
 --

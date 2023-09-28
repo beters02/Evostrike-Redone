@@ -21,6 +21,7 @@ local RemoteEvent = script:WaitForChild("Events").RemoteEvent
 local Replicate = script.Events.Replicate
 local Molly = require(Ability:WaitForChild("Molly"))
 local LongFlash = require(Ability:WaitForChild("LongFlash"))
+local SmokeGrenade = require(Ability:WaitForChild("SmokeGrenade"))
 
 AbilityService._Connections = {}
 AbilityService._PlayerData = {}
@@ -57,8 +58,10 @@ function AbilityService:Start()
             local abilityName, origin, direction = ...
             for _, v in pairs(Players:GetPlayers()) do
                 if v == player then continue end
-                Replicate:FireClient(v, action, abilityName, origin, direction)
+                Replicate:FireClient(v, action, abilityName, origin, direction, player)
             end
+        elseif action == "SmokeGrenadeServerPop" then
+            SmokeGrenade.ServerPop(...)
         end
     end)
 end

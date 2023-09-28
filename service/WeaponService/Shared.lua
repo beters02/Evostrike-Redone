@@ -39,7 +39,6 @@ function Shared.CreateBulletHole(result)
     EmitParticle.EmitParticles(result.Instance, EmitParticle.GetBulletParticlesFromInstance(result.Instance), bullet_hole, nil, nil, nil, isBangable)
 	
 	Debris:AddItem(bullet_hole, 8)
-
 	return bullet_hole
 end
 
@@ -51,6 +50,8 @@ function Shared.CreateBullet(tool, endPos, client, fromModel)
 	local pos
 	if fromModel then
 		pos = fromModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
+	else
+		pos = tool.ServerModel.GunComponents.WeaponHandle.FirePoint.WorldPosition
 	end
 
 	part.Size = Vector3.new(0.1, 0.1, 0.4)

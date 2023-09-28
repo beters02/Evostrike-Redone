@@ -11,8 +11,14 @@ local Math = require(Framework.Module.lib.fc_math)
 local FastCast = require(ReplicatedStorage.lib.c_fastcast)
 local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
 
+local PlayerActionsState
+
 local BotService
-if RunService:IsServer() then BotService = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService")) end
+if RunService:IsServer() then 
+    BotService = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService")) 
+else
+    PlayerActionsState = States.State("PlayerActions")
+end
 
 local LongFlash = {
     Configuration = {
@@ -63,7 +69,11 @@ local LongFlash = {
             damp = 4,
             mass = 9
         }
-    }
+    },
+
+    -- Module Scope Storage
+    flashGui = AbilityObjects:WaitForChild("FlashbangGui"),
+    flashEmitter = AbilityObjects:WaitForChild("Emitter")
 }
 
 -- Create Caster
@@ -91,6 +101,23 @@ local function initCaster()
     LongFlash.caster.CastTerminating:Connect(function()end)
 end
 initCaster()
+
+local function getLocalParams()
+    local locparams = RaycastParams.new()
+    locparams.CollisionGroup = "Grenades"
+    locparams.FilterType = Enum.RaycastFilterType.Exclude
+    locparams.FilterDescendantsInstances = {workspace.CurrentCamera, Players.LocalPlayer.Character}
+    return locparams
+end
+
+local function getOtherParams(thrower)
+    local otherCastParams = RaycastParams.new()
+    otherCastParams.CollisionGroup = "Grenades"
+    otherCastParams.FilterType = Enum.RaycastFilterType.Exclude
+    otherCastParams.FilterDescendantsInstances = {thrower.Character}
+    return otherCastParams
+end
+
 --
 
 -- LongFlash Utility
@@ -133,10 +160,10 @@ end
 
 --@summary Required Ability Function Use
 function LongFlash:Use()
-    -- set state var
-    States.SetStateVariable("PlayerActions", "grenadeThrowing", self.abilityName)
+
+    PlayerActionsState:set("grenadeThrowing", true)
     task.delay(self.Variables.usingDelay, function()
-        States.SetStateVariable("PlayerActions", "grenadeThrowing", false)
+        PlayerActionsState:set("grenadeThrowing", false)
     end)
 
     Sound.PlayReplicatedClone(AbilityObjects.Sounds.Equip, self.Player.Character.PrimaryPart)
@@ -190,13 +217,16 @@ function LongFlash:Use()
 end
 
 --@summary Required Grenade Function FireGrenade
-function LongFlash:FireGrenade(hit, isReplicated, origin, direction)
+function LongFlash:FireGrenade(hit, isReplicated, origin, direction, thrower)
     if not isReplicated then
         local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
         origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.Options.startHeight, 0)
         direction = (hit.Position - origin).Unit
         Replicate:FireServer("GrenadeFire", self.Options.name, origin, direction)
     end
+
+    local castParams = thrower and getOtherParams(thrower) or getLocalParams()
+    self.castBehavior.RaycastParams = castParams
 
     local cast = self.caster:Fire(origin, direction, self.Options.speed, self.castBehavior)
     LongFlash.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
@@ -209,7 +239,7 @@ function LongFlash.RayHit(_, _, _, result)
     local grenadeModel = LongFlash.currentGrenadeObject
 
     -- send grenade outward
-    local outDirection = result.Normal * LongFlash.anchorDistance
+    local outDirection = result.Normal * LongFlash.Configuration.anchorDistance
     local newPos = grenadeModel.Position + outDirection
 
     -- cehck for collision
@@ -230,7 +260,7 @@ function LongFlash.RayHit(_, _, _, result)
     -- init pop animation & position tweens
     local tModelSize = TweenService:Create(grenadeModel, TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, true), {Size = grenadeModel.Size * 10})
     local tPointLight = TweenService:Create(grenadeModel.PointLight, TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, true), {Range = 60})
-    local tPosition = TweenService:Create(grenadeModel, TweenInfo.new(LongFlash.anchorTime), {Position = newPos})
+    local tPosition = TweenService:Create(grenadeModel, TweenInfo.new(LongFlash.Configuration.anchorTime), {Position = newPos})
 
     -- play anchor and hit sound
     Sound.PlayClone(AbilityObjects.Sounds.Anchor, grenadeModel)
@@ -242,12 +272,12 @@ function LongFlash.RayHit(_, _, _, result)
 
     -- once the grenade has reached its reflection time (anchor time), wait another small amount of times so players can react.
     -- we'll send the server info here too, optiiiiii
-    task.delay(LongFlash.popTime, function()
+    task.delay(LongFlash.Configuration.popTime, function()
         Replicate:FireServer("LongFlashServerPop", newPos, LongFlash.CanSee(grenadeModel))
     end)
 
     grenadeModel.Anchored = true
-    task.wait(LongFlash.popTime)
+    task.wait(LongFlash.Configuration.popTime)
 
     -- play pop sound
     Sound.PlayClone(AbilityObjects.Sounds.Pop, grenadeModel)
@@ -296,9 +326,10 @@ function LongFlash.AttemptBlindPlayer(player, pos, isBot)
     local params = RaycastParams.new()
     params.FilterDescendantsInstances = {workspace.Temp, workspace.MovementIgnore}
     params.FilterType = Enum.RaycastFilterType.Exclude
-    params.CollisionGroup = "Bullets"
+    params.CollisionGroup = "FlashCast"
 
     local result = workspace:Raycast(pos, ((player.Character:WaitForChild("Head").CFrame.Position - Vector3.new(0,0,0)) - pos).Unit * 250, params)
+    print(result)
     local resultModel = result and result.Instance:FindFirstAncestorWhichIsA("Model")
     if (resultModel and resultModel ~= player.Character) or not string.match(result.Instance.Name, "Head") then
         return
@@ -316,14 +347,14 @@ function LongFlash.AttemptBlindPlayer(player, pos, isBot)
         gui.Parent = player.PlayerGui
 
         -- create and play player blinded tweens
-        local fadeInTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.3), {Transparency = 0}) 
+        local fadeInTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.3), {Transparency = 0})
         fadeInTween:Play()
 
         local fadeOutTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.2), {Transparency = 1})
         local cFadeTween = TweenService:Create(c, TweenInfo.new(0.25), {Rate = 0})
         
         -- fade out tweens
-        task.delay(LongFlash.blindLength, function() 
+        task.delay(LongFlash.Configuration.blindLength, function() 
             fadeOutTween:Play()
             cFadeTween:Play()
             task.spawn(function()
@@ -337,7 +368,7 @@ function LongFlash.AttemptBlindPlayer(player, pos, isBot)
     else
 
         local cFadeTween = TweenService:Create(c, TweenInfo.new(0.25), {Rate = 0})
-        task.delay(LongFlash.blindLength, function()
+        task.delay(LongFlash.Configuration.blindLength, function()
             cFadeTween:Play()
             task.spawn(function()
                 cFadeTween.Completed:Wait()

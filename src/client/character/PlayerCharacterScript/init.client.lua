@@ -22,7 +22,7 @@ end)
 
 -- Initialize Player Damaged Animations
 local _pha = ReplicatedStorage.Services.WeaponService.ServiceAssets.Animations.PlayerHit
-local playerHit = hum:WaitForChild("Animator"):LoadAnimation(_pha)
+local playerHitAnimation = hum:WaitForChild("Animator"):LoadAnimation(_pha)
 
 hum.Changed:Connect(function(property)
     if property == "Health" then
@@ -31,7 +31,7 @@ hum.Changed:Connect(function(property)
         end
         health = hum.Health
     end
-    playerHit:Play(0.8)
+    playerHitAnimation:Play(0.8)
 end)
 
 -- Initialize Camera Variables

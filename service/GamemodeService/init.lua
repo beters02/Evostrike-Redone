@@ -21,8 +21,12 @@ if RunService:IsClient() then
 end
 
 -- [[ SERVICE CONFIGURATION ]]
+
+local lobby_id = 11287185880        -- In the Lobby, the Gamemode will always be default_gamemode.
 local default_gamemode = "Deathmatch"
-local LobbyID = 11287185880
+
+local studio_gamemode = "Deathmatch"   -- The Gamemode that is automatically set in Studio.
+
 --
 
 local Types = require(script:WaitForChild("Types"))
@@ -47,48 +51,24 @@ function GamemodeService:Start()
         warn("GamemodeService is already running!")
         return
     end
+
+    print("GamemodeService Starting!")
     GamemodeService.Status = "Initting"
 
     self:ConnectClientRemotes()
 
-
-    local startingGamemode = false
-
-    if game.PlaceId ~= LobbyID then
-
-        -- Connect PlayerAdded listener to see if player had joined with Gamemode
-        GamemodeService.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
-            if GamemodeService.Status == "Verifying" then return end
-            GamemodeService.Status = "Verifying"
-            local gotGamemode = false
-
-            local data = player:GetJoinData()
-            gotGamemode = data and data.TeleportData and data.TeleportData.RequestedGamemode
-            if not gotGamemode then
-                data = EvoMM.MatchmakingService:GetUserData(player)
-                gotGamemode = data and data.RequestedGamemode
-            end
-
-            if not gotGamemode then
-                warn("Player joined with no TeleportData!")
-                startingGamemode = default_gamemode
-            else
-                startingGamemode = gotGamemode
-            end
-            GamemodeService.Connections.PlayerAdded:Disconnect()
-        end)
-
-    repeat task.wait() until startingGamemode
-
+    local startingGamemode
+    if RunService:IsStudio() then
+        startingGamemode = studio_gamemode
+    elseif game.PlaceId == lobby_id then
+        startingGamemode = default_gamemode
     else
-
-        startingGamemode = "Deathmatch"
-        
+        startingGamemode = GamemodeService:AwaitGamemodeDataExtraction()
     end
 
     GamemodeService.Gamemode = self:ChangeMode(startingGamemode, true, true)
     RemoteEvent:FireAllClients("Init")
-    print("GamemodeService started!")
+    print("GamemodeService Started!")
 end
 
 --@summary Stop GamemodeService.
@@ -137,6 +117,32 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
         end)
     end
     return _gamemode
+end
+
+--@summary Listen & Wait for the Received Gamemode from a Player's TeleportData
+function GamemodeService:AwaitGamemodeDataExtraction()
+    local startingGamemode
+    GamemodeService.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
+        if GamemodeService.Status == "Verifying" then return end
+        GamemodeService.Status = "Verifying"
+
+        local data = player:GetJoinData()
+        local gotGamemode = (data and data.TeleportData) and data.TeleportData.RequestedGamemode or false
+        if not gotGamemode then
+            data = EvoMM.MatchmakingService:GetUserData(player)
+            gotGamemode = data and data.RequestedGamemode
+        end
+
+        if not gotGamemode then
+            warn("GamemodeService: Player joined with no TeleportData! Starting Default Gamemode.")
+            startingGamemode = default_gamemode
+        else
+            startingGamemode = gotGamemode
+        end
+        GamemodeService.Connections.PlayerAdded:Disconnect()
+    end)
+    repeat task.wait() until startingGamemode
+    return startingGamemode
 end
 
 --@summary Listen for Client Remotes

@@ -10,13 +10,14 @@ local BulletModel = MainObj:WaitForChild("Bullet")
 local BulletHole = MainObj:WaitForChild("BulletHole")
 local WeaponFolder = ReplicatedStorage:WaitForChild("weapon")
 local GlobalSounds = WeaponFolder:WaitForChild("obj"):WaitForChild("global"):WaitForChild("sounds") -- global weapon sounds (player hit, player killed, etc)
-local WeaponRemotes = WeaponFolder:WaitForChild("remote")
+--local WeaponRemotes = WeaponFolder:WaitForChild("remote")
 local Particles = MainObj:WaitForChild("particles")
 local EmitParticle = require(Framework.shfc_emitparticle.Location)
 local Math = require(Framework.shfc_math.Location)
 local States = require(Framework.shm_states.Location)
 local EvoPlayer = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoPlayer"))
 local BulletHitUtil = require(script.Parent:WaitForChild("fc_bulletHitUtil"))
+local Replicate = Framework.Service.WeaponService.Events.Replicate
 
 local module = {}
 
@@ -177,7 +178,7 @@ end
 
 function module.ReplicateFireEmitters(serverModel, clientModel)
 	module._playFireEmitters(clientModel) -- client
-	WeaponRemotes.replicate:FireServer("_playFireEmitters", serverModel)
+	Replicate:FireServer("_playFireEmitters", serverModel)
 end
 
 --[[
@@ -189,12 +190,12 @@ function module.FireBullet(fromChar, result, isHumanoid, isBangable, tool, fromM
 	if game:GetService("RunService"):IsServer() then return end
 	module.CreateBullet(tool, result.Position, true, fromModel)
 	task.spawn(function()
-		WeaponRemotes.replicate:FireServer("CreateBullet", tool, result.Position, false)
+		Replicate:FireServer("CreateBullet", tool, result.Position, false)
 	end)
 	if not isHumanoid then
 		task.spawn(function()
 			module.CreateBulletHole({Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable})
-			WeaponRemotes.replicate:FireServer("CreateBulletHole", {Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable})
+			Replicate:FireServer("CreateBulletHole", {Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable})
 		end)
 	end
 end

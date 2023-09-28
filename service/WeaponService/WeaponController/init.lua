@@ -72,6 +72,11 @@ function WeaponController.new()
             if self.Inventory[weaponSlot] then
                 self.Inventory[weaponSlot]:Remove()
             end
+        elseif action == "ClearInventory" then
+            for i, v in pairs(self.Inventory) do
+                if v then v:Remove() end
+                self.Inventory[i] = false
+            end
         end
     end)
 
@@ -115,6 +120,7 @@ end
 
 --@summary Remove a Weapon from the Controller
 function WeaponController:RemoveWeapon(weaponSlot)
+    print('yuh')
     if self.Inventory.equipped.Slot == weaponSlot then
         self.Humanoid:UnequipTools()
     end
@@ -164,7 +170,9 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     self.Owner.Character.Humanoid:EquipTool(self.Inventory.equipped.Tool)
     self.Inventory[weaponSlot]:ConnectActions()
     task.delay(0.1, function()
-        util_processEquipTransparency(self.Inventory.equipped.ClientModel)
+        if self.Inventory.equipped.ClientModel then
+            util_processEquipTransparency(self.Inventory.equipped.ClientModel)
+        end
     end)
 end
 

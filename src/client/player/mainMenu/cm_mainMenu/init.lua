@@ -108,7 +108,7 @@ function main.topBar.connect()
 	for _, topBarFrame in pairs(main.topbar:GetChildren()) do
 		if not topBarFrame:IsA("Frame") then continue end
 		local pageName = topBarFrame.Name:gsub("ButtonFrame", "")
-
+		
 		topBarFrame.TextButton.MouseButton1Click:Connect(function()
 			main.page:OpenPage(pageName)
 		end)

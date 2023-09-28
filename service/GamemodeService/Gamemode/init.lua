@@ -37,9 +37,8 @@ local Teams = game:GetService("Teams")
 local TeleportService = game:GetService("TeleportService")
 local RoundTimer = require(script.Parent:WaitForChild("RoundTimer"))
 local Framework = require(game.ReplicatedStorage:WaitForChild("Framework"))
---local Weapon = require(Framework.Module.server.weapon.pm_main)
 local WeaponService = require(game.ReplicatedStorage.Services.WeaponService)
-local Ability = require(Framework.Module.server.ability.pm_main)
+local AbilityService = require(game.ReplicatedStorage.Services.AbilityService)
 local EvoPlayer = require(game.ReplicatedStorage.Modules.EvoPlayer)
 local EvoMM = require(game.ReplicatedStorage.Modules.EvoMMWrapper)
 local Tables = require(Framework.Module.lib.fc_tables)
@@ -309,6 +308,7 @@ function Gamemode:Stop(bruteForce)
 
     self:GuiBlackScreenAll(0.5, 0.3, true)
 
+    WeaponService:ClearAllPlayerInventories()
     self:PlayerRemoveAll()
 
     task.spawn(function()
@@ -399,8 +399,8 @@ function Gamemode:EndRound(result, winner, loser)
         end
     end)
 
-    --[[Ability.ClearAllPlayerInventories()
-    Weapon.ClearAllPlayerInventories()]]
+    --[[Ability.ClearAllPlayerInventories()]]
+    WeaponService:ClearAllPlayerInventories()
 
     if self.GameData.Connections.PlayerDied then
         self.GameData.Connections.PlayerDied:Disconnect()
@@ -625,7 +625,7 @@ function Gamemode:PlayerSpawn(player, content, index)
         end
         for _, v in pairs(self.PlayerData[player.Name].BuyMenuLoadout.Abilities) do
             if not v then continue end
-            Ability.Add(player, v)
+            AbilityService:AddAbility(player, v)
         end
     else
         if self.GameVariables.starting_weapons then
@@ -635,7 +635,7 @@ function Gamemode:PlayerSpawn(player, content, index)
         end
         if self.GameVariables.starting_abilities then
             for _, v in pairs(self.GameVariables.starting_abilities) do
-                Ability.Add(player, v)
+                AbilityService:AddAbility(player, v)
             end
         end
     end
@@ -654,7 +654,7 @@ function Gamemode:PlayerSpawn(player, content, index)
         end
         task.delay(0.9, function()
             for _, v in pairs(content.abilities) do
-                Ability.Add(player, v)
+                AbilityService:AddAbility(player, v)
             end
         end)
         shield, helmet = content.shield.shield, content.shield.helmet
@@ -986,7 +986,7 @@ function Gamemode:GuiAddBuyMenu(player: Player | "all")
         self.PlayerData[v.Name].BuyMenuConnections.Ability = c.AbilitySelected.OnServerEvent:Connect(function(_, abilityName, abilitySlot)
             self.PlayerData[v.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
             if self.GameVariables.buy_menu_add_bought_instant then
-                Ability.Add(v, abilityName)
+                AbilityService:AddAbility(v, abilityName)
             end
         end)
 
@@ -1000,11 +1000,15 @@ function Gamemode:GuiAddBuyMenu(player: Player | "all")
 end
 
 --@summary Round over gui to player or all
-function Gamemode:GuiRoundOver(player: Player | "all")
+function Gamemode:GuiRoundOver(player: Player | "all", winner: Player, loser: Player)
     self:GuiUpdateGamemodeBarAll("UpdateScore") -- update score
     local plrs = player == "all" and self:PlayerGetAll() or {player} -- play round over gui
-    for i, v in pairs(plrs) do
-        
+    for _, v in pairs(plrs) do
+        local c = DefaultGuis.RoundWonGui:Clone()
+        c:SetAttribute("WinnerName", winner and winner.Name or "")
+        c:SetAttribute("LoserName", loser and loser.Name or "")
+        c.Parent = v:WaitForChild("PlayerGui")
+        Debris:AddItem(c, 3)
     end
 end
 
