@@ -111,10 +111,10 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     if allSkins then
 
         for _, weaponFolder in pairs(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon:GetChildren()) do
-            weaponFolder = weaponFolder.Assets
+            local weaponAssets = weaponFolder.Assets
 
-            if weaponFolder.Parent.Name == "knife" then
-                for _, knifeFolder in pairs(weaponFolder:GetChildren()) do
+            if weaponAssets.Parent.Name == "knife" then
+                for _, knifeFolder in pairs(weaponAssets:GetChildren()) do
                     for _, v in pairs(knifeFolder.Models:GetChildren()) do
                         if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
                             self:InitializeSkinStringAsFrame("knife" .. "_" .. knifeFolder.Name .. "_" .. v.Name)
@@ -122,7 +122,7 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
                     end
                 end
             else
-                for _, v in pairs(weaponFolder.Models:GetChildren()) do
+                for _, v in pairs(weaponAssets.Models:GetChildren()) do
                     if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
                         local _str = weaponFolder.Name .. "_" .. v.Name
                         self:InitializeSkinStringAsFrame(_str)
@@ -136,6 +136,7 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     
         -- check if player has access to all skins to a specific weapon
         -- if so, we recurse CreateSkinFrame until all skins are added.
+        print(weapon)
         local parent = weapon == "knife" and WeaponModules.knife.Assets:WaitForChild(model).Models or WeaponModules:WaitForChild(weapon).Assets.Models
         if skin == "*" then
             for i, v in pairs(parent:GetChildren()) do
