@@ -6,7 +6,7 @@ local intervention = {
         scope = true,
 		
 		equipLength = 1.5,
-		fireRate = 1.2,
+		fireRate = 1.5,
 		reloadLength = 1.5,
 		recoilReset = 0.5,
         scopeLength = 0.2,

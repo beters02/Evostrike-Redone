@@ -53,40 +53,24 @@ end
 
 --@summary Create a new state.
 function State.new(id: string, replicated: boolean, values: table)
-    if States.Stored[id] then
-        error("Cannot create two of the same state. " .. tostring(id))
-    end
+    assert(not States.Stored[id], "Cannot create two of the same state. " .. tostring(id))
 
-    local self: State = {}
-
-    local bind, remote = nil, nil
-    if replicated then
-        if RunService:IsClient() then
-            -- we ping the server to create the bindable and remote, and then continue local class creation
-            bind, remote = States.RemoteFunction:InvokeServer("NewState", id, replicated, values)
-        else
-            -- create the class on the server, ping all clients with the created bindable and remote
-            self = {
-                id = id,
-                replicated = true,
-                values = values,
-                changedBindable = Instance.new("BindableEvent", States.Module),
-                changedRemote = Instance.new("RemoteEvent", States.Module)
-            }
-            States.Remote:FireAllClients("NewState", id, replicated, values, self.changedBindable, self.changedRemote)
-            States.Stored[id] = setmetatable(self, State)
-            return States.Stored[id]
-        end
-    end
-
-    -- if we made it this far, it is a client class that is being created.
-    self = {
+    local self: State = {
         id = id,
         replicated = replicated,
-        values = values,
-        changedBindable = bind or Instance.new("BindableEvent", States.Module),
-        changedRemote = remote or false -- changedRemote will only create if it's a replicated remote.
+        values = values
     }
+    
+    if RunService:IsClient() and replicated then -- server creates replicated objs
+        self.changedBindable, self.changedRemote = States.RemoteFunction:InvokeServer("NewState", id, replicated, values)
+    else
+        self.changedBindable = Instance.new("BindableEvent", States.Module)
+        self.changedRemote = replicated and RunService:IsServer() and Instance.new("RemoteEvent", States.Module)
+    end
+
+    if RunService:IsServer() and replicated then
+        States.Remote:FireAllClients("NewState", id, replicated, values, self.changedBindable, self.changedRemote)
+    end
 
     States.Stored[id] = setmetatable(self, State)
     return States.Stored[id]

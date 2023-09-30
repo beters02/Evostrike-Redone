@@ -133,8 +133,13 @@ local function initMain()
     PhysicsService:CollisionGroupSetCollidable("Grenades", cg.playerMovement, false)
     PhysicsService:CollisionGroupSetCollidable("Grenades", "Players", false)
     PhysicsService:CollisionGroupSetCollidable("Grenades", "PlayerFeet", false)
+    PhysicsService:CollisionGroupSetCollidable("Grenades", "Weapons", false)
+
+    -- weapons
+    PhysicsService:CollisionGroupSetCollidable("Weapons", "Players", false)
+    PhysicsService:CollisionGroupSetCollidable("Weapons", "PlayerFeet", false)
+    PhysicsService:CollisionGroupSetCollidable("Weapons", cg.playerMovement, false)
     
-	
 end
 
 local function initRagdolls()

@@ -106,6 +106,11 @@ Gamemode.GameVariables = {
         secondary = {"deagle"}
     },
 
+    ability_pool = {
+        movement = {"Dash"},
+        utility = {"LongFlash", "Molly", "SmokeGrenade"}
+    },
+
     buy_menu_enabled = false, -- if buy menu is enabled, buy_menu_starting_loadout must also be set.
     buy_menu_add_bought_instant = false, -- should the weapon/ability be added instantly or when they respawn
     buy_menu_starting_loadout = {
@@ -183,7 +188,7 @@ function Gamemode:Start(isInitialGamemode: boolean?)
     self.Status = "Running"
 
     if self.GameVariables.queueFrom_enabled then
-        EvoMM:StartQueueService({"Deathmatch", "1v1"})
+        EvoMM:StartQueueService({"1v1"})
     end
 
     -- initial PlayerAdded connection (fill up to minimum players)
@@ -891,8 +896,8 @@ function Gamemode:GetRoundPlayerContent()
     end
 
     local abilities = {"Dash"}
-    table.insert(abilities, math.round(math.random(1000,2000)/1000) == 1 and "LongFlash" or "Molly")
-    
+    local util = self.GameVariables.ability_pool.utility
+    table.insert(abilities, util[math.random(1,#util)])
     return {spawns = spawns, weapons = weapons, abilities = abilities, shield = _GetRoundShield(self)}
 end
 

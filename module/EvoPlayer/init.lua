@@ -71,7 +71,14 @@ end
 --@summary Do a function after a player has loaded.
 --         This function will connect the callback to a :GetAttributeChanged():Once()
 --         which replaces the need for ( if not player:GetAttribute("Loaded") then repeat task.wait() )
---         yeah fuck that getAttributeChanged is dogshiut
+--         ..
+--         ..
+--         ok nevermind yeah fuck that getAttributeChanged is dogshiut
+
+
+--@summary Do a function after a player has loaded.
+--         If the player is not loaded, This function threads a repeat wait and then calls when loaded.
+--         Otherwise, it will just call the function.
 function EvoPlayer:DoWhenLoaded(player, callback)
     if not player:GetAttribute("Loaded") then
         player = player :: Player
@@ -121,13 +128,13 @@ end
 -- EvoPlayer.PlayerDied:Once(callback)
 -- EvoPlayer.PlayerDied:Disconnect()
 
---@summary Register a death event received from the client via RemoteEvent -> signal
 if RunService:IsServer() then
+
+    --@summary Register a death event received from the client via RemoteEvent -> signal
     local Signal = require(script:WaitForChild("Signal"))
     EvoPlayer.PlayerDied = Signal.new()
 
     DiedEvent.OnServerEvent:Connect(function(killed, killer)
-
         EvoPlayer.PlayerDied:Fire(killed, killer)
 
         -- fire the event for clients
@@ -136,7 +143,29 @@ if RunService:IsServer() then
                 DiedEvent:FireClient(v, killed, killer)
             end
         end
+    end)
 
+    --@summary Create the Damaged Remote Event & Animation when a player's character is added.
+    --@note    Is all of this connection management necessary? Does CharAdded get removed when a player is removed?
+    --         If it is necessary, than there's a good 1GB of memory leakage in this game from just that concept alone
+    Players.PlayerAdded:Connect(function(player)
+        local charadd
+        local plrRemove
+
+        charadd = player.CharacterAdded:Connect(function(character)
+            local DamagedAnimation = ReplicatedStorage.Services.WeaponService.ServiceAssets.Animations.PlayerHit:Clone()
+            DamagedAnimation.Name = "DamagedAnimation"
+            DamagedAnimation.Parent = character
+            local DamagedEvent = Instance.new("RemoteEvent", character)
+            DamagedEvent.Name = "EvoPlayerDamagedEvent"
+        end)
+
+        plrRemove = Players.PlayerRemoving:Connect(function(_rplayer)
+            if player == _rplayer then
+                charadd:Disconnect()
+                plrRemove:Disconnect()
+            end
+        end)
     end)
 end
 

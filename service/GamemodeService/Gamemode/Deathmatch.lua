@@ -34,8 +34,8 @@ Deathmatch.GameVariables = {
     game_score_to_win_game = 1,
     game_end_condition = "scoreReached",
 
-    queueFrom_enabled = false, -- Can a player queue while in this gamemode?
-    queueTo_enabled = true,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?
+    queueFrom_enabled = true, -- Can a player queue while in this gamemode?
+    queueTo_enabled = false,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?
 
     kick_players_on_end = false,
 

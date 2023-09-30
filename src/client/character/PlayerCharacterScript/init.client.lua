@@ -11,27 +11,19 @@ local health = hum.Health
 -- Register Death & Damage
 local DiedEvent = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
 local DiedBind = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE")
-local DamagedEvent = script:WaitForChild("PlayerDamaged")
+--local ToServerDamagedEvent = script:WaitForChild("PlayerDamaged")
+local FromEvoPlayerDamagedEvent = char:WaitForChild("EvoPlayerDamagedEvent")
+local DamagedAnimationObj = char:WaitForChild("DamagedAnimation")
+local DamagedAnimation = hum.Animator:LoadAnimation(DamagedAnimationObj)
 
 hum.Died:Connect(function()
     local killer = char:FindFirstChild("DamageTag") and char.DamageTag.Value or false
     DiedEvent:FireServer(killer)
     DiedBind:Fire(killer)
-    print(killer)
 end)
 
--- Initialize Player Damaged Animations
-local _pha = ReplicatedStorage.Services.WeaponService.ServiceAssets.Animations.PlayerHit
-local playerHitAnimation = hum:WaitForChild("Animator"):LoadAnimation(_pha)
-
-hum.Changed:Connect(function(property)
-    if property == "Health" then
-        if hum.Health < health then
-            DamagedEvent:FireServer(hum.Health, health - hum.Health, char:GetAttribute("lastHitPart"))
-        end
-        health = hum.Health
-    end
-    playerHitAnimation:Play(0.8)
+FromEvoPlayerDamagedEvent.OnClientEvent:Connect(function()
+    DamagedAnimation:Play()
 end)
 
 -- Initialize Camera Variables
@@ -58,10 +50,9 @@ end)
 -- Set Character CanCollide to False
 -- Do this later so people dont fall thru floor?
 task.delay(3, function()
-    for i, v in pairs(char:GetDescendants()) do
+    for _, v in pairs(char:GetDescendants()) do
         if v:IsA("Part") or v:IsA("BasePart") then
             v.CanCollide = false
         end
     end
 end)
-

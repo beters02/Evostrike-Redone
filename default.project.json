@@ -37,8 +37,10 @@
     },
 
     "ServerStorage": {
-      "$path": "src/serverstorage",
-      "$ignoreUnknownInstances": true
+      "Plugins": {
+        "$path": "plugin",
+        "$ignoreUnknownInstances": true
+      }
     }
   }
 }
