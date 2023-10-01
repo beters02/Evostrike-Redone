@@ -35,7 +35,7 @@ local RemoteEvent = script:WaitForChild("RemoteEvent")
 local RemoteFunction = script:WaitForChild("RemoteFunction")
 local BindableEvent = script:WaitForChild("BindableEvent")
 local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
-local Admins = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminIDs"))
+local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("AdminIDs"))
 
 local ErrorDef = {Prefix = "GamemodeService: "}
 ErrorDef.CouldNotChangeGamemode = ErrorDef.Prefix .. "Could not change gamemode! "

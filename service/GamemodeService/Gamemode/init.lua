@@ -54,47 +54,56 @@ local Gamemode = {} :: Types.Gamemode
 Gamemode.__index = Gamemode
 
 Gamemode.GameVariables = {
+
+    -- [[ GENERAL ]]
+    game_type = "Round" :: Types.GameType,
     minimum_players = 2,
     maximum_players = 2,
-    teams_enabled = false,
-    players_per_team = 1,
-
     bots_enabled = false,
+    leaderboard_enabled = true,
+    spawn_objects = DefaultSpawns,
 
-    opt_to_spawn = false, -- should players spawn in automatically, or opt in on their own? (lobby)
-    main_menu_type = "Default", -- the string that the main menu requests upon init, and that is sent out upon gamemode changed
-
-    characterAutoLoads = false,
-    respawns_enabled = false,
-    respawn_length = 3,
-    spawn_invincibility = 3, -- set to false for none
-
-    rounds_enabled = true,
-    round_length = 60,
-    round_end_condition = "playerEliminated" :: Types.RoundEndCondition, -- teamEliminated, playerEliminated, timerOnly, scoreReached
-    round_end_timer_assign = "roundScore", -- roundScore, health, random, false
-
-    -- if scoreReached
-    round_score_to_win_round = 1,
-    round_score_increment_condition = "kills", -- other
-
-    overtime_enabled = true,
-    overtime_round_score_to_win_game = 1,
-    overtime_round_score_to_win_round = 1,
-
-    game_score_to_win_game = 7,
-    game_end_condition = "scoreReached", -- timerOnly
-
+    -- [[ QUEUING ]]
     queueFrom_enabled = false, -- Can a player queue while in this gamemode?
     queueTo_enabled = true,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?
 
-    kick_players_on_end = true,
+    -- [[ MAIN MENU ]]
+    main_menu_type = "Default", -- the string that the main menu requests upon init, and that is sent out upon gamemode changed
 
-    can_players_damage = true,
+    -- [[ TEAMS ]]
+    teams_enabled = false,
+    players_per_team = 1,
+
+    -- [[ PLAYER SPAWNING ]]
+    opt_to_spawn = false,           -- should players spawn in automatically, or opt in on their own? (lobby)
+    characterAutoLoads = false,     -- roblox CharacterAutoLoads
+    respawns_enabled = false,
+    respawn_length = 3,
+    spawn_invincibility = 3,        -- set to false for none
     starting_health = 100,
     starting_shield = 50,
     starting_helmet = true,
 
+    -- [[ ROUNDS ]]     : game_type == Round    
+    round_length = 60,
+    round_end_timer_callback = "RoundScore" :: Types.RoundOverTimerCallbackType,
+    round_end_condition = "PlayerEliminated" :: Types.RoundEndCondition,
+        -- if round_end_condition == ScoreReached
+        round_score_to_win_round = 1,
+        round_score_increment_condition = "Kills" :: Types.RoundScoreIncrementCondition,
+
+    -- [[ OVERTIME ]]   : game_type == Round
+    overtime_enabled = true,
+    overtime_round_score_to_win_game = 1,
+    overtime_round_score_to_win_round = 1,
+
+    -- [[ GAME END CONDITIONS ]]
+    game_score_to_win_game = 7,             -- if game_type == "Score"
+    game_rounds_to_win_game = 7,            -- if game_type == "Round
+    kick_players_on_end = true,             -- Kick players or Restart game?
+
+    -- [[ WEAPONS & DAMAGING ]]
+    can_players_damage = true,
     start_with_knife = true,
     auto_equip_strongest_weapon = true,
 
@@ -118,20 +127,17 @@ Gamemode.GameVariables = {
         Abilities = {primary = "Dash", secondary = "LongFlash"}
     },
 
-    leaderboard_enabled = true,
+    starting_weapons = false,
+    starting_abilities = false,
 
     --[[starting_weapons = {
         secondary = "glock17", primary = "ak47"
     },]]
-    starting_weapons = false,
+    
 
     --[[starting_abilities = {
         "Dash"
     },]]
-    starting_abilities = false,
-
-    spawn_objects = DefaultSpawns,
-
 }
 
 --@summary Create a new GamemodeClass.
@@ -180,7 +186,7 @@ end
 
 --@summary Start the Gamemode.
 function Gamemode:Start(isInitialGamemode: boolean?)
-    if self.Status == "Paused" and self.GameVariables.rounds_enabled then
+    if self.Status == "Paused" then
         self:StartRound()
         return
     end
@@ -271,7 +277,7 @@ function Gamemode:Start(isInitialGamemode: boolean?)
         task.wait(0.25)
     end
 
-    if self.GameVariables.rounds_enabled then
+    if self.GameVariables.game_type == "Round" then
         self.GameData.Round.Status = "Init"
         self.GameData.cancel_death_listener = true
         for _, v in pairs(self.PlayerData) do
@@ -336,8 +342,7 @@ end
 -- Called in :Start() and at some point during :EndRound()
 function Gamemode:StartRound()
 
-    if self.GameVariables.rounds_enabled then
-        
+    if self.GameVariables.game_type == "Round" then
         if self.GameData.Round.Status == "Started" or self.GameData.Round.Status == "PreInit" or self.GameData.Round.Status == "Running" then
             warn("Round is already running!")
             return false
@@ -367,7 +372,7 @@ function Gamemode:StartRound()
         end
         
         -- StartRoundTimer and EndRound via Timer
-        if self.GameVariables.rounds_enabled then
+        if self.GameVariables.game_type == "Round" or self.GameVariables.game_type == "Timer" then
             self.GameData.Round.Status = "Running"
             -- start round timer
             local RoundFinished = self:StartRoundTimer()
@@ -381,7 +386,7 @@ function Gamemode:StartRound()
     end)
 
     self.GameData.Connections.PlayerDied = EvoPlayer.PlayerDied:Connect(function(killed, killer)
-        if self.GameVariables.rounds_enabled then
+        if self.GameVariables.game_type == "Round" then
             if self.GameData.Round.Status ~= "Running" then
                 return
             end
@@ -494,10 +499,40 @@ function Gamemode._RoundOverWonCore(self, winner, loser)
     self:StartRound()
 end
 
+--@summary Score Sort Utility
+function Gamemode:SortPlayersByScore()
+    local scores = {}
+    for name, data in pairs(self.PlayerData) do
+        if table.find(scores, name) then continue end
+        scores = self:ScoreSortPlayer(name, data, scores)
+    end
+    return scores
+end
+
+function Gamemode:ScoreSortPlayer(name, data, scores)
+    if #scores == 0 then
+        scores[1] = name
+        return scores
+    end
+    for sindex, sname in scores do
+        if data.Score > self.PlayerData[sname].Score then
+            scores[sindex+1] = sname
+            scores[sindex] = name
+            break
+        end
+    end
+    return scores
+end
+--
+
 --@summary Called in :EndRound() when rounds_enabled = true and the timer runs out.
 function Gamemode:RoundOverTimer()
 
-    local roundEndAssign = self.GameVariables.round_end_timer_assign
+    if self.GameVariables.game_type == "Timer" then
+        return self:GameOverWon(self:SortPlayersByScore())
+    end
+
+    local roundEndAssign = self.GameVariables.round_end_timer_callback
     if roundEndAssign then
 
         local winner
@@ -530,7 +565,6 @@ function Gamemode:RoundOverTimer()
 
         -- assign "loser" player if necessary
         loser = self.Name == "1v1" and self:PlayerGetOtherPlayer(winner) or false
-
         return self:_RoundOverWonCore(winner, loser) -- No need to call EndRound here since it was already called
     end
 end
@@ -581,12 +615,13 @@ function Gamemode:PlayerInit(player)
         self.PlayerData[player.Name].BuyMenuLoadout = Tables.clone(self.GameVariables.buy_menu_starting_loadout)
     end
 
-    if self.GameVariables.rounds_enabled then
+    if self.GameVariables.game_type == "Round" then
         self.PlayerData[player.Name].Score = 0
-    end
-
-    if self.GameVariables.round_end_condition == "scoreReached" then
-        self.PlayerData[player.Name].Round = {Score = 0}
+        if self.GameVariables.round_end_condition == "ScoreReached" then
+            self.PlayerData[player.Name].Round = {Score = 0}
+        end
+    elseif self.GameVariables.game_type == "Score" then
+        self.PlayerData[player.Name].Score = 0
     end
 end
 
@@ -745,7 +780,6 @@ function Gamemode._PlayerDiedCore(self, player, killer)
     if killer then
         self.PlayerData[killer.Name].Kills += 1
     end
-
     self.PlayerData[player.Name].Deaths += 1
 
     if self.GameVariables.leaderboard_enabled then
@@ -765,44 +799,72 @@ function Gamemode._PlayerDiedCore(self, player, killer)
         self.PlayerData[player.Name].BuyMenuConnections = nil
     end
 
-    if self.GameVariables.rounds_enabled then
-        if killer and killer == player or not killer then
-            if self.PlayerDiedIsKiller then
-                return self:PlayerDiedIsKiller(player)
-            end
-        elseif self.GameVariables.round_end_condition == "scoreReached" and self.GameVariables.round_score_increment_condition == "kills" then
-            if not self.PlayerData[killer.Name].Round.Score then
-                self.PlayerData[killer.Name].Round.Score = 0
-            end
-            self.PlayerData[killer.Name].Round.Score += 1
+    Gamemode.PlayerDiedGameType[self.GameVariables.game_type](player, killer)
+end
+
+--@summary Called when a PlayerDied and game_type == "Round"
+function Gamemode:PlayerDiedRound(player, killer)
+    if killer and killer == player or not killer then
+        if self.PlayerDiedIsKiller then
+            return self:PlayerDiedIsKiller(player)
         end
-        if self.GameVariables.round_end_condition == "playerEliminated" then
+    elseif self.GameVariables.round_end_condition == "ScoreReached" and self.GameVariables.round_score_increment_condition == "Kills" then
+        if not self.PlayerData[killer.Name].Round.Score then
+            self.PlayerData[killer.Name].Round.Score = 0
+        end
+        self.PlayerData[killer.Name].Round.Score += 1
+    end
+    if self.GameVariables.round_end_condition == "PlayerEliminated" then
+        return self:EndRound("RoundOverWon", killer, player)
+    end
+    if self.GameVariables.round_end_condition == "TeamEliminated" then
+        -- check alive status of team members
+        local aliveTeamMembers = 0
+        if aliveTeamMembers <= 0 then
+            return self:EndRound("RoundOverWonTeam", killer, player)
+        end
+    end
+    if self.GameVariables.round_end_condition == "ScoreReached" then
+        if not killer then
+            self.GameData.Round.Status = "Running"
+            return end
+        if self.PlayerData[killer.Name].Round.Score == self.GameVariables.round_score_to_win_round then
             return self:EndRound("RoundOverWon", killer, player)
         end
-        if self.GameVariables.round_end_condition == "teamEliminated" then
-            -- check alive status of team members
-            local aliveTeamMembers = 0
-            if aliveTeamMembers <= 0 then
-                return self:EndRound("RoundOverWonTeam", killer, player)
-            end
-        end
-        if self.GameVariables.round_end_condition == "scoreReached" then
-            if not killer then
-                if self.GameVariables.rounds_enabled then
-                    self.GameData.Round.Status = "Running"
-                end
-                return end
-            if self.PlayerData[killer.Name].Round.Score == self.GameVariables.round_score_to_win_round then
-                return self:EndRound("RoundOverWon", killer, player)
-            end
-        end
+    end
 
-        if self.GameVariables.rounds_enabled then
-            self.GameData.Round.Status = "Running"
-        end
-        return true
+    self.GameData.Round.Status = "Running"
+    return true
+end
+
+--@summary Called when a PlayerDied and game_type == "Score"
+function Gamemode:PlayerDiedScore(player, killer)
+    self.PlayerData[player.Name].Deaths += 1
+    if player == killer or player.Name == killer.Name then
+        return
+    end
+    self.PlayerData[killer.Name].Kills += 1
+    self.PlayerData[killer.Name].Score += 1
+    if self.PlayerData[killer.Name].Score >= self.GameVariables.game_score_to_win_game then
+        self:GameOverWon(killer)
     end
 end
+
+--@summary Called when a PlayerDied and game_type == "Timer"
+function Gamemode:PlayerDiedTimer(player, killer)
+    self.PlayerData[player.Name].Deaths += 1
+    if player == killer or player.Name == killer.Name then
+        return
+    end
+    self.PlayerData[killer.Name].Kills += 1
+end
+
+--@summary Easy Access PlayerDied GameType Extracted Functions
+Gamemode.PlayerDiedGameType = {
+    Round = Gamemode.PlayerDiedRound,
+    Score = Gamemode.PlayerDiedScore,
+    Timer = Gamemode.PlayerDiedTimer
+}
 
 --@summary Called when a player kills themselves. Set to false to just run :PlayerDied()
 function Gamemode:PlayerDiedIsKiller(player)
@@ -988,17 +1050,17 @@ function Gamemode:GuiAddBuyMenu(player: Player | "all")
             end
         end
 
-        self.PlayerData[v.Name].BuyMenuConnections.Ability = c.AbilitySelected.OnServerEvent:Connect(function(_, abilityName, abilitySlot)
-            self.PlayerData[v.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
+        self.PlayerData[v.Name].BuyMenuConnections.Ability = c.AbilitySelected.OnServerEvent:Connect(function(plr, abilityName, abilitySlot)
+            self.PlayerData[plr.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
             if self.GameVariables.buy_menu_add_bought_instant then
-                AbilityService:AddAbility(v, abilityName)
+                AbilityService:AddAbility(plr, abilityName)
             end
         end)
 
-        self.PlayerData[v.Name].BuyMenuConnections.Weapon = c.WeaponSelected.OnServerEvent:Connect(function(_, weaponName, weaponSlot)
-            self.PlayerData[v.Name].BuyMenuLoadout.Weapons[weaponSlot] = weaponName
+        self.PlayerData[v.Name].BuyMenuConnections.Weapon = c.WeaponSelected.OnServerEvent:Connect(function(plr, weaponName, weaponSlot)
+            self.PlayerData[plr.Name].BuyMenuLoadout.Weapons[weaponSlot] = weaponName
             if self.GameVariables.buy_menu_add_bought_instant then
-                WeaponService:AddWeapon(v, weaponName)
+                WeaponService:AddWeapon(plr, weaponName)
             end
         end)
     end
