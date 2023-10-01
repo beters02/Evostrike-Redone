@@ -114,7 +114,7 @@ end
 if RunService:IsServer() then
     MatchmakingService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("MatchmakingService")).GetSingleton()
     module.MatchmakingService = MatchmakingService
-    StoredMapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
+    StoredMapIDs = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("MapIDs"))
     Bridge.OnServerInvoke = function(player, action, queue)
         return module[action](module, player, queue)
     end

@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local DataStore2 = require(Framework.sm_datastore2.Location)
 
 local module = {}
-module.defaultData = require(game:GetService("ServerScriptService"):WaitForChild("playerdata"):WaitForChild("defaultPlayerData"))
+module.defaultData = require(game:GetService("ServerScriptService"):WaitForChild("PlayerDataScript"):WaitForChild("default"))
 
 function module.GetPlayerData(player)
     local store = DataStore2("PlayerData", player)

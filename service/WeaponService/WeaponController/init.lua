@@ -109,7 +109,6 @@ function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: bool
     if forceEquip then
         self.InitialWeaponAddDebounce = true
         task.delay(ForceEquipDelay, function()
-            self.InitialWeaponAddDebounce = false
             self:EquipWeapon(wepObject.Slot, true)
         end)
         return true
@@ -133,8 +132,10 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     --if not bruteForce and self.Inventory.equipped and self.Inventory.equipped.Slot == weaponSlot then return warn(tostring(weaponSlot) .. " is already equipped") end
 	if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
     if not self:IsWeaponInSlot(weaponSlot) then return end
-    if not bruteForce and self:IsWeaponEquipped(weaponSlot) then return end
-    if self.InitialWeaponAddDebounce then return end
+    if not bruteForce then
+        if self:IsWeaponEquipped(weaponSlot) then return end
+        if self.InitialWeaponAddDebounce then return end
+    end
 
     -- last equipped
     if not self.Inventory.last_equipped then
@@ -174,6 +175,8 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
             util_processEquipTransparency(self.Inventory.equipped.ClientModel)
         end
     end)
+
+    self.InitialWeaponAddDebounce = false
 end
 
 --@summary Unequip a Weapon via slot. Called in tool.Unequipped

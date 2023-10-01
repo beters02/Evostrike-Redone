@@ -235,7 +235,7 @@ function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	end
 
 	-- Running Sounds
-	if Movement.movementVelocity.Velocity.Magnitude > Movement.walkMoveSpeed + math.round((Movement.groundMaxSpeed - Movement.walkMoveSpeed)/2) then
+	if Movement.movementVelocity.Velocity.Magnitude > Movement.crouchMoveSpeed then
 		if not runsnd.IsPlaying then SoundModule.PlayReplicated(runsnd, serverRunVolume) end
 	else
 		if runsnd.IsPlaying then SoundModule.StopReplicated(runsnd) end

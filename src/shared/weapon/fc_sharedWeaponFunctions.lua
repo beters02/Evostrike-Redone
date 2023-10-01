@@ -393,7 +393,7 @@ local movementConfig
 if RunService:IsClient() then
 	movementConfig = ReplicatedStorage.movement.get:InvokeServer()
 else
-	movementConfig = require(game:GetService("ServerScriptService"):WaitForChild("movement"):WaitForChild("config"):WaitForChild("main"))
+	movementConfig = require(game.ServerScriptService.MovementScript.config)
 end
 
 function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions)

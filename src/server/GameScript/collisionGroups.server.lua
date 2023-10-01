@@ -158,21 +158,5 @@ end
 
 --[[ Run ]]
 initCollisionGroups()
-
 initMain()
 initRagdolls()
-
-task.wait()
-
--- test lmao
---[[local printt = {}
-for i, v in pairs(cg) do
-    if not PhysicsService:IsCollisionGroupRegistered(v) then continue end
-
-    for i1, v1 in pairs(cg) do
-        if not PhysicsService:IsCollisionGroupRegistered(v1) then continue end
-        table.insert(printt, v .. " : " .. v1 .. " :: " .. tostring(PhysicsService:CollisionGroupsAreCollidable(v, v1)))
-    end
-end
-
-print(printt)]]

@@ -76,9 +76,6 @@ local function initCaster()
 	castBehavior.CosmeticBulletTemplate = AbilityObjects.Models.Grenade
     Molly.caster = caster
     Molly.castBehavior = castBehavior
-    Molly.caster.RayHit:Connect(function(...)
-        Molly.RayHit(caster, Players.LocalPlayer, ...)
-    end)
     local orientation = 0
     Molly.caster.LengthChanged:Connect(function(_, lastPoint, direction, length, velocity, bullet) -- cast, lastPoint, direction, length, velocity, bullet
         if bullet then
@@ -207,7 +204,7 @@ function Molly:FireGrenade(hit, isReplicated, origin, direction, thrower)
             Molly.currentGrenadeObject.Parent = workspace
 
             -- then we just send ray hit instead
-            self.RayHit(false, Players.LocalPlayer, false, initresult, startLv * 1.5)
+            self.RayHit(false, thrower, false, initresult, startLv * 1.5)
             return
         end
 
@@ -221,6 +218,7 @@ function Molly:FireGrenade(hit, isReplicated, origin, direction, thrower)
 
     local cast = self.caster:Fire(origin, direction, self.Options.speed, self.castBehavior)
     Molly.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
+    Molly.currentGrenadeObject:SetAttribute("IsOwner", not isReplicated)
 end
 
 --@summary Required Grenade Function RayHit
@@ -228,6 +226,7 @@ end
 function Molly.RayHit(_, casterPlayer, _, result, velocity)
 
     local grenade = Molly.currentGrenadeObject
+    local isOwner = grenade:GetAttribute("IsOwner")
     local explode = true
     local touchedConn
 
@@ -269,8 +268,7 @@ function Molly.RayHit(_, casterPlayer, _, result, velocity)
     grenade.Transparency = 1
     Debris:AddItem(grenade, 3)
 
-    -- Send remote server request to handle explosion
-    if casterPlayer == Players.LocalPlayer then
+    if isOwner then
         Replicate:FireServer("MollyServerExplode", position)
     end
 

@@ -7,6 +7,34 @@ local Players = game:GetService("Players")
 local Deathmatch = {}
 
 Deathmatch.GameVariables = {
+    bots_enabled = false,
+    spawn_invincibility = 3, -- set to false for none
+
+    start_with_knife = true,
+    auto_equip_strongest_weapon = true,
+
+    weapon_pool = {
+        light_primary = {"vityaz"},
+        primary = {"ak103", "acr"},
+
+        light_secondary = {"glock17"},
+        secondary = {"deagle"}
+    },
+
+    ability_pool = {
+        movement = {"Dash"},
+        utility = {"LongFlash", "Molly", "SmokeGrenade"}
+    },
+
+    buy_menu_starting_loadout = {
+        Weapons = {primary = "ak103", secondary = "glock17"},
+        Abilities = {primary = "Dash", secondary = "LongFlash"}
+    },
+
+    leaderboard_enabled = true,
+    starting_weapons = false,
+    starting_abilities = false,
+
     minimum_players = 1,
     maximum_players = 8,
     teams_enabled = false,
@@ -14,19 +42,20 @@ Deathmatch.GameVariables = {
     
     opt_to_spawn = true,
     buy_menu_enabled = true,
+    buy_menu_add_bought_instant = false,
     main_menu_type = "Lobby",
 
     characterAutoLoads = false,
     respawns_enabled = true,
     respawn_length = 3,
 
-    rounds_enabled = true,
+    rounds_enabled = false,
     round_length = 60 * 5,
     round_end_condition = "scoreReached",
     round_end_timer_assign = "roundScore",
 
     -- if scoreReached
-    round_score_to_win_round = 500,
+    round_score_to_win_round = 1500,
     round_score_increment_condition = "kills", -- other
 
     overtime_enabled = false,
