@@ -37,6 +37,8 @@ function WeaponService:Start()
     end)
 end
 
+---@function Initialize a Player's PlayerData
+---@param player Player -- The player to initialize.
 function WeaponService:InitPlayer(player)
     if not WeaponService._PlayerData[player.Name] then
         WeaponService._PlayerData[player.Name] = {primary = false, secondary = false, ternary = false}
@@ -45,6 +47,10 @@ end
 
 --
 
+---@function Add a Weapon to a Player's Inventory
+---@param player Player -- The player who's receiving the weapon
+---@param weapon string -- The name of the weapon being added
+---@param forceEquip boolean? -- Should it be equipped when added?
 function WeaponService:AddWeapon(player: Player, weapon: string, forceEquip: boolean?)
     if not player.Character then return false end
 

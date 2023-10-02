@@ -101,6 +101,17 @@ function Ability:SetIconColorEquipped(equipped)
     self.Frame.IconImage.ImageColor3 = equipped and self.Frame:GetAttribute("EquippedColor") or self.Frame:GetAttribute("UnequippedColor")
 end
 
+--@summary Stop All Playing Ability Animations
+function Ability:StopAnimations(fadeTime: number?)
+    for i, v in pairs(self.Animations) do
+        if v.IsPlaying then
+            v:Stop(fadeTime or 0)
+        end
+    end
+end
+
+--[[ CAMERA RECOIL ]]
+
 --@summary Initialize Camera Recoil Springs
 function Ability:InitCameraRecoil()
     self.Variables.cameraRecoil = true

@@ -43,7 +43,7 @@ local SmokeGrenade = {
         -- smoke grenade specific
         smokeLengthBeforePop = 1.8,
         smokeFadeInLength = 0.8,
-        smokeLength = 7,
+        smokeLength = 4,
         smokeFadeOutLength = 1,
         smokeBubbleStartSizeModifier = 0.3,
         smokeBubbleStartTransparency = 0.7,
@@ -135,9 +135,9 @@ end
 --@summary Required Ability Function Use
 function SmokeGrenade:Use()
 
-    PlayerActionsState:set("grenadeThrowing", true)
-    task.delay(self.Variables.usingDelay, function()
-        PlayerActionsState:set("grenadeThrowing", false)
+    PlayerActionsState:set(self.Player, "grenadeThrowing", self.Options.name)
+    task.delay(self.Options.usingDelay, function()
+        PlayerActionsState:set(self.Player, "grenadeThrowing", false)
     end)
 
     Sound.PlayReplicatedClone(AbilityObjects.Sounds.Equip, self.Player.Character.PrimaryPart)

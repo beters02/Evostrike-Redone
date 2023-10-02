@@ -136,9 +136,9 @@ end
 --@summary Required Ability Function Use
 function HEGrenade:Use()
 
-    PlayerActionsState:set("grenadeThrowing", true)
-    task.delay(self.Variables.usingDelay, function()
-        PlayerActionsState:set("grenadeThrowing", false)
+    PlayerActionsState:set(self.Player, "grenadeThrowing", self.Options.name)
+    task.delay(self.Options.usingDelay, function()
+        PlayerActionsState:set(self.Player, "grenadeThrowing", false)
     end)
 
     Sound.PlayReplicatedClone(AbilityObjects.Sounds.Equip, self.Player.Character.PrimaryPart)
@@ -201,8 +201,9 @@ function HEGrenade:FireGrenade(hit, isReplicated, origin, direction, thrower)
     self.castBehavior.RaycastParams = castParams
 
     local cast = self.caster:Fire(origin, direction, self.Options.speed, self.castBehavior)
-    HEGrenade.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
-    HEGrenade.currentGrenadeObject:SetAttribute("IsOwner", not isReplicated)
+    local grenade = cast.RayInfo.CosmeticBulletObject
+    HEGrenade.currentGrenadeObject = grenade
+    grenade:SetAttribute("IsOwner", not isReplicated)
 
     task.delay(self.Options.popLength, function()
         if HEGrenade.touchedConn then
@@ -213,18 +214,19 @@ function HEGrenade:FireGrenade(hit, isReplicated, origin, direction, thrower)
             HEGrenade.slowTimeConn:Disconnect()
             HEGrenade.slowTimeConn = nil
         end
-        Debris:AddItem(HEGrenade.currentGrenadeObject, 3)
-        HEGrenade.currentGrenadeObject.Transparency = 1
         if not thrower then
             -- only fire this event if there is not a thrower variable, which means that the thrower is the LocalPlayer
             HEGrenade.popbindable:Fire()
         end
+        task.delay(0.05, function()
+            HEGrenade.currentGrenadeObject:Destroy()
+        end)
     end)
 end
 
 --@summary Required Grenade Function RayHit
 -- grenadeClassObject, casterPlayer, caster, result, velocity, behavior, playerLookNormal)
-function HEGrenade.RayHit(_, casterPlayer, _, result, velocity)
+function HEGrenade.RayHit(_, _, _, result, velocity)
 
     local grenade = HEGrenade.currentGrenadeObject
     local isOwner = grenade:GetAttribute("IsOwner")
@@ -281,6 +283,8 @@ function HEGrenade.RayHit(_, casterPlayer, _, result, velocity)
             Replicate:FireServer("HEGrenadeServerPop", grenade.Position)
         end)
     end
+
+    grenade:Destroy()
 
     return
 end

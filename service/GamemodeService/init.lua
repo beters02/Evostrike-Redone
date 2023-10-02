@@ -40,6 +40,7 @@ local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored"):W
 local ErrorDef = {Prefix = "GamemodeService: "}
 ErrorDef.CouldNotChangeGamemode = ErrorDef.Prefix .. "Could not change gamemode! "
 
+---@interface GamemodeService
 local GamemodeService = {}
 GamemodeService.Status = "Stopped"
 GamemodeService.Gamemode = "None"
@@ -47,7 +48,7 @@ GamemodeService.Connections = {}
 
 local Guis = script.Gamemode.Guis
 
---@summary Start GamemodeService.
+---@function Start GamemodeService.
 function GamemodeService:Start()
     if GamemodeService.Status == "Running" or GamemodeService.Status == "Initting" then
         warn("GamemodeService is already running!")
@@ -73,16 +74,18 @@ function GamemodeService:Start()
     print("GamemodeService Started!")
 end
 
---@summary Stop GamemodeService.
+---@function Stop GamemodeService.
 function GamemodeService:Stop()
     if GamemodeService.Gamemode then
         GamemodeService.Gamemode:Stop()
     end
 end
 
---@summary      Change the current gamemode.
---@param        gamemode: string        [the name of the gamemode]
---@param        start: boolean = true   [start on class creation]
+---@function Change the current gamemode.
+---@param gamemode string -- The desired gamemode
+---@param start boolean? -- Should the game start automatically?
+---@param isInitialGamemode boolean? -- Is this the first gamemode set of the server?
+---@param bruteForce boolean? -- BruteForce processing variables?
 function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitialGamemode: boolean?, bruteForce: boolean?): Types.Gamemode
     if start == nil then start = true end
     local currentGamemodeRunning = false
@@ -117,7 +120,7 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
     return _gamemode
 end
 
---@summary Restart the current gamemode.
+---@function Restart the current gamemode.
 function GamemodeService:RestartMode()
     print("Gamemode Restarting!")
     GamemodeService.Gamemode:Stop()
@@ -129,13 +132,14 @@ function GamemodeService:RestartMode()
     end)
 end
 
+---@function Send the "Restarting Gamemode" GUI to all players.
 function GamemodeService:RestartModeGui()
     for _, v in pairs(Players:GetPlayers()) do
         Guis.RestartingGameGui:Clone().Parent = v.PlayerGui
     end
 end
 
---@summary Listen & Wait for the Received Gamemode from a Player's TeleportData
+---@function Listen & Wait for the Received Gamemode from a Player's TeleportData
 function GamemodeService:AwaitGamemodeDataExtraction()
     local startingGamemode
     GamemodeService.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
@@ -161,7 +165,7 @@ function GamemodeService:AwaitGamemodeDataExtraction()
     return startingGamemode
 end
 
---@summary Listen for Client Remotes
+---@function Listen for Client Remotes
 function GamemodeService:ConnectClientRemotes()
     RemoteFunction.OnServerInvoke = function(player, action, ...)
         if action == "GetCurrentGamemode" then
@@ -197,7 +201,7 @@ function GamemodeService:ConnectClientRemotes()
     end
 end
 
---@summary Listen for the Server Bindable typically fired by a Gamemode Class
+---@function Listen for the Server Bindable typically fired by a Gamemode Class
 function GamemodeService:ConnectServerBindables()
     GamemodeService.Connections.ServerBindable = BindableEvent.Event:Connect(function(action)
         if action == "GameRestart" then

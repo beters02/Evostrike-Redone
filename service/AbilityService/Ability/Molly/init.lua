@@ -127,9 +127,9 @@ end
 --@summary Required Ability Function Use
 function Molly:Use()
 
-    PlayerActionsState:set("grenadeThrowing", true)
-    task.delay(self.Variables.usingDelay, function()
-        PlayerActionsState:set("grenadeThrowing", false)
+    PlayerActionsState:set(self.Player, "grenadeThrowing", self.Options.name)
+    task.delay(self.Options.usingDelay, function()
+        PlayerActionsState:set(self.Player, "grenadeThrowing", false)
     end)
 
     Sound.PlayReplicatedClone(AbilityObjects.Sounds.Equip, self.Player.Character.PrimaryPart)

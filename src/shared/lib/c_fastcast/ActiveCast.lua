@@ -3,11 +3,6 @@
 -- ActiveCast class type.
 -- The ActiveCast type represents a currently running cast.
 
-
------------------------------------------------------------
---------------------- TYPE DEFINITION ---------------------
------------------------------------------------------------
-
 -- This will inject all types into this context.
 local TypeDefs = require(script.Parent.TypeDefinitions)
 
@@ -22,17 +17,10 @@ type ActiveCast = TypeDefs.ActiveCast
 
 local typeof = require(script.Parent.TypeMarshaller)
 
------------------------------------------------------------
--------------------- MODULE DEFINITION --------------------
------------------------------------------------------------
-
 local ActiveCastStatic = {}
 ActiveCastStatic.__index = ActiveCastStatic
 ActiveCastStatic.__type = "ActiveCast" -- For compatibility with TypeMarshaller
 
------------------------------------------------------------
------------------------ STATIC DATA -----------------------
------------------------------------------------------------
 local RunService = game:GetService("RunService")
 local table = require(script.Parent.Table)
 local FastCast = nil -- Static reference to the FastCast static module.
@@ -53,9 +41,7 @@ local ERR_OBJECT_DISPOSED = "This ActiveCast has been terminated. It can no long
 -- This only applies for repeated piercings, e.g. the amount of parts that fit within the space of a single cast segment (NOT the whole bullet's trajectory over its entire lifetime)
 local MAX_PIERCE_TEST_COUNT = 100
 
------------------------------------------------------------
------------------------- UTILITIES ------------------------
------------------------------------------------------------
+
 
 -- Looks for a folder within workspace.Terrain that contains elements to visualize casts.
 local function GetFastCastVisualizationContainer(): Instance
@@ -71,9 +57,7 @@ local function GetFastCastVisualizationContainer(): Instance
 	return fcVisualizationObjects
 end
 
------------------------------------------------------------
------------------------- DEBUGGING ------------------------
------------------------------------------------------------
+
 
 -- Print that runs only if debug mode is active.
 local function PrintDebug(message: string)
@@ -109,9 +93,6 @@ function DbgVisualizeHit(atCF: CFrame, wasPierce: boolean): SphereHandleAdornmen
 	return adornment
 end
 
------------------------------------------------------------
------------------------- CORE CODE ------------------------
------------------------------------------------------------
 
 -- Thanks to zoebasil for supplying the velocity and position functions below. (I've modified these functions)
 -- I was having a huge issue trying to get it to work and I had overcomplicated a bunch of stuff.
@@ -414,10 +395,6 @@ local function SimulateCast(cast: ActiveCast, delta: number, expectingShortCall:
 	end
 end
 
------------------------------------------------------------
-------------------------- EXPORTS -------------------------
------------------------------------------------------------
-
 -- Ctor
 function ActiveCastStatic.new(caster: Caster, origin: Vector3, direction: Vector3, velocity: Vector3 | number, castDataPacket: FastCastBehavior): ActiveCast
 	if typeof(velocity) == "number" then
@@ -620,8 +597,6 @@ function ActiveCastStatic.SetStaticFastCastReference(ref)
 	FastCast = ref
 end
 
----- GETTERS AND SETTERS ----
-
 local function ModifyTransformation(cast: ActiveCast, velocity: Vector3?, acceleration: Vector3?, position: Vector3?)
 	local trajectories = cast.StateInfo.Trajectories
 	local lastTrajectory = trajectories[#trajectories]
@@ -707,8 +682,6 @@ function ActiveCastStatic:GetPosition(): Vector3
 	return GetPositionAtTime(self.StateInfo.TotalRuntime - currentTrajectory.StartTime, currentTrajectory.Origin, currentTrajectory.InitialVelocity, currentTrajectory.Acceleration)
 end
 
----- ARITHMETIC ----
-
 function ActiveCastStatic:AddVelocity(velocity: Vector3)
 	assert(getmetatable(self) == ActiveCastStatic, ERR_NOT_INSTANCE:format("AddVelocity", "ActiveCast.new(...)"))
 	assert(self.StateInfo.UpdateConnection ~= nil, ERR_OBJECT_DISPOSED)
@@ -726,8 +699,6 @@ function ActiveCastStatic:AddPosition(position: Vector3)
 	assert(self.StateInfo.UpdateConnection ~= nil, ERR_OBJECT_DISPOSED)
 	self:SetPosition(self:GetPosition() + position)
 end
-
----- STATE MODIFICATION ----
 
 function ActiveCastStatic:Pause()
 	assert(getmetatable(self) == ActiveCastStatic, ERR_NOT_INSTANCE:format("Pause", "ActiveCast.new(...)"))
