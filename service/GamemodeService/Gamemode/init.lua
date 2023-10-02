@@ -32,7 +32,7 @@ local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local Types = require(script.Parent:WaitForChild("Types"))
-local EnableMainMenuRemote = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("EnableMainMenu")
+local EnableMainMenuRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("EnableMainMenu")
 local Teams = game:GetService("Teams")
 local TeleportService = game:GetService("TeleportService")
 local RoundTimer = require(script.Parent:WaitForChild("RoundTimer"))
@@ -102,7 +102,7 @@ Gamemode.GameVariables = {
     game_rounds_to_win_game = 7,            -- if game_type == "Round
     kick_players_on_end = true,             -- Kick players or Restart game?
 
-    -- [[ WEAPONS & DAMAGING ]]
+    -- [[ BUY MENU, WEAPONS, ABILITIES & DAMAGING ]]
     can_players_damage = true,
     start_with_knife = true,
     auto_equip_strongest_weapon = true,
@@ -120,6 +120,9 @@ Gamemode.GameVariables = {
         utility = {"LongFlash", "Molly", "SmokeGrenade"}
     },
 
+    starting_weapons = false,
+    starting_abilities = false,
+
     buy_menu_enabled = false, -- if buy menu is enabled, buy_menu_starting_loadout must also be set.
     buy_menu_add_bought_instant = false, -- should the weapon/ability be added instantly or when they respawn
     buy_menu_starting_loadout = {
@@ -127,14 +130,9 @@ Gamemode.GameVariables = {
         Abilities = {primary = "Dash", secondary = "LongFlash"}
     },
 
-    starting_weapons = false,
-    starting_abilities = false,
-
     --[[starting_weapons = {
         secondary = "glock17", primary = "ak47"
     },]]
-    
-
     --[[starting_abilities = {
         "Dash"
     },]]
@@ -303,28 +301,27 @@ function Gamemode:Pause()
 end
 
 --@summary End the Gamemode.
-function Gamemode:Stop(bruteForce)
-    if not bruteForce and self.Status == "Stopped" then
-        error("Gamemode already stopped.")
-        return false
-    end
-
-    if self.GameData.RoundTimer and (self.GameData.RoundTimer.Status == "Started" or self.GameData.RoundTimer.Stats == "Paused") then
-        self:EndRound("Restart") -- Restart just does nothing for the RoundTimer result
-    end
+function Gamemode:Stop()
+    local _, err = pcall(function()
+        if self.GameData.RoundTimer then
+            self:EndRound("Restart") -- Restart just does nothing for the RoundTimer result
+        end
+    end)
+    if err then warn(err) end
 
     for _, v in pairs(self.GameData.Connections) do
         v:Disconnect()
     end
 
     self:GuiBlackScreenAll(0.5, 0.3, true)
-
     WeaponService:ClearAllPlayerInventories()
     self:PlayerRemoveAll()
-
-    task.spawn(function()
-        EvoMM:StopQueueService()
-    end)
+    workspace.Temp:ClearAllChildren()
+    if self.GameVariables.queueFrom_enabled then
+        task.spawn(function()
+            EvoMM:StopQueueService()
+        end)
+    end
 
     -- probably keep track of any Gamemode related workspace objects under a tag and clear those here
     return true
@@ -799,12 +796,17 @@ function Gamemode._PlayerDiedCore(self, player, killer)
         self.PlayerData[player.Name].BuyMenuConnections = nil
     end
 
-    Gamemode.PlayerDiedGameType[self.GameVariables.game_type](player, killer)
+    Gamemode.PlayerDiedGameType[self.GameVariables.game_type](self, player, killer)
 end
 
 --@summary Called when a PlayerDied and game_type == "Round"
 function Gamemode:PlayerDiedRound(player, killer)
-    if killer and killer == player or not killer then
+    if not killer then
+        self.GameData.Round.Status = "Running"
+        return true
+    end
+
+    if killer == player or not killer then
         if self.PlayerDiedIsKiller then
             return self:PlayerDiedIsKiller(player)
         end
@@ -839,11 +841,9 @@ end
 
 --@summary Called when a PlayerDied and game_type == "Score"
 function Gamemode:PlayerDiedScore(player, killer)
-    self.PlayerData[player.Name].Deaths += 1
-    if player == killer or player.Name == killer.Name then
+    if not killer or player == killer or player.Name == killer.Name then
         return
     end
-    self.PlayerData[killer.Name].Kills += 1
     self.PlayerData[killer.Name].Score += 1
     if self.PlayerData[killer.Name].Score >= self.GameVariables.game_score_to_win_game then
         self:GameOverWon(killer)
@@ -852,11 +852,6 @@ end
 
 --@summary Called when a PlayerDied and game_type == "Timer"
 function Gamemode:PlayerDiedTimer(player, killer)
-    self.PlayerData[player.Name].Deaths += 1
-    if player == killer or player.Name == killer.Name then
-        return
-    end
-    self.PlayerData[killer.Name].Kills += 1
 end
 
 --@summary Easy Access PlayerDied GameType Extracted Functions

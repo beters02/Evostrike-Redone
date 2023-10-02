@@ -1,8 +1,5 @@
 --[[ Bound to m_hud ]]
-
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 

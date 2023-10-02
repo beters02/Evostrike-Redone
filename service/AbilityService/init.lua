@@ -22,6 +22,7 @@ local Replicate = script.Events.Replicate
 local Molly = require(Ability:WaitForChild("Molly"))
 local LongFlash = require(Ability:WaitForChild("LongFlash"))
 local SmokeGrenade = require(Ability:WaitForChild("SmokeGrenade"))
+local HEGrenade = require(Ability:WaitForChild("HEGrenade"))
 
 AbilityService._Connections = {}
 AbilityService._PlayerData = {}
@@ -62,6 +63,8 @@ function AbilityService:Start()
             end
         elseif action == "SmokeGrenadeServerPop" then
             SmokeGrenade.ServerPop(...)
+        elseif action == "HEGrenadeServerPop" then
+            HEGrenade.ServerPop(...)
         end
     end)
 end

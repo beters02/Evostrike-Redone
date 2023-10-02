@@ -1,1 +1,0 @@
-require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService")):Connect()

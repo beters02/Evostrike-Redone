@@ -18,8 +18,8 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local VMSprings = require(Framework.shc_vmsprings.Location)
 local Math =  require(Framework.shfc_math.Location)
 local Tables = require(Framework.shfc_tables.Location)
-local viewmodelModel = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj"):WaitForChild("viewModel")
-local PlayerDied = ReplicatedStorage.main.sharedMainRemotes.deathBE
+local viewmodelModel = ReplicatedStorage.Assets.Models.viewModel
+local PlayerDied = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 
 local viewmodelModule = {}
 viewmodelModule.cfg = Tables.clone(require(script.Parent:WaitForChild("config")))

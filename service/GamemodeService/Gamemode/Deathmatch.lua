@@ -7,9 +7,43 @@ local Players = game:GetService("Players")
 local Deathmatch = {}
 
 Deathmatch.GameVariables = {
-    bots_enabled = false,
-    spawn_invincibility = 3, -- set to false for none
 
+    -- [[ GENERAL ]]
+    game_type = "Timer",
+    minimum_players = 1,
+    maximum_players = 8,
+    bots_enabled = false,
+    leaderboard_enabled = true,
+
+    -- [[ QUEUING ]]
+    queueFrom_enabled = true, -- Can a player queue while in this gamemode?
+    queueTo_enabled = false,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?
+
+    -- [[ MAIN MENU ]]
+    main_menu_type = "Lobby", -- the string that the main menu requests upon init, and that is sent out upon gamemode changed
+
+    -- [[ TEAMS ]]
+    teams_enabled = false,
+    players_per_team = 1,
+
+    -- [[ ROUDS ]]
+    round_length = 30 * 60,
+
+    -- [[ PLAYER SPAWNING ]]
+    opt_to_spawn = true,           -- should players spawn in automatically, or opt in on their own? (lobby)
+    characterAutoLoads = false,     -- roblox CharacterAutoLoads
+    respawns_enabled = true,
+    respawn_length = 3,
+    spawn_invincibility = 3,        -- set to false for none
+    starting_health = 100,
+    starting_shield = 50,
+    starting_helmet = true,
+
+    -- [[ GAME END CONDITIONS ]]
+    kick_players_on_end = false,             -- Kick players or Restart game?
+
+    -- [[ WEAPONS & DAMAGING ]]
+    can_players_damage = true,
     start_with_knife = true,
     auto_equip_strongest_weapon = true,
 
@@ -26,52 +60,15 @@ Deathmatch.GameVariables = {
         utility = {"LongFlash", "Molly", "SmokeGrenade"}
     },
 
+    buy_menu_enabled = true, -- if buy menu is enabled, buy_menu_starting_loadout must also be set.
+    buy_menu_add_bought_instant = false, -- should the weapon/ability be added instantly or when they respawn
     buy_menu_starting_loadout = {
         Weapons = {primary = "ak103", secondary = "glock17"},
         Abilities = {primary = "Dash", secondary = "LongFlash"}
     },
 
-    leaderboard_enabled = true,
     starting_weapons = false,
-    starting_abilities = false,
-
-    minimum_players = 1,
-    maximum_players = 8,
-    teams_enabled = false,
-    players_per_team = 1,
-    
-    opt_to_spawn = true,
-    buy_menu_enabled = true,
-    buy_menu_add_bought_instant = false,
-    main_menu_type = "Lobby",
-
-    characterAutoLoads = false,
-    respawns_enabled = true,
-    respawn_length = 3,
-
-    rounds_enabled = false,
-    round_length = 60 * 5,
-    round_end_condition = "scoreReached",
-    round_end_timer_assign = "roundScore",
-
-    -- if scoreReached
-    round_score_to_win_round = 1500,
-    round_score_increment_condition = "kills", -- other
-
-    overtime_enabled = false,
-
-    game_score_to_win_game = 1,
-    game_end_condition = "scoreReached",
-
-    queueFrom_enabled = true, -- Can a player queue while in this gamemode?
-    queueTo_enabled = false,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?
-
-    kick_players_on_end = false,
-
-    can_players_damage = true,
-    starting_health = 100,
-    starting_shield = 50,
-    starting_helmet = true
+    starting_abilities = false
 }
 
 function Deathmatch:PlayerGetSpawnPoint()

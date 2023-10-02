@@ -23,7 +23,8 @@ local profile = {
 		usp = "default",
 		acr = "default",
 		deagle = "default",
-		intervention = "default"
+		intervention = "default",
+		hkp30 = "default",
 	}},
 
     options = {

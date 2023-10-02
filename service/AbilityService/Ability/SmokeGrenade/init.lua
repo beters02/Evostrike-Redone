@@ -2,13 +2,12 @@ local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
-local Sound = require(Framework.Module.shared.sound.m_sound)
-local EvoPlayer = require(ReplicatedStorage.Modules.EvoPlayer)
+local Sound = require(Framework.Module.Sound)
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local FastCast = require(ReplicatedStorage.lib.c_fastcast)
 local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
-local States = require(Framework.Module.shared.states.m_states)
+local States = require(Framework.Module.m_states)
 local AbilityObjects = Framework.Service.AbilityService.Ability.SmokeGrenade.Assets
 local Math = require(Framework.Module.lib.fc_math)
 
@@ -195,6 +194,7 @@ function SmokeGrenade:FireGrenade(hit, isReplicated, origin, direction, thrower)
         origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.Options.startHeight, 0)
         direction = (hit.Position - origin).Unit
         Replicate:FireServer("GrenadeFire", self.Options.name, origin, direction)
+        SmokeGrenade.currentGrenadeObject:SetAttribute("IsOwner", not isReplicated)
     end
 
     local castParams = thrower and getOtherParams(thrower) or getLocalParams()
@@ -226,6 +226,7 @@ end
 function SmokeGrenade.RayHit(_, casterPlayer, _, result, velocity)
 
     local grenade = SmokeGrenade.currentGrenadeObject
+    local isOwner = grenade:GetAttribute("IsOwner")
 	local normal = result.Normal
 	local reflected = velocity - 2 * velocity:Dot(normal) * normal
     grenade.CanCollide = true
@@ -276,7 +277,7 @@ function SmokeGrenade.RayHit(_, casterPlayer, _, result, velocity)
         end
     end)
 
-    if casterPlayer == Players.LocalPlayer then
+    if isOwner then
         -- Send remote server request once popbindable has fired
         SmokeGrenade.popbindable.Event:Wait()
         Replicate:FireServer("SmokeGrenadeServerPop", grenade.Position)

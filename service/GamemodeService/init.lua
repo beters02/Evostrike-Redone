@@ -45,6 +45,8 @@ GamemodeService.Status = "Stopped"
 GamemodeService.Gamemode = "None"
 GamemodeService.Connections = {}
 
+local Guis = script.Gamemode.Guis
+
 --@summary Start GamemodeService.
 function GamemodeService:Start()
     if GamemodeService.Status == "Running" or GamemodeService.Status == "Initting" then
@@ -102,21 +104,35 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
     if currentGamemodeRunning then
         GamemodeService.Gamemode:Stop(true)
     end
-
     task.wait(.1)
 
     GamemodeService.Gamemode = _gamemode
-
     script:SetAttribute("CanDamage", _gamemode.GameVariables.can_players_damage or false)
-
     RemoteEvent:FireAllClients("GamemodeChanged", gamemode)
-
     if start then
         task.delay(0.5, function()
             _gamemode:Start(isInitialGamemode)
         end)
     end
     return _gamemode
+end
+
+--@summary Restart the current gamemode.
+function GamemodeService:RestartMode()
+    print("Gamemode Restarting!")
+    GamemodeService.Gamemode:Stop()
+    GamemodeService:RestartModeGui()
+    task.delay(1.5, function()
+        RemoteEvent:FireAllClients("GamemodeChanged", GamemodeService.Gamemode.Name)
+        GamemodeService.Gamemode = GamemodeClass.new(GamemodeService.Gamemode.Name)
+        GamemodeService.Gamemode:Start()
+    end)
+end
+
+function GamemodeService:RestartModeGui()
+    for _, v in pairs(Players:GetPlayers()) do
+        Guis.RestartingGameGui:Clone().Parent = v.PlayerGui
+    end
 end
 
 --@summary Listen & Wait for the Received Gamemode from a Player's TeleportData
@@ -174,6 +190,9 @@ function GamemodeService:ConnectClientRemotes()
             return true
         elseif action == "GetPlayerData" then
             return type(self.Gamemode) ~= "string" and self.Gamemode.PlayerData
+        elseif action == "RestartGamemode" then
+            GamemodeService:RestartMode()
+            return true
         end
     end
 end
@@ -183,8 +202,7 @@ function GamemodeService:ConnectServerBindables()
     GamemodeService.Connections.ServerBindable = BindableEvent.Event:Connect(function(action)
         if action == "GameRestart" then
             print('Restart Received!')
-            local currGamemode = GamemodeService.Gamemode.Name
-            GamemodeService:ChangeMode(currGamemode, true, false, true)
+            GamemodeService:RestartMode()
         end
     end)
 end

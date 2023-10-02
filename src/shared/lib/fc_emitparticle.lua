@@ -1,6 +1,6 @@
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Particles = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("obj"):WaitForChild("particles")
+local Particles = ReplicatedStorage:WaitForChild("Assets").Particles
 local module = {}
 
 local function darkenColor(co)
@@ -55,10 +55,10 @@ function module.Emit(instance, particle, emitParent, char, emitAmount, lifetime,
 	return c
 end
 
-function module.EmitParticles(instance, particles, ...)
+function module.EmitParticles(instance, particles, emitParent, char, emitAmount, lifetime, isBangableWall)
 	local clones = {}
 	for i, v in pairs(particles) do
-		module.Emit(instance, v, ...)
+		module.Emit(instance, v, emitParent, char, emitAmount, lifetime, isBangableWall)
 	end
 	return clones
 end

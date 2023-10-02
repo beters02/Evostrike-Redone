@@ -1,7 +1,8 @@
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local Sound = require(Framework.shm_sound.Location)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Sound = require(Framework.Module.Sound)
 
 local Dash = {
     Configuration = {
@@ -41,7 +42,7 @@ local Dash = {
 }
 
 if RunService:IsClient() then
-    Dash.PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
+    Dash.PlayerData = require(ReplicatedStorage.PlayerData.m_clientPlayerData)
 end
 
 --@override

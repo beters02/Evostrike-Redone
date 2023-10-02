@@ -46,6 +46,7 @@ function createItemFrame(player)
     if player == Players.LocalPlayer then
         frame.Name = "1_" .. frame.Name
     else
+        frame.Name = "2_" .. frame.Name
         -- destroy "kills, deaths, kdr" labels for all other frames
         for _, v in pairs(frame:GetChildren()) do
             if v.Name == "killsLabel" then

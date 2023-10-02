@@ -3,7 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local DiedEvent = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
+local DiedEvent = script:WaitForChild("Events").PlayerDiedRemote
 local GamemodeServiceModule = ReplicatedStorage.Services:WaitForChild("GamemodeService")
 
 local EvoPlayer = {}

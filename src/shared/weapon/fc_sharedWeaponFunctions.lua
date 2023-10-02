@@ -1,22 +1,21 @@
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local Strings = require(Framework.shfc_strings.Location)
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Tween = game:GetService("TweenService")
-local MainObj = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+
+local Strings = require(Framework.Module.lib.fc_strings)
+local Math = require(Framework.Module.lib.fc_math)
+local States = require(Framework.Module.m_states)
+local EvoPlayer = require(Framework.Module.EvoPlayer)
+local EmitParticle = require(Framework.Module.lib.fc_emitparticle)
+local BulletHitUtil = require(script.Parent:WaitForChild("fc_bulletHitUtil"))
+
+local MainObj = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Models")
 local BulletModel = MainObj:WaitForChild("Bullet")
 local BulletHole = MainObj:WaitForChild("BulletHole")
-local WeaponFolder = ReplicatedStorage:WaitForChild("weapon")
-local GlobalSounds = WeaponFolder:WaitForChild("obj"):WaitForChild("global"):WaitForChild("sounds") -- global weapon sounds (player hit, player killed, etc)
---local WeaponRemotes = WeaponFolder:WaitForChild("remote")
-local Particles = MainObj:WaitForChild("particles")
-local EmitParticle = require(Framework.shfc_emitparticle.Location)
-local Math = require(Framework.shfc_math.Location)
-local States = require(Framework.shm_states.Location)
-local EvoPlayer = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoPlayer"))
-local BulletHitUtil = require(script.Parent:WaitForChild("fc_bulletHitUtil"))
+local GlobalSounds = Framework.Service.WeaponService.ServiceAssets.Sounds
 local Replicate = Framework.Service.WeaponService.Events.Replicate
 
 local module = {}
@@ -391,7 +390,7 @@ end
 
 local movementConfig
 if RunService:IsClient() then
-	movementConfig = ReplicatedStorage.movement.get:InvokeServer()
+	movementConfig = ReplicatedStorage.Movement.get:InvokeServer()
 else
 	movementConfig = require(game.ServerScriptService.MovementScript.config)
 end

@@ -1,5 +1,6 @@
 local Lobby = {}
 Lobby.GameVariables = {
+    game_type = "Custom",
     minimum_players = 1,
     maximum_players = 12,
     teams_enabled = false,
@@ -19,8 +20,6 @@ Lobby.GameVariables = {
     respawn_length = 1,
 
     leaderboard_enabled = true,
-
-    rounds_enabled = false,
 
     queueFrom_enabled = true, -- Can a player queue while in this gamemode?
     queueTo_enabled = false,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?

@@ -7,15 +7,14 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Tables = require(ReplicatedStorage.lib.fc_tables)
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local States = require(Framework.Module.shared.states.m_states)
+local States = require(Framework.Module.m_states)
 local UIState = States.State("UI")
 local Types = require(script.Parent.Types)
-local SoundModule = require(Framework.Module.shared.sound.m_sound)
+local SoundModule = require(Framework.Module.Sound)
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
-local PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
+local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
-local DiedBind = ReplicatedStorage.main.sharedMainRemotes.deathBE
-local UserGameSettings = UserSettings():GetService("UserGameSettings")
+local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
 function Weapon.new(weapon: string, tool: Tool)

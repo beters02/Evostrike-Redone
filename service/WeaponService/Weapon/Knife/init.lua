@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local States = require(Framework.shm_states.Location)
+local States = require(Framework.Module.m_states)
 local Math = require(Framework.Module.lib.fc_math)
 local RaycastHitbox = require(Framework.Module.lib.c_raycasthitbox)
 

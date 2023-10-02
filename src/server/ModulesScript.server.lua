@@ -1,19 +1,19 @@
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerScriptService = game:GetService("ServerScriptService")
+local ServerStorage = game:GetService("ServerStorage")
 
-local StoredMapIDs = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("MapIDs"))
-local EvoMM = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
-local GamemodeService = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("GamemodeService"))
 local Framework = require(ReplicatedStorage.Framework)
-local statesloc = ReplicatedStorage:WaitForChild("states")
-local states = Framework.shm_states or Framework.__index(Framework, "shm_states")
-local statesMainRF: RemoteFunction = statesloc:WaitForChild("remote").mainrf
-local queueRemote = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("requestQueueFunction")
-local replicateSoundRemote = game:GetService("ReplicatedStorage"):WaitForChild("sound"):WaitForChild("remote"):WaitForChild("replicate")
+local StoredMapIDs = require(ServerStorage:WaitForChild("Stored"):WaitForChild("MapIDs"))
+local EvoMM = require(Framework.Module.EvoMMWrapper)
+local GamemodeService = require(Framework.Service.GamemodeService)
+local statesloc = Framework.Module.m_states
+local states = require(statesloc)
+local statesMainRF: RemoteFunction = statesloc.remote.RemoteFunction
+local queueRemote = Framework.Module.shared.Remotes.requestQueueFunction
+local replicateSoundRemote = Framework.Module.Sound:WaitForChild("remote").replicate
 
 --EvoConsole
-require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoConsole"))
+require(Framework.Module.EvoConsole)
 
 --EvoMM
 local requestActions = {

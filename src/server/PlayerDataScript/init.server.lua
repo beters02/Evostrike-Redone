@@ -1,9 +1,10 @@
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 
 local serverPlayerDataModule = require(script:WaitForChild("m_serverPlayerData"))
-local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("playerdata"):WaitForChild("remote")
+local Remotes = ReplicatedStorage.PlayerData.remote
 local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("AdminIDs"))
 
 Remotes.sharedPlayerDataRF.OnServerInvoke = function(player, action, ...)

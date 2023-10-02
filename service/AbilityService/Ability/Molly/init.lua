@@ -2,13 +2,13 @@ local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
-local Sound = require(Framework.Module.shared.sound.m_sound)
+local Sound = require(Framework.Module.Sound)
 local EvoPlayer = require(ReplicatedStorage.Modules.EvoPlayer)
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local FastCast = require(ReplicatedStorage.lib.c_fastcast)
 local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
-local States = require(Framework.Module.shared.states.m_states)
+local States = require(Framework.Module.m_states)
 local AbilityObjects = Framework.Service.AbilityService.Ability.Molly.Assets
 local Math = require(Framework.Module.lib.fc_math)
 

@@ -12,10 +12,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService('UserInputService')
 local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local States = require(Framework.shm_states.Location)
-local SoundModule = require(Framework.Module.shared.sound.m_sound)
-local Strings = require(Framework.shfc_strings.Location)
-local PlayerData = require(Framework.shm_clientPlayerData.Location)
+local States = require(Framework.Module.m_states)
+local SoundModule = require(Framework.Module.Sound)
+local Strings = require(Framework.Module.lib.fc_strings)
+local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
 local MovementState = States.State("Movement")
 
 -- [[ Define Local Variables ]]
@@ -152,7 +152,7 @@ for i, v in pairs(config) do
 end]]
 
 collider.Anchored = true
-local config = ReplicatedStorage.movement.get:InvokeServer()
+local config = ReplicatedStorage.Movement.get:InvokeServer()
 collider.Anchored = false
 
 --[[ init estrictions ]]

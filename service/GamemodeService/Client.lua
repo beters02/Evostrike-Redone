@@ -46,6 +46,12 @@ function GMClient:ChangeGamemode(gamemode: string)
     return GMClient.RemoteFunction:InvokeServer("ChangeGamemode", gamemode)
 end
 
+function GMClient:RestartGamemode()
+    local succ, err = self:VerifyDebounce()
+    if not succ then return false, err end
+    return GMClient.RemoteFunction:InvokeServer("RestartGamemode")
+end
+
 function GMClient:AttemptPlayerSpawn()
     local succ, err = self:VerifyDebounce()
     if not succ then return false, err end

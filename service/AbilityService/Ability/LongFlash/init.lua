@@ -5,8 +5,8 @@ local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local AbilityObjects = Framework.Service.AbilityService.Ability.LongFlash.Assets
-local Sound = require(Framework.shm_sound.Location)
-local States = require(Framework.Module.shared.states.m_states)
+local Sound = require(Framework.Module.Sound)
+local States = require(Framework.Module.m_states)
 local Math = require(Framework.Module.lib.fc_math)
 local FastCast = require(ReplicatedStorage.lib.c_fastcast)
 local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
@@ -98,7 +98,7 @@ local function initCaster()
             bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
         end
     end)
-    LongFlash.caster.CastTerminating:Connect(function()end)
+    LongFlash.caster.CastTerminating:Connect(function() if LongFlash.currentGrenadeObject then Debris:AddItem(LongFlash.currentGrenadeObject, 3) end end)
 end
 initCaster()
 
