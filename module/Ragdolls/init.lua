@@ -16,7 +16,10 @@ if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAtt
 ]]
 
 local config = {
-	ImpulseRandomValues = Vector2.new(130, 200)
+	ImpulseRandomValues = Vector2.new(130, 200),
+	MaxFrictionTorque = 0.3,
+	ElbowFrictionTorque = 1,
+	KneeFrictionTorque = 1
 }
 
 --
@@ -68,13 +71,13 @@ end
 -- Shared Functions
 
 function DiedRagdoll(character, ragdoll)
-	setCharCollision(character)
 
-    initRagdollParts(ragdoll)
+	setCharCollision(character)
+	initRagdollParts(ragdoll)
+	
     replaceCharacterWithRagdoll(character, ragdoll)
 	setRagCollision(ragdoll)
-
-	task.wait()
+	
 	impulseRagdoll(ragdoll, character)
 
 	Debris:AddItem(ragdoll, 6)
@@ -119,91 +122,145 @@ function createRagdollClone(character)
     return clone
 end
 
-function initRagdollParts(char)
+type rodTable = {
+	lRod: RodConstraint,
+	rRod: RodConstraint,
+	ltop: Attachment,
+	rtop: Attachment,
+	lbottom: Attachment,
+	rbottom:Attachment
+}
+local rodTable = {}
 
-	local charHum = char:WaitForChild("Humanoid")
+--@summary Generate a new rodTable
+function rodTable.new()
+	local self = {
+		lRod = Instance.new("RodConstraint"),
+		rRod = Instance.new("RodConstraint"),
+		ltop = Instance.new("Attachment"),
+		rtop = Instance.new("Attachment"),
+		lbottom = Instance.new("Attachment"),
+		rbottom = Instance.new("Attachment")
+	}
+	self.lRod.Visible = true
+	self.rRod.Visible = true
+	return self
+end
+
+function initPartTopRodPos(part, pos, size, rods)
+	rods.lRod.Parent = part
+	rods.rRod.Parent = part
+	rods.ltop.Parent = part
+	rods.rtop.Parent = part
+	rods.rtop.CFrame = CFrame.new(Vector3.new(pos.X - (size.X/2), pos.Y + (size.Y/2), pos.Z)) -- move rrod attatchment to the top right corner
+	rods.ltop.CFrame = CFrame.new(Vector3.new(pos.X + (size.X/2), pos.Y + (size.Y/2), pos.Z)) -- move lrod attatchment to the top left corner
+end
+
+function initPartBottomRodPos(part, pos, size, rods)
+	rods.lbottom.Parent = part
+	rods.rbottom.Parent = part
+	rods.rbottom.CFrame = CFrame.new(Vector3.new(pos.X - (size.X/2), pos.Y - (size.Y/2), pos.Z)) -- move rrod attatchment to the bottom right corner
+	rods.lbottom.CFrame = CFrame.new(Vector3.new(pos.X + (size.X/2), pos.Y - (size.Y/2), pos.Z)) -- move lrod attatchment to the bottom left corner
+end
+
+function finalizeRods(lRods: rodTable, rRods: rodTable)
+	for _, rods in ipairs({lRods, rRods}) do
+		rods.lRod.Attachment0 = rods.ltop
+		rods.lRod.Attachment1 = rods.lbottom
+		rods.rRod.Attachment0 = rods.rtop
+		rods.rRod.Attachment1 = rods.rbottom
+	end
+end
+
+function initRagdollParts(char)
+	local charHum = char.Humanoid
 	char.PrimaryPart = char.UpperTorso
 	charHum:Destroy()
 	char.HumanoidRootPart:Destroy()
-	if char:FindFirstChild("EnemyHighlight") then
+	--[[if char:FindFirstChild("EnemyHighlight") then
 		char.EnemyHighlight:Destroy()
-	end
+	end]]
 
-	for i, v in pairs(char:GetDescendants()) do
+	--local lRods = rodTable.new()
+	--local rRods = rodTable.new()
+
+	for _, v in pairs(char:GetDescendants()) do
 		if v:IsA("Motor6D") then
-			if not string.match(v.Name, "Ankle") and not string.match(v.Name, "Wrist") then 
+			if not string.match(v.Name, "Ankle") and not string.match(v.Name, "Wrist") then
 
 				local part0 = v.Part0
 				local joint_name = v.Name
 				local attachment0 = v.Parent:FindFirstChild(joint_name.."Attachment") or v.Parent:FindFirstChild(joint_name.."RigAttachment")
 				local attachment1 = part0:FindFirstChild(joint_name.."Attachment") or part0:FindFirstChild(joint_name.."RigAttachment")
+				--[[local _pos = part0.CFrame.Position
+				local _size = part0.Size
+
+				if v.Parent.Name == "RightUpperArm" then
+					initPartTopRodPos(v.Parent, _pos, _size, rRods)
+				elseif v.Parent.Name == "LeftUpperArm" then
+					initPartTopRodPos(v.Parent, _pos, _size, lRods)
+				elseif v.Parent.Name == "RightLowerArm" then
+					initPartBottomRodPos(v.Parent, _pos, _size, rRods)
+				elseif v.Parent.Name == "LeftLowerArm" then
+					initPartBottomRodPos(v.Parent, _pos, _size, lRods)
+				end]]
 
 				if attachment0 and attachment1 then
 					local socket = Instance.new("BallSocketConstraint", v.Parent)
 					socket.LimitsEnabled = true
 					socket.TwistLimitsEnabled = true
+					socket.MaxFrictionTorque = (joint_name == "Knee" and config.KneeFrictionTorque) or (joint_name == "Elbow" and config.ElbowFrictionTorque) or config.MaxFrictionTorque
 					socket.Attachment0, socket.Attachment1 = attachment0, attachment1
 					v:Destroy()
-				end	
+				end
 			end
 		end
-	end
 
+		--finalizeRods(lRods, rRods)
+	end
 end
 
 function setRagCollision(char)
-	for i, v in pairs(char:GetChildren()) do
+	for _, v in pairs(char:GetChildren()) do
 		if v:IsA("Part") or v:IsA("MeshPart") then
 			v.CollisionGroup = "Ragdolls"
 			v.CanCollide = true
-			if v:FindFirstChild(v.Name .. "_HB") then
-				v[v.Name.."_HB"].CollisionGroup = "Ragdolls"
-				v[v.Name.."_HB"].CanCollide = true
-			end
 		end
 	end
 end
 
 function setCharCollision(char)
-	for i, v in pairs(char:GetChildren()) do
+	for _, v in pairs(char:GetChildren()) do
 		if v:IsA("Part") or v:IsA("MeshPart") then
 			v.CanCollide = true
 			v.CollisionGroup = "DeadCharacters"
-			if v:FindFirstChild(v.Name .. "_HB") then
-				v[v.Name.."_HB"].CanCollide = true
-				v[v.Name.."_HB"].CollisionGroup = "DeadCharacters"
-			end
 		end
 	end
 end
 
 function resetCharCollision(char)
-	for i, v in pairs(char:GetChildren()) do
+	for _, v in pairs(char:GetChildren()) do
 		if v:IsA("Part") or v:IsA("MeshPart") then
 			v.CanCollide = true
-			if string.match(v.Name, "Foot") then
+			if v.Name == "LeftFoot" or v.Name == "RightFoot" then
 				v.CollisionGroup = "PlayerFeet"
 			else
 				v.CollisionGroup = "Players"
-			end
-			if v:FindFirstChild(v.Name .. "_HB") then
-				v[v.Name.."_HB"].CanCollide = true
-				v[v.Name.."_HB"].CollisionGroup = "Players"
 			end
 		end
 	end
 end
 
 function transparency(char, t)
-    for i, v in pairs(char:GetDescendants()) do
+    for _, v in pairs(char:GetDescendants()) do
         if (not v:IsA("Part") and not v:IsA("MeshPart")) or v.Name == "HumanoidRootPart" then continue end
         v.Transparency = t
     end
 end
 
 function replaceCharacterWithRagdoll(char, clone)
-	local highlight = char:FindFirstChild("EnemyHighlight")
-	if highlight then highlight.Parent = clone end
+	--local highlight = char:FindFirstChild("EnemyHighlight")
+	--if highlight then highlight.Parent = clone end
 	clone:SetPrimaryPartCFrame(char.PrimaryPart.CFrame)
 	transparency(char, 1)
 	clone.Parent = char.Parent
@@ -219,20 +276,13 @@ function impulseRagdoll(char, oldChar)
 		local bulletRagdollPartName = oldChar:GetAttribute("lastHitPart")
 
 		if not bulletRagdollPartName then bulletRagdollPart = char.Head else
-			if string.match(bulletRagdollPartName, "HB") then
-				bulletRagdollPart = char:FindFirstChild(string.gsub(bulletRagdollPartName, "_HB", ""))
-			else
-				bulletRagdollPart = char:FindFirstChild(bulletRagdollPartName)
-			end
+			bulletRagdollPart = char:FindFirstChild(bulletRagdollPartName)
 			if not bulletRagdollPart then bulletRagdollPart = char.Head end
 		end
 
-		task.spawn(function()
-			local randomVec3 = Vector3.one * impulseModifier
-			local impulseAmount = (Vector3.new(bulletRagdollNorm.X * randomVec3.X, 0, bulletRagdollNorm.Z * randomVec3.Z) * math.random(config.ImpulseRandomValues.X, config.ImpulseRandomValues.Y))
-			bulletRagdollPart:ApplyImpulse(impulseAmount)
-		end)
-
+		local randomVec3 = Vector3.one * impulseModifier
+		local impulseAmount = (Vector3.new(bulletRagdollNorm.X * randomVec3.X, 0, bulletRagdollNorm.Z * randomVec3.Z) * math.random(config.ImpulseRandomValues.X, config.ImpulseRandomValues.Y))
+		bulletRagdollPart:ApplyImpulse(impulseAmount)
 	end
 end
 

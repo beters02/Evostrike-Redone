@@ -212,8 +212,6 @@ function Weapon:Remove()
 end
 
 function Weapon:PrimaryFire()
-    print(PlayerActionsState)
-    print(PlayerActionsState:get(self.Player, "grenadeThrowing"))
     if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get(self.Player, "grenadeThrowing") then return end
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
     local fireTick = tick()
@@ -789,15 +787,11 @@ function Weapon:RegisterRecoils()
 		wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
 
 		if result then
-
-			--print(result)
+            -- pass ray information to server for verification and damage
+			self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 
 			-- register client shot for bullet/blood/sound effects
 			SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel)
-
-			-- pass ray information to server for verification and damage
-			self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
-			--weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 			return true
 		end
 
@@ -814,9 +808,9 @@ end
 
 --@return damageMultiplier (total damage reduction added up from recursion)
 function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageMultiplier, filter)
-
 	if not filter then filter = params.FilterDescendantsInstances end
 
+    -- filter params
 	local _p = RaycastParams.new()
 	_p.CollisionGroup = "Bullets"
 	_p.FilterDescendantsInstances = filter
@@ -838,7 +832,10 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
 	end
 
 	-- create bullethole at wall
-    SharedWeaponFunctions.CreateBulletHole(result)
+    task.spawn(function()
+        SharedWeaponFunctions.CreateBulletHole(result)
+    end)
+
 	--SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, nil, nil, true, self.Tool, self.ClientModel)
 
 	table.insert(filter, result.Instance)

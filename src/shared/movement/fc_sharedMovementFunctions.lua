@@ -9,7 +9,7 @@ module._storedMovementConfig = false
 -- Init Movement Var on Init
 function module.GetMovementVar()
     if RunService:IsServer() then
-        return require(game:GetService("ServerScriptService"):WaitForChild("movement").config.main)
+        return require(game:GetService("ServerScriptService"):WaitForChild("MovementScript").config)
     else
         -- This will be haneled in server.movement.get
         return ReplicatedStorage.Movement.get:InvokeServer()

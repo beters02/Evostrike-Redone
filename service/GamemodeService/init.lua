@@ -25,7 +25,7 @@ end
 local lobby_id = 11287185880        -- In the Lobby, the Gamemode will always be default_gamemode.
 local default_gamemode = "Deathmatch"
 
-local studio_gamemode = "Deathmatch"   -- The Gamemode that is automatically set in Studio.
+local studio_gamemode = "Range"   -- The Gamemode that is automatically set in Studio.
 
 --
 

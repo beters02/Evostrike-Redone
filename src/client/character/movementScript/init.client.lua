@@ -100,9 +100,7 @@ local Movement = {
 
 	dashing = false,
 	currentAirFriction = 0,
-
-
-	
+	sliding = false
 }
 Movement.__index = Movement
 
@@ -322,6 +320,7 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 	waitTime = waitTime or (Movement.dashing and dashModule.Configuration.landingMovementDecreaseLength) or Movement.landingMovementDecreaseLength
 	hitMaterial = hitMaterial or Enum.Material.Concrete
 	landing = true
+	Movement.sliding = false
 
 	Movement.RegisterGroundMaterialSounds(hitMaterial)
 
@@ -566,6 +565,11 @@ function Movement.ProcessMovement()
 	
 	if Movement.jumpGrace and tick() < Movement.jumpGrace and collider.Velocity.Y > 0 then
 		playerGrounded = false
+	end
+
+	if playerGrounded and hitNormal.Y < Movement.surfSlopeAngle then
+		playerGrounded = false
+		Movement.sliding = true
 	end
 
 	-- attempt resolve players flying out of the map

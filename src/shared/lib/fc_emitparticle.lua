@@ -55,7 +55,19 @@ function module.Emit(instance, particle, emitParent, char, emitAmount, lifetime,
 	return c
 end
 
+--@summary Emit particles.
+--		   Supply a Vector3 for "emitParent" and it will make it's own part to emit out of at the Vector3 Position provided.
 function module.EmitParticles(instance, particles, emitParent, char, emitAmount, lifetime, isBangableWall)
+	if typeof(emitParent) == "Vector3" then
+		local pos = emitParent
+		emitParent = Instance.new("Part")
+		emitParent.Size = Vector3.new(0.7,0.7,0.7)
+		emitParent.CFrame = CFrame.new(pos)
+		emitParent.Transparency = 1
+		emitParent.Anchored = true
+		emitParent.Parent = workspace.Temp
+		Debris:AddItem(emitParent, 8)
+	end
 	local clones = {}
 	for i, v in pairs(particles) do
 		module.Emit(instance, v, emitParent, char, emitAmount, lifetime, isBangableWall)

@@ -5,6 +5,7 @@ local module = {
 	friction = 7.5,
 	maxVelocity = 50,
 	maxMovementPitch = 0.6,
+	surfSlopeAngle = 0.55,
 
 	--[[ Ground Settings ]]
 	groundAccelerate = 10.2,

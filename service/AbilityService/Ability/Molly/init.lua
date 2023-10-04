@@ -6,15 +6,9 @@ local Sound = require(Framework.Module.Sound)
 local EvoPlayer = require(ReplicatedStorage.Modules.EvoPlayer)
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local FastCast = require(ReplicatedStorage.lib.c_fastcast)
 local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
-local States = require(Framework.Module.m_states)
 local AbilityObjects = Framework.Service.AbilityService.Ability.Molly.Assets
-local Math = require(Framework.Module.lib.fc_math)
-
-local PlayerActionsState
-if RunService:IsClient() then PlayerActionsState = States.State("PlayerActions") end
-
+local Caster = require(Framework.Service.AbilityService.Caster)
 
 local Molly = {
     Configuration = {
@@ -61,129 +55,14 @@ local Molly = {
             damp = 4,
             mass = 9
         }
-    }
+    },
+    AbilityObjects = AbilityObjects
 }
 
--- Create Caster
-local caster
-local castBehavior
-local function initCaster()
-	caster = FastCast.new()
-	castBehavior = FastCast.newBehavior()
-	castBehavior.Acceleration = Vector3.new(0, -workspace.Gravity * Molly.Configuration.gravityModifier, 0)
-	castBehavior.AutoIgnoreContainer = false
-	castBehavior.CosmeticBulletContainer = workspace.Temp
-	castBehavior.CosmeticBulletTemplate = AbilityObjects.Models.Grenade
-    Molly.caster = caster
-    Molly.castBehavior = castBehavior
-    local orientation = 0
-    Molly.caster.LengthChanged:Connect(function(_, lastPoint, direction, length, velocity, bullet) -- cast, lastPoint, direction, length, velocity, bullet
-        if bullet then
-            orientation += 2
-            local bulletLength = bullet.Size.Z/2
-            local offset = CFrame.new(0, 0, -(length - bulletLength)) * CFrame.Angles(math.rad(orientation * math.clamp(velocity.Magnitude, 5, 17)), 0, 0)
-            bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
-        end
-    end)
-    Molly.caster.CastTerminating:Connect(function()end)
-end
-initCaster()
+Caster.new(Molly)
 
-local function getLocalParams()
-    local locparams = RaycastParams.new()
-    locparams.CollisionGroup = "Grenades"
-    locparams.FilterType = Enum.RaycastFilterType.Exclude
-    locparams.FilterDescendantsInstances = {workspace.CurrentCamera, Players.LocalPlayer.Character}
-    return locparams
-end
-
-local function getOtherParams(thrower)
-    local otherCastParams = RaycastParams.new()
-    otherCastParams.CollisionGroup = "Grenades"
-    otherCastParams.FilterType = Enum.RaycastFilterType.Exclude
-    otherCastParams.FilterDescendantsInstances = {thrower.Character}
-    return otherCastParams
-end
-
---
-
---@override
---@summary Grenade Ability UseCore Override
-function Molly:UseCore()
-    if self.Variables.Uses <= 0 or self.Variables.OnCooldown then
-        return
-    end
-    self.Variables.Uses -= 1
-    self:Cooldown()
-
-    task.delay(self.Options.grenadeThrowDelay, function()
-        self:UseCameraRecoil()
-    end)
-    self:PlayEquipCameraRecoil()
-
-    self:Use()
-end
-
---@summary Required Ability Function Use
-function Molly:Use()
-
-    PlayerActionsState:set(self.Player, "grenadeThrowing", self.Options.name)
-    task.delay(self.Options.usingDelay, function()
-        PlayerActionsState:set(self.Player, "grenadeThrowing", false)
-    end)
-
-    Sound.PlayReplicatedClone(AbilityObjects.Sounds.Equip, self.Player.Character.PrimaryPart)
-    self:PlayEquipCameraRecoil()
-
-    -- make player hold grenade in left hand
-    workspace.CurrentCamera.viewModel.LeftEquipped:ClearAllChildren()
-
-    local grenadeClone = AbilityObjects.Models.Grenade:Clone()
-    grenadeClone.Parent = workspace.CurrentCamera.viewModel.LeftEquipped
-    if self.Options.clientGrenadeSize then
-        grenadeClone.Size = self.Options.clientGrenadeSize
-    else
-        grenadeClone.Size *= 0.8
-    end
-
-    local leftHand = self.Viewmodel.LeftHand
-    local m6 = leftHand:FindFirstChild("LeftGrip")
-    if m6 then m6:Destroy() end
-    m6 = Instance.new("Motor6D", leftHand)
-    m6.Name = "LeftGrip"
-    m6.Part0 = leftHand
-    m6.Part1 = grenadeClone
-    if self.Options.grenadeVMOffsetCFrame then m6.C0 = self.Options.grenadeVMOffsetCFrame end
-
-    -- play throw animation
-    self.Animations.throw:Play(self.Options.throwAnimFadeTime or 0.18)
-    self.Animations.serverthrow:Play(self.Options.throwAnimFadeTime or 0.18)
-
-    -- equip finish
-    task.delay(self.Animations.throw.Length + ((self.Options.throwAnimFadeTime or 0.18)*1.45), function()
-        if self.Variables._equipFinishCustomSpring then
-            self.Variables._equipFinishCustomSpring.Shove()
-        end
-    end)
-
-    task.wait(self.Options.grenadeThrowDelay or 0.01)
-
-    -- play throw sound
-    Sound.PlayReplicatedClone(AbilityObjects.Sounds.Throw, self.Player.Character.PrimaryPart)
-
-    -- long flash does CanUse on the server via remoteFunction: ThrowGrenade
-    local hit = self.Player:GetMouse().Hit
-
-    -- grenade usage
-    self:FireGrenade(hit)
-
-    -- destroy left hand clone
-    grenadeClone:Destroy()
-    m6:Destroy()
-end
-
---@summary Required Grenade Function FireGrenade
-function Molly:FireGrenade(hit, isReplicated, origin, direction, thrower)
+--@summary The Core FireGrenade function ran before FireGrenade. Not recommended to override
+function Molly:FireGrenadeCore(hit, isReplicated, origin, direction, thrower)
     if not isReplicated then
         local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
 
@@ -196,15 +75,16 @@ function Molly:FireGrenade(hit, isReplicated, origin, direction, thrower)
         local mray = workspace.CurrentCamera:ScreenPointToRay(mos.X, mos.Y)
         local initresult = workspace:Raycast(mray.Origin, mray.Direction * 7, params)
         if initresult then
-            Molly.currentGrenadeObject = AbilityObjects.Models.Grenade:Clone()
-            Molly.currentGrenadeObject.CollisionGroup = "Default"
-            Molly.currentGrenadeObject.CanCollide = true
-            Molly.currentGrenadeObject.Position = Players.LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, self.Options.startHeight, 0)
-            Molly.currentGrenadeObject.Velocity = startLv * 1.5
-            Molly.currentGrenadeObject.Parent = workspace
+            self.currentGrenadeObject = AbilityObjects.Models.Grenade:Clone()
+            self.currentGrenadeObject.CollisionGroup = "Default"
+            self.currentGrenadeObject.CanCollide = true
+            self.currentGrenadeObject.Position = Players.LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, self.Options.startHeight, 0)
+            self.currentGrenadeObject.Velocity = startLv * 1.5
+            self.currentGrenadeObject.Parent = workspace
+            self.currentGrenadeObject:SetAttribute("IsOwner", true)
 
             -- then we just send ray hit instead
-            self.RayHit(false, thrower, false, initresult, startLv * 1.5)
+            self.RayHit(false, thrower, false, initresult, startLv * 1.5, self.currentGrenadeObject)
             return
         end
 
@@ -213,19 +93,19 @@ function Molly:FireGrenade(hit, isReplicated, origin, direction, thrower)
         Replicate:FireServer("GrenadeFire", self.Options.name, origin, direction)
     end
 
-    local castParams = thrower and getOtherParams(thrower) or getLocalParams()
+    local castParams = thrower and Caster.getOtherParams(thrower) or Caster.getLocalParams()
     self.castBehavior.RaycastParams = castParams
 
     local cast = self.caster:Fire(origin, direction, self.Options.speed, self.castBehavior)
-    Molly.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
-    Molly.currentGrenadeObject:SetAttribute("IsOwner", not isReplicated)
+    self.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
+    self.currentGrenadeObject:SetAttribute("IsOwner", not isReplicated)
 end
 
 --@summary Required Grenade Function RayHit
 -- grenadeClassObject, casterPlayer, caster, result, velocity, behavior, playerLookNormal)
-function Molly.RayHit(_, casterPlayer, _, result, velocity)
+-- class, casterPlayer, casterThrower, result, velocity, grenade
+function Molly.RayHit(_, _, _, result, velocity, grenade)
 
-    local grenade = Molly.currentGrenadeObject
     local isOwner = grenade:GetAttribute("IsOwner")
     local explode = true
     local touchedConn
@@ -273,14 +153,6 @@ function Molly.RayHit(_, casterPlayer, _, result, velocity)
     end
 
     return
-end
-
---@summary Required Grenade Function PlayEquipCameraRecoil
-function Molly:PlayEquipCameraRecoil()
-    self.Variables.cameraLastEquipShove = Vector3.new(0.01, Math.absr(0.01), 0)
-    self.Variables.cameraSpring:shove(self.Variables.cameraLastEquipShove)
-    task.wait()
-    self.Variables.cameraSpring:shove(-self.Variables.cameraLastEquipShove)
 end
 
 -- [[ MOLLY SPECIFIC FUNCTIONS ]]

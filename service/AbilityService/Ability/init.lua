@@ -8,10 +8,20 @@ local Math = require(Framework.Module.lib.fc_math)
 local Ability = {}
 local Types = require(script.Parent.Types)
 local Tables = require(game.ReplicatedStorage:WaitForChild("lib").fc_tables)
+local Grenade = require(script:WaitForChild("Grenade"))
 Ability.__index = Ability
 
 function Ability.new(module: ModuleScript)
-    local self = setmetatable(Tables.clone(require(module)), Ability)
+
+    local self = Tables.clone(require(module))
+    if self.Configuration.isGrenade then
+        for i, v in pairs(Grenade) do
+            if not self[i] then
+                self[i] = v
+            end
+        end
+    end
+    self = setmetatable(self, Ability)
 
     self.Name = self.Configuration.name
     self.Slot = self.Configuration.inventorySlot

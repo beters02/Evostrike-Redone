@@ -95,6 +95,13 @@ end
 
 function module.CreateBulletHole(result)
 	if not result then return end
+	local isBangable = false
+	local _succ = pcall(function()
+		isBangable = result.IsBangableWall
+	end)
+	isBangable = _succ and isBangable or false
+	EmitParticle.EmitParticles(result.Instance, EmitParticle.GetBulletParticlesFromInstance(result.Instance), result.Position, nil, nil, nil, isBangable)
+
 	local normal = result.Normal
 	local cFrame = CFrame.new(result.Position, result.Position + normal)
 	local bullet_hole = BulletHole:Clone()
@@ -107,16 +114,6 @@ function module.CreateBulletHole(result)
 	weld.Parent = bullet_hole
 	bullet_hole.Parent = workspace.Temp
 
-	local isBangable = false
-	local _succ = pcall(function()
-		isBangable = result.IsBangableWall
-	end)
-	isBangable = _succ and isBangable or false
-	
-	task.spawn(function()
-		EmitParticle.EmitParticles(result.Instance, EmitParticle.GetBulletParticlesFromInstance(result.Instance), bullet_hole, nil, nil, nil, isBangable)
-	end)
-	
 	Debris:AddItem(bullet_hole, 8)
 	return bullet_hole
 end
@@ -395,6 +392,9 @@ else
 	movementConfig = require(game.ServerScriptService.MovementScript.config)
 end
 
+-- sharedMovementFunctions
+local smf = require(Framework.shfc_sharedMovementFunctions.Location)
+
 function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions)
 
 	local _x
@@ -418,7 +418,7 @@ function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions
 	end
 	
 	-- jump inacc
-	if not require(Framework.shfc_sharedMovementFunctions.Location).IsGrounded(player) then
+	if not smf.IsGrounded(player) then
 		baseAccuracy += weaponOptions.accuracy.jump
 	end
 	
@@ -507,25 +507,7 @@ function module.GetAccuracyAndRecoilDirection(player, mray, currVecRecoil, weapo
 	-- combine acc and vec recoil
 	acc += vecr
 
-	-- register client ray using
-	-- client accuracy and vector recoil for direction
-	--local direction = mray.Direction
-	--[[local direction = storedVar.originPoint and storedVar.originPoint.Direction
-	if direction then
-		--print(direction)
-		-- apply y offset according to new mouse pos
-		direction = Vector3.new(
-			mray.Direction.X,
-			direction.Y > 0 and direction.Y + (mray.Direction.Y + direction.Y)/1.8 or direction.Y + (mray.Direction.Y - direction.Y)/1.8,
-			mray.Direction.Z
-		)
-	else
-		direction = mray.Direction
-	end]]
-
 	local direction = mray.Direction
-	
-
 	return Vector3.new(direction.X + (acc.X)*(direction.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X)*(direction.Z > 0 and 1 or -1)).Unit
 end
 
