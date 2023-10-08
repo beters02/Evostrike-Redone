@@ -55,13 +55,10 @@ end
 	@param
 ]]
 
-function module:ApplyGroundVelocity(groundNormal)
+function module:ApplyGroundVelocity(groundNormal: Vector3)
 
 	-- update accel dir for sticking
 	local accelDir = self:GetAccelerationDirection(groundNormal)
-
-	-- apply friction
-	
 
 	-- friction
 	if self.currentAirFriction > 0 then
@@ -77,6 +74,13 @@ function module:ApplyGroundVelocity(groundNormal)
 	
 	-- apply acceleration
 	self:ApplyGroundAcceleration(accelDir, wishSpeed)
+
+	-- calculate slope movement
+	local forwardVelocity: Vector3 = groundNormal:Cross(CFrame.Angles(0,math.rad(90),0).LookVector * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z))
+	local yVel = forwardVelocity.Unit.Y * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z).Magnitude
+
+	-- apply slope movement
+	self.movementVelocity.Velocity = Vector3.new(self.movementVelocity.Velocity.X, yVel * (accelDir.Y < 0 and 1.2 or 1), self.movementVelocity.Velocity.Z)
 
 end
 
@@ -119,7 +123,7 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	
 	-- you can't change the properties of a Vector3, so we do x, y, z
 	newVelocity += (accelerationSpeed * wishDir)
-	newVelocity = Vector3.new(newVelocity.X, 0, newVelocity.Z)
+	newVelocity = Vector3.new(newVelocity.X, self.sliding and newVelocity.Y or 0, newVelocity.Z)
 
 	-- detect if player is against wall
 	newVelocity = self:ApplyAntiSticking(newVelocity)
@@ -166,7 +170,8 @@ function module:ApplyAirVelocity()
 	end
 	
 	-- apply acceleration
-	self:ApplyAirAcceleration(accelDir, wishSpeed)
+	local accelspeed = self:ApplyAirAcceleration(accelDir, wishSpeed)
+	self:ApplyAntiSticking(self.movementVelocity.Velocity, self.dashing, accelspeed)
 end
 
 --[[
@@ -184,15 +189,15 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	
 	-- apply anti sticking on collider velocity
 	-- resolves head collision ** THIS IS A MUST HAVE **
-	self.collider.Velocity = self:ApplyAntiSticking(self.collider.Velocity, true, wishSpeed - self.collider.Velocity.Magnitude)
-
+	--self.collider.Velocity = self:ApplyAntiSticking(self.collider.Velocity, true, wishSpeed - self.collider.Velocity.Magnitude)
+	
 	-- if no inputs, don't accelerate
 	if wishDir.Magnitude == 0 then
 		if self.dashing then
 			wishDir = self.collider.Velocity.Unit * wishSpeed
 		else
-			self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, true, wishSpeed - self.movementVelocity.Velocity.Magnitude)
-			return
+			--self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, true, wishSpeed - self.movementVelocity.Velocity.Magnitude)
+			return wishSpeed - self.movementVelocity.Velocity.Magnitude
 		end
 	end
 
@@ -202,8 +207,7 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 
 	-- if we're not adding speed, dont do anything
 	if addSpeed <= 0 then
-		self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, self.dashing, addSpeed)
-		return
+		return addSpeed
 	end
 
 	-- get accelSpeed, cap at addSpeed
@@ -213,15 +217,16 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	local newVelocity = self.movementVelocity.Velocity + accelerationSpeed * wishDir
 
 	-- if a wall was hit, dont accelerate in that direction
-	newVelocity = self:ApplyAntiSticking(newVelocity, self.dashing, addSpeed)
+	--newVelocity = self:ApplyAntiSticking(newVelocity, self.dashing, addSpeed)
 
 	-- apply acceleration
 	self.movementVelocity.Velocity = newVelocity
 
-	if self.dashing then
+	--[[if self.dashing then
 		task.wait()
-	end
-
+	end]]
+	
+	return addSpeed
 end
 
 --[[

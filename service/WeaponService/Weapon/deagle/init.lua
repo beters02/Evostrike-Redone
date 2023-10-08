@@ -4,14 +4,14 @@ local wepconfig = {
 		inventorySlot = "secondary",
 		automatic = false,
 		
-		equipLength = 1,
+		equipLength = 0.7,
 		fireRate = 0.16, -- 375 rpm
-		reloadLength = 1.5,
+		reloadLength = 0.7,
 		recoilReset = 0.5,
 		
 		fireVectorCameraOffset = Vector2.new(10, 10), -- Side, Up
 		fireAccuracyCameraOffset = Vector2.new(10, 10), -- Side, Up
-		fireVectorCameraMax = Vector3.new(0.02, 0.013, 0.1), -- Up, Side
+		fireVectorCameraMax = Vector3.new(0.017, 0.015, 0.1), -- Up, Side
 		
 		ammo = {
 			magazine = 7,
@@ -20,7 +20,7 @@ local wepconfig = {
 		
 		accuracy = {
 			firstBullet = 5,
-			base = 25,
+			base = 35,
 			crouch = 35,
 			spray = 2,
 			walk = 170,
@@ -35,9 +35,9 @@ local wepconfig = {
 
 			headMultiplier = 3.3,
 			legMultiplier = 0.9,
-			damageFalloffPerMeter = 0.8,
-			damageFalloffDistance = 27,
-			enableHeadFalloff = true,
+			damageFalloffPerMeter = 1,
+			damageFalloffDistance = 24,
+			enableHeadFalloff = false,
 			headFalloffMultiplier = 0.6, -- Multiplier applied to damage falloff per meter
 			
 			helmetMultiplier = 1,

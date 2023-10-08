@@ -1,0 +1,9 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "RemoteFunction",
+        "ClassName": "RemoteFunction"
+      }
+    ]
+  }

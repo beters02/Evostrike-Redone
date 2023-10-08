@@ -42,6 +42,7 @@ local function hasRequiredParts()
 end
 
 local function updateYourTorsoVar()
+	if not character or not character.Humanoid or character.Humanoid.Health <= 0 then return end
 	if isCamOnChar() and hasRequiredParts() then
 		localRemote:FireServer(getPoint(), torso.CFrame.LookVector, cam.CFrame.LookVector, neckOriginC0, waistOriginC0, lShoulderC0, rShoulderC0) -- send variables off to have Packets created when receieved.
 	end
@@ -58,18 +59,20 @@ end
 
 RunService.RenderStepped:Connect(function()
 	for _, plr in pairs(Players:GetPlayers()) do
-		local packet = plr.Character and StoredPackets[plr.Name]
-		if packet then
-			local _mNeck = 	plr.Character.Head.Neck
-			local _mWaist = plr.Character.UpperTorso.Waist
-			local _mR = 	plr.Character.RightUpperArm.RightShoulder
-			local _mL = 	plr.Character.LeftUpperArm.LeftShoulder
+		pcall(function()
+			local packet = (plr.Character and plr.Character.Humanoid.Health > 0) and StoredPackets[plr.Name]
+			if packet then
+				local _mNeck = 	plr.Character.Head.Neck
+				local _mWaist = plr.Character.UpperTorso.Waist
+				local _mR = 	plr.Character.RightUpperArm.RightShoulder
+				local _mL = 	plr.Character.LeftUpperArm.LeftShoulder
 
-			_mNeck.C0 = 	_mNeck.C0:lerp(packet.neckC0 * GetThetaAngles(1, packet), 0.5 / 2)
-			_mWaist.C0 = 	_mWaist.C0:lerp(packet.waistC0 * GetThetaAngles(0.5, packet), 0.5 / 2)
-			_mR.C0 = 		_mR.C0:lerp(packet.rightShoulderC0 * GetThetaAngles(0.5, packet), 0)
-			_mL.C0 = 		_mL.C0:lerp(packet.leftShoulderCO * GetThetaAngles(0.5, packet), 0)
-		end
+				_mNeck.C0 = 	_mNeck.C0:lerp(packet.neckC0 * GetThetaAngles(1, packet), 0.5 / 2)
+				_mWaist.C0 = 	_mWaist.C0:lerp(packet.waistC0 * GetThetaAngles(0.5, packet), 0.5 / 2)
+				_mR.C0 = 		_mR.C0:lerp(packet.rightShoulderC0 * GetThetaAngles(0.5, packet), 0)
+				_mL.C0 = 		_mL.C0:lerp(packet.leftShoulderCO * GetThetaAngles(0.5, packet), 0)
+			end
+		end)
 	end
 end)
 

@@ -37,10 +37,17 @@
     },
 
     "ServerStorage": {
+      "$path": "src/serverstorage",
+      "$ignoreUnknownInstances": true,
       "Plugins": {
         "$path": "plugin",
         "$ignoreUnknownInstances": true
       }
+    },
+
+    "ReplicatedFirst": {
+      "$path": "src/replicatedfirst",
+      "$ignoreUnknownInstances": true
     }
   }
 }

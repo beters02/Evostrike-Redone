@@ -12,10 +12,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService('UserInputService')
 local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local States = require(Framework.shm_states.Location)
-local SoundModule = require(Framework.Module.shared.sound.m_sound)
-local Strings = require(Framework.shfc_strings.Location)
-local PlayerData = require(Framework.shm_clientPlayerData.Location)
+local States = require(Framework.Module.m_states)
+local SoundModule = require(Framework.Module.Sound)
+local Strings = require(Framework.Module.lib.fc_strings)
+local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
 local MovementState = States.State("Movement")
 
 -- [[ Define Local Variables ]]
@@ -100,9 +100,7 @@ local Movement = {
 
 	dashing = false,
 	currentAirFriction = 0,
-
-
-	
+	sliding = false
 }
 Movement.__index = Movement
 
@@ -152,7 +150,7 @@ for i, v in pairs(config) do
 end]]
 
 collider.Anchored = true
-local config = ReplicatedStorage.movement.get:InvokeServer()
+local config = ReplicatedStorage.Movement.get:InvokeServer()
 collider.Anchored = false
 
 --[[ init estrictions ]]
@@ -235,7 +233,7 @@ function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	end
 
 	-- Running Sounds
-	if Movement.movementVelocity.Velocity.Magnitude > Movement.walkMoveSpeed + math.round((Movement.groundMaxSpeed - Movement.walkMoveSpeed)/2) then
+	if Movement.movementVelocity.Velocity.Magnitude > Movement.crouchMoveSpeed then
 		if not runsnd.IsPlaying then SoundModule.PlayReplicated(runsnd, serverRunVolume) end
 	else
 		if runsnd.IsPlaying then SoundModule.StopReplicated(runsnd) end
@@ -322,6 +320,7 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 	waitTime = waitTime or (Movement.dashing and dashModule.Configuration.landingMovementDecreaseLength) or Movement.landingMovementDecreaseLength
 	hitMaterial = hitMaterial or Enum.Material.Concrete
 	landing = true
+	Movement.sliding = false
 
 	Movement.RegisterGroundMaterialSounds(hitMaterial)
 
@@ -566,6 +565,11 @@ function Movement.ProcessMovement()
 	
 	if Movement.jumpGrace and tick() < Movement.jumpGrace and collider.Velocity.Y > 0 then
 		playerGrounded = false
+	end
+
+	if playerGrounded and hitNormal.Y < Movement.surfSlopeAngle then
+		playerGrounded = false
+		Movement.sliding = true
 	end
 
 	-- attempt resolve players flying out of the map

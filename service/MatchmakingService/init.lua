@@ -214,14 +214,6 @@ end
 
 -- End private connections
 
-
---- Gets or creates the top level singleton of the matchmaking service.
--- @param options - The options to provide matchmaking service.
--- @param options.MajorVersion - The major version to obtain.
--- @param options.DisableRatingSystem - Whether or not to disable the rating system.
--- @param options.DisableExpansions - Whether or not to disable queue expansions.
--- @param options.DisableGlobalEvents - Whether or not to disable global events.
--- @return MatchmakingService - The matchmaking service singleton.
 type Singleton = {
   AddGamePlace: (self: {}, name: string, placeId: number) -> ();
   SetMatchmakingInterval: (self: {}, newInterval: number) -> ();

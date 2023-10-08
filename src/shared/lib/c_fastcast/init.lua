@@ -42,9 +42,7 @@
 	Make the caster once, then use the caster to fire your bullets. Do not make a caster for each bullet.
 --]]
 
------------------------------------------------------------
--------------------- MODULE DEFINITION --------------------
------------------------------------------------------------
+
 
 local FastCast = {}
 FastCast.DebugLogging = false
@@ -58,9 +56,7 @@ FastCast.HighFidelityBehavior = {
 	Always = 3
 }
 
------------------------------------------------------------
------------------------ STATIC DATA -----------------------
------------------------------------------------------------
+
 local ActiveCastStatic = require(script.ActiveCast)
 local Signal = require(script.Signal)
 local table = require(script.Table)
@@ -77,9 +73,6 @@ local FC_VIS_OBJ_NAME = "FastCastVisualizationObjects"
 -- Format params: N/A
 local ERR_OBJECT_DISPOSED = "This Caster has been disposed. It can no longer be used."
 
------------------------------------------------------------
---------------------- TYPE DEFINITION ---------------------
------------------------------------------------------------
 
 -- This will inject all types into this context.
 local TypeDefs = require(script.TypeDefinitions)
@@ -92,16 +85,10 @@ type CastStateInfo = TypeDefs.CastStateInfo
 type CastRayInfo = TypeDefs.CastRayInfo
 type ActiveCast = TypeDefs.ActiveCast
 
------------------------------------------------------------
------------------------ STATIC CODE -----------------------
------------------------------------------------------------
 
 -- Tell the ActiveCast factory module what FastCast actually *is*.
 ActiveCastStatic.SetStaticFastCastReference(FastCast)
 
------------------------------------------------------------
-------------------------- EXPORTS -------------------------
------------------------------------------------------------
 
 -- Constructor.
 function FastCast.new()

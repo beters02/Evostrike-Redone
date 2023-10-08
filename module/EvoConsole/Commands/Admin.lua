@@ -39,7 +39,7 @@ Commands.SetCameraMode = {
 	Description = "Set to LockFirstPerson or Classic",
 	Public = false,
 	
-	Function = function(self, _, cameraType)
+	Function = function(_, _, cameraType)
 		local t = Enum.CameraMode[cameraType] or false
 		if not t then return end
 		
@@ -51,7 +51,7 @@ Commands.AddWeapon = {
 	Description = "Add specified weapon to your inventory",
 	Public = false,
 	
-	Function = function(self, player, weapon)
+	Function = function(_, player, weapon)
 		require(game:GetService("ReplicatedStorage").Services.WeaponService):AddWeapon(player, weapon)
 	end
 }
@@ -60,8 +60,23 @@ Commands.AddAbility = {
 	Description = "Add specified ability to your inventory",
 	Public = false,
 
-	Function = function(self, player, ability)
+	Function = function(_, player, ability)
 		require(game:GetService("ReplicatedStorage").Services.AbilityService):AddAbility(player, ability)
+	end
+}
+
+Commands.GM = {
+	Description = "Gamemode management commands.<br /> 'get', 'set', 'restart'",
+	public = false,
+
+	Function = function(_, _, action, gamemode)
+		if action == "get" then
+			print(GamemodeService.Gamemode and GamemodeService.Gamemode.Name or "None")
+		elseif action == "set" then
+			GamemodeService:ChangeGamemode(gamemode)
+		elseif action == "restart" then
+			GamemodeService:RestartGamemode()
+		end
 	end
 }
 
@@ -77,12 +92,8 @@ Commands.Gamemode = {
 	end,
 }
 
-Commands.gm_forcestart = {
-	Description = "Force Start a gamemode with Bots filling in for missing players.",
+Commands.gm_restart = {
 
-	Function = function()
-		game:GetService("ReplicatedStorage").gamemode.remote.ForceStart:FireServer()
-	end
 }
 
 Commands.Map = {

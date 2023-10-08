@@ -30,6 +30,25 @@ function Math.vector3Max(vec: Vector3, max: number)
 	return Vector3.new(new.X, new.Y, new.Z)
 end
 
+--v3clamp
+-- Clamp all vector3 values
+function Math.vector3Clamp(vec: Vector3, min: number, max: number)
+	local new = {X = vec.X, Y = vec.Y, Z = vec.Z}
+	for i, v in pairs(new) do
+		new[i] = math.clamp(v, min, max)
+	end
+	return Vector3.new(new.X, new.Y, new.Z)
+end
+
+--fv3clamp
+function Math.fixedVector3Clamp(vec: Vector3, min: number, max: number)
+	local new = {X = vec.X, Y = vec.Y, Z = vec.Z}
+	for i, v in pairs(new) do
+		new[i] = Math.fixedClamp(v, min, max)
+	end
+	return Vector3.new(new.X, new.Y, new.Z)
+end
+
 --absr
 -- Randomly multiply by 1 or -1
 function Math.absValueRandom(value: number): number
@@ -50,6 +69,10 @@ end
 
 function Math.fixedMax(value, m)
 	return value > 0 and math.max(value, m) or math.max(value, -m)
+end
+
+function Math.fixedClamp(value, min, max)
+	return value > 0 and math.clamp(value, min, max) or math.clamp(value, -max, -min)
 end
 
 Math.maxOrMinAbs = Math.fixedMin
@@ -116,5 +139,7 @@ Math.v3add = Math.vector3Add
 Math.v3sub = Math.vector3Sub
 Math.norm2face = Math.normalToFace
 Math.face2norm = Math.faceToNormal
+Math.v3clamp = Math.vector3Clamp
+Math.fv3clamp = Math.fixedVector3Clamp
 
 return Math

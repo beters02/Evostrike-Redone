@@ -1,0 +1,25 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "requestQueueFunction",
+        "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "EnableMainMenu",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "playerDamagedEvent",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "playerLoadedEvent",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "setShieldAll",
+        "ClassName": "BindableEvent"
+      }
+    ]
+  }

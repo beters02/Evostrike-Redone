@@ -17,7 +17,7 @@ function crosshair.initialize(hud)
 
     -- this is a brute force way to get client stored player data
     -- alternatively, you could use module:Get() or module:GetAsync()
-    local clientPlayerDataModule = require(Framework.shm_clientPlayerData.Location)
+    local clientPlayerDataModule = require(ReplicatedStorage.PlayerData.m_clientPlayerData)
 	if not clientPlayerDataModule.stored then repeat task.wait() until clientPlayerDataModule.stored end
     self.clientModule = clientPlayerDataModule
 

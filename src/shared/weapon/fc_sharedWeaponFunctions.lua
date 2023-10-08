@@ -1,22 +1,21 @@
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local Strings = require(Framework.shfc_strings.Location)
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Tween = game:GetService("TweenService")
-local MainObj = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+
+local Strings = require(Framework.Module.lib.fc_strings)
+local Math = require(Framework.Module.lib.fc_math)
+local States = require(Framework.Module.m_states)
+local EvoPlayer = require(Framework.Module.EvoPlayer)
+local EmitParticle = require(Framework.Module.lib.fc_emitparticle)
+local BulletHitUtil = require(script.Parent:WaitForChild("fc_bulletHitUtil"))
+
+local MainObj = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Models")
 local BulletModel = MainObj:WaitForChild("Bullet")
 local BulletHole = MainObj:WaitForChild("BulletHole")
-local WeaponFolder = ReplicatedStorage:WaitForChild("weapon")
-local GlobalSounds = WeaponFolder:WaitForChild("obj"):WaitForChild("global"):WaitForChild("sounds") -- global weapon sounds (player hit, player killed, etc)
---local WeaponRemotes = WeaponFolder:WaitForChild("remote")
-local Particles = MainObj:WaitForChild("particles")
-local EmitParticle = require(Framework.shfc_emitparticle.Location)
-local Math = require(Framework.shfc_math.Location)
-local States = require(Framework.shm_states.Location)
-local EvoPlayer = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoPlayer"))
-local BulletHitUtil = require(script.Parent:WaitForChild("fc_bulletHitUtil"))
+local GlobalSounds = Framework.Service.WeaponService.ServiceAssets.Sounds
 local Replicate = Framework.Service.WeaponService.Events.Replicate
 
 local module = {}
@@ -96,6 +95,13 @@ end
 
 function module.CreateBulletHole(result)
 	if not result then return end
+	local isBangable = false
+	local _succ = pcall(function()
+		isBangable = result.IsBangableWall
+	end)
+	isBangable = _succ and isBangable or false
+	EmitParticle.EmitParticles(result.Instance, EmitParticle.GetBulletParticlesFromInstance(result.Instance), result.Position, nil, nil, nil, isBangable)
+
 	local normal = result.Normal
 	local cFrame = CFrame.new(result.Position, result.Position + normal)
 	local bullet_hole = BulletHole:Clone()
@@ -108,16 +114,6 @@ function module.CreateBulletHole(result)
 	weld.Parent = bullet_hole
 	bullet_hole.Parent = workspace.Temp
 
-	local isBangable = false
-	local _succ = pcall(function()
-		isBangable = result.IsBangableWall
-	end)
-	isBangable = _succ and isBangable or false
-	
-	task.spawn(function()
-		EmitParticle.EmitParticles(result.Instance, EmitParticle.GetBulletParticlesFromInstance(result.Instance), bullet_hole, nil, nil, nil, isBangable)
-	end)
-	
 	Debris:AddItem(bullet_hole, 8)
 	return bullet_hole
 end
@@ -391,10 +387,13 @@ end
 
 local movementConfig
 if RunService:IsClient() then
-	movementConfig = ReplicatedStorage.movement.get:InvokeServer()
+	movementConfig = ReplicatedStorage.Movement.get:InvokeServer()
 else
-	movementConfig = require(game:GetService("ServerScriptService"):WaitForChild("movement"):WaitForChild("config"):WaitForChild("main"))
+	movementConfig = require(game.ServerScriptService.MovementScript.config)
 end
+
+-- sharedMovementFunctions
+local smf = require(Framework.shfc_sharedMovementFunctions.Location)
 
 function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions)
 
@@ -419,7 +418,7 @@ function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions
 	end
 	
 	-- jump inacc
-	if not require(Framework.shfc_sharedMovementFunctions.Location).IsGrounded(player) then
+	if not smf.IsGrounded(player) then
 		baseAccuracy += weaponOptions.accuracy.jump
 	end
 	
@@ -508,25 +507,7 @@ function module.GetAccuracyAndRecoilDirection(player, mray, currVecRecoil, weapo
 	-- combine acc and vec recoil
 	acc += vecr
 
-	-- register client ray using
-	-- client accuracy and vector recoil for direction
-	--local direction = mray.Direction
-	--[[local direction = storedVar.originPoint and storedVar.originPoint.Direction
-	if direction then
-		--print(direction)
-		-- apply y offset according to new mouse pos
-		direction = Vector3.new(
-			mray.Direction.X,
-			direction.Y > 0 and direction.Y + (mray.Direction.Y + direction.Y)/1.8 or direction.Y + (mray.Direction.Y - direction.Y)/1.8,
-			mray.Direction.Z
-		)
-	else
-		direction = mray.Direction
-	end]]
-
 	local direction = mray.Direction
-	
-
 	return Vector3.new(direction.X + (acc.X)*(direction.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X)*(direction.Z > 0 and 1 or -1)).Unit
 end
 

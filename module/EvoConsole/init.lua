@@ -36,7 +36,7 @@ function EvoConsole.ServerOnly() if not RunService:IsServer() then warn("This ca
 -- Create the Console GUI and create command modules dependant on player command access
 function EvoConsole:_instantiateConsole(player)
     if not EvoConsole.ServerOnly() then return end
-    local Permissions = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminIDs"))
+    local Permissions = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("AdminIDs"))
 
     local gui = self.ConsoleTemplate:Clone()
     gui.Enabled = false

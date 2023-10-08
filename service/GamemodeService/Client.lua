@@ -11,7 +11,7 @@ GMClient.RemoteFunction = script.Parent:WaitForChild("RemoteFunction")
 GMClient.IsServiceInit = false
 GMClient.Connections = {}
 
-function _clientRemoteEvent(action)
+function _clientRemoteEvent(action, ...)
     if action == "Init" then
         GMClient.IsServiceInit = true
     end
@@ -44,6 +44,12 @@ function GMClient:ChangeGamemode(gamemode: string)
     local succ, err = self:VerifyDebounce()
     if not succ then return false, err end
     return GMClient.RemoteFunction:InvokeServer("ChangeGamemode", gamemode)
+end
+
+function GMClient:RestartGamemode()
+    local succ, err = self:VerifyDebounce()
+    if not succ then return false, err end
+    return GMClient.RemoteFunction:InvokeServer("RestartGamemode")
 end
 
 function GMClient:AttemptPlayerSpawn()

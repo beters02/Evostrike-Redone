@@ -18,8 +18,8 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local VMSprings = require(Framework.shc_vmsprings.Location)
 local Math =  require(Framework.shfc_math.Location)
 local Tables = require(Framework.shfc_tables.Location)
-local viewmodelModel = ReplicatedStorage:WaitForChild("main"):WaitForChild("obj"):WaitForChild("viewModel")
-local PlayerDied = ReplicatedStorage.main.sharedMainRemotes.deathBE
+local viewmodelModel = ReplicatedStorage.Assets.Models.viewModel
+local PlayerDied = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 
 local viewmodelModule = {}
 viewmodelModule.cfg = Tables.clone(require(script.Parent:WaitForChild("config")))
@@ -69,7 +69,7 @@ function viewmodelModule:initDefaultSprings()
     self.springs = {}
     self.springs.bob = VMSprings:new(9, 50, 5, 3.5) --m, f, d, s
     self.springs.charMoveSway = VMSprings:new(9, 50, 4, 4)
-    self.springs.mouseSway = VMSprings:new(9, 60, 4, 4)
+    self.springs.mouseSway = VMSprings:new(9, 40, 2.5, 5)
     self.springs.mouseSwayRotation = VMSprings:new(9, 50, 4, 4)
 end
 
@@ -219,16 +219,17 @@ function viewmodelModule:mouseSway(dt)
 	--shove by mouseDelta
 	local MouseDelta = UserInputService:GetMouseDelta()
 	-- get position shove
-    local shove = Vector3.new((-MouseDelta.X  / 500), MouseDelta.Y / 200, 0)
+    local shove = Vector3.new((-MouseDelta.X  / 470), MouseDelta.Y / 185, 0)
 
 	-- accelerate position shove
 	spring:shove(shove)
 
 	-- get rotation shove
 	-- we min the rotation on the up Y axis so it doesn't go up too much
-	local rsy = math.max(math.min(shove.Y, 0.007), -0.007)
-	local rotShove = Math.vector3Max(Math.vector3Min(shove, 0.03), -0.03)
-	rotShove = Vector3.new(rotShove.X, rsy, rotShove.Z)
+	local swaycfg = viewmodelModule.cfg.mousesway
+	local rotShoveY = math.max(math.min(shove.Y, swaycfg.maxY), swaycfg.minY)
+	local rotShove = Math.vector3Max(Math.vector3Min(shove, swaycfg.maxXZ), swaycfg.minXZ)
+	rotShove = Vector3.new(rotShove.X, rotShoveY, rotShove.Z)
 	
 	-- accelerate rotation shove
 	rotspring:shove(rotShove)

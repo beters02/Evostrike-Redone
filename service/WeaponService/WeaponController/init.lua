@@ -19,11 +19,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Types = require(script.Parent:WaitForChild("Types"))
 local Tables = require(Framework.Module.lib.fc_tables)
-local PlayerDiedBind = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE")
+local PlayerDiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local UserInputService = game:GetService("UserInputService")
-local PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
+local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
 local Remote = ReplicatedStorage.Services.WeaponService.Events.RemoteEvent
-local UIState = require(Framework.Module.shared.states.m_states).State("UI")
+local UIState = require(Framework.Module.m_states).State("UI")
 local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon)
 
 --[[ CONFIGURATION ]]
@@ -109,7 +109,6 @@ function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: bool
     if forceEquip then
         self.InitialWeaponAddDebounce = true
         task.delay(ForceEquipDelay, function()
-            self.InitialWeaponAddDebounce = false
             self:EquipWeapon(wepObject.Slot, true)
         end)
         return true
@@ -133,8 +132,10 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     --if not bruteForce and self.Inventory.equipped and self.Inventory.equipped.Slot == weaponSlot then return warn(tostring(weaponSlot) .. " is already equipped") end
 	if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
     if not self:IsWeaponInSlot(weaponSlot) then return end
-    if not bruteForce and self:IsWeaponEquipped(weaponSlot) then return end
-    if self.InitialWeaponAddDebounce then return end
+    if not bruteForce then
+        if self:IsWeaponEquipped(weaponSlot) then return end
+        if self.InitialWeaponAddDebounce then return end
+    end
 
     -- last equipped
     if not self.Inventory.last_equipped then
@@ -170,10 +171,12 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     self.Owner.Character.Humanoid:EquipTool(self.Inventory.equipped.Tool)
     self.Inventory[weaponSlot]:ConnectActions()
     task.delay(0.1, function()
-        if self.Inventory.equipped.ClientModel then
+        if self.Inventory.equipped and self.Inventory.equipped.ClientModel then
             util_processEquipTransparency(self.Inventory.equipped.ClientModel)
         end
     end)
+
+    self.InitialWeaponAddDebounce = false
 end
 
 --@summary Unequip a Weapon via slot. Called in tool.Unequipped

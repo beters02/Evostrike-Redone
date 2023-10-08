@@ -1,0 +1,13 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "PlayerDiedBindable",
+        "ClassName": "BindableEvent"
+      },
+      {
+        "Name": "PlayerDiedRemote",
+        "ClassName": "RemoteEvent"
+      }
+    ]
+  }

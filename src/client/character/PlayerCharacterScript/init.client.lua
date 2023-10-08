@@ -1,7 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local TweenService = game:GetService("TweenService")
-local Playerdata = require(Framework.shm_clientPlayerData.Location)
+local Playerdata = require(ReplicatedStorage.PlayerData.m_clientPlayerData)
+local EvoPlayer = Framework.Module.EvoPlayer
 
 local player = game:GetService("Players").LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
@@ -9,8 +10,8 @@ local hum = char:WaitForChild("Humanoid")
 local health = hum.Health
 
 -- Register Death & Damage
-local DiedEvent = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
-local DiedBind = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathBE")
+local DiedEvent = EvoPlayer.Events:WaitForChild("PlayerDiedRemote")
+local DiedBind = EvoPlayer.Events:WaitForChild("PlayerDiedBindable")
 --local ToServerDamagedEvent = script:WaitForChild("PlayerDamaged")
 local FromEvoPlayerDamagedEvent = char:WaitForChild("EvoPlayerDamagedEvent")
 local DamagedAnimationObj = char:WaitForChild("DamagedAnimation")

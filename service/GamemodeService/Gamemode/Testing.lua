@@ -1,5 +1,6 @@
 local Lobby = {}
 Lobby.GameVariables = {
+    game_type = "Custom",
     minimum_players = 1,
     maximum_players = 12,
     teams_enabled = false,

@@ -6,7 +6,7 @@ if RunService:IsServer() then error("m_clientPlayerData: You cannot use this mod
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Strings = require(Framework.shfc_strings.Location)
-local Remotes = ReplicatedStorage:WaitForChild("playerdata"):WaitForChild("remote")
+local Remotes = ReplicatedStorage.PlayerData:WaitForChild("remote")
 
 -- init core playerdata variables
 local DefaultPlayerData, DefaultPlayerDataMinMax = Remotes.sharedPlayerDataRF:InvokeServer("GetDefault")

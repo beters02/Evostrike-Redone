@@ -74,7 +74,7 @@ end
 
 function playerstats.Set(player, new, save)
     if RunService:IsClient() then
-        return SharedRF:InvokeServer("Set", new)
+        return
     end
 
     local success, err = pcall(function()

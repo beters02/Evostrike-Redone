@@ -7,15 +7,15 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Tables = require(ReplicatedStorage.lib.fc_tables)
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local States = require(Framework.Module.shared.states.m_states)
+local States = require(Framework.Module.m_states)
 local UIState = States.State("UI")
+local PlayerActionsState = States.State("PlayerActions")
 local Types = require(script.Parent.Types)
-local SoundModule = require(Framework.Module.shared.sound.m_sound)
+local SoundModule = require(Framework.Module.Sound)
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
-local PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
+local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
-local DiedBind = ReplicatedStorage.main.sharedMainRemotes.deathBE
-local UserGameSettings = UserSettings():GetService("UserGameSettings")
+local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
 function Weapon.new(weapon: string, tool: Tool)
@@ -108,8 +108,6 @@ function Weapon.new(weapon: string, tool: Tool)
         self.Controller:UnequipWeapon(self.Slot)
     end)
 
-    
-
     -- hide server model
     for _, v in pairs(self.Tool:WaitForChild("ServerModel"):GetDescendants()) do
 		if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("Texture") then
@@ -146,8 +144,8 @@ function Weapon:Equip()
 	-- var
     self.Variables.forcestop = false
     self.Variables.equipping = true
-	States.SetStateVariable("PlayerActions", "weaponEquipping", true)
-	States.SetStateVariable("PlayerActions", "weaponEquipped", self.Name)
+    PlayerActionsState:set(self.Player, "weaponEquipping", true)
+    PlayerActionsState:set("weaponEquipped", self.Name)
 
 	-- process equip animation and sounds next frame ( to let unequip run )
 	task.spawn(function() self:_ProcessEquipAnimation() end)
@@ -163,7 +161,7 @@ function Weapon:Equip()
         if success and self.Variables.equipping then
             self.Variables.equipped = true
             self.Variables.equipping = false
-			States.SetStateVariable("PlayerActions", "weaponEquipping", false)
+            PlayerActionsState:set(self.Player, "weaponEquipping", false)
         end
 	end)
 
@@ -191,10 +189,10 @@ function Weapon:Unequip()
     self.Variables.firing = false
     self.Variables.reloading = false
 	self.Variables.inspecting = false
-	States.SetStateVariable("PlayerActions", "weaponEquipped", false)
-	States.SetStateVariable("PlayerActions", "weaponEquipping", false)
-	States.SetStateVariable("PlayerActions", "reloading", false)
-	States.SetStateVariable("PlayerActions", "shooting", false)
+    PlayerActionsState:set(self.Player, "weaponEquipped", false)
+    PlayerActionsState:set(self.Player, "weaponEquipping", false)
+    PlayerActionsState:set(self.Player, "reloading", false)
+    PlayerActionsState:set(self.Player, "shooting", false)
 
     self.Variables.equipping = false
 
@@ -209,17 +207,18 @@ function Weapon:Remove()
     self.ClientModel:Destroy()
     for i, v in pairs(self.Connections) do
         v:Disconnect()
+        self.Connections[i] = nil
     end
     self = nil
 end
 
 function Weapon:PrimaryFire()
-    if not self.Character or self.Humanoid.Health <= 0 then return end
+    if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get(self.Player, "grenadeThrowing") then return end
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
     local fireTick = tick()
 
     -- set var
-	States.SetStateVariable("PlayerActions", "shooting", true)
+    PlayerActionsState:set(self.Player, "shooting", true)
 
 	self.Variables.firing = true
 	self.Variables.ammo.magazine -= 1
@@ -262,7 +261,7 @@ function Weapon:PrimaryFire()
 	task.spawn(function()
 		repeat task.wait() until tick() >= nextFire
 		self.Variables.firing = false
-		States.SetStateVariable("PlayerActions", "shooting", false)
+        PlayerActionsState:set(self.Player, "shooting", false)
 	end)
 
 	-- update hud
@@ -280,7 +279,7 @@ function Weapon:PrimaryFire()
 end
 
 function Weapon:SecondaryFire()
-    if not self.Variables.equipped and self.Variables.equipping then return end
+    if not self.Variables.equipped then return end
     if self.Options.scope then
         if self.Variables.scoping then
             if self.Controller.Keybinds.aimToggle == 1 then
@@ -307,8 +306,8 @@ function Weapon:Reload()
         end
         self:ScopeOut()
     end
-	
-	States.SetStateVariable("PlayerActions", "reloading", true)
+
+    PlayerActionsState:set(self.Player, "reloading", true)
 	
 	task.spawn(function()
         self:PlayAnimation("client", "Reload", true)
@@ -326,7 +325,7 @@ function Weapon:Reload()
 	self.Variables.infoFrame.CurrentTotalAmmoLabel.Text = tostring(total)
 
 	self.Variables.reloading = false
-	States.SetStateVariable("PlayerActions", "reloading", false)
+	PlayerActionsState:set(self.Player, "reloading", false)
 end
 
 function Weapon:Inspect()
@@ -507,6 +506,7 @@ function Weapon:DisconnectActions()
     for i, v in pairs(self.Connections) do
         if string.match(i, "Actions") then
             v:Disconnect()
+            self.Connections[i] = nil
         end
     end
     self.Connections.ActionsDown = nil
@@ -703,19 +703,14 @@ end
 function Weapon:_ProcessEquipAnimation()
     self.Controller:_StopAllVMAnimations()
 	
-	-- disable grenade throwing animation if neccessary
-	task.spawn(function()
-		local _throwing = States.GetStateVariable("PlayerActions", "grenadeThrowing")
-		if _throwing then
-			-- find ability folder on character
-			if not self.Character:FindFirstChild("AbilityFolder_" .. _throwing) then warn("Could not cancel ability throw anim! Couldnt find ability folder") return end
-			self.Character["AbilityFolder_" .. _throwing].Scripts.base_client.communicate:Fire("StopThrowAnimation")
-		end
-	end)
+    local _throwing = PlayerActionsState:get(self.Player, "grenadeThrowing")
+	if _throwing then
+        require(Framework.Service.AbilityService):StopAbilityAnimations()
+	end
 
     task.spawn(function() -- client
         -- play pullout
-        local serverPullout = self:PlayAnimation("server", "Pullout")
+        self:PlayAnimation("server", "Pullout")
 		local clientPullout = self:PlayAnimation("client", "Pullout")
 		clientPullout.Stopped:Wait()
 		
@@ -794,15 +789,11 @@ function Weapon:RegisterRecoils()
 		wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
 
 		if result then
-
-			--print(result)
+            -- pass ray information to server for verification and damage
+			self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 
 			-- register client shot for bullet/blood/sound effects
 			SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel)
-
-			-- pass ray information to server for verification and damage
-			self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
-			--weaponRemoteFunction:InvokeServer("Fire", weaponVar.currentBullet, false, sharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 			return true
 		end
 
@@ -819,9 +810,9 @@ end
 
 --@return damageMultiplier (total damage reduction added up from recursion)
 function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageMultiplier, filter)
-
 	if not filter then filter = params.FilterDescendantsInstances end
 
+    -- filter params
 	local _p = RaycastParams.new()
 	_p.CollisionGroup = "Bullets"
 	_p.FilterDescendantsInstances = filter
@@ -843,7 +834,10 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
 	end
 
 	-- create bullethole at wall
-    SharedWeaponFunctions.CreateBulletHole(result)
+    task.spawn(function()
+        SharedWeaponFunctions.CreateBulletHole(result)
+    end)
+
 	--SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, nil, nil, true, self.Tool, self.ClientModel)
 
 	table.insert(filter, result.Instance)

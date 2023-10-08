@@ -5,11 +5,11 @@ local intervention = {
 		automatic = false,
         scope = true,
 		
-		equipLength = 1.5,
-		fireRate = 1.5,
-		reloadLength = 1.5,
+		equipLength = 1,
+		fireRate = 1.1,
+		reloadLength = 1.1,
 		recoilReset = 0.5,
-        scopeLength = 0.2,
+        scopeLength = 0.14,
 		
 		fireVectorCameraOffset = Vector2.new(5, 5), -- Side, Up
 		fireAccuracyCameraOffset = Vector2.new(5, 5), -- Side, Up

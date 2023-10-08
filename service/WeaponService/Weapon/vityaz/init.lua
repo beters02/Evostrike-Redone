@@ -4,9 +4,9 @@ local wepconfig = {
 		inventorySlot = "primary",
 		automatic = true,
 		
-		equipLength = 1,
+		equipLength = 0.8,
 		fireRate = 0.115, -- 0.118
-		reloadLength = 1.4,
+		reloadLength = 0.8,
 		recoilReset = 0.2,
 		camRecoilReset = 0.5,
 		
@@ -29,10 +29,10 @@ local wepconfig = {
 		},
 		
 		damage = {
-			base = 33,
-			min = 25,
+			base = 26,
+			min = 22,
 
-			headMultiplier = 4.8,
+			headMultiplier = 4,
 			legMultiplier = 0.9,
 			damageFalloffPerMeter = 0.7,
 			damageFalloffDistance = 50,

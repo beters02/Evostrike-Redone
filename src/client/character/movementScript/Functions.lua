@@ -343,8 +343,7 @@ function module:ApplyAntiSticking(wishedSpeed, inAir, addSpeed)
 			newSpeed -= result.Instance.Velocity
 
 			self.movementVelocity.Velocity = newSpeed
-			self.collider.Velocity = newSpeed -- anti sticking has to be applied on collider velocity as well (resolves head & in air collision)
-		
+			self.collider.Velocity = Vector3.new(newSpeed.X, self.sliding and newSpeed.Y or self.collider.Velocity.Y, newSpeed.Z) -- anti sticking has to be applied on collider velocity as well (resolves head & in air collision)
 		end
 	end
 

@@ -1,4 +1,5 @@
 local InsertService = game:GetService("InsertService")
+local Players = game:GetService("Players")
 local FrameworkModule = game:GetService("ReplicatedStorage"):WaitForChild("Framework")
 local ServerStorage = game:GetService("ServerStorage")
 local sp = game:GetService("StarterPlayer")
@@ -217,6 +218,34 @@ end
 -- 
 function vh.pullUpdate(self)
 
+	-- confirm pull
+	local confirmation = self.vhPullConfirmGui:Clone()
+	
+	local result = nil
+
+	local conns = {}
+	local disconns = function() for _, conn in ipairs(conns) do conn:Disconnect() end conns = nil end
+	conns.yes = confirmation:WaitForChild("Frame"):WaitForChild("YES").MouseButton1Click:Once(function()
+		result = true
+		disconns()
+	end)
+	conns.no = confirmation.Frame:WaitForChild("NO").MouseButton1Click:Once(function()
+		result = false
+		disconns()
+	end)
+
+	confirmation.Parent = game:WaitForChild("CoreGui")
+
+	if result == nil then
+		repeat task.wait() until result ~= nil
+	end
+	
+	if not result then
+		return false
+	end
+
+	confirmation:Destroy()
+
 	-- make sure we have a model that can be unpacked
 	local currModel = vh.findVersionFile()
 
@@ -309,7 +338,7 @@ function vh.pack(self, vers: number, destroyAfter: boolean, packMap: boolean, mo
 	}
 	
 	-- handle map stuff
-	if self.currentMapMode ~= "play" then -- set play mode if not already
+	if self.getMapMode() ~= "Play" then
 		self.mm_play()
 	end
 

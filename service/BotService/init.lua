@@ -1,14 +1,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local Tables = require(Framework.shfc_tables.Location)
-local RagdollRE = ReplicatedStorage:WaitForChild("ragdoll"):WaitForChild("remote"):WaitForChild("sharedRagdollRE")
 local CollectionService = game:GetService("CollectionService")
-local PlayerDiedEvent = ReplicatedStorage:WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("deathRE")
-local BotAddedEvent = ReplicatedStorage:WaitForChild("bots"):WaitForChild("BotAdded")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+
+local RagdollRE = Framework.Module.Ragdolls.Remotes.RemoteEvent
+local PlayerDiedEvent = Framework.Module.EvoPlayer.Events.PlayerDiedRemote
+local BotAddedEvent = Framework.Service.BotService.Remotes.BotAdded
 local Types = require(script:WaitForChild("Types"))
 local ServerStorage = game:GetService("ServerStorage")
 local StarterCharacterTemplate = game:GetService("StarterPlayer").StarterCharacter
-local EvoPlayer = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoPlayer"))
+local EvoPlayer = require(Framework.Module.EvoPlayer)
 
 local Bots = {}
 

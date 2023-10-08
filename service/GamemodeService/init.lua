@@ -20,13 +20,15 @@ if RunService:IsClient() then
     return require(Client)
 end
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local Maps = require(ServerStorage:WaitForChild("Stored"):WaitForChild("MapIDs"))
+
 -- [[ SERVICE CONFIGURATION ]]
-
-local lobby_id = 11287185880        -- In the Lobby, the Gamemode will always be default_gamemode.
+local lobby_id = Maps.mapIds.lobby        -- In the Lobby, the Gamemode will always be default_gamemode.
+local unstable_id = Maps.mapIds.unstable
 local default_gamemode = "Deathmatch"
-
 local studio_gamemode = "Deathmatch"   -- The Gamemode that is automatically set in Studio.
-
 --
 
 local Types = require(script:WaitForChild("Types"))
@@ -34,8 +36,8 @@ local GamemodeClass = require(script:WaitForChild("Gamemode"))
 local RemoteEvent = script:WaitForChild("RemoteEvent")
 local RemoteFunction = script:WaitForChild("RemoteFunction")
 local BindableEvent = script:WaitForChild("BindableEvent")
-local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
-local Admins = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedAdminIDs"))
+local EvoMM = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
+local Admins = require(ServerStorage:WaitForChild("Stored"):WaitForChild("AdminIDs"))
 
 local ErrorDef = {Prefix = "GamemodeService: "}
 ErrorDef.CouldNotChangeGamemode = ErrorDef.Prefix .. "Could not change gamemode! "
@@ -60,7 +62,7 @@ function GamemodeService:Start()
     local startingGamemode
     if RunService:IsStudio() then
         startingGamemode = studio_gamemode
-    elseif game.PlaceId == lobby_id then
+    elseif game.PlaceId == lobby_id or game.PlaceId == unstable_id then
         startingGamemode = default_gamemode
     else
         startingGamemode = GamemodeService:AwaitGamemodeDataExtraction()

@@ -1,9 +1,7 @@
 local player = game:GetService("Players").LocalPlayer
 if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
-
-local player = game:GetService("Players").LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local hud = require(script.Parent:WaitForChild("m_hud"))
+local _ = player.Character or player.CharacterAdded:Wait()
+local hud = require(script.Parent)
 
 hud = hud.initialize(player)
 

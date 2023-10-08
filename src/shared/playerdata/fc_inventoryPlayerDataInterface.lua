@@ -4,9 +4,9 @@ local RunService = game:GetService("RunService")
 local PlayerData
 
 if RunService:IsServer() then
-    PlayerData = require(Framework.Module.server.playerdata.m_serverPlayerData)
+    PlayerData = require(Framework.Module.server.PlayerDataScript.m_serverPlayerData)
 else
-    PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
+    PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
 end
 
 local interface = {}

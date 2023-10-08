@@ -1,9 +1,10 @@
 local UserInputService = game:GetService("UserInputService")
 local Framework = require(game.ReplicatedStorage.Framework)
 local Ability = require(Framework.Service.AbilityService.Ability).new(script.Parent:WaitForChild("ModuleObject").Value)
-local PlayerData = require(Framework.Module.shared.playerdata.m_clientPlayerData)
+local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
-local UIState = require(Framework.Module.shared.states.m_states).State("UI")
+local UIState = require(Framework.Module.m_states).State("UI")
+local Bindable = Framework.Service.AbilityService.Events.BindableEvent
 
 local Path = "options.keybinds." .. Ability.Options.inventorySlot .. "Ability"
 local Key = PlayerData:Get(Path)
@@ -18,5 +19,11 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if UIState:hasOpenUI() or Ability.Player:GetAttribute("Typing") or gp then return end
     if input.KeyCode == Enum.KeyCode[Key] then
         Ability:UseCore()
+    end
+end)
+
+Bindable.Event:Connect(function(action, fadeTime)
+    if action == "StopAnimations" then
+        Ability:StopAnimations(fadeTime)
     end
 end)

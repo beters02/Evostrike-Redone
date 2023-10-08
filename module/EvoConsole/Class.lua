@@ -1,10 +1,11 @@
-local EvoConsole = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoConsole")
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local EvoConsole = Framework.Module.EvoConsole
 local UserInputService = game:GetService("UserInputService")
 local Types = require(EvoConsole.Types)
 local Tables = require(EvoConsole.Tables)
 local Configuration = require(EvoConsole.Configuration)
 
-local States = require(game:GetService("ReplicatedStorage"):WaitForChild("states"):WaitForChild("m_states"))
+local States = require(Framework.Module.m_states)
 
 local class = {}
 class.__index = class

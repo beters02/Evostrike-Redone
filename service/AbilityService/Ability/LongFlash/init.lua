@@ -1,23 +1,16 @@
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local AbilityObjects = Framework.Service.AbilityService.Ability.LongFlash.Assets
-local Sound = require(Framework.shm_sound.Location)
-local States = require(Framework.Module.shared.states.m_states)
-local Math = require(Framework.Module.lib.fc_math)
-local FastCast = require(ReplicatedStorage.lib.c_fastcast)
+local Sound = require(Framework.Module.Sound)
 local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
-
-local PlayerActionsState
+local Caster = require(Framework.Service.AbilityService.Caster)
 
 local BotService
-if RunService:IsServer() then 
+if RunService:IsServer() then
     BotService = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService")) 
-else
-    PlayerActionsState = States.State("PlayerActions")
 end
 
 local LongFlash = {
@@ -48,7 +41,7 @@ local LongFlash = {
 
         -- flash specific
         anchorTime = 0.2,
-        anchorDistance = 5,
+        anchorDistance = 7,
         popTime = 0.3,
         blindLength = 1.5,
         canSeeAngle = 1.07,
@@ -70,55 +63,19 @@ local LongFlash = {
             mass = 9
         }
     },
+    AbilityObjects = AbilityObjects,
 
     -- Module Scope Storage
     flashGui = AbilityObjects:WaitForChild("FlashbangGui"),
     flashEmitter = AbilityObjects:WaitForChild("Emitter")
 }
 
--- Create Caster
-local caster
-local castBehavior
-local function initCaster()
-	caster = FastCast.new()
-	castBehavior = FastCast.newBehavior()
-	castBehavior.Acceleration = Vector3.new(0, -workspace.Gravity * LongFlash.Configuration.gravityModifier, 0)
-	castBehavior.AutoIgnoreContainer = false
-	castBehavior.CosmeticBulletContainer = workspace.Temp
-	castBehavior.CosmeticBulletTemplate = AbilityObjects.Models.Grenade
-    LongFlash.caster = caster
-    LongFlash.castBehavior = castBehavior
-    LongFlash.caster.RayHit:Connect(function(...)
-        LongFlash.RayHit(caster, Players.LocalPlayer, ...)
-    end)
-    LongFlash.caster.LengthChanged:Connect(function(_, lastPoint, direction, length, _, bullet) -- cast, lastPoint, direction, length, velocity, bullet
-        if bullet then
-            local bulletLength = bullet.Size.Z/2
-            local offset = CFrame.new(0, 0, -(length - bulletLength))
-            bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
-        end
-    end)
-    LongFlash.caster.CastTerminating:Connect(function()end)
-end
-initCaster()
+Caster.new(LongFlash)
 
-local function getLocalParams()
-    local locparams = RaycastParams.new()
-    locparams.CollisionGroup = "Grenades"
-    locparams.FilterType = Enum.RaycastFilterType.Exclude
-    locparams.FilterDescendantsInstances = {workspace.CurrentCamera, Players.LocalPlayer.Character}
-    return locparams
+function LongFlash.init(abilityClass)
+    -- Resolve: base class ray hit functionality
+    Caster.setAbilityClass(abilityClass)
 end
-
-local function getOtherParams(thrower)
-    local otherCastParams = RaycastParams.new()
-    otherCastParams.CollisionGroup = "Grenades"
-    otherCastParams.FilterType = Enum.RaycastFilterType.Exclude
-    otherCastParams.FilterDescendantsInstances = {thrower.Character}
-    return otherCastParams
-end
-
---
 
 -- LongFlash Utility
 
@@ -141,102 +98,9 @@ end
 
 -- End LongFlash Utility
 
---@override
---@summary Grenade Ability UseCore Override
-function LongFlash:UseCore()
-    if self.Variables.Uses <= 0 or self.Variables.OnCooldown then
-        return
-    end
-    self.Variables.Uses -= 1
-    self:Cooldown()
-
-    task.delay(self.Options.grenadeThrowDelay, function()
-        self:UseCameraRecoil()
-    end)
-    self:PlayEquipCameraRecoil()
-
-    self:Use()
-end
-
---@summary Required Ability Function Use
-function LongFlash:Use()
-
-    PlayerActionsState:set("grenadeThrowing", true)
-    task.delay(self.Variables.usingDelay, function()
-        PlayerActionsState:set("grenadeThrowing", false)
-    end)
-
-    Sound.PlayReplicatedClone(AbilityObjects.Sounds.Equip, self.Player.Character.PrimaryPart)
-    self:PlayEquipCameraRecoil()
-
-    -- make player hold grenade in left hand
-    workspace.CurrentCamera.viewModel.LeftEquipped:ClearAllChildren()
-
-    local grenadeClone = AbilityObjects.Models.Grenade:Clone()
-    grenadeClone.Parent = workspace.CurrentCamera.viewModel.LeftEquipped
-    if self.Options.clientGrenadeSize then
-        grenadeClone.Size = self.Options.clientGrenadeSize
-    else
-        grenadeClone.Size *= 0.8
-    end
-
-    local leftHand = self.Viewmodel.LeftHand
-    local m6 = leftHand:FindFirstChild("LeftGrip")
-    if m6 then m6:Destroy() end
-    m6 = Instance.new("Motor6D", leftHand)
-    m6.Name = "LeftGrip"
-    m6.Part0 = leftHand
-    m6.Part1 = grenadeClone
-    if self.Options.grenadeVMOffsetCFrame then m6.C0 = self.Options.grenadeVMOffsetCFrame end
-
-    -- play throw animation
-    self.Animations.throw:Play(self.Options.throwAnimFadeTime or 0.18)
-    self.Animations.serverthrow:Play(self.Options.throwAnimFadeTime or 0.18)
-
-    -- equip finish
-    task.delay(self.Animations.throw.Length + ((self.Options.throwAnimFadeTime or 0.18)*1.45), function()
-        if self.Variables._equipFinishCustomSpring then
-            self.Variables._equipFinishCustomSpring.Shove()
-        end
-    end)
-
-    task.wait(self.Options.grenadeThrowDelay or 0.01)
-
-    -- play throw sound
-    Sound.PlayReplicatedClone(AbilityObjects.Sounds.Throw, self.Player.Character.PrimaryPart)
-
-    -- long flash does CanUse on the server via remoteFunction: ThrowGrenade
-    local hit = self.Player:GetMouse().Hit
-
-    -- grenade usage
-    self:FireGrenade(hit)
-
-    -- destroy left hand clone
-    grenadeClone:Destroy()
-    m6:Destroy()
-end
-
---@summary Required Grenade Function FireGrenade
-function LongFlash:FireGrenade(hit, isReplicated, origin, direction, thrower)
-    if not isReplicated then
-        local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
-        origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.Options.startHeight, 0)
-        direction = (hit.Position - origin).Unit
-        Replicate:FireServer("GrenadeFire", self.Options.name, origin, direction)
-    end
-
-    local castParams = thrower and getOtherParams(thrower) or getLocalParams()
-    self.castBehavior.RaycastParams = castParams
-
-    local cast = self.caster:Fire(origin, direction, self.Options.speed, self.castBehavior)
-    LongFlash.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
-end
-
 --@summary Required Grenade Function RayHit
--- grenadeClassObject, casterPlayer, caster, result, velocity, behavior, playerLookNormal
-function LongFlash.RayHit(_, _, _, result)
-
-    local grenadeModel = LongFlash.currentGrenadeObject
+-- caster, casterPlayer, casterThrower, result, velocity, grenade, class
+function LongFlash.RayHit(_, casterPlayer, _, result, _, grenadeModel, abilityClass)
 
     -- send grenade outward
     local outDirection = result.Normal * LongFlash.Configuration.anchorDistance
@@ -280,14 +144,22 @@ function LongFlash.RayHit(_, _, _, result)
     task.wait(LongFlash.Configuration.popTime)
 
     -- play pop sound
-    Sound.PlayClone(AbilityObjects.Sounds.Pop, grenadeModel)
+    abilityClass:PlaySound(AbilityObjects.Sounds.Pop, grenadeModel)
+
+    -- clear throwing sound
+    if grenadeModel:FindFirstChild("Throwing") then
+        TweenService:Create(grenadeModel.Throwing, TweenInfo.new(0.1), {Volume = 0}):Play()
+        task.delay(0.11, function()
+            pcall(function()grenadeModel.Throwing:Stop()end)
+        end)
+    end
 
     tModelSize:Play()
     tPointLight:Play()
     tPointLight.Completed:Wait()
 
     -- set emitter variables
-    for i, v in pairs(grenadeModel:GetChildren()) do
+    for _, v in ipairs(grenadeModel:GetChildren()) do
         if not v:IsA("ParticleEmitter") or not v.Name == "Spark" then continue end
         v = v :: ParticleEmitter
         v.Speed = NumberRange.new(40, 60)
@@ -300,12 +172,11 @@ function LongFlash.RayHit(_, _, _, result)
     Debris:AddItem(grenadeModel, 2)
 end
 
---@summary Required Grenade Function PlayEquipCameraRecoil
-function LongFlash:PlayEquipCameraRecoil()
-    self.Variables.cameraLastEquipShove = Vector3.new(0.01, Math.absr(0.01), 0)
-    self.Variables.cameraSpring:shove(self.Variables.cameraLastEquipShove)
-    task.wait()
-    self.Variables.cameraSpring:shove(-self.Variables.cameraLastEquipShove)
+--@summary The FireGrenade function ran after FireGrenadeCore
+--         This is the function you'll want to override to add custom functionality.
+function LongFlash:FireGrenadePost(hit, isReplicated, origin, direction, thrower, grenade)
+    local sound = Sound.PlayClone(self.AbilityObjects.Sounds.Throwing, grenade, {Volume = 0})
+    TweenService:Create(sound, TweenInfo.new(0.07), {Volume = self.AbilityObjects.Sounds.Throwing.Volume}):Play()
 end
 
 -- [[ LongFlash Specific Functions ]]

@@ -1,7 +1,7 @@
 local RunService = game:GetService("RunService")
 if RunService:IsClient() then return {} end
 
-local StoredMapIDs = require(game:GetService("ServerScriptService"):WaitForChild("main"):WaitForChild("storedMapIDs"))
+local StoredMapIDs = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("MapIDs"))
 local TeleportService = game:GetService("TeleportService")
 
 local listener = {
