@@ -16,7 +16,7 @@ local SmokeGrenade = {
         isGrenade = true,
         
         -- general
-        cooldownLength = 10,
+        cooldownLength = 8, -- 10
         uses = 100,
         usingDelay = 1, -- Time that player will be "using" their ability, won't be able to interact with weapons during this time
 
@@ -34,10 +34,10 @@ local SmokeGrenade = {
         throwFinishSpringShove = Vector3.new(-0.4, -0.5, 0.2),
 
         -- smoke grenade specific
-        smokeLengthBeforePop = 1.8,
-        smokeFadeInLength = 0.8,
-        smokeLength = 4,
-        smokeFadeOutLength = 1,
+        smokeLengthBeforePop = 1.5, -- 1.8
+        smokeFadeInLength = 0.4, -- 0.8
+        smokeLength = 2.9, -- 4
+        smokeFadeOutLength = 0.8, -- 1
         smokeBubbleStartSizeModifier = 0.3,
         smokeBubbleStartTransparency = 0.7,
         smokeGrenadeVelocitySlowMultPerInterval = 0.7,
