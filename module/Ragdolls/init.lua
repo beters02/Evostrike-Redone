@@ -30,6 +30,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local RagdollRE = script:WaitForChild("Remotes").RemoteEvent
 local PlayerDied = Framework.Module.EvoPlayer.Events.PlayerDiedRemote
+local PlayerDiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 
 local playerConns = {}
 local nonPlayerDolls = {}
@@ -88,12 +89,18 @@ function CreateRagdoll(character)
     -- connect died event
     local hum = character:WaitForChild("Humanoid")
     local conn
-	conn = PlayerDied.OnClientEvent:Connect(function(player)
-		if player.Name == character.Name then
+
+	if character.Name == player.Name then
+		conn = PlayerDiedBind.Event:Connect(function()
 			DiedRagdoll(character, ragdoll)
 			conn:Disconnect()
-		end
-    end)
+		end)
+	else
+		conn = PlayerDied.OnClientEvent:Connect(function(_plr)
+			DiedRagdoll(character, ragdoll)
+			conn:Disconnect()
+		end)
+	end
 	return ragdoll, hum, conn
 end
 
@@ -260,6 +267,7 @@ end
 function replaceCharacterWithRagdoll(char, clone)
 	--local highlight = char:FindFirstChild("EnemyHighlight")
 	--if highlight then highlight.Parent = clone end
+	char.PrimaryPart.Anchored = true
 	clone:SetPrimaryPartCFrame(char.PrimaryPart.CFrame)
 	transparency(char, 1)
 	clone.Parent = char.Parent
