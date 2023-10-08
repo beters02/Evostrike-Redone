@@ -37,16 +37,19 @@ function PlayerData:GetPath(player, path) -- path: options.primaryFire
 end
 
 --@summary Set the PlayerData from a new PlayerData
-function PlayerData:Set(player, new, save, wasClientRequest)
+type Key = string
+type Path = string
+export type dataChangedInfo = {location: "Set" | "Key" | "Path", key: Key | Path | nil, new: any?}
+function PlayerData:Set(player, new, changed: dataChangedInfo?, save, ignoreRemote)
+    if not changed then changed = {location = "Set"} end
     local store = _getStoreSafe(player)
-    if wasClientRequest then
-        _verifyIncoming(new)
-    end
     store:Set(new)
     if save then
         store:Save()
     end
-    RemoteEvent:FireClient(player, "SetAsync", new)
+    if not ignoreRemote then
+        RemoteEvent:FireClient(player, "SetAsync", new, changed)
+    end
     return new
 end
 
@@ -54,7 +57,7 @@ end
 function PlayerData:SetKey(player, key, new)
     local playerdata = PlayerData:GetAsync(player)
     playerdata[key] = new
-    return PlayerData:Set(player, playerdata)
+    return PlayerData:Set(player, playerdata, {location = "Key", key = key, new = new})
 end
 
 --@summary Set the key of a value from the PlayerData path
@@ -63,7 +66,7 @@ function PlayerData:SetPath(player, path, new)
     Strings.doActionViaPath(path, playerdata, function(gotTableParent, key)
         gotTableParent[key] = new
     end)
-    return PlayerData:Set(player, playerdata)
+    return PlayerData:Set(player, playerdata, {location = "Path", key = path, new = new})
 end
 
 --@summary Save the PlayerData
@@ -78,11 +81,11 @@ end
 --@private
 --[[Private Module Functions]]
 function _serverInvoke(player, action, ...)
-    if not PlayerData[action] then
-        return false
+    if action == "Get" then
+        return PlayerData:Get(player)
+    elseif action == "Set" then
+        return _clientRequestToSet(player, ...)
     end
-
-    return PlayerData[action](PlayerData, player, ..., true)
 end
 
 function _serverPlayerAdded(player)
@@ -125,14 +128,20 @@ function _hardCopy(variant: any)
     return copy
 end
 
-function _verifyIncoming(new)
+--@summary Overrides unvalidated data with what was previously stored.
+function _validateIncoming(player, new)
     local _rep = false
     for i, _ in pairs(new) do
         if PlayerData._defOpt[i] then
-            _rep = PlayerData:GetKey(i)
+            _rep = PlayerData:GetKey(player, i)
             new[i] = _hardCopy(_rep)
         end
     end
+end
+
+function _clientRequestToSet(player, new)
+    _validateIncoming(player, new)
+    return PlayerData:Set(player, new, false, true)
 end
 
 --@private

@@ -136,7 +136,6 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     
         -- check if player has access to all skins to a specific weapon
         -- if so, we recurse CreateSkinFrame until all skins are added.
-        print(weapon)
         local parent = weapon == "knife" and WeaponModules.knife.Assets:WaitForChild(model).Models or WeaponModules:WaitForChild(weapon).Assets.Models
         if skin == "*" then
             for i, v in pairs(parent:GetChildren()) do

@@ -18,7 +18,7 @@ require(Framework.Module.EvoMMWrapper)
 task.delay(2, function() require(Framework.Module.EvoPlayer) end)
 
 
--- Evo Modules
+-- Evo MM
 Framework.Module.EvoMMWrapper.Remote.OnClientEvent:Connect(function() end)
 --
 
@@ -61,7 +61,10 @@ end)
 --
 
 -- PlayerData
-print(PlayerData:Get())
+--
+
+-- EvoEconomy
+require(Framework.Module.EvoEconomy)
 --
 
 -- [DEPRECATED] m_clientPlayerData

@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -56,10 +57,11 @@ local Molly = {
             mass = 9
         }
     },
-    AbilityObjects = AbilityObjects
+    AbilityObjects = AbilityObjects,
+    RotValue = false
 }
 
-Caster.new(Molly)
+Caster.new(Molly, Molly.LengthChanged)
 
 --@summary The Core FireGrenade function ran before FireGrenade. Not recommended to override
 function Molly:FireGrenadeCore(hit, isReplicated, origin, direction, thrower)
@@ -99,6 +101,7 @@ function Molly:FireGrenadeCore(hit, isReplicated, origin, direction, thrower)
     local cast = self.caster:Fire(origin, direction, self.Options.speed, self.castBehavior)
     self.currentGrenadeObject = cast.RayInfo.CosmeticBulletObject
     self.currentGrenadeObject:SetAttribute("IsOwner", not isReplicated)
+    CollectionService:AddTag(self.currentGrenadeObject, self.Player.Name .. "_ClearOnDeath")
 end
 
 --@summary Required Grenade Function RayHit
@@ -153,6 +156,16 @@ function Molly.RayHit(_, _, _, result, velocity, grenade)
     end
 
     return
+end
+
+function Molly.LengthChanged(_, lastPoint, direction, length, velocity, bullet)-- cast, lastPoint, direction, length, velocity, bullet
+    if bullet then
+        if not Molly.RotValue then Molly.RotValue = Instance.new("NumberValue", ReplicatedStorage.temp) end
+        Molly.RotValue.Value += 2
+        local bulletLength = bullet.Size.Z/2
+        local offset = CFrame.new(0, 0, -(length - bulletLength)) * CFrame.Angles(math.rad(Molly.RotValue.Value * math.clamp(velocity.Magnitude, 5, 17)), 0, 0)
+        bullet.CFrame = CFrame.lookAt(lastPoint, lastPoint + direction):ToWorldSpace(offset)
+    end
 end
 
 -- [[ MOLLY SPECIFIC FUNCTIONS ]]

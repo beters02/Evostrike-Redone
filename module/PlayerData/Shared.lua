@@ -73,6 +73,11 @@ Shared.def = {
         deaths = 0,
         totaldamage = 0,
         wins = 0
+    },
+
+    economy = {
+        strafeCoins = 0,
+        premiumCredits = 0
     }
 }
 
@@ -80,7 +85,8 @@ Shared.defVar = {
     inventory = {clientReadOnly = true},
     options = {clientReadOnly = false},
     states = {clientReadOnly = true},
-    pstats = {clientReadOnly = true}
+    pstats = {clientReadOnly = true},
+    economy = {clientReadOnly = true}
 }
 
 return Shared

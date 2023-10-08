@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -81,3 +82,13 @@ end)
 
 --PlayerData
 require(Framework.Module.PlayerData)
+
+--EvoEconomy
+local EvoEconomy = require(Framework.Module.EvoEconomy)
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        task.delay(5, function()
+            EvoEconomy:Increment(player, "StrafeCoins", 1)
+        end)
+    end)
+end)

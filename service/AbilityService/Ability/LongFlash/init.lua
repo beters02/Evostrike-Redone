@@ -41,7 +41,7 @@ local LongFlash = {
 
         -- flash specific
         anchorTime = 0.2,
-        anchorDistance = 5,
+        anchorDistance = 7,
         popTime = 0.3,
         blindLength = 1.5,
         canSeeAngle = 1.07,
@@ -72,6 +72,11 @@ local LongFlash = {
 
 Caster.new(LongFlash)
 
+function LongFlash.init(abilityClass)
+    -- Resolve: base class ray hit functionality
+    Caster.setAbilityClass(abilityClass)
+end
+
 -- LongFlash Utility
 
 --@summary
@@ -94,8 +99,8 @@ end
 -- End LongFlash Utility
 
 --@summary Required Grenade Function RayHit
--- class, casterPlayer, casterThrower, result, velocity, grenade
-function LongFlash.RayHit(_, _, _, result, _, grenadeModel)
+-- caster, casterPlayer, casterThrower, result, velocity, grenade, class
+function LongFlash.RayHit(_, casterPlayer, _, result, _, grenadeModel, abilityClass)
 
     -- send grenade outward
     local outDirection = result.Normal * LongFlash.Configuration.anchorDistance
@@ -139,14 +144,22 @@ function LongFlash.RayHit(_, _, _, result, _, grenadeModel)
     task.wait(LongFlash.Configuration.popTime)
 
     -- play pop sound
-    Sound.PlayClone(AbilityObjects.Sounds.Pop, grenadeModel)
+    abilityClass:PlaySound(AbilityObjects.Sounds.Pop, grenadeModel)
+
+    -- clear throwing sound
+    if grenadeModel:FindFirstChild("Throwing") then
+        TweenService:Create(grenadeModel.Throwing, TweenInfo.new(0.1), {Volume = 0}):Play()
+        task.delay(0.11, function()
+            pcall(function()grenadeModel.Throwing:Stop()end)
+        end)
+    end
 
     tModelSize:Play()
     tPointLight:Play()
     tPointLight.Completed:Wait()
 
     -- set emitter variables
-    for i, v in pairs(grenadeModel:GetChildren()) do
+    for _, v in ipairs(grenadeModel:GetChildren()) do
         if not v:IsA("ParticleEmitter") or not v.Name == "Spark" then continue end
         v = v :: ParticleEmitter
         v.Speed = NumberRange.new(40, 60)
@@ -157,6 +170,13 @@ function LongFlash.RayHit(_, _, _, result, _, grenadeModel)
     grenadeModel.Transparency = 1
     disableAllParticleEmittersAndLights(grenadeModel)
     Debris:AddItem(grenadeModel, 2)
+end
+
+--@summary The FireGrenade function ran after FireGrenadeCore
+--         This is the function you'll want to override to add custom functionality.
+function LongFlash:FireGrenadePost(hit, isReplicated, origin, direction, thrower, grenade)
+    local sound = Sound.PlayClone(self.AbilityObjects.Sounds.Throwing, grenade, {Volume = 0})
+    TweenService:Create(sound, TweenInfo.new(0.07), {Volume = self.AbilityObjects.Sounds.Throwing.Volume}):Play()
 end
 
 -- [[ LongFlash Specific Functions ]]

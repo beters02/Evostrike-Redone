@@ -89,9 +89,7 @@ end
 
 --@summary Required Grenade Function RayHit
 -- class, casterPlayer, casterThrower, result, velocity, grenade
-function SmokeGrenade.RayHit(_, _, _, result, velocity)
-
-    local grenade = SmokeGrenade.currentGrenadeObject
+function SmokeGrenade.RayHit(_, _, _, result, velocity, grenade)
     local isOwner = grenade:GetAttribute("IsOwner")
 	local normal = result.Normal
 	local reflected = velocity - 2 * velocity:Dot(normal) * normal
