@@ -22,7 +22,7 @@ function Shared.CreateBulletHole(result)
 	local cFrame = CFrame.new(result.Position, result.Position + normal)
 	local bullet_hole = BulletHole:Clone()
 	bullet_hole.CFrame = cFrame
-	bullet_hole.Anchored = false
+	bullet_hole.Anchored = true
 	bullet_hole.CanCollide = false
 	local weld = Instance.new("WeldConstraint")
 	weld.Part0 = bullet_hole
