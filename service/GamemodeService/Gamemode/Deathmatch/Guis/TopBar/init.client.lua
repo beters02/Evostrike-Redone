@@ -30,7 +30,11 @@ local remoteConn = false
 
 --[[ Utility ]]
 local function convertSecToMin(sec: number)
-	return tostring(math.floor(sec/60)) .. ": " .. tostring(sec % 60)
+    local _sec = sec % 60
+    if _sec < 10 then
+        _sec = "0"..tostring(_sec)
+    end
+	return tostring(math.floor(sec/60)) .. ": " .. tostring(_sec)
 end
 
 local function getPlayerAvatar(player: Player)
