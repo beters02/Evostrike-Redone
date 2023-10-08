@@ -12,6 +12,7 @@ Lobby.GameVariables = {
         Weapons = {primary = "ak103", secondary = "glock17"},
         Abilities = {primary = "Dash", secondary = "LongFlash"}
     },
+    buy_menu_open_on_spawn = false,
 
     bots_enabled = true,
 

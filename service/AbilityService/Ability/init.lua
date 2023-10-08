@@ -4,6 +4,7 @@ local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Fra
 local Strings = require(Framework.Module.lib.fc_strings)
 local VMSprings = require(Framework.Module.lib.c_vmsprings)
 local Math = require(Framework.Module.lib.fc_math)
+local Sound = require(Framework.Module.Sound)
 
 local Ability = {}
 local Types = require(script.Parent.Types)
@@ -12,7 +13,7 @@ local Grenade = require(script:WaitForChild("Grenade"))
 Ability.__index = Ability
 
 function Ability.new(module: ModuleScript)
-
+    local req = require(module)
     local self = Tables.clone(require(module))
     if self.Configuration.isGrenade then
         for i, v in pairs(Grenade) do
@@ -26,6 +27,7 @@ function Ability.new(module: ModuleScript)
     self.Name = self.Configuration.name
     self.Slot = self.Configuration.inventorySlot
     self.Module = module
+    self.Assets = self.Module.Assets
 
     self.Variables = {
         Uses = self.Configuration.uses,
@@ -34,6 +36,7 @@ function Ability.new(module: ModuleScript)
 
     self.Player = Players.LocalPlayer
     self.Character = self.Player.Character
+    self.HumanoidRootPart = self.Character:WaitForChild("HumanoidRootPart")
     self.Humanoid = self.Character:WaitForChild("Humanoid")
     self.Viewmodel = workspace.CurrentCamera:WaitForChild("viewModel")
     self.Options = self.Configuration
@@ -57,11 +60,14 @@ function Ability.new(module: ModuleScript)
     end
 
     --hud
-    self.Icon.Image = self.Module.Assets.Images.Icon.Texture
+    self.Icon.Image = self.Module.Assets.Images.Icon.Image
     self.Icon.ImageTransparency = 0
     self.Icon.ImageColor3 = self.Frame:GetAttribute("EquippedColor")
     self.Icon.Visible = true
     self.Frame.Visible = true
+
+    -- Resolve: RayHit functionality
+    if req.init then req.init(self) end
 
     return self :: Types.Ability
 end
@@ -118,6 +124,47 @@ function Ability:StopAnimations(fadeTime: number?)
             v:Stop(fadeTime or 0)
         end
     end
+end
+
+--@summary The preferred way to play an ability sound
+--@param sound Sound | string -- The Sound or it's Name
+--@param isReplicated boolean -- Should the sound be replicated?
+function Ability:PlaySound(sound: Sound | Folder | string, whereFrom: Instance, isReplicated: boolean?)
+    local func = isReplicated and PlayReplicatedSoundFromSound or PlaySoundFromSound
+
+    if type(sound) == "string" then
+        sound = self.Assets.Sounds:FindFirstChild(sound)
+        if sound then
+            func(sound, whereFrom)
+        end
+        return
+    end
+
+    if sound:IsA("Sound") then
+        func(sound, whereFrom)
+        return
+    end
+
+    for _, soundchild in pairs(sound:GetChildren()) do
+        if soundchild:IsA("Sound") then
+            func(soundchild, whereFrom)
+        end
+    end
+end
+
+--@summary Replicated PlaySound -- PlaySound(sound, true) shorthand
+function Ability:PlayReplicatedSound(sound: Sound | Folder | string, whereFrom: Instance)
+    self:PlaySound(sound, whereFrom, true)
+end
+
+--@summary Play a sound quickly directly from the Sound
+function PlaySoundFromSound(sound: Sound, whereFrom)
+    Sound.PlayClone(sound, whereFrom)
+end
+
+--@summary Play a sound quickly directly from the Sound
+function PlayReplicatedSoundFromSound(sound: Sound, whereFrom)
+    Sound.PlayReplicatedClone(sound, whereFrom, true)
 end
 
 --[[ CAMERA RECOIL ]]

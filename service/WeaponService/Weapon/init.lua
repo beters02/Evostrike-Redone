@@ -207,6 +207,7 @@ function Weapon:Remove()
     self.ClientModel:Destroy()
     for i, v in pairs(self.Connections) do
         v:Disconnect()
+        self.Connections[i] = nil
     end
     self = nil
 end
@@ -505,6 +506,7 @@ function Weapon:DisconnectActions()
     for i, v in pairs(self.Connections) do
         if string.match(i, "Actions") then
             v:Disconnect()
+            self.Connections[i] = nil
         end
     end
     self.Connections.ActionsDown = nil

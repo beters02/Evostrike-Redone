@@ -4,9 +4,9 @@ local wepconfig = {
 		inventorySlot = "secondary",
 		automatic = false,
 		
-		equipLength = 1,
+		equipLength = 0.65,
 		fireRate = 0.16,
-		reloadLength = 1,
+		reloadLength = 0.65,
 		recoilReset = 0.35,
 		
 		fireVectorCameraOffset = Vector2.new(5, 5), -- Side, Up
@@ -30,10 +30,10 @@ local wepconfig = {
 		},
 		
 		damage = {
-			base = 22,
+			base = 19,
 			min = 12,
 
-			headMultiplier = 7,
+			headMultiplier = 5.35,
 			legMultiplier = 0.9,
 			damageFalloffPerMeter = 1.5,
 			damageFalloffDistance = 20,

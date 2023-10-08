@@ -4,9 +4,9 @@ local ACR = {
 		inventorySlot = "primary",
 		automatic = true,
 		
-		equipLength = 1,
+		equipLength = 0.85,
 		fireRate = 0.086, -- 700 rpm
-		reloadLength = 1.5,
+		reloadLength = 0.85,
 		recoilReset = 0.22,
 		camRecoilReset = 0.5,
 		
@@ -29,8 +29,10 @@ local ACR = {
 		},
 		
 		damage = {
-			base = 23,
-			headMultiplier = 5.3,
+			base = 36,
+			min = 33,
+
+			headMultiplier = 4,
 			legMultiplier = 0.9,
 			damageFalloffPerMeter = 0.7,
 			damageFalloffDistance = 35,

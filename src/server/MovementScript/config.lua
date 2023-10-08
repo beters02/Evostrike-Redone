@@ -5,7 +5,7 @@ local module = {
 	friction = 7.5,
 	maxVelocity = 50,
 	maxMovementPitch = 0.6,
-	surfSlopeAngle = 0.55,
+	surfSlopeAngle = 0.58,
 
 	--[[ Ground Settings ]]
 	groundAccelerate = 10.2,
@@ -20,9 +20,9 @@ local module = {
 	crouchAccelerate = 19,
 
 	--[[ Air Settings ]]
-	airAccelerate = 55, -- 35 feels good, lets try changing airspeed. 22 def
-	airSpeed = 6, -- 5
-	airMaxSpeed = 34, -- 33 was the sweet spot but i was hitting hops as much, 35 was too easy to hit hops
+	airAccelerate = 40,
+	airSpeed = 6,
+	airMaxSpeed = 36, -- 34
 	airMaxSpeedFriction = 6,
 	airMaxSpeedFrictionDecrease = .5, -- amount of times per 1/60sec to decrease air fric
 

@@ -3,24 +3,30 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
-local RunService = game:GetService("RunService")
 
 local player = game:GetService("Players").LocalPlayer
 if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
 
--- [[ INIT MODULES ]]
+local Console = require(Framework.Module.EvoConsole)
+local States = require(Framework.Module.m_states)
+local StatesRemoteFunction: RemoteFunction = Framework.Module.m_states.remote.RemoteFunction
+local UIState = States.State("UI")
+local PlayerData = require(Framework.Module.PlayerData.Client)
+local SoundsReplicate = Framework.Module.Sound:WaitForChild("remote"):WaitForChild("replicate")
+local clientPlayerDataModule = require(Framework.Module.shared.PlayerData.m_clientPlayerData).initialize()
+require(Framework.Module.EvoMMWrapper)
+task.delay(2, function() require(Framework.Module.EvoPlayer) end)
+
+
+-- Evo Modules
+Framework.Module.EvoMMWrapper.Remote.OnClientEvent:Connect(function() end)
+--
 
 -- Console
-local Console = require(Framework.Module.EvoConsole)
 Console:Create(game:GetService("Players").LocalPlayer)
 --
 
 -- States
-local States = require(Framework.Module.m_states)
-local StatesRemoteFunction: RemoteFunction = Framework.Module.m_states.remote.RemoteFunction
-local UIState = States.State("UI")
-local clientPlayerDataModule = require(Framework.Module.shared.PlayerData.m_clientPlayerData).initialize()
-local nxt = tick()
 function init_connections()
     StatesRemoteFunction.OnClientInvoke = remote_main
 end
@@ -42,31 +48,31 @@ function remote_main(action, ...)
     end
 end
 
--- responsible for handling UI state properties
--- ex: if a UI is enabled in which the MouseIcon is enabled with, the MouseIcon stays enabled
--- Connect Mouse Icon Update
+--@summary responsible for handling UI state properties (mouseIconEnabled)
 UIState:changed(function()
     local should = UIState:shouldMouseBeEnabled()
     UserInputService.MouseIconEnabled = should
     UserInputService.MouseBehavior = should and Enum.MouseBehavior.Default or Enum.MouseBehavior.LockCenter
 end)
+
+Framework.Module.EvoPlayer.Events.PlayerDiedBindable.Event:Connect(function()
+    UIState:clearOpenUIs()
+end)
 --
 
-local update = RunService.RenderStepped:Connect(function()
-    if tick() < nxt then return end
-    nxt = tick() + 10
-end)
+-- PlayerData
+print(PlayerData:Get())
+--
 
+-- [DEPRECATED] m_clientPlayerData
 Players.PlayerRemoving:Connect(function(plr)
     if player == plr then
-        update:Disconnect()
         clientPlayerDataModule:Save()
     end
 end)
 --
 
 -- Sounds
-local SoundsReplicate = Framework.Module.Sound:WaitForChild("remote"):WaitForChild("replicate")
 SoundsReplicate.OnClientEvent:Connect(function(action, sound, whereFrom)
     if not sound then return end
     if action == "Play" then
@@ -85,14 +91,4 @@ end)
 --
 
 -- Ragdolls
-local Ragdolls = require(Framework.Module.Ragdolls)
-
--- Evo Modules
-require(Framework.Module.EvoMMWrapper)
-Framework.Module.EvoMMWrapper.Remote.OnClientEvent:Connect(function()
-end)
-
-task.delay(2, function()
-    require(Framework.Module.EvoPlayer)
-end)
---
+require(Framework.Module.Ragdolls)

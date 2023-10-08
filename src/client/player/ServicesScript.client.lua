@@ -3,13 +3,27 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 
 -- Ability Service and Classes
 local AbilityService = Framework.Service.AbilityService
+local AbilityClasses = {}
 for _, module in pairs(AbilityService.Ability:GetChildren()) do
-    require(module)
+    local _name = string.lower(module.Name)
+    AbilityClasses[_name] = require(module)
+    AbilityClasses[_name].Options = AbilityClasses[_name].Configuration
+    AbilityClasses[_name].Player = game.Players.LocalPlayer
 end
 
-AbilityService.Events.Replicate.OnClientEvent:Connect(function(action, abilityName, origin, direction, thrower)
+local function getAbilityClass(ability: string)
+    return AbilityClasses[ability]
+end
+
+local function abilityGrenadeFire(abilityName, origin, direction, thrower)
+    local abilityClass = getAbilityClass(string.lower(abilityName))
+    local fireGrenade = abilityClass.FireGrenadeCore or getAbilityClass("grenade").FireGrenadeCore
+    fireGrenade(abilityClass, false, true, origin, direction, thrower)
+end
+
+AbilityService.Events.Replicate.OnClientEvent:Connect(function(action, ...)
     if action == "GrenadeFire" then
-        require(AbilityService.Ability[abilityName]):FireGrenade(false, true, origin, direction, thrower)
+        abilityGrenadeFire(...)
     end
 end)
 --

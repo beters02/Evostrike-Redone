@@ -71,7 +71,6 @@ end
 -- Shared Functions
 
 function DiedRagdoll(character, ragdoll)
-
 	setCharCollision(character)
 	initRagdollParts(ragdoll)
 	

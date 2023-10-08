@@ -43,6 +43,11 @@
         "$path": "plugin",
         "$ignoreUnknownInstances": true
       }
+    },
+
+    "ReplicatedFirst": {
+      "$path": "src/replicatedfirst",
+      "$ignoreUnknownInstances": true
     }
   }
 }

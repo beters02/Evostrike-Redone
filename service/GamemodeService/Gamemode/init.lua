@@ -32,7 +32,7 @@ local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local Types = require(script.Parent:WaitForChild("Types"))
-local EnableMainMenuRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("EnableMainMenu")
+local EnableMainMenuRemote = game:GetService("ReplicatedStorage"):WaitForChild("main"):WaitForChild("sharedMainRemotes"):WaitForChild("EnableMainMenu")
 local Teams = game:GetService("Teams")
 local TeleportService = game:GetService("TeleportService")
 local RoundTimer = require(script.Parent:WaitForChild("RoundTimer"))
@@ -44,6 +44,7 @@ local EvoMM = require(game.ReplicatedStorage.Modules.EvoMMWrapper)
 local Tables = require(Framework.Module.lib.fc_tables)
 local BotService = require(game.ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService"))
 
+local DefaultScripts = script:WaitForChild("Scripts")
 local DefaultSpawns = script:WaitForChild("Spawns")
 local DefaultGuis = script:WaitForChild("Guis")
 local DefaultBots = script:WaitForChild("Bots")
@@ -54,56 +55,51 @@ local Gamemode = {} :: Types.Gamemode
 Gamemode.__index = Gamemode
 
 Gamemode.GameVariables = {
-
-    -- [[ GENERAL ]]
-    game_type = "Round" :: Types.GameType,
     minimum_players = 2,
     maximum_players = 2,
-    bots_enabled = false,
-    leaderboard_enabled = true,
-    spawn_objects = DefaultSpawns,
-
-    -- [[ QUEUING ]]
-    queueFrom_enabled = false, -- Can a player queue while in this gamemode?
-    queueTo_enabled = true,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?
-
-    -- [[ MAIN MENU ]]
-    main_menu_type = "Default", -- the string that the main menu requests upon init, and that is sent out upon gamemode changed
-
-    -- [[ TEAMS ]]
     teams_enabled = false,
     players_per_team = 1,
 
-    -- [[ PLAYER SPAWNING ]]
-    opt_to_spawn = false,           -- should players spawn in automatically, or opt in on their own? (lobby)
-    characterAutoLoads = false,     -- roblox CharacterAutoLoads
+    bots_enabled = false,
+
+    opt_to_spawn = false, -- should players spawn in automatically, or opt in on their own? (lobby)
+    main_menu_type = "Default", -- the string that the main menu requests upon init, and that is sent out upon gamemode changed
+
+    characterAutoLoads = false,
     respawns_enabled = false,
     respawn_length = 3,
-    spawn_invincibility = 3,        -- set to false for none
-    starting_health = 100,
-    starting_shield = 50,
-    starting_helmet = true,
+    spawn_invincibility = 3, -- set to false for none
 
-    -- [[ ROUNDS ]]     : game_type == Round    
+    -- [[ PLAYER DEATH ]]
+    death_camera_enabled = true,
+    death_camera_custom_script = false,
+
+    -- [[ ROUNDS ]]     : game_type == Round
     round_length = 60,
-    round_end_timer_callback = "RoundScore" :: Types.RoundOverTimerCallbackType,
-    round_end_condition = "PlayerEliminated" :: Types.RoundEndCondition,
-        -- if round_end_condition == ScoreReached
-        round_score_to_win_round = 1,
-        round_score_increment_condition = "Kills" :: Types.RoundScoreIncrementCondition,
+    round_end_condition = "playerEliminated" :: Types.RoundEndCondition, -- teamEliminated, playerEliminated, timerOnly, scoreReached
+    round_end_timer_assign = "roundScore", -- roundScore, health, random, false
 
-    -- [[ OVERTIME ]]   : game_type == Round
+    -- if scoreReached
+    round_score_to_win_round = 1,
+    round_score_increment_condition = "kills", -- other
+
     overtime_enabled = true,
     overtime_round_score_to_win_game = 1,
     overtime_round_score_to_win_round = 1,
 
-    -- [[ GAME END CONDITIONS ]]
-    game_score_to_win_game = 7,             -- if game_type == "Score"
-    game_rounds_to_win_game = 7,            -- if game_type == "Round
-    kick_players_on_end = true,             -- Kick players or Restart game?
+    game_score_to_win_game = 7,
+    game_end_condition = "scoreReached", -- timerOnly
 
-    -- [[ BUY MENU, WEAPONS, ABILITIES & DAMAGING ]]
+    queueFrom_enabled = false, -- Can a player queue while in this gamemode?
+    queueTo_enabled = true,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?
+
+    kick_players_on_end = true,
+
     can_players_damage = true,
+    starting_health = 100,
+    starting_shield = 50,
+    starting_helmet = true,
+
     start_with_knife = true,
     auto_equip_strongest_weapon = true,
 
@@ -120,9 +116,6 @@ Gamemode.GameVariables = {
         utility = {"LongFlash", "Molly", "SmokeGrenade"}
     },
 
-    starting_weapons = false,
-    starting_abilities = false,
-
     buy_menu_enabled = false, -- if buy menu is enabled, buy_menu_starting_loadout must also be set.
     buy_menu_add_bought_instant = false, -- should the weapon/ability be added instantly or when they respawn
     buy_menu_starting_loadout = {
@@ -130,12 +123,20 @@ Gamemode.GameVariables = {
         Abilities = {primary = "Dash", secondary = "LongFlash"}
     },
 
+    leaderboard_enabled = true,
+
     --[[starting_weapons = {
         secondary = "glock17", primary = "ak47"
     },]]
+    starting_weapons = false,
+
     --[[starting_abilities = {
         "Dash"
     },]]
+    starting_abilities = false,
+
+    spawn_objects = DefaultSpawns,
+
 }
 
 --@summary Create a new GamemodeClass.
@@ -184,7 +185,7 @@ end
 
 --@summary Start the Gamemode.
 function Gamemode:Start(isInitialGamemode: boolean?)
-    if self.Status == "Paused" then
+    if self.Status == "Paused" and self.GameVariables.rounds_enabled then
         self:StartRound()
         return
     end
@@ -230,7 +231,7 @@ function Gamemode:Start(isInitialGamemode: boolean?)
         for i = 1, teams do
             local _team = Instance.new("Team", Teams)
             _team.Name = teamnames[i]
-            for pi = 1, self.GameVariables.players_per_team do
+            for _ = 1, self.GameVariables.players_per_team do
                 playercounter += 1
                 local playerdata = self:PlayerGetDataByNumberIndex(playercounter)
                 if playerdata then
@@ -243,7 +244,7 @@ function Gamemode:Start(isInitialGamemode: boolean?)
     self.GameData.Connections.PlayerAdded:Disconnect()
 
     if isInitialGamemode then -- we dont need to add blackscreen if there was a gamemode before this, since gamemode:Stop() does it already.
-        self:GuiBlackScreenAll(0.01, 0.5, true)
+        self:GuiBlackScreenAll(false, 0.1, 0.5, true)
     end
 
     task.wait()
@@ -275,7 +276,7 @@ function Gamemode:Start(isInitialGamemode: boolean?)
         task.wait(0.25)
     end
 
-    if self.GameVariables.game_type == "Round" then
+    if self.GameVariables.rounds_enabled then
         self.GameData.Round.Status = "Init"
         self.GameData.cancel_death_listener = true
         for _, v in pairs(self.PlayerData) do
@@ -301,26 +302,30 @@ function Gamemode:Pause()
 end
 
 --@summary End the Gamemode.
-function Gamemode:Stop()
-    local _, err = pcall(function()
-        if self.GameData.RoundTimer then
-            self:EndRound("Restart") -- Restart just does nothing for the RoundTimer result
-        end
-    end)
-    if err then warn(err) end
+function Gamemode:Stop(bruteForce)
+    if not bruteForce and self.Status == "Stopped" then
+        error("Gamemode already stopped.")
+        return false
+    end
+
+    if self.GameData.RoundTimer and (self.GameData.RoundTimer.Status == "Started" or self.GameData.RoundTimer.Stats == "Paused") then
+        self:EndRound("Restart") -- Restart just does nothing for the RoundTimer result
+    end
 
     for _, v in pairs(self.GameData.Connections) do
         v:Disconnect()
     end
 
-    self:GuiBlackScreenAll(0.5, 0.3, true)
+    self:GuiBlackScreenAll(false, 0.5, 0.3, true)
     WeaponService:ClearAllPlayerInventories()
     self:PlayerRemoveAll()
-    workspace.Temp:ClearAllChildren()
-    if self.GameVariables.queueFrom_enabled then
-        task.spawn(function()
-            EvoMM:StopQueueService()
-        end)
+
+    task.spawn(function()
+        EvoMM:StopQueueService()
+    end)
+
+    if self.GameVariables.bots_enabled then
+        BotService:RemoveAllBots()
     end
 
     -- probably keep track of any Gamemode related workspace objects under a tag and clear those here
@@ -329,7 +334,6 @@ end
 
 --@summary Start the overtime phase of the game.
 function Gamemode:InitOvertime()
-    
 end
 
 --
@@ -339,7 +343,8 @@ end
 -- Called in :Start() and at some point during :EndRound()
 function Gamemode:StartRound()
 
-    if self.GameVariables.game_type == "Round" then
+    if self.GameVariables.rounds_enabled then
+        
         if self.GameData.Round.Status == "Started" or self.GameData.Round.Status == "PreInit" or self.GameData.Round.Status == "Running" then
             warn("Round is already running!")
             return false
@@ -369,7 +374,7 @@ function Gamemode:StartRound()
         end
         
         -- StartRoundTimer and EndRound via Timer
-        if self.GameVariables.game_type == "Round" or self.GameVariables.game_type == "Timer" then
+        if self.GameVariables.rounds_enabled then
             self.GameData.Round.Status = "Running"
             -- start round timer
             local RoundFinished = self:StartRoundTimer()
@@ -383,7 +388,7 @@ function Gamemode:StartRound()
     end)
 
     self.GameData.Connections.PlayerDied = EvoPlayer.PlayerDied:Connect(function(killed, killer)
-        if self.GameVariables.game_type == "Round" then
+        if self.GameVariables.rounds_enabled then
             if self.GameData.Round.Status ~= "Running" then
                 return
             end
@@ -423,7 +428,7 @@ function Gamemode:EndRound(result, winner, loser)
         end)
     end
 
-    self:GuiBlackScreenAll(0.5, 0.5, true)
+    self:GuiBlackScreenAll(false, 0.5, 0.5, true)
 
     self.GameData.Round.Status = "Ended"
     self.GameData.Round.Current += 1
@@ -496,40 +501,10 @@ function Gamemode._RoundOverWonCore(self, winner, loser)
     self:StartRound()
 end
 
---@summary Score Sort Utility
-function Gamemode:SortPlayersByScore()
-    local scores = {}
-    for name, data in pairs(self.PlayerData) do
-        if table.find(scores, name) then continue end
-        scores = self:ScoreSortPlayer(name, data, scores)
-    end
-    return scores
-end
-
-function Gamemode:ScoreSortPlayer(name, data, scores)
-    if #scores == 0 then
-        scores[1] = name
-        return scores
-    end
-    for sindex, sname in scores do
-        if data.Score > self.PlayerData[sname].Score then
-            scores[sindex+1] = sname
-            scores[sindex] = name
-            break
-        end
-    end
-    return scores
-end
---
-
 --@summary Called in :EndRound() when rounds_enabled = true and the timer runs out.
 function Gamemode:RoundOverTimer()
 
-    if self.GameVariables.game_type == "Timer" then
-        return self:GameOverWon(self:SortPlayersByScore())
-    end
-
-    local roundEndAssign = self.GameVariables.round_end_timer_callback
+    local roundEndAssign = self.GameVariables.round_end_timer_assign
     if roundEndAssign then
 
         local winner
@@ -562,6 +537,7 @@ function Gamemode:RoundOverTimer()
 
         -- assign "loser" player if necessary
         loser = self.Name == "1v1" and self:PlayerGetOtherPlayer(winner) or false
+
         return self:_RoundOverWonCore(winner, loser) -- No need to call EndRound here since it was already called
     end
 end
@@ -612,20 +588,24 @@ function Gamemode:PlayerInit(player)
         self.PlayerData[player.Name].BuyMenuLoadout = Tables.clone(self.GameVariables.buy_menu_starting_loadout)
     end
 
-    if self.GameVariables.game_type == "Round" then
+    if self.GameVariables.rounds_enabled then
         self.PlayerData[player.Name].Score = 0
-        if self.GameVariables.round_end_condition == "ScoreReached" then
-            self.PlayerData[player.Name].Round = {Score = 0}
-        end
-    elseif self.GameVariables.game_type == "Score" then
-        self.PlayerData[player.Name].Score = 0
+    end
+
+    if self.GameVariables.round_end_condition == "scoreReached" then
+        self.PlayerData[player.Name].Round = {Score = 0}
     end
 end
 
 --@summary Spawn a player. Called either in PlayerSpawnAll() or during respawn on PlayerDied()
 function Gamemode:PlayerSpawn(player, content, index)
-    player:LoadCharacter()
+    if self.GameVariables.death_camera_enabled then
+        self:PlayerRemoveDeathCamera(player)
+    end
+
     task.wait()
+
+    player:LoadCharacter()
 
     if self.Name == "1v1" then
         player.Character:SetPrimaryPartCFrame(content and content.spawns[index].CFrame)
@@ -752,14 +732,38 @@ function Gamemode:PlayerRemoveAll()
 end
 
 --@summary Called when a player dies.
+--         Ran in PlayerDiedCore at the very end
 function Gamemode:PlayerDied(player, killer)
-    --TODO: add the death camera script here
+end
+
+--@summary Called in PlayerDiedCore if death_camera_enabled
+function Gamemode:PlayerAddDeathCamera(player, killer)
+    if not killer then killer = player end
+    local dscript = (self.GameVariables.death_camera_custom_script and self.GameVariables.death_camera_custom_script or DefaultScripts.DeathCamera):Clone()
+    dscript.Parent = player.Character
+    local ko = Instance.new("ObjectValue", dscript)
+    ko.Name = "killerObject"
+    ko.Value = killer
+    self.PlayerData[player.Name].DeathCameraScript = dscript
+end
+
+--@summary Called in PlayerSpawn if death_camera_enabled
+function Gamemode:PlayerRemoveDeathCamera(player)
+    if self.PlayerData[player.Name].DeathCameraScript then
+        self.PlayerData[player.Name].DeathCameraScript:WaitForChild("Finished"):FireClient(player)
+        task.delay(1, function()
+            self.PlayerData[player.Name].DeathCameraScript:Destroy()
+            self.PlayerData[player.Name].DeathCameraScript = nil
+        end)
+    end
 end
 
 --@final
 --@summary For win conditioning, respawns, etc. Called by default when a Player dies. Not recommended to override.
 function Gamemode._PlayerDiedCore(self, player, killer)
-    self:PlayerDied(player, killer)
+    if self.GameVariables.death_camera_enabled then
+        self:PlayerAddDeathCamera(player, killer)
+    end
 
     if self.GameVariables.respawns_enabled then
         task.delay(self.GameVariables.respawn_length, function()
@@ -777,26 +781,16 @@ function Gamemode._PlayerDiedCore(self, player, killer)
     if killer then
         self.PlayerData[killer.Name].Kills += 1
     end
+
     self.PlayerData[player.Name].Deaths += 1
 
     if self.GameVariables.leaderboard_enabled then
         self:GuiUpdateLeaderboardAll()
     end
 
-    if self.GameVariables.buy_menu_enabled then
-        local pd = self.PlayerData[player.Name]
-        if pd.BuyMenu then pd.BuyMenu:Destroy() end
-        if pd.BuyMenuConnections then
-            for _, v in pairs(pd.BuyMenuConnections) do
-                v:Disconnect()
-            end
-        end
-        
-        self.PlayerData[player.Name].BuyMenu = nil
-        self.PlayerData[player.Name].BuyMenuConnections = nil
-    end
-
     Gamemode.PlayerDiedGameType[self.GameVariables.game_type](self, player, killer)
+
+    self:PlayerDied(player, killer)
 end
 
 --@summary Called when a PlayerDied and game_type == "Round"
@@ -806,60 +800,44 @@ function Gamemode:PlayerDiedRound(player, killer)
         return true
     end
 
-    if killer == player or not killer then
-        if self.PlayerDiedIsKiller then
-            return self:PlayerDiedIsKiller(player)
+    if self.GameVariables.rounds_enabled then
+        if killer and killer == player or not killer then
+            if self.PlayerDiedIsKiller then
+                return self:PlayerDiedIsKiller(player)
+            end
+        elseif self.GameVariables.round_end_condition == "scoreReached" and self.GameVariables.round_score_increment_condition == "kills" then
+            if not self.PlayerData[killer.Name].Round.Score then
+                self.PlayerData[killer.Name].Round.Score = 0
+            end
+            self.PlayerData[killer.Name].Round.Score += 1
         end
-    elseif self.GameVariables.round_end_condition == "ScoreReached" and self.GameVariables.round_score_increment_condition == "Kills" then
-        if not self.PlayerData[killer.Name].Round.Score then
-            self.PlayerData[killer.Name].Round.Score = 0
-        end
-        self.PlayerData[killer.Name].Round.Score += 1
-    end
-    if self.GameVariables.round_end_condition == "PlayerEliminated" then
-        return self:EndRound("RoundOverWon", killer, player)
-    end
-    if self.GameVariables.round_end_condition == "TeamEliminated" then
-        -- check alive status of team members
-        local aliveTeamMembers = 0
-        if aliveTeamMembers <= 0 then
-            return self:EndRound("RoundOverWonTeam", killer, player)
-        end
-    end
-    if self.GameVariables.round_end_condition == "ScoreReached" then
-        if not killer then
-            self.GameData.Round.Status = "Running"
-            return end
-        if self.PlayerData[killer.Name].Round.Score == self.GameVariables.round_score_to_win_round then
+        if self.GameVariables.round_end_condition == "playerEliminated" then
             return self:EndRound("RoundOverWon", killer, player)
         end
+        if self.GameVariables.round_end_condition == "teamEliminated" then
+            -- check alive status of team members
+            local aliveTeamMembers = 0
+            if aliveTeamMembers <= 0 then
+                return self:EndRound("RoundOverWonTeam", killer, player)
+            end
+        end
+        if self.GameVariables.round_end_condition == "scoreReached" then
+            if not killer then
+                if self.GameVariables.rounds_enabled then
+                    self.GameData.Round.Status = "Running"
+                end
+                return end
+            if self.PlayerData[killer.Name].Round.Score == self.GameVariables.round_score_to_win_round then
+                return self:EndRound("RoundOverWon", killer, player)
+            end
+        end
+
+        if self.GameVariables.rounds_enabled then
+            self.GameData.Round.Status = "Running"
+        end
+        return true
     end
-
-    self.GameData.Round.Status = "Running"
-    return true
 end
-
---@summary Called when a PlayerDied and game_type == "Score"
-function Gamemode:PlayerDiedScore(player, killer)
-    if not killer or player == killer or player.Name == killer.Name then
-        return
-    end
-    self.PlayerData[killer.Name].Score += 1
-    if self.PlayerData[killer.Name].Score >= self.GameVariables.game_score_to_win_game then
-        self:GameOverWon(killer)
-    end
-end
-
---@summary Called when a PlayerDied and game_type == "Timer"
-function Gamemode:PlayerDiedTimer(player, killer)
-end
-
---@summary Easy Access PlayerDied GameType Extracted Functions
-Gamemode.PlayerDiedGameType = {
-    Round = Gamemode.PlayerDiedRound,
-    Score = Gamemode.PlayerDiedScore,
-    Timer = Gamemode.PlayerDiedTimer
-}
 
 --@summary Called when a player kills themselves. Set to false to just run :PlayerDied()
 function Gamemode:PlayerDiedIsKiller(player)
@@ -986,12 +964,20 @@ function Gamemode:GuiInit(plr: Player | "all")
     for _, player in pairs(plrs) do
         if self.Name == "1v1" then
             local c = DefaultGuis.GamemodeBar:Clone()
+            CollectionService:AddTag(c, "DestroyOnClose")
             local enemyobj = Instance.new("ObjectValue")
             enemyobj.Name = "EnemyObject"
             enemyobj.Value = self:PlayerGetOtherPlayer(player)
             enemyobj.Parent = c
             c.Parent = player:WaitForChild("PlayerGui")
         end
+    end
+end
+
+--@summary Ran when Gamemode is Stopped
+function Gamemode:GuiClose()
+    for _, v in ipairs(CollectionService:GetTagged("DestroyOnClose") or {}) do
+        v:Destroy()
     end
 end
 
@@ -1045,17 +1031,17 @@ function Gamemode:GuiAddBuyMenu(player: Player | "all")
             end
         end
 
-        self.PlayerData[v.Name].BuyMenuConnections.Ability = c.AbilitySelected.OnServerEvent:Connect(function(plr, abilityName, abilitySlot)
-            self.PlayerData[plr.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
+        self.PlayerData[v.Name].BuyMenuConnections.Ability = c.AbilitySelected.OnServerEvent:Connect(function(_, abilityName, abilitySlot)
+            self.PlayerData[v.Name].BuyMenuLoadout.Abilities[abilitySlot] = abilityName
             if self.GameVariables.buy_menu_add_bought_instant then
-                AbilityService:AddAbility(plr, abilityName)
+                AbilityService:AddAbility(v, abilityName)
             end
         end)
 
-        self.PlayerData[v.Name].BuyMenuConnections.Weapon = c.WeaponSelected.OnServerEvent:Connect(function(plr, weaponName, weaponSlot)
-            self.PlayerData[plr.Name].BuyMenuLoadout.Weapons[weaponSlot] = weaponName
+        self.PlayerData[v.Name].BuyMenuConnections.Weapon = c.WeaponSelected.OnServerEvent:Connect(function(_, weaponName, weaponSlot)
+            self.PlayerData[v.Name].BuyMenuLoadout.Weapons[weaponSlot] = weaponName
             if self.GameVariables.buy_menu_add_bought_instant then
-                WeaponService:AddWeapon(plr, weaponName)
+                WeaponService:AddWeapon(v, weaponName)
             end
         end)
     end
@@ -1085,7 +1071,7 @@ end
 --@summary Waiting for player gui
 function Gamemode:GuiWaitingForPlayers(player: Player | "all", tag: string?)
     local plrs = player == "all" and self:PlayerGetAll() or {player}
-    for i, v in pairs(plrs) do
+    for _, v in ipairs(plrs) do
         local c = DefaultGuis.WaitingForPlayers:Clone()
         c.Parent = v:WaitForChild("PlayerGui")
         if tag then
@@ -1095,16 +1081,19 @@ function Gamemode:GuiWaitingForPlayers(player: Player | "all", tag: string?)
 end
 
 --@summary Add Black Screen
-function Gamemode:GuiBlackScreenAll(inLength: number?, outLength: number?, await: boolean?)
+function Gamemode:GuiBlackScreenAll(maxLength: number?, inLength: number?, outLength: number?, await: boolean?)
+    maxLength = maxLength or 5
     inLength = inLength or 0.25
     outLength = outLength or 0.25
-    for _, v in pairs(self:PlayerGetAll()) do
+    for _, v in ipairs(self:PlayerGetAll()) do
         local c: ScreenGui = DefaultGuis.BlackScreen:Clone()
         c:SetAttribute("InLength", inLength)
         c:SetAttribute("OutLength", outLength)
+        c:SetAttribute("MaxLength", maxLength)
         c.Parent = v:WaitForChild("PlayerGui")
         c.ResetOnSpawn = false
         CollectionService:AddTag(c, "BlackScreen")
+        Debris:AddItem(c, maxLength + inLength + outLength)
     end
     if await then
         task.wait(inLength)
@@ -1115,7 +1104,7 @@ end
 function Gamemode:GuiRemoveBlackScreen(player: Player | "all", await: boolean)
     local outLength
     if player == "all" then
-        for _, ui in pairs(CollectionService:GetTagged("BlackScreen")) do
+        for _, ui in ipairs(CollectionService:GetTagged("BlackScreen")) do
             ui.Out:FireClient(ui.Parent.Parent)
             outLength = ui:GetAttribute("OutLength")
             Debris:AddItem(ui, 5)

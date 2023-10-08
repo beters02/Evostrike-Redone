@@ -1,3 +1,4 @@
+local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
@@ -186,6 +187,8 @@ function HEGrenade.ServerPop(position)
             v.Rate = 0
         end)
     end
+
+    Debris:AddItem(_explosion, 5)
 end
 
 return HEGrenade

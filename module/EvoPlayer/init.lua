@@ -1,5 +1,6 @@
 --[[ Purpose: Centralizing Evostrike Player Functionality ]]
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -135,6 +136,12 @@ if RunService:IsServer() then
     EvoPlayer.PlayerDied = Signal.new()
 
     DiedEvent.OnServerEvent:Connect(function(killed, killer)
+        local tagged = CollectionService:GetTagged(killed.Name .. "_ClearOnDeath")
+        if tagged and type(tagged) == "table" then
+            for _, v in ipairs(tagged) do
+                v:Destroy()
+            end
+        end
         EvoPlayer.PlayerDied:Fire(killed, killer)
 
         -- fire the event for clients

@@ -42,6 +42,7 @@ local function hasRequiredParts()
 end
 
 local function updateYourTorsoVar()
+	if not character or not character.Humanoid or character.Humanoid.Health <= 0 then return end
 	if isCamOnChar() and hasRequiredParts() then
 		localRemote:FireServer(getPoint(), torso.CFrame.LookVector, cam.CFrame.LookVector, neckOriginC0, waistOriginC0, lShoulderC0, rShoulderC0) -- send variables off to have Packets created when receieved.
 	end

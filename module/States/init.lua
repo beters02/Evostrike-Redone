@@ -1,215 +1,185 @@
-local RunService = game:GetService("RunService")
--- [[ States Singleton Module ]]
-
 --[[
-    A "State" is a Class that will contain a table values that remain
-    consistent globally, and can be set and got from anywhere.
+    Reliable, replicated States.
+    Initialied upon first require, must be initialized on both Client and Server.
 
-    States are not replicated by default, you have to set replicated = true when creating
+    ------- Tutorial -------
+    == Create a Replicated State ==
 
-    
+        - From any script -
+    local stateProperties = {id = "TestState", replicated = true, clientReadOnly = false}
+    local stateVariables = {test = false}
+    local state = States:Create(stateProperties, stateVariables)
+    state:set("test", true)
 
-    In this current stage I think the module is quite unreliable when replicating because it only Fire's a RemoteEvent once.
-    I would rather replication be through the RemoteFunction and listening to responses on a seperate thread.
+        - From another script -
+    local state = States:Get("TestState")
+    state:get("test") -- returns true
 
-    On second thought, replication does not actually work at all right now since we need to create listeners on both the Server and Client for when a value is to be replicated.
+    ====
+
 ]]
 
-export type State = {
-    id: string,
-    replicated: boolean,
-    values: table,
-    changedBindable: BindableEvent,
-    changedRemote: RemoteEvent | false,
+-----------------------------------------------------------------------------------------
+-- Set this to a higher value if you are consistently having "getCurrentReplicated" error.
+-- This would be happening if the game you are running States on is a larger game.
+local CLIENT_GET_WAIT_SEC = 3
+-----------------------------------------------------------------------------------------
 
-    get: (self: State, key: string) -> (any),
-    set: (self: State, key: string, value: any) -> (any)
+export type States = {
+    Create: (self: States, properties: StateProperties, defaultVar: table) -> (State),
+    Get: (self: States, ID: string) -> (State)
 }
 
--- Module
-local States = {}
-States.Stored = {}
-States.Module = script
-States.RemoteEvent = script:WaitForChild("RemoteEvent")
-States.RemoteFunction = script:WaitForChild("RemoteFunction")
+export type State = {
+    _variables: table,
 
--- Class
+    get: (self: State, key: string) -> (any),
+    set: (self: State, key: string, variant: any) -> (any),
+    properties: StateProperties
+}
+
+export type StateProperties = {
+    id: string,
+    replicated: boolean,
+    clientReadOnly: boolean
+}
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local RF = script.Events.RemoteFunction
+local RE = script.Events.RemoteEvent
+
+local Util = {}
+function Util.hardCopy(tab: table)
+    local self = {}
+    for i, v in pairs(tab) do
+        self[i] = v
+    end
+    return self
+end
+
+function Util.fireAllClientsExcept(remote, player, ...)
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if player ~= plr then
+            remote:FireClient(...)
+        end
+    end
+end
+
+--@class [[
 local State = {}
 State.__index = State
 
--- [[ PUBLIC MODULE FUNCTIONS ]]
-
---@summary Create a Custom State
-function States:CreateState(id: string, replicated: boolean, values: table)
-    return State.new(id, replicated, values)
+function State.new(properties, defaultVariables)
+    local self = setmetatable({}, State) :: State
+    self.new = nil
+    self.properties = properties :: StateProperties
+    self._variables = Util.hardCopy(defaultVariables)
+    return self
 end
 
---@summary Get a Stored State by ID
-function States:GetState(id: string)
-    return States.Stored[id]
-end
-
--- [[ CREATE STATES ]]
-
---@summary Create a new state.
-function State.new(id: string, replicated: boolean, values: table)
-    assert(not States.Stored[id], "Cannot create two of the same state. " .. tostring(id))
-
-    local self: State = {
-        id = id,
-        replicated = replicated,
-        values = values
-    }
-    
-    if RunService:IsClient() and replicated then -- server creates replicated objs
-        self.changedBindable, self.changedRemote = States.RemoteFunction:InvokeServer("NewState", id, replicated, values)
-    else
-        self.changedBindable = Instance.new("BindableEvent", States.Module)
-        self.changedRemote = replicated and RunService:IsServer() and Instance.new("RemoteEvent", States.Module)
-    end
-
-    if RunService:IsServer() and replicated then
-        States.Remote:FireAllClients("NewState", id, replicated, values, self.changedBindable, self.changedRemote)
-    end
-
-    States.Stored[id] = setmetatable(self, State)
-    return States.Stored[id]
-end
-
---@summary Get a value from a State's value key.
 function State:get(key: string)
-    return self.values[key]
+    return self._variables[key]
 end
 
---@summary Set a value from a State's value key.
-function State:set(key: string, value: any)
-    local succ, err = pcall(function()
-        self.values[key] = value
-    end)
-    
-    if not succ then
-        warn("Could not set state " .. tostring(key) .. " " .. tostring(err))
-        return
-    end
-
-    self.changedBindable:Fire(key, value)
-
-    if self.replicated then
-        if RunService:IsServer() then
-            self.changedRemote:FireAllClients(key, value)
+function State:set(key: string, new: any)
+    if self.properties.replicated then
+        if RunService:IsClient() then
+            assert(not self.properties.clientReadOnly, "Client cannot edit State " .. self.properties.id)
+            local success, response = pcall(function()
+                return RF:InvokeServer("_stateSetAsync", self.properties.id, key, new)
+            end)
+            assert(success, response)
+            return response
         else
-            self.changedRemote:FireServer(key, value)
+            RE:FireAllClients("_stateSetAsync", self.properties.id, key, new)
         end
     end
 
-    return self.values[key]
+    return self:setAsync(key, new)
 end
 
---@summary Listen to the Changed Bindable Event
---@param once: boolean          - Listen only once?
---@param listenKey: string?     - Define key if listening for specific key value change, otherwise put false
---@param callback: function     - The function ran on Event Fired
-function State:listenChangedBindable(once: boolean, listenKey: string | false, callback: (key: string, value: any) -> ()): RBXScriptConnection
-    local conn
-    conn = self.changedBindable.Event:Connect(function(key, value)
-        if listenKey and listenKey ~= key then return end
-        callback(key, value)
-        if once then
-            conn:Disconnect()
+function State:setAsync(key: string, new: any)
+    self._variables[key] = new
+    return new
+end
+-- ]]
+
+--@module [[
+local States = {}
+States._cache = {storedStates = {}}
+
+function States:Create(properties: StateProperties, defaultVar: table)
+    if properties.replicated then
+        if RunService:IsClient() then
+            local success, response = RF:InvokeServer("_stateCreateAsync", properties, defaultVar)
+            assert(success, response)
+        else
+            RE:FireAllClients("_stateCreateAsync", properties, defaultVar)
+        end
+    end
+
+    return States:_stateCreateAsync(properties, defaultVar) :: State
+end
+
+function States:Get(ID: string)
+    local state = States._cache.storedStates[ID] :: State
+    if not state and RunService:IsClient() then
+        local i = 0
+        while not state and i < CLIENT_GET_WAIT_SEC do
+            state = States._cache.storedStates[ID] :: State
+            task.wait(1)
+            i += 1
+        end
+    end
+    return state
+end
+-- ]]
+
+--@module_private [[
+function States:_stateCreateAsync(properties, defaultVar)
+    local _state = State.new(properties, defaultVar)
+    States._cache.storedStates[properties.id] = _state
+    return _state :: State
+end
+
+function States:_stateSetAsync(id, key, new)
+    return States:Get(id):setAsync(key, new)
+end
+
+function States:_getCurrentReplicated()
+    local _st = {}
+    for _, s in pairs(States._cache.storedStates) do
+        if s.properties.replicated then
+            table.insert(_st, {s.properties, s._variables})
+        end
+    end
+    return _st
+end
+-- ]]
+
+--@run [[
+if RunService:IsServer() then
+    local function ServerInvoke(_, action, ...)
+        assert(States[action], "Action " .. tostring(action) .. " not found")
+        return States[action](States, ...)
+    end
+    RF.OnServerInvoke = ServerInvoke
+elseif RunService:IsClient() then
+    RE.OnClientEvent:Connect(function(action, ...)
+        if States[action] then
+            States[action](States, ...)
         end
     end)
-    return conn
+
+    local statesToCreate = RF:InvokeServer("_getCurrentReplicated")
+    assert(statesToCreate, "Could not getCurrentReplicated! Did you connect to this module on the server?")
+
+    for _, st in pairs(statesToCreate) do
+        States:_stateCreateAsync(st[1], st[2])
+    end
+    statesToCreate = nil
 end
+-- ]]
 
---@summary Listen to the Changed Remote Event (replicated state only)
-function State:listenChangedRemote(once: boolean, listenKey: string | false, callback: (key: string, value: any) -> ()): RBXScriptConnection
-    local conn
-
-    if RunService:IsClient() then
-        conn = self.changedRemote.OnClientEvent:Connect(function(key, value)
-            if listenKey and listenKey ~= key then return end
-            callback(key, value)
-            if once then
-                conn:Disconnect()
-            end
-        end)
-    elseif RunService:IsServer() then
-        conn = self.changedRemote.OnServerEvent:Connect(function(_, key, value)
-            if listenKey and listenKey ~= key then return end
-            callback(key, value)
-            if once then
-                conn:Disconnect()
-            end
-        end)
-    end
-    
-    return conn
-end
-
--- [[ INIT DEFAULT CLASSES & REQUIRE SCRIPT ]]
-
-if RunService:IsServer() then
-    -- Replicated State Creation
-    States.RemoteFunction.OnServerInvoke = function(_, action, ...)
-        if action == "NewState" then
-            local id, replicated, values = ...
-            local _state = States.new(id, replicated, values)
-            return _state.changedBindable, _state.changedRemote
-        end
-    end
-elseif RunService:IsClient() then
-
-    --[[Movement]]
-    State.new("Movement", false, {
-        grounded = false,
-        landing = false,
-        crouching = false
-    })
-
-    --[[PlayerActions]]
-    State.new("PlayerActions", false, {
-        shooting = false,
-        reloading = false,
-        weaponEquipped = false,
-        weaponEquipping = false,
-        grenadeThrowing = false
-    })
-
-    --[[UI]]
-    local UI = State.new("UI", false, {
-        openUIS = {}
-    })
-
-    function UI:addOpenUI(uiName, ui, mouseIconEnabled)
-        if not uiName then warn("Must specifiy UI name.") return false end
-    
-        -- we dont want to add the same UI twice here
-        if self.values.openUIs[uiName] then
-            warn("C_UI Cannot open the same UI twice. " .. tostring(uiName))
-            return false
-        end
-    
-        -- set as new table so changed event fires
-        local new = self.values.openUIs
-        new[uiName] = {UI = ui, MouseIconEnabled = mouseIconEnabled or false}
-        return self:set("openUIs", new)
-    end
-    
-    -- Remove an open UI from the state data
-    function UI:removeOpenUI(uiName)
-        -- set as new table so changed event fires
-        local new = self.values.openUIs
-        new[uiName] = nil
-        return self:set("openUIs", new)
-    end
-    
-    function UI:hasOpenUI()
-        for _, v in pairs(self:get("openUIs")) do
-            if v then return true end
-        end
-        return false
-    end
-    --[[END UI]]
-end
-
-return States
+return States :: States

@@ -25,19 +25,27 @@ local map = require(script:WaitForChild("map"))
 --
 
 -- [[ Version Handling ]]
-
 local vh = require(script:WaitForChild("versionHandle"))
+
 local vhSelf = {}
 vhSelf.vh_isupdating = false
 vhSelf.vh_isunpacking = false
 vhSelf.vhUpdateConfirmGui = script:WaitForChild("vhUpdateConfirmGui", 10):Clone()
 vhSelf.vhPackWithMapConfirmGui = script:WaitForChild("vhPackWithMapConfirmGui", 10):Clone()
+vhSelf.vhPullConfirmGui = script:WaitForChild("ConfirmPull", 10):Clone()
 
 --
 
+local self
+
 local function init()
-	vh.init(vhSelf, vhpushupdatebutton, vhpullupdatebutton, vhunpackbutton, vhpackbutton)
 	map.init(mmeditButton, mmplayButton)
+
+	vhSelf.getMapMode = map.GetMode
+	vhSelf.mm_play = function() return map.Mode("Play") end
+	vhSelf.mm_ungroupChildren = map.Ungroup
+
+	vh.init(vhSelf, vhpushupdatebutton, vhpullupdatebutton, vhunpackbutton, vhpackbutton)
 end
 
 init()

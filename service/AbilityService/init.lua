@@ -18,11 +18,13 @@ local AbilityService = {}
 local Assets = script:WaitForChild("Assets")
 local Ability = script:WaitForChild("Ability")
 local RemoteEvent = script:WaitForChild("Events").RemoteEvent
+local RemoteFunction = script:WaitForChild("Events").RemoteFunction
 local Replicate = script.Events.Replicate
 local Molly = require(Ability:WaitForChild("Molly"))
 local LongFlash = require(Ability:WaitForChild("LongFlash"))
 local SmokeGrenade = require(Ability:WaitForChild("SmokeGrenade"))
 local HEGrenade = require(Ability:WaitForChild("HEGrenade"))
+local Satchel = require(Ability:WaitForChild("Satchel"))
 
 AbilityService._Connections = {}
 AbilityService._PlayerData = {}
@@ -65,8 +67,14 @@ function AbilityService:Start()
             SmokeGrenade.ServerPop(...)
         elseif action == "HEGrenadeServerPop" then
             HEGrenade.ServerPop(...)
+        elseif action == "SatchelServerPop" then
+            Satchel.ServerPop(player, ...)
         end
     end)
+    RemoteFunction.OnServerInvoke = function(_, action, ...)
+        if not AbilityService[action] then return end
+        return AbilityService[action](...)
+    end
 end
 
 function AbilityService:CreateAbilityFolder(character)

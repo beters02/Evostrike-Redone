@@ -1,21 +1,16 @@
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
-
 local Framework = require(ReplicatedStorage.Framework)
-local StoredMapIDs = require(ServerStorage:WaitForChild("Stored"):WaitForChild("MapIDs"))
-local EvoMM = require(Framework.Module.EvoMMWrapper)
-local GamemodeService = require(Framework.Service.GamemodeService)
-local statesloc = Framework.Module.m_states
-local states = require(statesloc)
-local statesMainRF: RemoteFunction = statesloc.remote.RemoteFunction
-local queueRemote = Framework.Module.shared.Remotes.requestQueueFunction
-local replicateSoundRemote = Framework.Module.Sound:WaitForChild("remote").replicate
 
 --EvoConsole
 require(Framework.Module.EvoConsole)
 
 --EvoMM
+local EvoMM = require(Framework.Module.EvoMMWrapper)
+local GamemodeService = require(Framework.Service.GamemodeService)
+local StoredMapIDs = require(ServerStorage:WaitForChild("Stored"):WaitForChild("MapIDs"))
+local queueRemote = Framework.Module.shared.Remotes.requestQueueFunction
 local requestActions = {
     Add = function(player, ...)
         if GamemodeService.Gamemode.Name ~= "Lobby" then return end
@@ -48,6 +43,9 @@ end
 --
 
 --States
+local statesloc = Framework.Module.m_states
+local states = require(statesloc)
+local statesMainRF: RemoteFunction = statesloc.remote.RemoteFunction
 function init_connections()
     statesMainRF.OnServerInvoke = remote_main
 end
@@ -72,9 +70,14 @@ end
 --
 
 --Sound
+local replicateSoundRemote = Framework.Module.Sound:WaitForChild("remote").replicate
 replicateSoundRemote.OnServerEvent:Connect(function(player, action, sound, whereFrom, volume)
     for _, v in pairs(game:GetService("Players"):GetPlayers()) do
         if v == player then continue end
         replicateSoundRemote:FireClient(v, action, sound, whereFrom)
     end
 end)
+--
+
+--PlayerData
+require(Framework.Module.PlayerData)

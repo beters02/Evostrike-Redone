@@ -20,13 +20,15 @@ if RunService:IsClient() then
     return require(Client)
 end
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local Maps = require(ServerStorage:WaitForChild("Stored"):WaitForChild("MapIDs"))
+
 -- [[ SERVICE CONFIGURATION ]]
-
-local lobby_id = 11287185880        -- In the Lobby, the Gamemode will always be default_gamemode.
+local lobby_id = Maps.mapIds.lobby        -- In the Lobby, the Gamemode will always be default_gamemode.
+local unstable_id = Maps.mapIds.unstable
 local default_gamemode = "Deathmatch"
-
-local studio_gamemode = "Range"   -- The Gamemode that is automatically set in Studio.
-
+local studio_gamemode = "Deathmatch"   -- The Gamemode that is automatically set in Studio.
 --
 
 local Types = require(script:WaitForChild("Types"))
@@ -34,21 +36,18 @@ local GamemodeClass = require(script:WaitForChild("Gamemode"))
 local RemoteEvent = script:WaitForChild("RemoteEvent")
 local RemoteFunction = script:WaitForChild("RemoteFunction")
 local BindableEvent = script:WaitForChild("BindableEvent")
-local EvoMM = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
-local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("AdminIDs"))
+local EvoMM = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
+local Admins = require(ServerStorage:WaitForChild("Stored"):WaitForChild("AdminIDs"))
 
 local ErrorDef = {Prefix = "GamemodeService: "}
 ErrorDef.CouldNotChangeGamemode = ErrorDef.Prefix .. "Could not change gamemode! "
 
----@interface GamemodeService
 local GamemodeService = {}
 GamemodeService.Status = "Stopped"
 GamemodeService.Gamemode = "None"
 GamemodeService.Connections = {}
 
-local Guis = script.Gamemode.Guis
-
----@function Start GamemodeService.
+--@summary Start GamemodeService.
 function GamemodeService:Start()
     if GamemodeService.Status == "Running" or GamemodeService.Status == "Initting" then
         warn("GamemodeService is already running!")
@@ -63,7 +62,7 @@ function GamemodeService:Start()
     local startingGamemode
     if RunService:IsStudio() then
         startingGamemode = studio_gamemode
-    elseif game.PlaceId == lobby_id then
+    elseif game.PlaceId == lobby_id or game.PlaceId == unstable_id then
         startingGamemode = default_gamemode
     else
         startingGamemode = GamemodeService:AwaitGamemodeDataExtraction()
@@ -74,18 +73,16 @@ function GamemodeService:Start()
     print("GamemodeService Started!")
 end
 
----@function Stop GamemodeService.
+--@summary Stop GamemodeService.
 function GamemodeService:Stop()
     if GamemodeService.Gamemode then
         GamemodeService.Gamemode:Stop()
     end
 end
 
----@function Change the current gamemode.
----@param gamemode string -- The desired gamemode
----@param start boolean? -- Should the game start automatically?
----@param isInitialGamemode boolean? -- Is this the first gamemode set of the server?
----@param bruteForce boolean? -- BruteForce processing variables?
+--@summary      Change the current gamemode.
+--@param        gamemode: string        [the name of the gamemode]
+--@param        start: boolean = true   [start on class creation]
 function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitialGamemode: boolean?, bruteForce: boolean?): Types.Gamemode
     if start == nil then start = true end
     local currentGamemodeRunning = false
@@ -107,11 +104,15 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
     if currentGamemodeRunning then
         GamemodeService.Gamemode:Stop(true)
     end
+
     task.wait(.1)
 
     GamemodeService.Gamemode = _gamemode
+
     script:SetAttribute("CanDamage", _gamemode.GameVariables.can_players_damage or false)
+
     RemoteEvent:FireAllClients("GamemodeChanged", gamemode)
+
     if start then
         task.delay(0.5, function()
             _gamemode:Start(isInitialGamemode)
@@ -120,26 +121,7 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
     return _gamemode
 end
 
----@function Restart the current gamemode.
-function GamemodeService:RestartMode()
-    print("Gamemode Restarting!")
-    GamemodeService.Gamemode:Stop()
-    GamemodeService:RestartModeGui()
-    task.delay(1.5, function()
-        RemoteEvent:FireAllClients("GamemodeChanged", GamemodeService.Gamemode.Name)
-        GamemodeService.Gamemode = GamemodeClass.new(GamemodeService.Gamemode.Name)
-        GamemodeService.Gamemode:Start()
-    end)
-end
-
----@function Send the "Restarting Gamemode" GUI to all players.
-function GamemodeService:RestartModeGui()
-    for _, v in pairs(Players:GetPlayers()) do
-        Guis.RestartingGameGui:Clone().Parent = v.PlayerGui
-    end
-end
-
----@function Listen & Wait for the Received Gamemode from a Player's TeleportData
+--@summary Listen & Wait for the Received Gamemode from a Player's TeleportData
 function GamemodeService:AwaitGamemodeDataExtraction()
     local startingGamemode
     GamemodeService.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
@@ -165,7 +147,7 @@ function GamemodeService:AwaitGamemodeDataExtraction()
     return startingGamemode
 end
 
----@function Listen for Client Remotes
+--@summary Listen for Client Remotes
 function GamemodeService:ConnectClientRemotes()
     RemoteFunction.OnServerInvoke = function(player, action, ...)
         if action == "GetCurrentGamemode" then
@@ -194,19 +176,17 @@ function GamemodeService:ConnectClientRemotes()
             return true
         elseif action == "GetPlayerData" then
             return type(self.Gamemode) ~= "string" and self.Gamemode.PlayerData
-        elseif action == "RestartGamemode" then
-            GamemodeService:RestartMode()
-            return true
         end
     end
 end
 
----@function Listen for the Server Bindable typically fired by a Gamemode Class
+--@summary Listen for the Server Bindable typically fired by a Gamemode Class
 function GamemodeService:ConnectServerBindables()
     GamemodeService.Connections.ServerBindable = BindableEvent.Event:Connect(function(action)
         if action == "GameRestart" then
             print('Restart Received!')
-            GamemodeService:RestartMode()
+            local currGamemode = GamemodeService.Gamemode.Name
+            GamemodeService:ChangeMode(currGamemode, true, false, true)
         end
     end)
 end

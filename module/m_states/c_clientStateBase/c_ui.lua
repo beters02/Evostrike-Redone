@@ -30,6 +30,10 @@ function module:removeOpenUI(uiName)
 	return self:set(self.player, "openUIs", new)
 end
 
+function module:clearOpenUIs()
+	self:set(self.player, "openUIs", {})
+end
+
 function module:hasOpenUI()
 	local count = 0
 	for _, v in pairs(self:get(self.players, "openUIs")) do

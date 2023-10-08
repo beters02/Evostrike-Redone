@@ -35,8 +35,8 @@ local Dash = {
         strength = 55,
         upstrength = 25,
         jumpingUpstrengthModifier = 0.5,
-        landingMovementDecreaseFriction = 0.7,
-        landingMovementDecreaseLength = 0.33,
+        landingMovementDecreaseFriction = 0.9,
+        landingMovementDecreaseLength = 0.3,
         
     }
 }

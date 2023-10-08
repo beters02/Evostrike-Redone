@@ -4,9 +4,9 @@ AK103.Configuration = {
     inventorySlot = "primary",
 	automatic = true,
 	
-	equipLength = 1,
+	equipLength = 0.9,
 	fireRate = 0.1, -- 600 rpm
-	reloadLength = 1.5,
+	reloadLength = 0.9,
 	recoilReset = 0.24,
 	camRecoilReset = 0.5,
 	

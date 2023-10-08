@@ -11,7 +11,7 @@ GMClient.RemoteFunction = script.Parent:WaitForChild("RemoteFunction")
 GMClient.IsServiceInit = false
 GMClient.Connections = {}
 
-function _clientRemoteEvent(action)
+function _clientRemoteEvent(action, ...)
     if action == "Init" then
         GMClient.IsServiceInit = true
     end

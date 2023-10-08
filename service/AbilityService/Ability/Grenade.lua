@@ -1,5 +1,6 @@
 -- [[ This module contains the Base Ability Class Functions for a Grenade Ability ]]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -91,6 +92,7 @@ function Grenade:Use()
     local grenadeClone = self.AbilityObjects.Models.Grenade:Clone()
     grenadeClone.Parent = workspace.CurrentCamera.viewModel.LeftEquipped
     grenadeClone.Size = self.Options.clientGrenadeSize or grenadeClone.Size * 0.8
+    CollectionService:AddTag(grenadeClone, self.Player.Name .. "_ClearOnDeath")
 
     local leftHand = self.Viewmodel.LeftHand
     local m6 = leftHand:FindFirstChild("LeftGrip")
@@ -138,6 +140,7 @@ end
 
 --@summary The Core FireGrenade function ran before FireGrenade. Not recommended to override
 function Grenade:FireGrenadeCore(hit, isReplicated, origin, direction, thrower)
+    print(self)
     if not isReplicated then
         local startLv = Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
         origin = Players.LocalPlayer.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.Options.startHeight, 0)
@@ -151,6 +154,7 @@ function Grenade:FireGrenadeCore(hit, isReplicated, origin, direction, thrower)
     local cast = self.caster:Fire(origin, direction, self.Options.speed, self.castBehavior)
     local grenade = cast.RayInfo.CosmeticBulletObject
     grenade:SetAttribute("IsOwner", not isReplicated)
+    CollectionService:AddTag(grenade, self.Player.Name .. "_ClearOnDeath")
     self.currentGrenadeObject = grenade
 
     self:FireGrenadePost(hit, isReplicated, origin, direction, thrower, grenade)

@@ -5,6 +5,7 @@ map.canChange = true
 map.currentMode = false
 map.editButton = false
 map.playButton = false
+local confirmgui = script.Parent:WaitForChild("ConfirmMapMode")
 
 function map.init(edit, play)
     map.currentMode = map.GetMode()
@@ -55,11 +56,24 @@ local modes = {
 function map.Mode(mode: string)
     assert(map.canChange, "Cannot Change Map right now!")
     assert(mode == "Edit" or mode == "Play", "Invalid MapMode!")
-    assert(mode ~= map.currentMode, "MapMode already " .. tostring(mode) .. "!")
-    map.canChange = false
-    map.currentMode = mode
-    modes[mode]()
-    map.canChange = true
+    local cg = confirmgui:Clone()
+    local conns = {}
+    conns[1] = cg:WaitForChild("Frame"):WaitForChild("NO").MouseButton1Click:Once(function()
+        cg:Destroy()
+        conns[2]:Disconnect()
+        conns[1]:Disconnect()
+        return
+    end)
+    conns[2] = cg:WaitForChild("Frame"):WaitForChild("YES").MouseButton1Click:Once(function()
+        cg:Destroy()
+        conns[1]:Disconnect()
+        map.canChange = false
+        map.currentMode = mode
+        modes[mode]()
+        map.canChange = true
+        conns[2]:Disconnect()
+    end)
+    cg.Parent = game:GetService("CoreGui")
 end
 
 --@summary Get the Current "Map Mode"
