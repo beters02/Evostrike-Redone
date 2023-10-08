@@ -4,10 +4,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local Sound = require(Framework.Module.Sound)
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
 local AbilityObjects = Framework.Service.AbilityService.Ability.HEGrenade.Assets
 local EvoPlayer = require(Framework.Module.shared.Modules.EvoPlayer)
 local Caster = require(Framework.Service.AbilityService.Caster)
+local ScorchMark = Framework.Service.WeaponService.ServiceAssets.Models.ScorchMark
 
 local HEGrenade = {
     Configuration = {
@@ -45,6 +47,11 @@ local HEGrenade = {
         velocitySlowMultPerInterval = 0.9, -- grenade velocity slow
         velocitySlowIntervalSec = 0.1,
         velocityMinimum = 0.5,
+        glowFadeIn = 0.1,
+        glowLength = 0.4,
+        glowFadeOut = 2,
+        dustLength = 4,
+        dustFadeOut = 2,
 
         -- absr = Absolute Value Random
         -- rtabsr = Random to Absolute Value Random
@@ -166,6 +173,31 @@ function HEGrenade.ServerPop(position)
 
     task.spawn(function()
         Sound.Sounds("PlayClone", AbilityObjects.Sounds.Explode:GetChildren(), _explosion)
+        local scorchMarkResult = workspace:Raycast(position, position.Unit * Vector3.new(0,-1,0) * HEGrenade.Configuration.damageRadius, RaycastParams.new())
+        if scorchMarkResult then
+            local scorchMark = ScorchMark:Clone()
+            scorchMark.Parent = workspace.Temp
+            local cFrame = CFrame.new(scorchMarkResult.Position, scorchMarkResult.Position + scorchMarkResult.Normal)
+            scorchMark.CFrame = cFrame
+            scorchMark.Anchored = true
+            scorchMark.CanCollide = false
+            for _, v in pairs(scorchMark:GetChildren()) do
+                TweenService:Create(v, TweenInfo.new(HEGrenade.Configuration.glowFadeIn), {Transparency = 0}):Play()
+            end
+            local _glowot = TweenService:Create(scorchMark.Glow, TweenInfo.new(HEGrenade.Configuration.glowFadeOut), {Transparency = 1})
+            local _dustot = TweenService:Create(scorchMark.ScorchMark, TweenInfo.new(HEGrenade.Configuration.glowFadeOut), {Transparency = 1})
+            task.delay(HEGrenade.Configuration.glowFadeIn + HEGrenade.Configuration.glowLength, function()
+                _glowot:Play()
+            end)
+            task.delay(HEGrenade.Configuration.dustLength + HEGrenade.Configuration.glowFadeIn, function()
+                _dustot:Play()
+                _dustot.Completed:Once(function()
+                    _glowot:Destroy()
+                    _dustot:Destroy()
+                    scorchMark:Destroy()
+                end)
+            end)
+        end
     end)
 
     task.wait()
