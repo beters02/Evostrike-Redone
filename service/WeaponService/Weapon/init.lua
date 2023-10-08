@@ -111,7 +111,7 @@ function Weapon.new(weapon: string, tool: Tool)
     
 
     self = setmetatable(self, Weapon)
-    --self:_SetServerModelTransparency(0)
+    self:_SetServerModelTransparency(1)
     self:SetIconEquipped(false)
     return self
 end
