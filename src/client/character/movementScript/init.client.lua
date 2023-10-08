@@ -567,7 +567,9 @@ function Movement.ProcessMovement()
 		playerGrounded = false
 	end
 
-	if playerGrounded and hitNormal.Y < Movement.surfSlopeAngle then
+	if not playerGrounded then
+		if Movement.sliding then Movement.sliding = false end
+	elseif playerGrounded and hitNormal.Y < Movement.surfSlopeAngle then
 		playerGrounded = false
 		Movement.sliding = true
 	end
@@ -576,24 +578,9 @@ function Movement.ProcessMovement()
 	if Movement.movementVelocity.Velocity.Magnitude > 100 or Movement.collider.Velocity.Magnitude > 100 then
 		Movement.movementVelocity.Velocity = Vector3.zero
 		Movement.collider.Velocity = Vector3.zero
-		--Movement.movementPosition.Position = lastSavedHitPos
-		--[[print("GLITCHAGE")
-		print(Movement)
-		print(Movement.movementVelocity.Velocity)
-		print(collider.Velocity)
-		print(Movement.movementPosition.Position)]]
 	else
 		lastSavedHitPos = hitPosition
 	end
-
-	--[[
-		SERIALIZE ATTRIBUTES TEST
-
-		Movement.groundAccelerate = script:GetAttribute("groundAccelerate")
-	Movement.groundDeccelerate = script:GetAttribute("groundDeccelerate")
-	Movement.friction = script:GetAttribute("friction")
-	
-	]]
 	
 	-- [[ LANDING REGISTRATION ]]
 	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then

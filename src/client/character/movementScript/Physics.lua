@@ -207,7 +207,8 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 
 	-- if we're not adding speed, dont do anything
 	if addSpeed <= 0 then
-		return addSpeed
+		--return addSpeed
+		if not self.sliding then return end
 	end
 
 	-- get accelSpeed, cap at addSpeed
@@ -216,15 +217,8 @@ function module:ApplyAirAcceleration(wishDir, wishSpeed)
 	-- get new velocity
 	local newVelocity = self.movementVelocity.Velocity + accelerationSpeed * wishDir
 
-	-- if a wall was hit, dont accelerate in that direction
-	--newVelocity = self:ApplyAntiSticking(newVelocity, self.dashing, addSpeed)
-
 	-- apply acceleration
 	self.movementVelocity.Velocity = newVelocity
-
-	--[[if self.dashing then
-		task.wait()
-	end]]
 	
 	return addSpeed
 end
