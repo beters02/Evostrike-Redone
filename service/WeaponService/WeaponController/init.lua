@@ -295,6 +295,7 @@ end
 --@summary Stop all current vm animations
 function WeaponController:_StopAllVMAnimations()
     for _, v in pairs(workspace.CurrentCamera.viewModel.AnimationController:GetPlayingAnimationTracks()) do
+        v = v :: AnimationTrack
 		v:Stop()
 	end
 end

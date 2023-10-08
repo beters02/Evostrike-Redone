@@ -32,6 +32,7 @@ function Weapon.new(weapon: string, tool: Tool)
         self.Variables.ammo = {magazine = self.Options.ammo.magazine, total = self.Options.ammo.total}
     end
     self.ClientModel = tool:WaitForChild("ClientModelObject").Value
+    self.ServerModel = tool:WaitForChild("ServerModel")
     self.Viewmodel = workspace.CurrentCamera:WaitForChild("viewModel")
     self.Player = game:GetService("Players").LocalPlayer
     self.Character = self.Player.Character
@@ -107,15 +108,10 @@ function Weapon.new(weapon: string, tool: Tool)
     self.Connections.Unequip = self.Tool.Unequipped:Connect(function()
         self.Controller:UnequipWeapon(self.Slot)
     end)
-
-    -- hide server model
-    for _, v in pairs(self.Tool:WaitForChild("ServerModel"):GetDescendants()) do
-		if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("Texture") then
-			v.Transparency = 1
-		end
-	end
+    
 
     self = setmetatable(self, Weapon)
+    --self:_SetServerModelTransparency(0)
     self:SetIconEquipped(false)
     return self
 end
@@ -710,15 +706,26 @@ function Weapon:_ProcessEquipAnimation()
 
     task.spawn(function() -- client
         -- play pullout
-        self:PlayAnimation("server", "Pullout")
 		local clientPullout = self:PlayAnimation("client", "Pullout")
 		clientPullout.Stopped:Wait()
-		
-        -- dont play hold if not equipped or unequipping
 		if self.Variables.forcestop then return end
         if not self.Variables.equipped and not self.Variables.equipping then return end
         self.Animations.client.Hold:Play()
-        self.Animations.server.Hold:Play()
+    end)
+
+    task.spawn(function() -- server animation
+        for _, v in pairs(self.Humanoid.Animator:GetPlayingAnimationTracks()) do
+            if not string.match(v.Name, "Run") and not string.match(v.Name, "Jump") then
+                v:Stop()
+            end
+        end
+        task.wait()
+        local serverPullout = self:PlayAnimation("server", "Pullout")
+        serverPullout.Stopped:Once(function()
+            if self.Variables.forcestop then return end
+            if not self.Variables.equipped and not self.Variables.equipping then return end
+            self.Animations.server.Hold:Play()
+        end)     
     end)
 end
 
@@ -747,7 +754,16 @@ function Weapon:_StopAllActionAnimations()
 end
 
 function Weapon:_SetClientModelTransparency(t)
-    for i, v in pairs(self.ClientModel:GetDescendants()) do
+    for _, v in ipairs(self.ClientModel:GetDescendants()) do
+        if v:IsA("Part") or v:IsA("MeshPart") or v:IsA("Texture") then
+            if v.Name == "WeaponHandle" or v:GetAttribute("Ignore") then continue end
+            v.Transparency = t
+        end
+    end
+end
+
+function Weapon:_SetServerModelTransparency(t)
+    for _, v in ipairs(self.ServerModel:GetDescendants()) do
         if v:IsA("Part") or v:IsA("MeshPart") or v:IsA("Texture") then
             if v.Name == "WeaponHandle" or v:GetAttribute("Ignore") then continue end
             v.Transparency = t

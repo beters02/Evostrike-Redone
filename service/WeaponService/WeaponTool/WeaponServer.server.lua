@@ -20,6 +20,10 @@ if Options.ammo then
     Variables.ammo = {magazine = Options.ammo.magazine, total = Options.ammo.total}
 end
 
+local Grip = character:FindFirstChild("Grip") or Instance.new("Motor6D", character:WaitForChild("RightHand"))
+Grip.Name = "Grip"
+Grip.Part0 = character.RightHand
+
 function ServerEquip()
     task.spawn(EquipTimer)
 
@@ -28,19 +32,28 @@ function ServerEquip()
 	end
 
     local weaponHandle = serverModel.GunComponents.WeaponHandle
+
+	-- oh my god....
+	-- when was i destroying this
+	-- i wasnt
+
+	-- 10/08/2023 So yeah just figured out I was creating a new Motor6D every time a weapon was equipped and NEVER DESTROYING IT
+	--[[
 	local grip = Instance.new("Motor6D")
 	grip.Name = "RightGrip"
 	grip.Parent = character.RightHand
 	grip.Part0 = character.RightHand
-	grip.Part1 = weaponHandle
+	]]
+
+	Grip.Part1 = weaponHandle
 end
 
 function ServerUnequip()
+	Grip.Part1 = nil
+
     if Variables.equipping then
         EquipTimerCancel()
     end
-
-	player.Character.HumanoidRootPart.WeaponGrip.Part1 = nil
 end
 
 --@summary Start the Equip Timer.
