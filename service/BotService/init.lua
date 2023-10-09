@@ -11,21 +11,14 @@ local StarterCharacterTemplate = game:GetService("StarterPlayer").StarterCharact
 local EvoPlayer = require(Framework.Module.EvoPlayer)
 
 local Bots = {}
-
--- Current Alive Map Bots
 Bots.Bots = {}
-
--- Names that can be assigned
 Bots.BotNames = {"Fred", "Dave", "Laney", "George", "Ardiis"}
 
 -- Add a bot to the game
 function Bots:AddBot(properties)
-
-    -- create bot character
     local character = StarterCharacterTemplate:Clone()
     character.Parent = ServerStorage
 
-    -- init properties
     if not properties.SpawnCFrame then properties.SpawnCFrame = game.ReplicatedStorage.Services.GamemodeService.Gamemode.Spawns.Default.CFrame end
     local botProperties = Types.BotProperties.new(properties)
 
@@ -120,7 +113,7 @@ end
 -- The default Respawn function that is called when a bot is respawned.
 function Bots:RespawnBot(_bot)
     _bot.Character:Destroy()
-    local char, hum = _createBotCharacter(_bot.Name, _bot.Properties.SpawnCFrame)
+    local char, hum = _createBotCharacter(_bot.Name, _bot.Properties)
     _bot.Character = char
     _bot.Humanoid = hum
     _connectBotDiedEvent(_bot)
@@ -154,11 +147,11 @@ function Bots:GetBotFromCharacter(character)
     return false
 end
 
-function _createBotCharacter(name, spawnCF)
+function _createBotCharacter(name, properties)
     -- create bot character
     local character = StarterCharacterTemplate:Clone()
     character.Parent = ServerStorage
-    character.PrimaryPart.CFrame = spawnCF
+    character.PrimaryPart.CFrame = properties.SpawnCFrame
     local hum = character:WaitForChild("Humanoid")
     hum.BreakJointsOnDeath = false
     character.Name = name
@@ -173,6 +166,8 @@ function _createBotCharacter(name, spawnCF)
             v.CollisionGroup = "Bots"
         end
     end
+    EvoPlayer:SetShield(character, properties.StartingShield or 0)
+    EvoPlayer:SetHelmet(character, properties.StartingHelmet or false)
     return character, hum
 end
 

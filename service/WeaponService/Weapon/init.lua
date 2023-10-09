@@ -141,7 +141,8 @@ function Weapon:Equip()
     self.Variables.forcestop = false
     self.Variables.equipping = true
     PlayerActionsState:set(self.Player, "weaponEquipping", true)
-    PlayerActionsState:set("weaponEquipped", self.Name)
+    PlayerActionsState:set(self.Player, "weaponEquipped", self.Name)
+    PlayerActionsState:set(self.Player, "currentEquipPenalty", self.Options.movement.penalty)
 
 	-- process equip animation and sounds next frame ( to let unequip run )
 	task.spawn(function() self:_ProcessEquipAnimation() end)
@@ -189,6 +190,7 @@ function Weapon:Unequip()
     PlayerActionsState:set(self.Player, "weaponEquipping", false)
     PlayerActionsState:set(self.Player, "reloading", false)
     PlayerActionsState:set(self.Player, "shooting", false)
+    PlayerActionsState:set(self.Player, "currentEquipPenalty", 0)
 
     self.Variables.equipping = false
 

@@ -6,6 +6,6 @@ Players.PlayerAdded:Connect(function(player)
 
     -- Patch notes!
     pcall(function() -- get rid of that annoying ass error
-        player.PlayerGui:WaitForChild("MainMenu"):WaitForChild("HomeFrame"):WaitForChild("PatchFrame").InformationFrame.TextLabel.Text = require(script:WaitForChild("patchNotes"))()
+        --player.PlayerGui:WaitForChild("MainMenu"):WaitForChild("HomeFrame"):WaitForChild("PatchFrame").InformationFrame.TextLabel.Text = require(script:WaitForChild("patchNotes"))()
     end)
 end)

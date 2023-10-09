@@ -216,6 +216,7 @@ end
 	@summary
 ]]
 
+local PlayerActionsState = States.State("PlayerActions")
 function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	Movement.movementPosition.position = hitPosition + Vector3.new(0, Movement.playerTorsoToGround, 0)
 	Movement.movementPosition.maxForce = Vector3.new(0, Movement.movementPositionForce, 0)
@@ -233,7 +234,7 @@ function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	end
 
 	-- Running Sounds
-	if Movement.movementVelocity.Velocity.Magnitude > Movement.crouchMoveSpeed then
+	if Movement.movementVelocity.Velocity.Magnitude > Movement.walkNoiseSpeed + PlayerActionsState:get(player, "currentEquipPenalty") then
 		if not runsnd.IsPlaying then SoundModule.PlayReplicated(runsnd, serverRunVolume) end
 	else
 		if runsnd.IsPlaying then SoundModule.StopReplicated(runsnd) end
@@ -403,6 +404,7 @@ function Movement.Crouch(crouch: boolean)
 		-- movement state
 
 		MovementState:set(player, "crouching", true)
+		Movement.crouching = true
 
 	else
 	
@@ -418,6 +420,7 @@ function Movement.Crouch(crouch: boolean)
 
 		-- movement state
 		MovementState:set(player, "crouching", false)
+		Movement.crouching = false
 
 	end
 	
@@ -441,10 +444,12 @@ function Movement.Walk(walk: boolean)
 
 		-- slow player
 		Movement.SetFrictionVars("walk")
+		Movement.walking = true
 		task.wait()
 	else
 		-- unslow player
 		Movement.SetFrictionVars("run")
+		Movement.walking = false
 		task.wait()
 	end
 
@@ -536,6 +541,22 @@ function Movement.Dash()
 	end)
 	
 	--Movement.Land(0.6)
+end
+
+function Movement.Satchel(force)
+	print(force)
+	Movement.dashing = true
+	Movement.Jump(force.Y)
+	task.wait()
+	
+	local velocity = Movement.movementVelocity.Velocity + Vector3.new(force.X, 0, force.Z)
+	Movement.movementVelocity.Velocity = velocity
+	Movement.Air()
+	playerGrounded = false
+	inAir = tick()
+	task.wait()
+
+	Movement.dashing = false
 end
 
 --[[
@@ -877,6 +898,7 @@ function Main()
 
 	-- connect movement abilities
 	script.Events.Dash.Event:Connect(Movement.RegisterDashVariables)
+	script.Events.Satchel.Event:Connect(Movement.Satchel)
 
 	script.Events.Get.OnInvoke = function()
 		return playerGrounded

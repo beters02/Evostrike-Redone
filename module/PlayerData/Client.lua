@@ -105,6 +105,7 @@ type Path = string
 type Key = string
 export type ChangedCallback = (changeLocation: "PlayerData" | "Key" | "Path", new: any, key: Path | Key) -> ()
 export type PathChangedCallback = (new: any, path: string) -> ()
+export type KeyChangedCallback = (new: any, key: string) -> ()
 function Client:Changed(callback: ChangedCallback)
     local connection = {}
     connection.Connection = Client._changedEvent.Event:Connect(callback)
@@ -122,6 +123,16 @@ function Client:PathValueChanged(path: string, callback: PathChangedCallback)
     local connection = Client:Changed(function(changedLocation, new, key)
         if changedLocation == "Path" and key == path then
             callback(new, path)
+        end
+    end)
+    return connection
+end
+
+--@summary Listen for a change on a key value
+function Client:KeyValueChanged(_key: string, callback: KeyChangedCallback)
+    local connection = Client:Changed(function(changedLocation, new, key)
+        if changedLocation == "Key" and key == _key then
+            callback(new, key)
         end
     end)
     return connection

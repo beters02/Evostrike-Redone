@@ -35,7 +35,7 @@ end
 
 --[[Util]]
 function _currToDataKey(currency: Currency)
-    return (currency == "StrafeCoins" and "strafeCoins") or (currency == "PremiumCredits" and "premiumCredits" or "xp")
+    return (currency == "StrafeCoins" and "strafeCoins" or false) or (currency == "PremiumCredits" and "premiumCredits" or false) or "xp"
 end
 
 return Economy

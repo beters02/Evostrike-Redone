@@ -10,7 +10,7 @@ local wepconfig = {
 		recoilReset = 0.2,
 		camRecoilReset = 0.5,
 		
-		fireVectorCameraOffset = Vector2.new(5, 12), -- Side, Up
+		fireVectorCameraOffset = Vector2.new(7, 14), -- Side, Up
 		fireAccuracyCameraOffset = Vector2.new(1, 10), -- Side, Up
 		fireVectorCameraMax = Vector3.new(0.011, 0.01, 0.3), -- Up, Side
 		
@@ -20,8 +20,8 @@ local wepconfig = {
 		},
 		
 		accuracy = {
-			firstBullet = 4,
-			base = 10,
+			firstBullet = 6,
+			base = 11,
 			crouch = 12,
 			walk = 97,
 			run = 100,

@@ -84,9 +84,11 @@ end
 --@summary      Change the current gamemode.
 --@param        gamemode: string        [the name of the gamemode]
 --@param        start: boolean = true   [start on class creation]
+local restartConn = false
 function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitialGamemode: boolean?, bruteForce: boolean?): Types.Gamemode
     if start == nil then start = true end
     local currentGamemodeRunning = false
+    if restartConn then restartConn:Disconnect() restartConn = nil end
 
     if type(GamemodeService.Gamemode) ~= "string" then -- GamemodeService.Gamemode = "None" if not initialized.
         if GamemodeService.Gamemode.Name == gamemode and not bruteForce then
@@ -104,6 +106,7 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
     --why the fuck was this in the wrong spot
     if currentGamemodeRunning then
         GamemodeService.Gamemode:Stop(true)
+        GamemodeService.Gamemode = nil
     end
 
     task.wait(.1)
@@ -115,6 +118,7 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
     if start then
         task.delay(0.5, function()
             _gamemode:Start(isInitialGamemode)
+            print('Starting!')
         end)
     end
 
@@ -124,8 +128,7 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
         _gamemode.RestartGamemodeFromService.Name = "RestartGamemodeFromService"
     end
 
-    _gamemode.RestartGamemodeFromService.Event:Connect(function()
-        print('Restart Received!')
+    restartConn = _gamemode.RestartGamemodeFromService.Event:Connect(function()
         local currGamemode = GamemodeService.Gamemode.Name
         GamemodeService:ChangeMode(currGamemode, true, false, true)
     end)
@@ -194,14 +197,6 @@ end
 
 --@summary Listen for the Server Bindable typically fired by a Gamemode Class
 function GamemodeService:ConnectServerBindables()
-    GamemodeService.Connections.ServerBindable = BindableEvent.Event:Connect(function(action)
-        print(action)
-        if action == "GameRestart" then
-            print('Restart Received!')
-            local currGamemode = GamemodeService.Gamemode.Name
-            GamemodeService:ChangeMode(currGamemode, true, false, true)
-        end
-    end)
 end
 
 return GamemodeService

@@ -72,7 +72,8 @@ Shared.def = {
         kills = 0,
         deaths = 0,
         totaldamage = 0,
-        wins = 0
+        wins = 0,
+        losses = 0
     },
 
     economy = {

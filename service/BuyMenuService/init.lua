@@ -1,3 +1,5 @@
+if game:GetService("RunService"):IsClient() then return require(script:WaitForChild("Client")) end
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
@@ -16,6 +18,7 @@ BuyMenuService.Events = Events
 BuyMenuService._currentgui = script:WaitForChild("BuyMenu")
 BuyMenuService._cache = {connections = {}, playerdata = {}}
 BuyMenuService._config = {equipBoughtInstant = false, resetBuyMenuOnDeath = false, resetInventoryOnDeath = false, openOnSpawn = false}
+BuyMenuService._connections = {}
 
 --@summary Start the BuyMenuService with a Custom BuyMenuGui (Default if unspecified)
 function BuyMenuService:Start(buyMenuGui: ScreenGui?, config: table?)
@@ -26,9 +29,9 @@ function BuyMenuService:Start(buyMenuGui: ScreenGui?, config: table?)
         if not func then return error("BuyMenuService" .. tostring(action) .. " does not exist.") end
         return func(player, ...)
     end
-    Players.PlayerAdded:Connect(PlayerAdded)
-    Players.PlayerRemoving:Connect(PlayerRemoving)
-    EvoPlayer.PlayerDied:Connect(PlayerDied)
+    BuyMenuService._connections.playerAdded = Players.PlayerAdded:Connect(PlayerAdded)
+    BuyMenuService._connections.playerRemoving = Players.PlayerRemoving:Connect(PlayerRemoving)
+    BuyMenuService._connections.playerDied = EvoPlayer.PlayerDied:Connect(PlayerDied)
     InitAllPlayersData()
 end
 
@@ -36,11 +39,16 @@ function BuyMenuService:Stop()
     ServiceCommunicate.OnServerInvoke = nil
     BuyMenuService:RemoveBuyMenuMultiple(Players:GetPlayers())
     ClearPlayerData("all")
+    for _,v in pairs(BuyMenuService._connections) do
+        v:Disconnect()
+    end
+    table.clear(BuyMenuService._connections)
 end
 
 --
 
 function PlayerAdded(player)
+    if BuyMenuService._cache.playerdata[player.Name] then return end
     local _pd = Types.PlayerData.new()
     _pd.Connections.CharacterAdded = player.CharacterAdded:Connect(function()
         BuyMenuService:AddBuyMenu(player)

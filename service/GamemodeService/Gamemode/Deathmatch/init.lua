@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local DMGuis = script:WaitForChild("Guis")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local EvoEconomy = require(Framework.Module.EvoEconomy)
+local PlayerData = require(Framework.Module.PlayerData)
 
 local Deathmatch = {}
 
@@ -186,11 +187,25 @@ function Deathmatch:CalculatePlayerPostMatchStats(player, isTop3)
     local datasucc, dataresult = pcall(function()
         EvoEconomy:Increment(player, "StrafeCoins", sc)
         EvoEconomy:Increment(player, "XP", xp)
-        EvoEconomy:Save(player)
     end)
     if not datasucc then
-        warn("Could not set " .. player.Name .. " DataStore Stats. " .. tostring(dataresult))
+        warn("Could not set " .. player.Name .. " Economy DataStore Stats. " .. tostring(dataresult))
     end
+
+    datasucc, dataresult = pcall(function()
+        PlayerData:IncrementPath(player, "pstats.kills", kills)
+        PlayerData:IncrementPath(player, "pstats.deaths", deaths)
+        if isTop3 then
+            PlayerData:IncrementPath(player, "pstats.wins", 1)
+        end
+    end)
+    if not datasucc then
+        warn("Could not set " .. player.Name .. " Stats DataStore Stats. " .. tostring(dataresult))
+    end
+    
+    task.spawn(function()
+        PlayerData:SaveWithRetry(player, 3)
+    end)
 
     return {StrafeCoins = sc, XP = xp}
 end
@@ -235,7 +250,7 @@ function Deathmatch:PlayerJoinedDuringRound(player)
     self:GuiMainMenu(player, true)
 end
 
-function Deathmatch:AddDMGui(player: Player, guiName: string, resetOnSpawn: boolean?, attributes: table?)
+function Deathmatch:AddDMGui(player: Player, guiName: string, resetOnSpawn: boolean?, attributes: table?, tags: table?)
     local guiScript = DMGuis:FindFirstChild(guiName)
     if not guiScript then
         error("Could not find Deathmatch Gui " .. tostring(guiName))
@@ -243,13 +258,19 @@ function Deathmatch:AddDMGui(player: Player, guiName: string, resetOnSpawn: bool
 
     local parent = player:WaitForChild("PlayerGui"):WaitForChild("Container")
     guiScript = guiScript:Clone() :: ScreenGui
-    CollectionService:AddTag(guiScript, "DestroyOnClose")
-    guiScript:WaitForChild("Gui").ResetOnSpawn = resetOnSpawn or false
+    local gui = guiScript:WaitForChild("Gui")
+    gui.ResetOnSpawn = resetOnSpawn or false
 
     if attributes then
         for i, v in pairs(attributes) do
             guiScript:SetAttribute(i, v)
         end
+    end
+
+    tags = tags or {"GamemodeDestroyOnStop"}
+    for _, v in ipairs(tags) do
+        CollectionService:AddTag(guiScript, v)
+        CollectionService:AddTag(gui, v)
     end
 
     guiScript.Parent = parent

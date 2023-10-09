@@ -7,6 +7,9 @@ local module = {
 	maxMovementPitch = 0.6,
 	surfSlopeAngle = 0.58,
 
+	--[[Sound Settings]]
+	walkNoiseSpeed = 15.5,
+
 	--[[ Ground Settings ]]
 	groundAccelerate = 10.2,
 	groundDeccelerate = 16, -- the lower this number is, the longer it takes to decel btw

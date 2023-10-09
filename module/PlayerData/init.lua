@@ -69,9 +69,36 @@ function PlayerData:SetPath(player, path, new)
     return PlayerData:Set(player, playerdata, {location = "Path", key = path, new = new})
 end
 
+--@summary Increment the value of a key from the PlayerData path
+function PlayerData:IncrementPath(player, path, amnt)
+    local playerdata = PlayerData:GetAsync(player)
+    local new
+    Strings.doActionViaPath(path, playerdata, function(gotTableParent, key)
+        new = gotTableParent[key] + amnt
+        gotTableParent[key] = new
+    end)
+    return PlayerData:Set(player, playerdata, {location = "Path", key = path, new = new})
+end
+
 --@summary Save the PlayerData
 function PlayerData:Save(player)
     _getStoreSafe(player):Save()
+end
+
+function PlayerData:SaveWithRetry(player, sec, isAssert)
+    local succ, err = pcall(function()
+        PlayerData:Save(player)
+    end)
+    if succ then return end
+    local _et = tick() + sec
+    while not succ and tick() < _et do
+        succ, err = pcall(function()
+            PlayerData:Save(player)
+        end)
+    end
+    if not succ and isAssert then
+        error("Could not save " .. player.Name .. "'s PlayerData!")
+    end
 end
 
 function PlayerData:ClearPlayerCache(player)

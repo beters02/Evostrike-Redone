@@ -9,6 +9,11 @@
 
     ex: Check Deathmatch script.
 
+    [Tags]
+    "GamemodeDestroyOnStop"
+    "GamemodeDestroyOnRoundOver"
+    "GamemodeDestroyOnDeath_{PlayerName}"
+
 ]]
 
 -- [[ CONFIGURATION ]]
@@ -260,7 +265,7 @@ function Gamemode:Start(isInitialGamemode: boolean?)
 
     task.wait()
     
-    self:GuiRemoveTagged("WaitingForPlayersHUD")
+    self:RemoveTagged("WaitingForPlayersHUD")
     self:GuiInit("all")
 
     if self.GameVariables.bots_enabled then
@@ -301,10 +306,6 @@ function Gamemode:Start(isInitialGamemode: boolean?)
 
     task.wait(0.25)
 
-    --[[PlayerDiedRemote.OnServerEvent:Connect(function(player, killer)
-        self:_PlayerDiedCore(player, killer)
-    end)]]
-
     self:StartRound()
 end
 
@@ -314,13 +315,12 @@ end
 
 --@summary End the Gamemode.
 function Gamemode:Stop()
-    local success, err = pcall(function()
-        if self.GameData.RoundTimer then
-            self:EndRound("Restart") -- Restart just does nothing for the RoundTimer result
-        end
-    end)
-    if not success then
-        warn(err)
+    if self.GameData.RoundTimer and self.GameData.RoundTimer.Status ~= "Stopped" then
+        self.GameData.RoundTimer:Stop("Restart")
+    end
+
+    if self.GameData.Connections.PlayerDied then
+        self.GameData.Connections.PlayerDied:Disconnect()
     end
 
     for _, v in pairs(self.GameData.Connections) do
@@ -330,6 +330,7 @@ function Gamemode:Stop()
     self:GuiBlackScreenAll(false, 0.5, 0.3, true)
     WeaponService:ClearAllPlayerInventories()
     self:PlayerRemoveAll()
+    self:RemoveTagged("GamemodeDestroyOnStop")
 
     workspace.Temp:ClearAllChildren()
 
@@ -426,17 +427,14 @@ function Gamemode:EndRound(result, winner, loser)
             v:Destroy()
         end
     end)
-    WeaponService:ClearAllPlayerInventories()
 
     if self.GameData.Connections.PlayerDied then
         self.GameData.Connections.PlayerDied:Disconnect()
     end
 
+    self:RemoveTagged("GamemodeDestroyOnRoundOver")
+    WeaponService:ClearAllPlayerInventories()
     self:GuiUpdateGamemodeBarAll("StopTimer")
-
-    if result == "Restart" then
-        return
-    end
 
     if self.GameVariables.game_type == "Round" then
         task.wait(3)
@@ -611,6 +609,13 @@ end
 function Gamemode:GameOver(winner: Player?)
     self:GuiGameOver("all", winner)
     task.wait(5)
+end
+
+--@summary Remove all tagged objects from the workspace.
+function Gamemode:RemoveTagged(tag: string)
+    for _, ui in pairs(CollectionService:GetTagged(tag)) do
+        ui:Destroy()
+    end
 end
 
 --
@@ -1164,13 +1169,6 @@ function Gamemode:GuiRemoveBlackScreen(player: Player | "all", await: boolean)
     
     if await then
         task.wait(outLength)
-    end
-end
-
---@summary Remove all tagged UIs from the workspace.
-function Gamemode:GuiRemoveTagged(tag: string)
-    for _, ui in pairs(CollectionService:GetTagged(tag)) do
-        ui:Destroy()
     end
 end
 

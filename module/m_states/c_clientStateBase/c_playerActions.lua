@@ -5,7 +5,8 @@ local playerActions = {
         reloading = false,
         weaponEquipped = false,
         weaponEquipping = false,
-        grenadeThrowing = false
+        grenadeThrowing = false,
+        currentEquipPenalty = 0,
 	}
 }
 

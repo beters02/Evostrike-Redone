@@ -59,6 +59,7 @@ function Remote.StartTimer(length)
     end
     local endt = tick() + length
     timer = RunService.RenderStepped:Connect(function()
+        if tick() >= endt then Remote.StopTimer() return end
         timerUI.textLabel.Text = convertSecToMin(math.floor(endt - tick()))
     end)
 end
