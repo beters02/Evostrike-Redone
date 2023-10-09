@@ -55,7 +55,7 @@ function Client:Set(new)
     Client:Get()
     Client._cache = new
     Client._changed = tick() + changedUpdateSec
-    Client._changedEvent:Fire("PlayerData", new)
+    _fireChanged("PlayerData", new)
     return new
 end
 
@@ -71,15 +71,15 @@ function Client:SetAsync(new, changed)
     end
 
     Client._cache = new
-    Client._changedEvent:Fire(location, cnew or new, key)
+    _fireChanged(location, cnew or new, key)
     return new
 end
 
 function Client:SetKey(key, new)
     Client:Get()
-    _isClientReadOnly(key)
+    _assertIsClientReadOnly(key)
     Client._cache[key] = new
-    Client._changedEvent:Fire("Key", new, key)
+    _fireChanged("Key", new, key)
     return new
 end
 
@@ -91,7 +91,7 @@ function Client:SetPath(path, new)
         parent[key] = new
     end)
     Client._cache = _pd
-    Client._changedEvent:Fire("Path", new, path)
+    _fireChanged("Path", new, path)
     return Strings.convertPathToInstance(path, Client._cache)
 end
 
@@ -129,7 +129,7 @@ end
 
 --[[ Private ]]
 
---@param update boolean -- Update local cache?
+--@param update boolean -- if true will set the Client Cache as got
 function _getFromServer(update: boolean?)
     local success, result = pcall(function()return RemoteFunction:InvokeServer("Get")end)
     assert(success, result)
@@ -145,12 +145,18 @@ function _remoteClientEvent(action, ...)
     Client[action](Client, ...)
 end
 
-function _isClientReadOnly(key)
+function _assertIsClientReadOnly(key)
     assert(not Client._defvar[key].clientReadOnly, "Cannot edit this value on the client.")
 end
 
 function _isClientListening()
     return #Client._listeners > 0
+end
+
+function _fireChanged(...)
+    if _isClientListening() then
+        Client._changedEvent:Fire(...)
+    end
 end
 
 --@summary Will return before wait if possible

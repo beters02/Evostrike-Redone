@@ -314,12 +314,14 @@ end
 
 --@summary End the Gamemode.
 function Gamemode:Stop()
-    local _, err = pcall(function()
+    local success, err = pcall(function()
         if self.GameData.RoundTimer then
             self:EndRound("Restart") -- Restart just does nothing for the RoundTimer result
         end
     end)
-    if err then warn(err) end
+    if not success then
+        warn(err)
+    end
 
     for _, v in pairs(self.GameData.Connections) do
         v:Disconnect()
@@ -419,41 +421,46 @@ end
 --@summary Ends a round of the game. Called automatically when the RoundTimer is done, or when the win condition is met. 
 -- Called in :StartRound()
 function Gamemode:EndRound(result, winner, loser)
-    self:GuiUpdateGamemodeBarAll("StopTimer")
-
     task.delay(3, function()
         for i, v in pairs(workspace:WaitForChild("Temp"):GetChildren()) do
             v:Destroy()
         end
     end)
-
-    --[[Ability.ClearAllPlayerInventories()]]
     WeaponService:ClearAllPlayerInventories()
 
     if self.GameData.Connections.PlayerDied then
         self.GameData.Connections.PlayerDied:Disconnect()
     end
 
-    task.wait(3)
+    self:GuiUpdateGamemodeBarAll("StopTimer")
 
-    for _, v in pairs(self.PlayerData) do
-        pcall(function()
-            if v.Player.Character and v.Player.Character.Humanoid then
-                v.Player.Character.Humanoid:TakeDamage(1000)
-            end
-        end)
+    if result == "Restart" then
+        return
     end
 
-    self:GuiBlackScreenAll(false, 0.5, 0.5, true)
+    if self.GameVariables.game_type == "Round" then
+        task.wait(3)
 
-    self.GameData.Round.Status = "Ended"
-    self.GameData.Round.Current += 1
-    if result == "RoundOverWon" then
-        return self:_RoundOverWonCore(winner, loser)
-    elseif result == "RoundOverTimer" then
-        return self:RoundOverTimer()
+        for _, v in pairs(self.PlayerData) do
+            pcall(function()
+                if v.Player.Character and v.Player.Character.Humanoid then
+                    v.Player.Character.Humanoid:TakeDamage(1000)
+                end
+            end)
+        end
+
+        self:GuiBlackScreenAll(false, 0.5, 0.5, true)
+
+        self.GameData.Round.Status = "Ended"
+        self.GameData.Round.Current += 1
+        if result == "RoundOverWon" then
+            return self:_RoundOverWonCore(winner, loser)
+        elseif result == "RoundOverTimer" then
+            return self:RoundOverTimer()
+        end
     end
 
+    self:_GameOverCore(winner)
 end
 
 --@summary Start the timer of a rounds_enabled Gamemode.
@@ -501,7 +508,7 @@ function Gamemode._RoundOverWonCore(self, winner, loser)
 
     if self.GameVariables.game_end_condition == "scoreReached" then
         if self.PlayerData[winner.Name].Score >= self.GameVariables.game_score_to_win_game then
-            self:_GameOverWonCore(winner, loser)
+            self:_GameOverCore(winner, loser)
             return
         end
 
@@ -517,7 +524,7 @@ function Gamemode._RoundOverWonCore(self, winner, loser)
     self:StartRound()
 end
 
---@summary Score Sort Utility
+--@summary Score Sort Utility -- Returns Array of PlayerNames
 function Gamemode:SortPlayersByScore()
     local scores = {}
     for name, data in pairs(self.PlayerData) do
@@ -543,13 +550,8 @@ function Gamemode:ScoreSortPlayer(name, data, scores)
 end
 --
 
---@summary Called in :EndRound() when rounds_enabled = true and the timer runs out.
+--@summary Called in :EndRound() when GameType == "Round" and the timer runs out.
 function Gamemode:RoundOverTimer()
-
-    if self.GameVariables.game_type == "Timer" then
-        return self:GameOverWon(self:SortPlayersByScore())
-    end
-
     local roundEndAssign = self.GameVariables.round_end_timer_callback
     if roundEndAssign then
 
@@ -587,25 +589,28 @@ function Gamemode:RoundOverTimer()
     end
 end
 
---@summary Called in :RoundOverWon() when rounds_enabled = true and player has reached the maximum amount of rounds.
-function Gamemode:GameOverWon(winner, loser)
-    -- add a nice game over gui, then wait 3 seconds before players are kicked.
-    self:GuiGameOver("all", winner)
-    task.wait(5)
-end
-
---@final
---@summary
-function Gamemode._GameOverWonCore(self, winner, loser)
-    self:GameOverWon(winner, loser)
+--@summary Called at the end of :EndRound if GameType ~= "Round"
+function Gamemode:_GameOverCore(winner: Player?)
+    print('games over!')
+    for i, v in pairs(Players:GetPlayers()) do
+        print(v)
+        if v.Character then v.Character.Humanoid:TakeDamage(10000)v.Character = nil end
+    end
+    self:GameOver(winner)
 
     if self.GameVariables.kick_players_on_end then
-        TeleportService:TeleportAsync(LobbyID, self:PlayerGetAll())
+        TeleportService:TeleportAsync(LobbyID, Players:GetPlayers())
         return
     end
 
     -- this event will handle stopping and restarting in GamemodeService.
-    BindableEvent:Fire("GameRestart")
+    self.RestartGamemodeFromService:Fire()
+end
+
+--@summary Called at the beginning of _GameOverCore
+function Gamemode:GameOver(winner: Player?)
+    self:GuiGameOver("all", winner)
+    task.wait(5)
 end
 
 --
@@ -896,7 +901,7 @@ function Gamemode:PlayerDiedScore(player, killer)
     end
     self.PlayerData[killer.Name].Score += 1
     if self.PlayerData[killer.Name].Score >= self.GameVariables.game_score_to_win_game then
-        self:GameOverWon(killer)
+        self:GameOver(killer)
     end
 end
 
@@ -960,6 +965,8 @@ end
 -- if rounds_enabled = false, this is for when a player joins after the game has started.
 function Gamemode:PlayerJoinedDuringRound(player)
     self:PlayerInit(player, true)
+    self:GuiInit(player)
+    self:PlayerSpawn(player)
 end
 
 --@summary 1v1 Utility Function for getting the other player in the game.
@@ -1185,7 +1192,7 @@ function Gamemode:GuiUpdateLeaderboardAll()
             end
         end
 
-        local succ, err = pcall(function()
+        local succ = pcall(function()
             updateLeaderboard()
         end)
 

@@ -21,7 +21,7 @@
 
 -----------------------------------------------------------------------------------------
 -- Set this to a higher value if you are consistently having "getCurrentReplicated" error.
--- This would be happening if the game you are running States on is a larger game.
+-- This could be happening because you are running States on a larger game.
 local CLIENT_GET_WAIT_SEC = 3
 -----------------------------------------------------------------------------------------
 

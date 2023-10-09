@@ -6,7 +6,7 @@ end
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
 
-export type Currency = "PremiumCredits" | "StrafeCoins"
+export type Currency = "PremiumCredits" | "StrafeCoins" | "XP"
 
 local Economy = {}
 
@@ -24,6 +24,10 @@ function Economy:Decrement(player: Player, currency: Currency, amnt: number)
     return _Set(player, currency, currentAmount - amnt)
 end
 
+function Economy:Save(player)
+    return PlayerData:Save(player)
+end
+
 --[[Private]]
 function _Set(player: Player, currency: Currency, new: number)
     return PlayerData:SetPath(player, "economy." .. _currToDataKey(currency), new)
@@ -31,7 +35,7 @@ end
 
 --[[Util]]
 function _currToDataKey(currency: Currency)
-    return currency == "StrafeCoins" and "strafeCoins" or "premiumCredits"
+    return (currency == "StrafeCoins" and "strafeCoins") or (currency == "PremiumCredits" and "premiumCredits" or "xp")
 end
 
 return Economy

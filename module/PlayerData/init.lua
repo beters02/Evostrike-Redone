@@ -36,7 +36,7 @@ function PlayerData:GetPath(player, path) -- path: options.primaryFire
     return Strings.convertPathToInstance(path, PlayerData:GetAsync(player))
 end
 
---@summary Set the PlayerData from a new PlayerData
+--@summary Set the PlayerData to a new PlayerData
 type Key = string
 type Path = string
 export type dataChangedInfo = {location: "Set" | "Key" | "Path", key: Key | Path | nil, new: any?}
@@ -60,7 +60,7 @@ function PlayerData:SetKey(player, key, new)
     return PlayerData:Set(player, playerdata, {location = "Key", key = key, new = new})
 end
 
---@summary Set the key of a value from the PlayerData path
+--@summary Set the value of a key from the PlayerData path
 function PlayerData:SetPath(player, path, new)
     local playerdata = PlayerData:GetAsync(player)
     Strings.doActionViaPath(path, playerdata, function(gotTableParent, key)
@@ -155,7 +155,8 @@ local function compareRecurse(start, defloc)
             changed = true
         end
         if type(v) == "table" then
-            compareRecurse(start[i], defloc[i])
+            local _c = compareRecurse(start[i], defloc[i])
+            if not changed then changed = _c end
         end
     end
     return changed

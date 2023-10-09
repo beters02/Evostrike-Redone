@@ -32,8 +32,8 @@ function timer:Start()
             self.TimeUpdated:Fire(self.Time)
         end
         if self.Time >= self.TimeLength then
-            self.Status = "Stopped"
             self:Stop("RoundOverTimer")
+            self.Status = "Stopped"
         end
     end)
 end

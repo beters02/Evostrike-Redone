@@ -58,6 +58,7 @@ function GamemodeService:Start()
     GamemodeService.Status = "Initting"
 
     self:ConnectClientRemotes()
+    self:ConnectServerBindables()
 
     local startingGamemode
     if RunService:IsStudio() then
@@ -108,9 +109,7 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
     task.wait(.1)
 
     GamemodeService.Gamemode = _gamemode
-
     script:SetAttribute("CanDamage", _gamemode.GameVariables.can_players_damage or false)
-
     RemoteEvent:FireAllClients("GamemodeChanged", gamemode)
 
     if start then
@@ -118,6 +117,19 @@ function GamemodeService:ChangeMode(gamemode: string, start: boolean?, isInitial
             _gamemode:Start(isInitialGamemode)
         end)
     end
+
+    _gamemode.RestartGamemodeFromService = script:FindFirstChild("RestartGamemodeFromService")
+    if not _gamemode.RestartGamemodeFromService then
+        _gamemode.RestartGamemodeFromService = Instance.new("BindableEvent", script)
+        _gamemode.RestartGamemodeFromService.Name = "RestartGamemodeFromService"
+    end
+
+    _gamemode.RestartGamemodeFromService.Event:Connect(function()
+        print('Restart Received!')
+        local currGamemode = GamemodeService.Gamemode.Name
+        GamemodeService:ChangeMode(currGamemode, true, false, true)
+    end)
+
     return _gamemode
 end
 
@@ -183,6 +195,7 @@ end
 --@summary Listen for the Server Bindable typically fired by a Gamemode Class
 function GamemodeService:ConnectServerBindables()
     GamemodeService.Connections.ServerBindable = BindableEvent.Event:Connect(function(action)
+        print(action)
         if action == "GameRestart" then
             print('Restart Received!')
             local currGamemode = GamemodeService.Gamemode.Name
