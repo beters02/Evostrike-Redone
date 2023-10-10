@@ -20,7 +20,7 @@
 local LobbyID = 11287185880
 
 local GamemodeClasses = {}
-for i, v in pairs(script:GetChildren()) do
+for _, v in pairs(script:GetChildren()) do
     if v:IsA("ModuleScript") then
         table.insert(GamemodeClasses, v)
     end
@@ -433,12 +433,12 @@ function Gamemode:EndRound(result, winner, loser)
     end
 
     self:RemoveTagged("GamemodeDestroyOnRoundOver")
-    WeaponService:ClearAllPlayerInventories()
     self:GuiUpdateGamemodeBarAll("StopTimer")
 
     if self.GameVariables.game_type == "Round" then
         task.wait(3)
 
+        WeaponService:ClearAllPlayerInventories()
         for _, v in pairs(self.PlayerData) do
             pcall(function()
                 if v.Player.Character and v.Player.Character.Humanoid then
@@ -503,22 +503,20 @@ function Gamemode._RoundOverWonCore(self, winner, loser)
     end
 
     self.PlayerData[winner.Name].Score += 1
+    if self.PlayerData[winner.Name].Score >= self.GameVariables.game_score_to_win_game then
+        self:_GameOverCore(winner, loser)
+        return
+    end
 
-    if self.GameVariables.game_end_condition == "scoreReached" then
-        if self.PlayerData[winner.Name].Score >= self.GameVariables.game_score_to_win_game then
-            self:_GameOverCore(winner, loser)
-            return
-        end
-
+    --[[if self.GameVariables.game_end_condition == "scoreReached" then
         local otscore = self.GameVariables.game_score_to_win_game - 1
         if self.PlayerData[winner.Name].Score == otscore and self.PlayerData[loser.Name] == otscore then
             self.GameData.IsOvertime = true
             self:InitOvertime()
         end
-    end
+    end]]
     
     self:RoundOverWon(winner, loser)
-
     self:StartRound()
 end
 
@@ -677,6 +675,8 @@ function Gamemode:PlayerSpawn(player, isFirstSpawn, content, index)
 
     if self.Name == "1v1" then
         player.Character:SetPrimaryPartCFrame(content and content.spawns[index].CFrame)
+        --player.Character.HumanoidRootPart.Velocity = Vector3.zero
+        task.wait()
     else
         player.Character:SetPrimaryPartCFrame(self:PlayerGetSpawnPoint(player))
     end
@@ -690,7 +690,7 @@ function Gamemode:PlayerSpawn(player, isFirstSpawn, content, index)
 
     -- equip strongest weapon
     local strongestWeapon = "ternary"
-    local bml = BuyMenuService:GetInventory(player) :: BuyMenuTypes.BuyMenuPlayerInventory
+    local bml = self.GameVariables.buy_menu_enabled and BuyMenuService:GetInventory(player) :: BuyMenuTypes.BuyMenuPlayerInventory
 
     if self.GameVariables.auto_equip_strongest_weapon then
         if bml then

@@ -5,6 +5,8 @@
 
 ]]
 
+local MOVEMENT_INIT_ANCHOR_LENGTH = 0.25
+
 -- [[ Services ]]
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -31,7 +33,7 @@ local collider = character:WaitForChild("HumanoidRootPart")
 local head = character:WaitForChild("Head")
 
 -- lets anchor the character while he loads so we dont fall through the ground lol
-character.PrimaryPart.Anchored = true
+collider.Anchored = true
 
 local cameraLook = Vector3.new()
 local cameraYaw = Vector3.new()
@@ -149,9 +151,7 @@ for i, v in pairs(config) do
 	Movement[i] = v
 end]]
 
-collider.Anchored = true
 local config = ReplicatedStorage.Movement.get:InvokeServer()
-collider.Anchored = false
 
 --[[ init estrictions ]]
 --[[local Restrictions = require(script:WaitForChild("Restrictions"))
@@ -903,6 +903,12 @@ function Main()
 	script.Events.Get.OnInvoke = function()
 		return playerGrounded
 	end
+
+	task.delay(MOVEMENT_INIT_ANCHOR_LENGTH, function()
+		collider.Anchored = false
+		Movement.movementVelocity.Velocity = Vector3.zero
+		collider.Velocity = Vector3.zero
+	end)
 end
 
 function InitMovers()
@@ -926,7 +932,3 @@ function InitMovers()
 end
 
 Main()
-
-task.delay(1.5, function()
-	character.PrimaryPart.Anchored = false
-end)
