@@ -9,6 +9,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Players = game:GetService("Players")
 local States = require(Framework.Module.m_states)
 local UIState = States.State("UI")
+local player = Players.LocalPlayer
 
 local main = {}
 
@@ -25,6 +26,21 @@ function main.initialize(gui)
 
 	main.isInit = true
 	return main
+end
+
+-- menu type
+type MenuType = "Game" | "Lobby"
+function main.setMenuType(mtype: MenuType)
+	if mtype == "Game" then
+		main.page._stored.Home:_preparePageGamemode("Default")
+		main.conectOpenInput()
+	else
+		main.page._stored.Home:_preparePageGamemode("Lobby")
+		main.disconectOpenInput()
+		if not main.var.opened then
+			main.open()
+		end
+	end
 end
 
 -- main
@@ -66,6 +82,24 @@ function main.toggle()
 		main.open()
 		task.wait()
 	end
+end
+
+function main.conectOpenInput()
+	if main.inputConn then
+		main.disconectOpenInput()
+	end
+	main.inputConn = UserInputService.InputBegan:Connect(function(input, gp)
+		if input.KeyCode == Enum.KeyCode.M then
+			if player:GetAttribute("Typing") then return end
+			if player:GetAttribute("loading") then return end -- if player is loading then dont open menu
+			main.toggle()
+		end
+	end)
+end
+
+function main.disconectOpenInput()
+	main.inputConn:Disconnect()
+	main.inputConn = nil
 end
 
 -- main util

@@ -38,6 +38,7 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local Types = require(script.Parent:WaitForChild("Types"))
 local EnableMainMenuRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("EnableMainMenu")
+local SetMainMenuType = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("SetMainMenuType")
 local Teams = game:GetService("Teams")
 local TeleportService = game:GetService("TeleportService")
 local RoundTimer = require(script.Parent:WaitForChild("RoundTimer"))
@@ -76,7 +77,7 @@ Gamemode.GameVariables = {
     queueTo_enabled = true,    -- Can a player queue into this gamemode while in a queueFrom enabled gamemode?
 
     -- [[ MAIN MENU ]]
-    main_menu_type = "Default", -- the string that the main menu requests upon init, and that is sent out upon gamemode changed
+    main_menu_type = "Game", -- the string that the main menu requests upon init, and that is sent out upon gamemode changed
 
     -- [[ TEAMS ]]
     teams_enabled = false,
@@ -266,7 +267,6 @@ function Gamemode:Start(isInitialGamemode: boolean?)
     task.wait()
     
     self:RemoveTagged("WaitingForPlayersHUD")
-    self:GuiInit("all")
 
     if self.GameVariables.bots_enabled then
         local botprop = {SpawnCFrame = true}
@@ -306,7 +306,7 @@ function Gamemode:Start(isInitialGamemode: boolean?)
 
     task.wait(0.25)
 
-    self:StartRound()
+    self:StartRound(true)
 end
 
 --@summary Pause the Gamemode.
@@ -361,7 +361,7 @@ end
 --@summary Starts a round of the game.
 -- This function will still run even if rounds_enabled = false, in that case the CurrentRound would just stay 1.
 -- Called in :Start() and at some point during :EndRound()
-function Gamemode:StartRound()
+function Gamemode:StartRound(isFirstRound)
 
     if self.GameVariables.game_type == "Round" then
         if self.GameData.Round.Status == "Started" or self.GameData.Round.Status == "PreInit" or self.GameData.Round.Status == "Running" then
@@ -386,7 +386,7 @@ function Gamemode:StartRound()
     task.delay(1, function()
         if not self.GameVariables.opt_to_spawn then
             self:GuiRemoveBlackScreen("all", false)
-            self:PlayerSpawnAll(_1v1content)
+            self:PlayerSpawnAll(_1v1content, isFirstRound)
         else
             self:GuiMainMenu("all", true)
             self:GuiRemoveBlackScreen("all", false)
@@ -666,7 +666,7 @@ function Gamemode:PlayerInit(player)
 end
 
 --@summary Spawn a player. Called either in PlayerSpawnAll() or during respawn on PlayerDied()
-function Gamemode:PlayerSpawn(player, content, index)
+function Gamemode:PlayerSpawn(player, isFirstSpawn, content, index)
     if self.GameVariables.death_camera_enabled then
         self:PlayerRemoveDeathCamera(player)
     end
@@ -746,6 +746,14 @@ function Gamemode:PlayerSpawn(player, content, index)
 
     EvoPlayer:SetShield(player.Character, shield)
     EvoPlayer:SetHelmet(player.Character, helmet)
+
+    self:_PlayerSpawnPost(player, isFirstSpawn)
+end
+ 
+function Gamemode:_PlayerSpawnPost(player, isFirstSpawn)
+    if isFirstSpawn then
+        self:GuiInit(player)
+    end
 end
 
 function Gamemode:PlayerGetSpawnPoint(player)
@@ -771,19 +779,19 @@ function Gamemode:PlayerRemove(player)
 end
 
 --@summary Spawn all of the players in self.PlayerData. Called when all players are to be spawned.
-function Gamemode:PlayerSpawnAll(content)
+function Gamemode:PlayerSpawnAll(content, isFirstSpawn)
     if content and self.Name == "1v1" then
         local counter = 0 -- for tables indexing
         for _, v in pairs(self.PlayerData) do
             counter += 1
-            self:PlayerSpawn(v.Player, content, counter)
+            self:PlayerSpawn(v.Player, isFirstSpawn, content, counter)
         end
         return
     else
         for _, v in pairs(self.PlayerData) do
             if not v.Player.Character then
                 EvoPlayer:DoWhenLoaded(v.Player, function()
-                    self:PlayerSpawn(v.Player)
+                    self:PlayerSpawn(v.Player, isFirstSpawn)
                 end)
             end
         end
@@ -971,7 +979,7 @@ end
 function Gamemode:PlayerJoinedDuringRound(player)
     self:PlayerInit(player, true)
     self:GuiInit(player)
-    self:PlayerSpawn(player)
+    self:PlayerSpawn(player, true)
 end
 
 --@summary 1v1 Utility Function for getting the other player in the game.
@@ -1176,6 +1184,7 @@ end
 function Gamemode:GuiMainMenu(player: Player | "all", enabled: boolean)
     local plrs = player == "all" and self:PlayerGetAll() or {player}
     for _, v in pairs(plrs) do
+        SetMainMenuType:FireClient(v, self.GameVariables.main_menu_type)
         EnableMainMenuRemote:FireClient(v, enabled)
     end
 end

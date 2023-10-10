@@ -8,6 +8,8 @@ if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAtt
 local gui = player.PlayerGui:WaitForChild("MainMenu")
 local module = require(script.Parent).initialize(gui)
 
+module.conectOpenInput()
+
 ReplicatedStorage:WaitForChild("Remotes").EnableMainMenu.OnClientEvent:Connect(function(enable)
     if enable then
         module.open()
@@ -16,25 +18,10 @@ ReplicatedStorage:WaitForChild("Remotes").EnableMainMenu.OnClientEvent:Connect(f
     end
 end)
 
-script.Parent.events.enableMenuBindable.Event:Connect(function(enable)
-    if enable then
-        module.open()
-    else
-        module.close()
-    end
+ReplicatedStorage:WaitForChild("Remotes").SetMainMenuType.OnClientEvent:Connect(function(mtype)
+    module.setMenuType(mtype)
 end)
 
-UserInputService.InputBegan:Connect(function(input, gp)
-    if input.KeyCode == Enum.KeyCode.M then
-        if player:GetAttribute("Typing") then return end
-        if player:GetAttribute("loading") then return end -- if player is loading then dont open menu
-
-        -- if player in the lobby screen and has not spawned, don't let them close the menu
-        if module.var.opened and module.gui:GetAttribute("NotSpawned") then
-            return
-        end
-
-        module.toggle()
-    end
+script.Parent.events.connectOpenInput.Event:Connect(function(mtype)
+    module.conectOpenInput()
 end)
-

@@ -32,7 +32,7 @@ Deathmatch.GameVariables = {
     players_per_team = 1,
 
     -- [[ ROUDS ]]
-    round_length = 10 * 60, -- in sec
+    round_length = 10, -- in sec
 
     -- [[ PLAYER SPAWNING ]]
     opt_to_spawn = true,           -- should players spawn in automatically, or opt in on their own? (lobby)
@@ -87,7 +87,7 @@ function Deathmatch:GuiInit(_reqPlr: Player | "all")
     for _, player in pairs(plrs) do
         local att = {}
         if self.GameData.RoundTimer and self.GameData.RoundTimer.Time then
-            att.TimerTime = self.GameData.RoundTimer.Time
+            att.TimerTime = self.GameData.RoundTimer.TimeLeft
         else
             att.TimerTime = self.GameVariables.round_length
         end
@@ -246,7 +246,6 @@ end
 
 function Deathmatch:PlayerJoinedDuringRound(player)
     self:PlayerInit(player)
-    self:GuiInit(player)
     self:GuiMainMenu(player, true)
 end
 

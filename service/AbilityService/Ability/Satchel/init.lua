@@ -26,8 +26,8 @@ local Satchel = {
         -- grenade
         grenadeThrowDelay = 0.1,
         acceleration = 10,
-        speed = 150,
-        gravityModifier = 0.5,
+        speed = 50,
+        gravityModifier = 0.4,
         startHeight = 2,
 
         -- animation / holding
@@ -86,7 +86,6 @@ end
 --@override
 function Satchel:FireGrenadePost(_, _, _, _, thrower, grenade)
     if self.satchelConnection then self.satchelConnection:Disconnect() end
-    --grenade:SetAttribute("IsPopped", false)
 
     local _t = tick() + self.Options.lengthBeforePop
     local blasted = false
@@ -122,19 +121,21 @@ function Satchel:Blast(thrower, grenade)
 
     if thrower.Character then
         local result = workspace:Raycast(grenPos, (hrpPos - grenPos).Unit * radmax, self:GetSatchelParams(grenade))
-        if not result then warn("No result!") return end
-
-        if result.Instance:FindFirstAncestorOfClass("Model") == self.Character then
-            local dir = (hrpPos - grenPos).Unit
-            local vel = dir * ((radmax-result.Distance)/radmax) * strength
-
-            -- set Y velocity to ignore a negative Y value
-            if vel.Y < velmin then
-                vel = Vector3.new(vel.X, velmin, vel.Z)
+        if not result then
+            warn("No result!")
+        else
+            if result.Instance:FindFirstAncestorOfClass("Model") == self.Character then
+                local dir = (hrpPos - grenPos).Unit
+                local vel = dir * ((radmax-result.Distance)/radmax) * strength
+    
+                -- set Y velocity to ignore a negative Y value
+                if vel.Y < velmin then
+                    vel = Vector3.new(vel.X, velmin, vel.Z)
+                end
+    
+                vel = Math.fv3clamp(vel, velmin, velmax) --[[* -dir]]
+                self.Player.Character.MovementScript.Events.Satchel:Fire(vel)
             end
-
-            vel = Math.fv3clamp(vel, velmin, velmax) --[[* -dir]]
-            self.Player.Character.MovementScript.Events.Satchel:Fire(vel)
         end
     end
     

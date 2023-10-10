@@ -97,15 +97,10 @@ play.GamemodeInteractions = {
         self.Location.Card_BackToLobby.Visible = false
     
         self.coreconnections.homeActionCardClick = self.Location.Card_StarterIsland.MouseButton1Click:Connect(function()
-
-            local succ, err = GamemodeService:AttemptPlayerSpawn()
-            if succ then
-                self._closeMain()
-                self.Location.Card_StarterIsland.Visible = false
-                return
-            end
-            
-            warn("PlayPage LoadIntoStarterIsland Error " .. tostring(err))
+            GamemodeService:AttemptPlayerSpawn()
+            self._closeMain()
+            self.Location.Card_StarterIsland.Visible = false
+            game.Players.LocalPlayer.PlayerScripts.MainMenu.events.connectOpenInput:Fire()
             return
         end)
     end

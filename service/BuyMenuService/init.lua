@@ -37,12 +37,13 @@ end
 
 function BuyMenuService:Stop()
     ServiceCommunicate.OnServerInvoke = nil
-    BuyMenuService:RemoveBuyMenuMultiple(Players:GetPlayers())
+    BuyMenuService:RemoveBuyMenuMultiple(Players:GetPlayers(), true)
     ClearPlayerData("all")
     for _,v in pairs(BuyMenuService._connections) do
         v:Disconnect()
     end
     table.clear(BuyMenuService._connections)
+    print('Stopped Buy Menu service')
 end
 
 --
@@ -121,7 +122,7 @@ function BuyMenuService:AddBuyMenu(player, enabled, properties)
     BuyMenuService._cache.playerdata[player.Name] = playerdata
 end
 
-function BuyMenuService:RemoveBuyMenu(player)
+function BuyMenuService:RemoveBuyMenu(player, clearConn)
     local playerdata = BuyMenuService._cache.playerdata[player.Name]
     if not playerdata then return end
     if playerdata.BuyMenu then
@@ -129,10 +130,11 @@ function BuyMenuService:RemoveBuyMenu(player)
         playerdata.BuyMenu = false
     end
     for i, conn in pairs(playerdata.Connections) do
-        if string.match(i, "BuyMenu") then
-            conn:Disconnect()
-            playerdata.Connections[i] = nil
+        if not clearConn and not string.match(i, "BuyMenu") then
+            continue
         end
+        conn:Disconnect()
+        playerdata.Connections[i] = nil
     end
     if BuyMenuService._config.resetInventoryOnDeath then playerdata.Inventory = Types.PlayerInventory.new() end
     BuyMenuService._cache.playerdata[player.Name] = playerdata
@@ -193,9 +195,9 @@ function BuyMenuService:AddBuyMenuMultiple(players)
     end
 end
 
-function BuyMenuService:RemoveBuyMenuMultiple(players)
+function BuyMenuService:RemoveBuyMenuMultiple(players, clearConn)
     for _, v in ipairs(players) do
-        BuyMenuService:RemoveBuyMenu(v)
+        BuyMenuService:RemoveBuyMenu(v, clearConn)
     end
 end
 

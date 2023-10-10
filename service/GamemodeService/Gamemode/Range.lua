@@ -37,7 +37,7 @@ Lobby.GameVariables = {
 -- if rounds_enabled = false, this is for when a player joins after the game has started.
 function Lobby:PlayerJoinedDuringRound(player)
     self:PlayerInit(player, true)
-    self:PlayerSpawn(player)
+    self:PlayerSpawn(player, true)
 end
 
 return Lobby

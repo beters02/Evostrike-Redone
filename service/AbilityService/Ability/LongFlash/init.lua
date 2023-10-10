@@ -101,6 +101,7 @@ end
 --@summary Required Grenade Function RayHit
 -- caster, casterPlayer, casterThrower, result, velocity, grenade, class
 function LongFlash.RayHit(_, casterPlayer, _, result, _, grenadeModel, abilityClass)
+    Debris:AddItem(grenadeModel, LongFlash.Configuration.popTime + LongFlash.Configuration.anchorTime + 0.3)
 
     -- send grenade outward
     local outDirection = result.Normal * LongFlash.Configuration.anchorDistance
@@ -169,7 +170,6 @@ function LongFlash.RayHit(_, casterPlayer, _, result, _, grenadeModel, abilityCl
 
     grenadeModel.Transparency = 1
     disableAllParticleEmittersAndLights(grenadeModel)
-    Debris:AddItem(grenadeModel, 2)
 end
 
 --@summary The FireGrenade function ran after FireGrenadeCore

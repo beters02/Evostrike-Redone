@@ -9,7 +9,7 @@ function timer.new(length)
     local self = {} :: Types.RoundTimer
     self.Time = 0
     self.TimeLength = length
-    self.TimeLeft = function() return self.TimeLength - self.Time end
+    self.TimeLeft = self.TimeLength
     self.Status = "Init"
     self.Finished = Instance.new("BindableEvent", game:GetService("ServerStorage"))
     self.TimeUpdated = Instance.new("BindableEvent", game:GetService("ServerStorage"))
@@ -26,6 +26,7 @@ function timer:Start()
     local lastSecStartTick = tick()
     self._connection = RunService.Heartbeat:Connect(function()
         if self.Status == "Stopped" then return end -- Be sure you disconnect your timers by calling :Stop()
+        self.TimeLeft = self.TimeLength - self.Time
         if tick() - lastSecStartTick >= 1 then
             lastSecStartTick = tick()
             self.Time += 1

@@ -156,4 +156,19 @@ Commands.as_add = {
 	end
 }
 
+--
+
+--[[Commands.addecon = {
+	Description = "Add economy to a player"
+}]]
+
+Commands.addcase = {
+	Description = "Add a case to a player's inventory",
+	Public = false,
+
+	Function = function()
+		game.ReplicatedStorage.Remotes.AddCase:FireServer()
+	end
+}
+
 return Commands
