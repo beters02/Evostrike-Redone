@@ -28,7 +28,7 @@ local Maps = require(ServerStorage:WaitForChild("Stored"):WaitForChild("MapIDs")
 local lobby_id = Maps.mapIds.lobby        -- In the Lobby, the Gamemode will always be default_gamemode.
 local unstable_id = Maps.mapIds.unstable
 local default_gamemode = "Deathmatch"
-local studio_gamemode = "1v1"   -- The Gamemode that is automatically set in Studio.
+local studio_gamemode = "Deathmatch"   -- The Gamemode that is automatically set in Studio.
 --
 
 local GamemodeClass = require(script:WaitForChild("Gamemode"))

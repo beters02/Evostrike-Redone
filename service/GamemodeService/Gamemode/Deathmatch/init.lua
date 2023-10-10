@@ -32,7 +32,7 @@ Deathmatch.GameVariables = {
     players_per_team = 1,
 
     -- [[ ROUDS ]]
-    round_length = 10, -- in sec
+    round_length = 10 * 60, -- in sec
 
     -- [[ PLAYER SPAWNING ]]
     opt_to_spawn = true,           -- should players spawn in automatically, or opt in on their own? (lobby)

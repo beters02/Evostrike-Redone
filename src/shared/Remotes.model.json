@@ -20,6 +20,14 @@
       {
         "Name": "setShieldAll",
         "ClassName": "BindableEvent"
+      },
+      {
+        "Name": "SetMainMenuType",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "AddCase",
+        "ClassName": "RemoteEvent"
       }
     ]
   }
