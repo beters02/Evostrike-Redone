@@ -75,7 +75,8 @@ function crosshair:updateCrosshair(dataKey: string?, newValue: any?)
     -- update pos
 	local verticalOffset, horizontalOffset = UDim2.fromOffset(0, self.gap + (self.size/2)), UDim2.fromOffset(self.gap + (self.size/2), 0)
     local hairs = self.hairs
-    local origin = self.origin
+    local origin = UDim2.fromOffset(self.resolution.X / 2, self.resolution.Y / 2)
+    self.origin = origin
 	
 	hairs.top.Position = origin + -verticalOffset
 	hairs.bottom.Position = origin + verticalOffset
