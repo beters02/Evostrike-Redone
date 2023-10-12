@@ -27,4 +27,12 @@ function Tables.getDictionaryLength(dictionary: table)
     return index
 end
 
+--@summary Do a function to all values in a table.
+function Tables.doIn(tab, callback)
+    if not tab or type(tab) ~= "table" then return end
+    for i, v in pairs(tab) do
+        callback(v, i)
+    end
+end
+
 return Tables

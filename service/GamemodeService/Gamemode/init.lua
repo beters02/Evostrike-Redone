@@ -954,11 +954,12 @@ end
 
 --@summary Get a table all of the Players in self.PlayerData
 function Gamemode:PlayerGetAll()
-    local plrs = {}
+    --[[local plrs = {}
     for _, v in pairs(self.PlayerData) do
         table.insert(plrs, v.Player)
     end
-    return plrs
+    return plrs]]
+    return Players:GetPlayers()
 end
 
 --@summary Get a Player from self.PlayerData via index
@@ -980,6 +981,7 @@ function Gamemode:PlayerJoinedDuringRound(player)
     self:PlayerInit(player, true)
     self:GuiInit(player)
     self:PlayerSpawn(player, true)
+    print('PLAYER JOINED DURING ROUND')
 end
 
 --@summary 1v1 Utility Function for getting the other player in the game.

@@ -8,10 +8,6 @@
         {
             "Name": "RemoteFunction",
             "ClassName": "RemoteFunction"
-        },
-        {
-            "Name": "Replicate",
-            "ClassName": "RemoteEvent"
         }
     ]
 }

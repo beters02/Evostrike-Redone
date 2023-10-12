@@ -7,7 +7,7 @@ local lastGoodCF = CFrame.new()
 local primcf = CFrame.new()
 local success = false
 
-camera.CameraType = Enum.CameraType.Scriptable
+--camera.CameraType = Enum.CameraType.Scriptable
 
 local conn
 conn = game:GetService("RunService").RenderStepped:Connect(function(dt)

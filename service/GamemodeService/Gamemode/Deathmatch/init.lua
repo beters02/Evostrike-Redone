@@ -247,6 +247,7 @@ end
 function Deathmatch:PlayerJoinedDuringRound(player)
     self:PlayerInit(player)
     self:GuiMainMenu(player, true)
+    print('PLAYER JOINED DURING ROUND')
 end
 
 function Deathmatch:AddDMGui(player: Player, guiName: string, resetOnSpawn: boolean?, attributes: table?, tags: table?)

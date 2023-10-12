@@ -66,6 +66,7 @@ function PlayerInitRagdoll(plr)
     playerConns[plr.Name] = plr.CharacterAdded:Connect(function(character)
         CreateRagdoll(character)
 		resetCharCollision(character)
+		transparency(character, 0)
     end)
 end
 

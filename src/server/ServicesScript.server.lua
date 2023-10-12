@@ -10,8 +10,8 @@ local WeaponService = require(Framework.Service.WeaponService)
 WeaponService:Start()
 
 -- GamemodeService
-local GamemodeService = require(Framework.Service.GamemodeService)
-GamemodeService:Start()
+--local GamemodeService = require(Framework.Service.GamemodeService)
+--GamemodeService:Start()
 
 -- Framework Services
 for _, v in pairs(ReplicatedStorage:WaitForChild("Services"):GetChildren()) do

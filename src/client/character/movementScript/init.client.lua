@@ -5,7 +5,7 @@
 
 ]]
 
-local MOVEMENT_INIT_ANCHOR_LENGTH = 0.25
+local MOVEMENT_INIT_ANCHOR_LENGTH = 0
 
 -- [[ Services ]]
 local Players = game:GetService("Players")
@@ -904,11 +904,19 @@ function Main()
 		return playerGrounded
 	end
 
-	task.delay(MOVEMENT_INIT_ANCHOR_LENGTH, function()
+	local function _init()
 		collider.Anchored = false
 		Movement.movementVelocity.Velocity = Vector3.zero
 		collider.Velocity = Vector3.zero
-	end)
+	end
+
+	if MOVEMENT_INIT_ANCHOR_LENGTH > 0 then
+		task.delay(MOVEMENT_INIT_ANCHOR_LENGTH, function()
+			_init()
+		end)
+	else
+		_init()
+	end
 end
 
 function InitMovers()
