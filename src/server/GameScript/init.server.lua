@@ -6,6 +6,7 @@ local ConnectionsLib = require(Framework.Module.lib.fc_rbxsignals)
 
 local Connections = {Ended = false}
 local CurrentGamemodeBaseScript = GamemodeService2:GetGamemodeScript(GamemodeService2.DefaultGamemode)
+local CurrentGamemodeScript
 
 --@summary Ran when the first player joins
 function Init(player)
@@ -27,6 +28,10 @@ function Start(gmScript)
     Connections.Ended = gmScript:WaitForChild("Events"):WaitForChild("Ended").Event:Once(function(restart: boolean)
         Stop(restart)
     end)
+    if CurrentGamemodeScript then
+        CurrentGamemodeScript:Destroy()
+    end
+    CurrentGamemodeScript = gmScript
 end
 
 function Stop(restart: boolean?)

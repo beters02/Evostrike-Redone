@@ -450,9 +450,11 @@ function GuiBuyMenu(player)
 end
 
 function GuiGameOver(winner: Player | false, plrEarnings)
-    for plrname, earnings in pairs(plrEarnings) do
-        print(earnings)
-        Gui(PlayerData[plrname].Player, "GameOver", false, {"DestroyOnClose"}, {EarnedStrafeCoins = earnings.sc, EarnedXP = earnings.xp})
+    local earnings
+    for _, v in pairs(Players:GetPlayers()) do
+        earnings = plrEarnings[v.Name]
+        earnings = earnings and {EarnedStrafeCoins = earnings.sc, EarnedXP = earnings.xp} or {}
+        Gui(v, "GameOver", false, {"DestroyOnClose"}, earnings)
     end
 end
 
