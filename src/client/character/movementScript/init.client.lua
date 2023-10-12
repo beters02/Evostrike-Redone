@@ -905,9 +905,11 @@ function Main()
 	end
 
 	local function _init()
-		collider.Anchored = false
-		Movement.movementVelocity.Velocity = Vector3.zero
-		collider.Velocity = Vector3.zero
+		if hum.Health > 0 then
+			collider.Anchored = false
+			Movement.movementVelocity.Velocity = Vector3.zero
+			collider.Velocity = Vector3.zero
+		end
 	end
 
 	if MOVEMENT_INIT_ANCHOR_LENGTH > 0 then

@@ -6,6 +6,7 @@ if RunService:IsClient() then
     return require(script:WaitForChild("Client"))
 end
 
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local DataStore2 = require(script:WaitForChild("DataStore2"))
 local Strings = require(script:WaitForChild("Strings"))
 local Default = require(script:WaitForChild("Shared"))
@@ -43,6 +44,7 @@ export type dataChangedInfo = {location: "Set" | "Key" | "Path", key: Key | Path
 function PlayerData:Set(player, new, changed: dataChangedInfo?, save, ignoreRemote)
     if not changed then changed = {location = "Set"} end
     local store = _getStoreSafe(player)
+    print(new)
     store:Set(new)
     if save then
         store:Save()
@@ -82,6 +84,8 @@ end
 
 --@summary Save the PlayerData
 function PlayerData:Save(player)
+    local store = _getStoreSafe(player)
+    print(_getDataSafe(player))
     _getStoreSafe(player):Save()
 end
 
@@ -193,6 +197,7 @@ function _compareToDefault(player, playerData)
     local changed = compareRecurse(playerData, PlayerData._def)
     if changed then
         PlayerData:Set(player, playerData)
+        print(playerData)
         print("Updated PlayerData during Get!")
     end
     return playerData, changed

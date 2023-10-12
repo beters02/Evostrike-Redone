@@ -63,16 +63,26 @@ end
 function PlayerInitRagdoll(plr)
     -- connect character added
     if playerConns[plr.Name] then return end
+	local didInit = false
     playerConns[plr.Name] = plr.CharacterAdded:Connect(function(character)
         CreateRagdoll(character)
 		resetCharCollision(character)
 		transparency(character, 0)
+		didInit = true
     end)
+	if not didInit and plr.Character then
+		CreateRagdoll(plr.Character)
+		resetCharCollision(plr.Character)
+		transparency(plr.Character, 0)
+		didInit = true
+	end
 end
 
 -- Shared Functions
 
 function DiedRagdoll(character, ragdoll)
+	character.PrimaryPart.Anchored = true
+	character.Head.Anchored = true
 	setCharCollision(character)
 	initRagdollParts(ragdoll)
 	
@@ -97,6 +107,7 @@ function CreateRagdoll(character)
 			conn:Disconnect()
 		end)
 	else
+		print('INITTING RAGDOLL OTHER PLAYER')
 		conn = PlayerDied.OnClientEvent:Connect(function(_plr)
 			DiedRagdoll(character, ragdoll)
 			conn:Disconnect()
@@ -239,6 +250,7 @@ end
 function setCharCollision(char)
 	for _, v in pairs(char:GetChildren()) do
 		if v:IsA("Part") or v:IsA("MeshPart") then
+			v.Anchored = true
 			v.CanCollide = true
 			v.CollisionGroup = "DeadCharacters"
 		end
@@ -248,6 +260,7 @@ end
 function resetCharCollision(char)
 	for _, v in pairs(char:GetChildren()) do
 		if v:IsA("Part") or v:IsA("MeshPart") then
+			v.Anchored = false
 			v.CanCollide = true
 			if v.Name == "LeftFoot" or v.Name == "RightFoot" then
 				v.CollisionGroup = "PlayerFeet"
@@ -273,6 +286,7 @@ function replaceCharacterWithRagdoll(char, clone)
 	transparency(char, 1)
 	clone.Parent = char.Parent
 	clone.PrimaryPart.Velocity = char.PrimaryPart.Velocity
+	char:SetPrimaryPartCFrame(clone.PrimaryPart.CFrame + Vector3.new(0,2,0))
 end
 
 function impulseRagdoll(char, oldChar)
@@ -302,5 +316,9 @@ if #tplayers > 0 then for _, v in pairs(tplayers) do PlayerInitRagdoll(v) end en
 -- connections
 Players.PlayerAdded:Connect(PlayerInitRagdoll) -- Initialize new players
 RagdollRE.OnClientEvent:Connect(SharedRE)
+
+PlayerInitRagdoll(player)
+
+print('Ragdoll Service Started')
 
 return Shared

@@ -4,7 +4,7 @@ function rbxsignals.DisconnectAllIn(tab: table)
     for i, v in pairs(tab) do
         if type(v) == "table" then
             tab[i] = rbxsignals.DisconnectAllIn(v)
-        else
+        elseif typeof(v) == "RBXScriptConnection" then
             v:Disconnect()
             tab[i] = nil
         end

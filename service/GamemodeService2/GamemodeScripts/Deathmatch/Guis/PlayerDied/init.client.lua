@@ -21,6 +21,13 @@ local killedLabel = mainFrame:WaitForChild("KilledLabel")
 local remoteEvent = script:WaitForChild("Events"):WaitForChild("RemoteEvent")
 local buyMenu = game.Players.LocalPlayer.PlayerGui:WaitForChild("BuyMenu")
 local killstr = script:GetAttribute("KilledString") or "You died!"
+local player = game.Players.LocalPlayer
+local killer = script:WaitForChild("KillerObject").Value or player
+local camera = workspace.CurrentCamera
+
+local lastGoodCF = CFrame.new()
+local primcf = CFrame.new()
+local success = false
 
 local inLoadout = false
 local inTween = false
@@ -60,6 +67,26 @@ function Click.Back()
 end
 
 --[[ MAIN ]]
+
+camera.CameraType = Enum.CameraType.Scriptable
+local conn
+conn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+	success, primcf = pcall(function()
+		return killer.Character.PrimaryPart.CFrame
+	end)
+	if not success or not killer.Character or not camera then
+		lastGoodCF = camera.CFrame:Lerp(lastGoodCF, dt * 10)
+	else
+		lastGoodCF = camera.CFrame:Lerp(CFrame.new(primcf.Position + Vector3.new(5, 10, 0) - camera.CFrame.LookVector, primcf.Position), dt * 10)
+	end
+	camera.CFrame = lastGoodCF
+end)
+
+script:WaitForChild("Events"):WaitForChild("Finished").OnClientEvent:Connect(function()
+    conn:Disconnect()
+	camera.CameraType = Enum.CameraType.Custom
+end)
+
 function init()
     mainFrame.GroupTransparency = 1
     inTween = TweenService:Create(mainFrame, TweenInfo.new(fadeInTime, Enum.EasingStyle.Cubic), {GroupTransparency = 0})

@@ -9,17 +9,17 @@ require(Framework.Module.EvoConsole)
 
 --EvoMM
 local EvoMM = require(Framework.Module.EvoMMWrapper)
-local GamemodeService = require(Framework.Service.GamemodeService)
+--local GamemodeService = require(Framework.Service.GamemodeService)
 local StoredMapIDs = require(ServerStorage:WaitForChild("Stored"):WaitForChild("MapIDs"))
 local queueRemote = Framework.Module.shared.Remotes.requestQueueFunction
 local requestActions = {
     Add = function(player, ...)
-        if GamemodeService.Gamemode.Name ~= "Lobby" then return end
-        return EvoMM:AddPlayerToQueue(player, ...)
+        --if GamemodeService.Gamemode.Name ~= "Lobby" then return end
+        --return EvoMM:AddPlayerToQueue(player, ...)
     end,
     Remove = function(player, ...)
-        if GamemodeService.Gamemode.Name ~= "Lobby" then return end
-        return EvoMM:RemovePlayerFromQueue(player)
+        --if GamemodeService.Gamemode.Name ~= "Lobby" then return end
+        --return EvoMM:RemovePlayerFromQueue(player)
     end,
     PrintAll = function()
     end,

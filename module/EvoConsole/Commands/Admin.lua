@@ -1,7 +1,8 @@
 local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local EmitParticles = require(Framework.shfc_emitparticle.Location)
-local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService"))
+--local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService"))
+local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService2"))
 
 local ParticlesTable
 task.spawn(function()

@@ -50,10 +50,8 @@ end)
 
 -- Set Character CanCollide to False
 -- Do this later so people dont fall thru floor?
-task.delay(3, function()
-    for _, v in pairs(char:GetDescendants()) do
-        if v:IsA("Part") or v:IsA("BasePart") then
-            v.CanCollide = false
-        end
+for _, v in pairs(char:GetDescendants()) do
+    if v:IsA("Part") or v:IsA("BasePart") then
+        v.CanCollide = false
     end
-end)
+end

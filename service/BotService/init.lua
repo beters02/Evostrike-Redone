@@ -19,7 +19,7 @@ function Bots:AddBot(properties)
     local character = StarterCharacterTemplate:Clone()
     character.Parent = ServerStorage
 
-    if not properties.SpawnCFrame then properties.SpawnCFrame = game.ReplicatedStorage.Services.GamemodeService.Gamemode.Spawns.Default.CFrame end
+    if not properties.SpawnCFrame then properties.SpawnCFrame = game.ReplicatedStorage.Services.GamemodeService2.GamemodeScripts.Deathmatch.Spawns.Default.CFrame end
     local botProperties = Types.BotProperties.new(properties)
 
     -- set bot loaded property

@@ -4,6 +4,8 @@ Copy this script and put it on the Character, Backpack or PlayerGui
 Listen for remotes or whatever, call a Cleanup remote if necessary, destroy the script when ready
 ]]
 
+local st = tick()
+
 local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -96,7 +98,7 @@ function connect()
         initLeaderboard(playerData)
     end)
 
-    local endt = tick() + timerLength
+    local endt = st + timerLength
     timer = RunService.RenderStepped:Connect(function()
         timerLabel.Text = convertSecToMin(math.floor(endt - tick()))
         if tick() >= endt then
@@ -111,6 +113,9 @@ end
 function start()
     gui.Parent = localPlayer.PlayerGui
     UIState:addOpenUI("DeathmatchRoundOver", gui, true)
+    task.delay(timerLength - 1, function()
+        UIState:removeOpenUI("DeathmatchRoundOver")
+    end)
 end
 
 init()

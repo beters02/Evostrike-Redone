@@ -26,7 +26,7 @@ function module:StartQueueService(queueableGamemodes)
 
     -- init gamemodes
     for _, gamemode in pairs(queueableGamemodes) do
-        local req = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService").Gamemode:FindFirstChild(gamemode)
+        --[[local req = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService2").GamemodeScripts:FindFirstChild(gamemode)
         if not req then continue end
         req = require(req)
 
@@ -34,7 +34,7 @@ function module:StartQueueService(queueableGamemodes)
         for map, mapid in pairs(StoredMapIDs.GetMapInfoInGamemode(gamemode)) do
             MatchmakingService:SetPlayerRange(map .. "_" .. gamemode, NumberRange.new(req.minimumPlayers or 1, req.maximumPlayers or 8))
             MatchmakingService:AddGamePlace(map .. "_" .. gamemode, mapid)
-        end
+        end]]
     end
 
     -- update queue count

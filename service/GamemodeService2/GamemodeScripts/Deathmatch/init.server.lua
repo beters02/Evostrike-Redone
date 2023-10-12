@@ -15,8 +15,10 @@ type PlayerData = {
 
 -- TAGS
 -- DestroyOnClose
+-- DestroyOnGameEnd
 -- DestroyOnPlayerDied_{playerName}
 -- DestroyOnPlayerRemoving_{playerName}
+-- DestroyOnPlayerSpawning_{playerName}
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -28,6 +30,8 @@ local ConnectionsLib = require(Framework.Module.lib.fc_rbxsignals)
 local TagsLib = require(Framework.Module.lib.fc_tags)
 local Timer = require(script:WaitForChild("Timer"))
 local Tables = require(Framework.Module.lib.fc_tables)
+local EvoEconomy = require(Framework.Module.EvoEconomy)
+local EvoPlayer = require(Framework.Module.EvoPlayer)
 
 local PlayerData = {}
 local GameData = {
@@ -89,7 +93,74 @@ end
 
 --@summary Called when game ends naturally by condition/timer
 function End(result: RoundEndResult, winner: Player?)
-    GameData.Events.Ended:Fire(GameData.Options.restart_on_end)
+    GuiGameOver(winner or false, ProcessPlayerPostEarnings())
+    ConnectionsLib.SmartDisconnect(GameData.Connections.PlayerDied)
+    WeaponService:ClearAllPlayerInventories()
+    for _, v in pairs(Players:GetPlayers()) do
+        if v.Character then
+            pcall(function()AbilityService:GetPlayerAbilityFolder(v):ClearAllChildren()end)
+            v.Character.Humanoid:TakeDamage(1000)
+        end
+    end
+    
+    task.delay(GameData.Options.end_screen_length, function()
+        Stop()
+        for _, v in pairs(PlayerData) do
+            PlayerRemoving(v.Player)
+        end
+        GameData.Events.Ended:Fire(GameData.Options.restart_on_end)
+    end)
+end
+
+function ProcessPlayerPostEarnings()
+    local top3 = {}
+    for _, plrdata in pairs(PlayerData) do
+        local inserted = false
+        if #top3 < 3 then
+            table.insert(top3, plrdata)
+            continue
+        end
+        for ti, tpd in pairs(top3) do
+            if not inserted then
+                inserted = true
+                if plrdata.Kills > tpd.Kills then
+                    tpd[ti] = plrdata
+                end
+            end
+        end
+    end
+    for ti, tv in pairs(top3) do
+        top3[tv.Player.Name] = tv
+        top3[ti] = nil
+    end
+
+    local function isTop3(player)
+        for plrname, _ in pairs(top3) do
+            if player.Name == plrname then
+                return true
+            end
+        end
+        return false
+    end
+
+    local plrEarnings = {}
+    local sc
+    local xp
+    for _, plrdata in pairs(PlayerData) do
+        if plrdata.Kills > 0 then
+            sc = GameData.Options.base_sc_earned
+            xp = GameData.Options.base_xp_earned
+            if isTop3(plrdata.Player) then
+                sc += 10
+                xp += 100
+            end
+            EvoEconomy:Increment(plrdata.Player, "StrafeCoins", sc)
+            EvoEconomy:Increment(plrdata.Player, "XP", xp)
+            EvoEconomy:Save(plrdata.Player)
+            plrEarnings[plrdata.Player.Name] = {sc = sc, xp = xp}
+        end
+    end
+    return plrEarnings
 end
 
 --
@@ -117,9 +188,11 @@ end]]
 --@summary Processes whether or not the game should end
 function RoundProcessPlayerDied(player, killer): boolean
     PlayerDataIncrement(player, "Deaths", 1)
+    GuiTopBarUpdateScore(player, false, PlayerDataGetKey(player, "Deaths"))
 
     if killer and player ~= killer then
         PlayerDataIncrement(killer, "Kills", 1)
+        GuiTopBarUpdateScore(killer, PlayerDataGetKey(killer, "Kills"))
         if PlayerDataGetKey(killer, "Kills") >= GameData.Options.score_to_win_game then
             End("Condition", killer)
             return true
@@ -138,9 +211,17 @@ function PlayerSpawn(player)
 
     local pd = PlayerDataGet(player)
     local cf = PlayerGetSpawnPoint()
+    TagsLib.DestroyTagged("DestroyOnPlayerSpawning_"..player.Name)
     player:LoadCharacter()
+    print('LOADING CHARACTER')
+    task.wait()
+    --local char = player.Character or player.CharacterAdded:Wait()
+
     local char = player.Character or player.CharacterAdded:Wait()
     char:WaitForChild("HumanoidRootPart").CFrame = cf + Vector3.new(0, 2, 0)
+    char:WaitForChild("Humanoid").Health = GameData.Options.starting_health
+    EvoPlayer:SetHelmet(char, GameData.Options.starting_helmet)
+    EvoPlayer:SetShield(char, GameData.Options.starting_shield or 0)
 
     for _, item in pairs(pd.Inventory.Weapons) do
         WeaponService:AddWeapon(player, item)
@@ -183,12 +264,12 @@ function PlayerGetSpawnPoint()
     spawns = GameData.Spawns.Zone1:GetChildren()
 
     for _, v in pairs(Players:GetPlayers()) do
-        if not v.Character then continue end
+        if not v.Character or v.Character.Humanoid.Health <= 0 then continue end
 
         for _, spwn in pairs(spawns) do
             if spwn:IsA("Part") then
                 if not points[spwn.Name] then points[spwn.Name] = 10000 end
-                points[spwn.Name] -= (v.Character.HumanoidRootPart.CFrame.Position - spwn.CFrame.Position).Magnitude
+                points[spwn.Name] -= (v.Character:WaitForChild("HumanoidRootPart").CFrame.Position - spwn.CFrame.Position).Magnitude
 
                 if not lowest or points[spwn.Name] < lowest[2] then
                     lowest = {spwn, points[spwn.Name]}
@@ -277,6 +358,7 @@ function Gui(player: Player, gui: string, resets: boolean?, tags: table?, attrib
     Tables.doIn(attributes, function(value, index)
         _guiScript:SetAttribute(index, value)
         _gui:SetAttribute(index, value)
+        print(index, value)
     end)
 
     local pgui = player:WaitForChild("PlayerGui")
@@ -298,10 +380,18 @@ end
 
 function GuiPlayerDied(player, killer)
     PlayerDataGet(player)
-    local gui = Gui(player, "PlayerDied", false, {"DestroyOnPlayerDied_" .. player.Name}, {KillerName = killer and killer.Name or false})
+    local gui = Gui(player, "PlayerDied", false, {"DestroyOnPlayerSpawning_" .. player.Name}, {KillerName = killer and killer.Name or false})
+    local killerObject = Instance.new("ObjectValue")
+    killerObject.Name = "KillerObject"
+    killerObject.Value = killer or nil
+    killerObject.Parent = gui
+
     PlayerData[player.Name].Connections.Respawn = gui:WaitForChild("Events"):WaitForChild("RemoteEvent").OnServerEvent:Connect(function(_, action)
         if action == "Respawn" then
+            gui:WaitForChild("Events"):WaitForChild("Finished"):FireClient(player)
+            task.wait(0.2)
             PlayerSpawn(player)
+            task.wait()
             PlayerData[player.Name].Connections.Respawn:Disconnect()
             PlayerData[player.Name].Connections.Respawn = nil
         end
@@ -310,8 +400,15 @@ end
 
 function GuiTopBar(player)
     if not PlayerDataGetKey(player, "States")["GuiTopBar"] then
-        PlayerDataSetState(player, "GuiTopBar", true)
-        Gui(player, "TopBar", false, {"DestroyOnClose", "DestroyOnPlayerRemoving_" .. player.Name}, {TimerLength = GameData.Timer and GameData.Timer.Time or GameData.Options.round_length})
+        local _gui = Gui(player, "TopBar", false, {"DestroyOnGameEnd", "DestroyOnPlayerRemoving_" .. player.Name}, {TimerLength = GameData.Timer and GameData.Timer.Time or GameData.Options.round_length})
+        PlayerDataSetState(player, "GuiTopBar", _gui)
+    end
+end
+
+function GuiTopBarUpdateScore(player, kills, deaths)
+    local _guiscript = PlayerDataGetKey(player, "States")["GuiTopBar"]
+    if _guiscript then
+        _guiscript:WaitForChild("Events").RemoteEvent:FireClient(player, "UpdateScoreFrame", kills, deaths)
     end
 end
 
@@ -349,6 +446,13 @@ function GuiBuyMenu(player)
                 end
             end
         end)
+    end
+end
+
+function GuiGameOver(winner: Player | false, plrEarnings)
+    for plrname, earnings in pairs(plrEarnings) do
+        print(earnings)
+        Gui(PlayerData[plrname].Player, "GameOver", false, {"DestroyOnClose"}, {EarnedStrafeCoins = earnings.sc, EarnedXP = earnings.xp})
     end
 end
 

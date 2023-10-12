@@ -5,7 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local DiedEvent = script:WaitForChild("Events").PlayerDiedRemote
-local GamemodeServiceModule = ReplicatedStorage.Services:WaitForChild("GamemodeService")
+--local GamemodeServiceModule = ReplicatedStorage.Services:WaitForChild("GamemodeService")
 
 local EvoPlayer = {}
 
@@ -93,11 +93,11 @@ function EvoPlayer:DoWhenLoaded(player, callback)
 end
 
 function EvoPlayer:CanDamage(character: Model?)
-    local can = GamemodeServiceModule:GetAttribute("CanDamage")
+    --[[local can = GamemodeServiceModule:GetAttribute("CanDamage")
     if can and character then
         can = not character:GetAttribute("SpawnInvincibility")
-    end
-    return can
+    end]]
+    return true
 end
 
 function EvoPlayer:SetSpawnInvincibility(character: Model, enabled: boolean, length: number?)
@@ -136,12 +136,6 @@ if RunService:IsServer() then
     EvoPlayer.PlayerDied = Signal.new()
 
     DiedEvent.OnServerEvent:Connect(function(killed, killer)
-        local tagged = CollectionService:GetTagged(killed.Name .. "_ClearOnDeath")
-        if tagged and type(tagged) == "table" then
-            for _, v in ipairs(tagged) do
-                v:Destroy()
-            end
-        end
         EvoPlayer.PlayerDied:Fire(killed, killer)
 
         -- fire the event for clients

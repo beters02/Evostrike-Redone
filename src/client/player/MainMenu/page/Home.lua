@@ -3,7 +3,7 @@ local TweenService = game:GetService("TweenService")
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
 local EvoMM = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoMMWrapper"))
 
-local GamemodeService = require(ReplicatedStorage:WaitForChild("Services").GamemodeService)
+--local GamemodeService = require(ReplicatedStorage:WaitForChild("Services").GamemodeService)
 local requestQueueFunction = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("requestQueueFunction")
 
 local ClickDebounce = 0.5
@@ -17,15 +17,15 @@ function play:init()
     self.var = {nextClickAllow = tick()}
 
     -- connect gamemode changed
-    self.coreconnections.GamemodeServiceMain = GamemodeService.RemoteEvent.OnClientEvent:Connect(function(action, gamemode)
+    --[[self.coreconnections.GamemodeServiceMain = GamemodeService.RemoteEvent.OnClientEvent:Connect(function(action, gamemode)
         if action == "GamemodeChanged" then
             self:_preparePageGamemode(gamemode)
         end
-    end)
+    end)]]
 
     if not self.CurrentGamemodeSelected then
         local succ, err = pcall(function()
-            self:_preparePageGamemode(GamemodeService:GetMenuType())
+            --self:_preparePageGamemode(GamemodeService:GetMenuType())
         end)
         if not succ then warn("PlayPage Cant get current gamemode " .. tostring(err)) end
     end
@@ -97,7 +97,7 @@ play.GamemodeInteractions = {
         self.Location.Card_BackToLobby.Visible = false
     
         self.coreconnections.homeActionCardClick = self.Location.Card_StarterIsland.MouseButton1Click:Connect(function()
-            GamemodeService:AttemptPlayerSpawn()
+            --GamemodeService:AttemptPlayerSpawn()
             self._closeMain()
             self.Location.Card_StarterIsland.Visible = false
             game.Players.LocalPlayer.PlayerScripts.MainMenu.events.connectOpenInput:Fire()

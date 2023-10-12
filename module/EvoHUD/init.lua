@@ -69,6 +69,6 @@ function HUD:GetComponent(component: string)
 end
 
 --@run
-HUD.init()
+--HUD.init()
 
 return HUD

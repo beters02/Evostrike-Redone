@@ -5,11 +5,11 @@ local GamemodeService2 = require(Framework.Service.GamemodeService2)
 local ConnectionsLib = require(Framework.Module.lib.fc_rbxsignals)
 
 local Connections = {Ended = false}
-local CurrentGamemodeBaseScript = false
+local CurrentGamemodeBaseScript = GamemodeService2:GetGamemodeScript(GamemodeService2.DefaultGamemode)
 
 --@summary Ran when the first player joins
 function Init(player)
-    local gmScript = GamemodeService2:GetGamemodeScript(GamemodeService2.DefaultGamemode)
+    local gmScript = CurrentGamemodeBaseScript
     local teleportData = player:GetJoinData().teleportData
     if teleportData and teleportData.RequestedGamemode then
         gmScript = GamemodeService2:GetGamemodeScript(teleportData.RequestedGamemode) or gmScript
@@ -24,8 +24,8 @@ function Start(gmScript)
     gmScript = gmScript:Clone()
     gmScript.Name = "CurrentGamemode"
     gmScript.Parent = script
-    Connections.Ended = gmScript:WaitForChild("Events"):WaitForChild("Ended").Event:Once(function()
-        Stop()
+    Connections.Ended = gmScript:WaitForChild("Events"):WaitForChild("Ended").Event:Once(function(restart: boolean)
+        Stop(restart)
     end)
 end
 
