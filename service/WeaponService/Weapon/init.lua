@@ -756,7 +756,7 @@ function Weapon:_StopAllActionAnimations()
 end
 
 function Weapon:_SetClientModelTransparency(t)
-    for _, v in ipairs(self.ClientModel:GetDescendants()) do
+    for _, v in pairs(self.ClientModel:GetDescendants()) do
         if v:IsA("Part") or v:IsA("MeshPart") or v:IsA("Texture") then
             if v.Name == "WeaponHandle" or v:GetAttribute("Ignore") then continue end
             v.Transparency = t
@@ -765,7 +765,7 @@ function Weapon:_SetClientModelTransparency(t)
 end
 
 function Weapon:_SetServerModelTransparency(t)
-    for _, v in ipairs(self.ServerModel:GetDescendants()) do
+    for _, v in pairs(self.ServerModel:GetDescendants()) do
         if v:IsA("Part") or v:IsA("MeshPart") or v:IsA("Texture") then
             if v.Name == "WeaponHandle" or v:GetAttribute("Ignore") then continue end
             v.Transparency = t

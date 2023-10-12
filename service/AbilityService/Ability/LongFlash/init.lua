@@ -206,9 +206,7 @@ function LongFlash.BlindPlayer(player, isBot)
             Debris:AddItem(gui, 0.5) -- destroy gui
             Debris:AddItem(c, 0.5)
         end)
-
     else
-
         local cFadeTween = TweenService:Create(c, TweenInfo.new(0.25), {Rate = 0})
         task.delay(LongFlash.Configuration.blindLength, function()
             cFadeTween:Play()
@@ -218,7 +216,6 @@ function LongFlash.BlindPlayer(player, isBot)
                 Debris:AddItem(c, 0.5)
             end)
         end)
-
     end
 end
 
