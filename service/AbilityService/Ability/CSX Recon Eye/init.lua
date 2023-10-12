@@ -6,6 +6,7 @@ local Sound = require(Framework.Module.Sound)
 local States = require(Framework.Module.m_states)
 
 local Satchel = {
+    Configuration = {ignore = true},
     name = "Satchel",
 
     -- grenade settings
