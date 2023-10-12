@@ -49,7 +49,7 @@ local EvoPlayer = require(game.ReplicatedStorage.Modules.EvoPlayer)
 local EvoMM = require(game.ReplicatedStorage.Modules.EvoMMWrapper)
 local Tables = require(Framework.Module.lib.fc_tables)
 local BotService = require(game.ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService"))
-local BuyMenuService = require(Framework.Service.BuyMenuService)
+local BuyMenuService = {} --require(Framework.Service.BuyMenuService)
 local BuyMenuTypes = BuyMenuService.Types
 
 local DefaultScripts = script:WaitForChild("Scripts")
@@ -658,7 +658,7 @@ function Gamemode:PlayerInit(player)
                 primary = loadout.Abilities.primary,
                 secondary = loadout.Abilities.secondary
             }
-        }:: BuyMenuTypes.BuyMenuPlayerInventory)
+        })--:: BuyMenuTypes.BuyMenuPlayerInventory)
     end
 
 end
@@ -690,7 +690,7 @@ function Gamemode:PlayerSpawn(player, isFirstSpawn, content, index)
 
     -- equip strongest weapon
     local strongestWeapon = "ternary"
-    local bml = self.GameVariables.buy_menu_enabled and BuyMenuService:GetInventory(player) :: BuyMenuTypes.BuyMenuPlayerInventory
+    local bml = self.GameVariables.buy_menu_enabled and BuyMenuService:GetInventory(player) --:: BuyMenuTypes.BuyMenuPlayerInventory
 
     if self.GameVariables.auto_equip_strongest_weapon then
         if bml then
