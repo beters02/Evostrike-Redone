@@ -117,6 +117,15 @@ function AbilityService:AddAbility(player: Player, ability: string)
     ModuleObject.Name = "ModuleObject"
     ModuleObject.Value = abilityModule
 
+    local PlayerObject = Instance.new("ObjectValue", folder)
+    PlayerObject.Name = "PlayerObject"
+    PlayerObject.Value = player
+
+    local Events = Instance.new("Folder", folder)
+    Events.Name = "Events"
+    Instance.new("RemoteEvent", Events)
+    Instance.new("RemoteFunction", Events)
+
     -- now the client side of weapon creation should happen via AbilityLocalScript
     return true
 end

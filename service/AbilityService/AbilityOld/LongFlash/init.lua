@@ -1,13 +1,21 @@
-local Debris = game:GetService("Debris")
-local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
+local AbilityObjects = Framework.Service.AbilityService.Ability.LongFlash.Assets
 local Sound = require(Framework.Module.Sound)
-local AbilityServiceRF = Framework.Service.AbilityService.Events.RemoteFunction
+local Replicate = ReplicatedStorage.Services.AbilityService.Events.Replicate
+local Caster = require(Framework.Service.AbilityService.Caster)
+
+local BotService
+if RunService:IsServer() then
+    BotService = require(ReplicatedStorage:WaitForChild("Services"):WaitForChild("BotService")) 
+end
 
 local LongFlash = {
-    Options = {
+    Configuration = {
+
         -- data
         name = "LongFlash",
         isGrenade = true,
@@ -37,6 +45,8 @@ local LongFlash = {
         popTime = 0.3,
         blindLength = 1.5,
         canSeeAngle = 1.07,
+        flashGui = AbilityObjects:WaitForChild("FlashbangGui"),
+        flashEmitter = AbilityObjects:WaitForChild("Emitter"),
 
         -- absr = Absolute Value Random
         -- rtabsr = Random to Absolute Value Random
@@ -52,8 +62,22 @@ local LongFlash = {
             damp = 4,
             mass = 9
         }
-    }
+    },
+    AbilityObjects = AbilityObjects,
+
+    -- Module Scope Storage
+    flashGui = AbilityObjects:WaitForChild("FlashbangGui"),
+    flashEmitter = AbilityObjects:WaitForChild("Emitter")
 }
+
+Caster.new(LongFlash)
+
+function LongFlash.init(abilityClass)
+    -- Resolve: base class ray hit functionality
+    Caster.setAbilityClass(abilityClass)
+end
+
+-- LongFlash Utility
 
 --@summary
 local function disableAllParticleEmittersAndLights(grenadeModel)
@@ -72,8 +96,11 @@ local function disableAllParticleEmittersAndLights(grenadeModel)
     end
 end
 
+-- End LongFlash Utility
+
 --@summary Required Grenade Function RayHit
-function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
+-- caster, casterPlayer, casterThrower, result, velocity, grenade, class
+function LongFlash.RayHit(_, casterPlayer, _, result, _, grenadeModel, abilityClass)
     Debris:AddItem(grenadeModel, LongFlash.Configuration.popTime + LongFlash.Configuration.anchorTime + 0.3)
 
     -- send grenade outward
@@ -101,29 +128,24 @@ function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
     local tPosition = TweenService:Create(grenadeModel, TweenInfo.new(LongFlash.Configuration.anchorTime), {Position = newPos})
 
     -- play anchor and hit sound
-    Sound.PlayClone(self.Module.Assets.Sounds.Anchor, grenadeModel)
-    Sound.PlayClone(self.Module.Assets.Sounds.Hit, grenadeModel)
+    Sound.PlayClone(AbilityObjects.Sounds.Anchor, grenadeModel)
+    Sound.PlayClone(AbilityObjects.Sounds.Hit, grenadeModel)
     
     -- send grenade out reflected
     tPosition:Play()
     tPosition.Completed:Wait()
 
-    grenadeModel.Anchored = true
-    task.wait(LongFlash.Options.popTime)
+    -- once the grenade has reached its reflection time (anchor time), wait another small amount of times so players can react.
+    -- we'll send the server info here too, optiiiiii
+    task.delay(LongFlash.Configuration.popTime, function()
+        Replicate:FireServer("LongFlashServerPop", newPos, LongFlash.CanSee(grenadeModel))
+    end)
 
-    for _, v in pairs(Players:GetPlayers()) do
-        if v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
-            local plr = v
-            task.spawn(function()
-                if self.FlashCast(plr, newPos) and AbilityServiceRF:InvokeClient(plr, "LongFlashCanSee", grenadeModel) then
-                    self:BlindPlayer(plr)
-                end
-            end)
-        end
-    end
+    grenadeModel.Anchored = true
+    task.wait(LongFlash.Configuration.popTime)
 
     -- play pop sound
-    self:PlaySound(self.Module.Asstets.Sounds.Pop, grenadeModel)
+    abilityClass:PlaySound(AbilityObjects.Sounds.Pop, grenadeModel)
 
     -- clear throwing sound
     if grenadeModel:FindFirstChild("Throwing") then
@@ -150,33 +172,39 @@ function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
     disableAllParticleEmittersAndLights(grenadeModel)
 end
 
--- check if flash can hit player (wall collision)
-function LongFlash.FlashCast(player, pos)
+--@summary The FireGrenade function ran after FireGrenadeCore
+--         This is the function you'll want to override to add custom functionality.
+function LongFlash:FireGrenadePost(hit, isReplicated, origin, direction, thrower, grenade)
+    local sound = Sound.PlayClone(self.AbilityObjects.Sounds.Throwing, grenade, {Volume = 0})
+    TweenService:Create(sound, TweenInfo.new(0.07), {Volume = self.AbilityObjects.Sounds.Throwing.Volume}):Play()
+end
+
+-- [[ LongFlash Specific Functions ]]
+
+--@summary Blind BotPlayers
+function LongFlash.BlindBots(pos)
+    for _, v in pairs(BotService:GetBots()) do
+        task.spawn(function()
+            LongFlash.AttemptBlindPlayer(v, pos, true)
+        end)
+    end
+end
+
+--@summary Blind a player if they are blindable
+function LongFlash.AttemptBlindPlayer(player, pos, isBot)
+
+    -- check if flash can hit player (wall collision)
     local params = RaycastParams.new()
     params.FilterDescendantsInstances = {workspace.Temp, workspace.MovementIgnore}
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.CollisionGroup = "FlashCast"
+
     local result = workspace:Raycast(pos, ((player.Character:WaitForChild("Head").CFrame.Position - Vector3.new(0,0,0)) - pos).Unit * 250, params)
     local resultModel = result and result.Instance:FindFirstAncestorWhichIsA("Model")
-    if not result or (resultModel and resultModel ~= player.Character) or not string.match(result.Instance.Name, "Head") then
-        return false
+    if (resultModel and resultModel ~= player.Character) or not string.match(result.Instance.Name, "Head") then
+        return
     end
-    return true
-end
 
---@summary Check if the LocalPlayer can see part
-function LongFlash.CanSee(part)
-    local pos = part.Position
-    local vector, inViewport = workspace.CurrentCamera:WorldToViewportPoint(pos)
-    local onScreen = inViewport and vector.Z > 0
-    if onScreen then
-        return true
-    end
-    return false
-end
-
---@summary Blind a player if they are blindable
-function LongFlash.BlindPlayer(player, isBot)
     -- create emitter
     local c = LongFlash.flashEmitter:Clone()
     c.Parent = player.Character.Head
@@ -220,6 +248,17 @@ function LongFlash.BlindPlayer(player, isBot)
         end)
 
     end
+end
+
+--@summary Check if the LocalPlayer can see part
+function LongFlash.CanSee(part)
+    local pos = part.Position
+    local vector, inViewport = workspace.CurrentCamera:WorldToViewportPoint(pos)
+    local onScreen = inViewport and vector.Z > 0
+    if onScreen then
+        return true
+    end
+    return false
 end
 
 return LongFlash
