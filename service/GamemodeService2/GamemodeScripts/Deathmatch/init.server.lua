@@ -225,6 +225,7 @@ function PlayerSpawn(player)
     char:WaitForChild("Humanoid").Health = GameData.Options.starting_health
     EvoPlayer:SetHelmet(char, GameData.Options.starting_helmet)
     EvoPlayer:SetShield(char, GameData.Options.starting_shield or 0)
+    EvoPlayer:SetSpawnInvincibility(char, true, GameData.Options.spawn_invincibility)
 
     for _, item in pairs(pd.Inventory.Weapons) do
         WeaponService:AddWeapon(player, item)
