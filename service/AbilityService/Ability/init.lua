@@ -3,6 +3,7 @@ local AbilityService = game:GetService("ReplicatedStorage"):WaitForChild("Servic
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local Sound = require(Framework.Module.Sound)
+local Tables = require(Framework.Module.lib.fc_tables)
 
 local Ability = {
     Options = {
@@ -17,7 +18,7 @@ Ability.__index = Ability
 
 function Ability.new(player, module, base) -- base = Replicated Caster
     local req
-    req = setmetatable(require(module), Ability)
+    req = setmetatable(Tables.clone(require(module)), Ability)
     req.new = nil
     req.Module = module
     req.Player = player
