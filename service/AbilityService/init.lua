@@ -102,7 +102,7 @@ function AbilityService:AddAbility(player: Player, ability: string)
     end
 
     -- server inventory management
-    local abilitySlot = require(abilityModule).Configuration.inventorySlot
+    local abilitySlot = require(abilityModule).Options.inventorySlot
     if AbilityService:GetPlayerInventorySlot(player, abilitySlot) then
         AbilityService:RemoveAbility(player, abilitySlot)
     end

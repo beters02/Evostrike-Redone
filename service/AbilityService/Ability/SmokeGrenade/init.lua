@@ -5,7 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local Sound = require(Framework.Module.Sound)
 local AbilityServiceRF = Framework.Service.AbilityService.Events.RemoteFunction
-local Assets = Framework.Service.AbilityService.Ability.LongFlash.Assets
 
 local LongFlash = {
     Options = {
@@ -75,10 +74,10 @@ end
 
 --@summary Required Grenade Function RayHit
 function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
-    Debris:AddItem(grenadeModel, LongFlash.Options.popTime + LongFlash.Options.anchorTime + 0.3)
+    Debris:AddItem(grenadeModel, LongFlash.Configuration.popTime + LongFlash.Configuration.anchorTime + 0.3)
 
     -- send grenade outward
-    local outDirection = result.Normal * LongFlash.Options.anchorDistance
+    local outDirection = result.Normal * LongFlash.Configuration.anchorDistance
     local newPos = grenadeModel.Position + outDirection
 
     -- cehck for collision
@@ -99,7 +98,7 @@ function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
     -- init pop animation & position tweens
     local tModelSize = TweenService:Create(grenadeModel, TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, true), {Size = grenadeModel.Size * 10})
     local tPointLight = TweenService:Create(grenadeModel.PointLight, TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, true), {Range = 60})
-    local tPosition = TweenService:Create(grenadeModel, TweenInfo.new(LongFlash.Options.anchorTime), {Position = newPos})
+    local tPosition = TweenService:Create(grenadeModel, TweenInfo.new(LongFlash.Configuration.anchorTime), {Position = newPos})
 
     -- play anchor and hit sound
     Sound.PlayClone(self.Module.Assets.Sounds.Anchor, grenadeModel)
@@ -112,12 +111,19 @@ function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
     grenadeModel.Anchored = true
     task.wait(LongFlash.Options.popTime)
 
-    if self.FlashCast(Players.LocalPlayer, newPos) and LongFlash.CanSee(grenadeModel) then
-        self:BlindPlayer(Players.LocalPlayer)
+    for _, v in pairs(Players:GetPlayers()) do
+        if v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
+            local plr = v
+            task.spawn(function()
+                if self.FlashCast(plr, newPos) and AbilityServiceRF:InvokeClient(plr, "LongFlashCanSee", grenadeModel) then
+                    self:BlindPlayer(plr)
+                end
+            end)
+        end
     end
 
     -- play pop sound
-    self:PlaySound(self.Module.Assets.Sounds.Pop, grenadeModel)
+    self:PlaySound(self.Module.Asstets.Sounds.Pop, grenadeModel)
 
     -- clear throwing sound
     if grenadeModel:FindFirstChild("Throwing") then
@@ -170,15 +176,15 @@ function LongFlash.CanSee(part)
 end
 
 --@summary Blind a player if they are blindable
-function LongFlash:BlindPlayer(player, isBot)
+function LongFlash.BlindPlayer(player, isBot)
     -- create emitter
-    local c = Assets.Emitter:Clone()
+    local c = LongFlash.flashEmitter:Clone()
     c.Parent = player.Character.Head
     c.Enabled = true
 
      -- gui responsible for "blinding" the player
     if not isBot then
-        local gui = Assets.FlashbangGui:Clone()
+        local gui = LongFlash.flashGui:Clone()
         gui.FlashedFrame.Transparency = 1
         gui.Parent = player.PlayerGui
 
@@ -190,7 +196,7 @@ function LongFlash:BlindPlayer(player, isBot)
         local cFadeTween = TweenService:Create(c, TweenInfo.new(0.25), {Rate = 0})
         
         -- fade out tweens
-        task.delay(LongFlash.Options.blindLength, function() 
+        task.delay(LongFlash.Configuration.blindLength, function() 
             fadeOutTween:Play()
             cFadeTween:Play()
             task.spawn(function()
@@ -202,7 +208,7 @@ function LongFlash:BlindPlayer(player, isBot)
         end)
     else
         local cFadeTween = TweenService:Create(c, TweenInfo.new(0.25), {Rate = 0})
-        task.delay(LongFlash.Options.blindLength, function()
+        task.delay(LongFlash.Configuration.blindLength, function()
             cFadeTween:Play()
             task.spawn(function()
                 cFadeTween.Completed:Wait()

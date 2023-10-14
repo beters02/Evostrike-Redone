@@ -1,22 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 
--- Ability Service and Classes
-local AbilityService = Framework.Service.AbilityService
-local AbilityClasses = {}
-for _, module in pairs(AbilityService.Ability:GetChildren()) do
-    local _name = string.lower(module.Name)
-    AbilityClasses[_name] = require(module)
-end
-
-
-AbilityService.Events.RemoteFunction.OnClientInvoke = function(action, part)
-    if action == "LongFlashCanSee" then
-        return AbilityClasses.LongFlash.CanSee(part)
-    end
-end
---
-
 -- Weapon Service
 local SharedWeaponFunc = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
 local WeaponServiceShared = require(Framework.Service.WeaponService.Shared)

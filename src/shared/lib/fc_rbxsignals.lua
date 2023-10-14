@@ -19,4 +19,20 @@ function rbxsignals.SmartDisconnect(value: RBXScriptConnection?)
     end
 end
 
+--@summary Connect a connection in a table safely, checking for current connection
+function rbxsignals.TableConnect(tab, key, connection): table?
+    local success, result = pcall(function()
+        if tab[key] and typeof(tab[key]) == "RBXScriptConnection" then
+            tab[key]:Disconnect()
+        end
+        tab[key] = connection
+        return tab
+    end)
+    if not success then
+        warn(result)
+        return tab
+    end
+    return result
+end
+
 return rbxsignals

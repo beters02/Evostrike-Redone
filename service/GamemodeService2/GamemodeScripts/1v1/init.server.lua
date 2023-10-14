@@ -1,4 +1,5 @@
 local GameOptionsModule = require(script:WaitForChild("GameOptions"))
+local Shared = require(game.ReplicatedStorage.Services.GamemodeService2.GamemodeScripts.Shared)
 type GameStatus = "Running" | "Paused" | "Stopped" | "Waiting"
 type RoundEndResult = "Condition" | "Timer"
 type PlayerData = {
@@ -9,7 +10,7 @@ type PlayerData = {
     Connections: {},
     States: {GuiTopBar: boolean},
     Round: {Kills: number, Deaths: number},
-    Inventory: GameOptionsModule.Inventory,
+    Inventory: Shared.Inventory,
     GuiContainer: ScreenGui,
 }
 
@@ -65,7 +66,6 @@ function Start()
     ConnectionsLib.SmartDisconnect(GameData.Connections.PlayerAdded)
     GameData.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
         PlayerDataInit(player)
-        PlayerSpawn(player)
         GuiTopBar(player)
         GuiBuyMenu(player)
     end)
@@ -171,6 +171,8 @@ function RoundStart(round: number)
     GameData.RoundStatus = "Running"
     GameData.CurrentRound = round
 
+    RoundSetContent(round)
+
     for _, v in pairs(PlayerData) do
         PlayerSpawn(v.Player)
     end
@@ -182,11 +184,11 @@ function RoundStart(round: number)
     end)
 end
 
---[[function RoundEnd(result: RoundEndResult, winner: Player?) Not needed in Deathmatch
+function RoundEnd(result: RoundEndResult, winner: Player?)
     if result ~= "Timer" then
         GameData.Timer:Stop()
     end
-end]]
+end
 
 --@summary Processes whether or not the game should end
 function RoundProcessPlayerDied(player, killer): boolean
@@ -196,13 +198,38 @@ function RoundProcessPlayerDied(player, killer): boolean
     if killer and player ~= killer then
         PlayerDataIncrement(killer, "Kills", 1)
         GuiTopBarUpdateScore(killer, PlayerDataGetKey(killer, "Kills"))
-        if PlayerDataGetKey(killer, "Kills") >= GameData.Options.score_to_win_game then
-            End("Condition", killer)
-            return true
-        end
     end
-    
-    return false
+
+    End("Condition", killer or PlayerGetOther(player))
+    return true
+end
+
+function RoundSetContent(round: number)
+    local inventory = GameData.Options.inventory
+    inventory.Abilities.primary = Tables.random(GameData.Options.primary_ability)
+    inventory.Abilities.secondary = Tables.random(GameData.Options.secondary_ability)
+    if round == 1 then
+        inventory.Weapons.primary = false
+        inventory.Weapons.secondary = Tables.random(GameData.Options.light_secondary)
+        GameData.Options.starting_helmet = false
+        GameData.Options.starting_shield = 0
+    elseif round == 2 then
+        inventory.Weapons.primary = false
+        inventory.Weapons.secondary = Tables.random(GameData.Options.secondary)
+        GameData.Options.starting_helmet = false
+        GameData.Options.starting_shield = 50
+    elseif round == 3 then
+        inventory.Weapons.primary = Tables.random(GameData.Options.light_primary)
+        inventory.Weapons.secondary = Tables.random(GameData.Options.light_secondary)
+        GameData.Options.starting_helmet = true
+        GameData.Options.starting_shield = 50
+    else
+        inventory.Weapons.primary = Tables.random(GameData.Options.primary)
+        local secondaryTable = math.random(1,2) == 1 and GameData.Options.light_secondary or GameData.Options.secondary
+        inventory.Weapons.secondary = Tables.random(secondaryTable)
+        GameData.Options.starting_helmet = true
+        GameData.Options.starting_shield = 50
+    end
 end
 
 --
@@ -283,6 +310,14 @@ function PlayerGetSpawnPoint()
 
     lowest = lowest and lowest[1] or spawns[math.random(1, #spawns)]
     return lowest.CFrame
+end
+
+function PlayerGetOther(player)
+    for _, plrdata in pairs(PlayerData) do
+        if plrdata.Player.Name ~= player.Name then
+            return plrdata.Player
+        end
+    end
 end
 
 --

@@ -317,8 +317,8 @@ end
 
 function Movement.Land(fric: number, waitTime: number, hitMaterial)
 
-	fric = fric or (Movement.dashing and dashModule.Configuration.landingMovementDecreaseFriction) or Movement.landingMovementDecreaseFriction
-	waitTime = waitTime or (Movement.dashing and dashModule.Configuration.landingMovementDecreaseLength) or Movement.landingMovementDecreaseLength
+	fric = fric or (Movement.dashing and dashModule.Options.landingMovementDecreaseFriction) or Movement.landingMovementDecreaseFriction
+	waitTime = waitTime or (Movement.dashing and dashModule.Options.landingMovementDecreaseLength) or Movement.landingMovementDecreaseLength
 	hitMaterial = hitMaterial or Enum.Material.Concrete
 	landing = true
 	Movement.sliding = false
