@@ -13,9 +13,35 @@ end
 function Tables.clone(tab: table)
     local n = {}
     for i, v in pairs(tab) do
-        n[i] = v
+        if type(v) == "table" then
+            n[i] = Tables.clone(v)
+        else
+            n[i] = v
+        end
     end
     return n
+end
+
+-- Save copied tables in `copies`, indexed by original table.
+function Tables.deepcopy(orig, copies)
+    copies = copies or {}
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        if copies[orig] then
+            copy = copies[orig]
+        else
+            copy = {}
+            copies[orig] = copy
+            for orig_key, orig_value in next, orig, nil do
+                copy[Tables.deepcopy(orig_key, copies)] = Tables.deepcopy(orig_value, copies)
+            end
+            setmetatable(copy, Tables.deepcopy(getmetatable(orig), copies))
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
 end
 
 -- Gets length of a dictionary

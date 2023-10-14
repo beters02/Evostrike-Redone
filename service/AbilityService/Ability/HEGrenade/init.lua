@@ -71,7 +71,6 @@ local HEGrenade = {
     AbilityObjects = AbilityObjects
 }
 
---@server
 function HEGrenade:FireGrenadePost(_, _, _, grenade)
     self.PopBindable = self.PopBindable or Instance.new("BindableEvent", script)
     game:GetService("CollectionService"):AddTag(grenade, "DestroyOnPlayerDied_" .. self.Player.Name)
@@ -82,7 +81,6 @@ function HEGrenade:FireGrenadePost(_, _, _, grenade)
     end)
 end
 
---@server Required Grenade Function RayHit
 function HEGrenade:RayHit(_, result, velocity, grenade)
 	local normal = result.Normal
 	local reflected = velocity - 2 * velocity:Dot(normal) * normal
@@ -94,7 +92,6 @@ function HEGrenade:RayHit(_, result, velocity, grenade)
     return
 end
 
---@server
 function HEGrenade:Pop(position)
     local _explosion = AbilityObjects.Models.ExplosionPart:Clone()
     _explosion.Anchored = true

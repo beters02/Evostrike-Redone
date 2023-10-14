@@ -19,7 +19,7 @@ function HUD.init()
 
     local Component = require(script:WaitForChild("Component"))
     HUD.Components = {}
-    for _, v in ipairs(script.Component:GetChildren()) do
+    for _, v in pairs(script.Component:GetChildren()) do
         HUD.Components[v.Name] = Component.new(HUD, v)
     end
 

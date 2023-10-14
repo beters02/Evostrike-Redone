@@ -56,6 +56,7 @@ function Click.Respawn()
 	remoteEvent:FireServer("Respawn")
     uistate:removeOpenUI("BuyMenu")
     uistate:removeOpenUI("DeathMenu")
+	buyMenu.Enabled = false
     gui:Destroy()
 end
 

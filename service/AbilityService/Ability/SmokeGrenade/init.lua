@@ -1,50 +1,55 @@
+local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local Sound = require(Framework.Module.Sound)
-local AbilityServiceRF = Framework.Service.AbilityService.Events.RemoteFunction
+local TweenService = game:GetService("TweenService")
+local ConnectionsLib = require(Framework.Module.lib.fc_rbxsignals)
+local AbilityObjects = Framework.Service.AbilityService.Ability.SmokeGrenade.Assets
 
-local LongFlash = {
+local SmokeGrenade = {
     Options = {
         -- data
-        name = "LongFlash",
-        isGrenade = true,
+        name = "SmokeGrenade",
         inventorySlot = "secondary",
-
+        isGrenade = true,
+        
         -- general
-        cooldownLength = 7,
+        cooldownLength = 8, -- 10
         uses = 100,
         usingDelay = 1, -- Time that player will be "using" their ability, won't be able to interact with weapons during this time
 
         -- grenade
-        grenadeThrowDelay = 0.2,
-        acceleration = 16,
+        grenadeThrowDelay = 0.36,
+        acceleration = 10,
         speed = 150,
-        gravityModifier = 0.4,
+        gravityModifier = 0.5,
         startHeight = 2,
+        velocitySlowMultPerInterval = 0.7,
+        velocitySlowIntervalSec = 0.1,
+        velocityMinimum = 0.5,
+        popLength = 1.5, -- 1.8
 
         -- animation / holding
-        clientGrenadeSize = nil,
-        grenadeVMOffsetCFrame = CFrame.Angles(0,math.rad(80),0) + Vector3.new(0, 0, 0.4), -- if you have a custom animation already, set this to nil
+        clientGrenadeSize = Vector3.new(0.328, 1.047, 0.359),
+        grenadeVMOffsetCFrame = false, -- if you have a custom animation already, set this to false
         throwAnimFadeTime = 0.18,
         throwFinishSpringShove = Vector3.new(-0.4, -0.5, 0.2),
 
-        -- flash specific
-        anchorTime = 0.2,
-        anchorDistance = 7,
-        popTime = 0.3,
-        blindLength = 1.5,
-        canSeeAngle = 1.07,
+        -- smoke grenade specific
+        smokeLength = 2.9, -- 4
+        smokeFadeInLength = 0.4, -- 0.8
+        smokeFadeOutLength = 0.8, -- 1
+        smokeBubbleStartSizeModifier = 0.3,
+        smokeBubbleStartTransparency = 0.7,
 
         -- absr = Absolute Value Random
         -- rtabsr = Random to Absolute Value Random
         useCameraRecoil = {
             downDelay = 0.07,
 
-            up = 0.02,
-            side = 0.008,
+            up = 0.03,
+            side = 0.011,
             shake = "0.015-0.035rtabsr",
 
             speed = 4,
@@ -55,168 +60,112 @@ local LongFlash = {
     }
 }
 
---@summary
-local function disableAllParticleEmittersAndLights(grenadeModel)
-    for i, v in pairs(grenadeModel:GetChildren()) do
-        if v:IsA("ParticleEmitter") then
-            v.Rate = 0
-        elseif v:IsA("PointLight") then
-           local _t = TweenService:Create(v, TweenInfo.new(0.2, Enum.EasingStyle.Cubic), {Brightness = 0, Range = 0})
-           _t:Play()
-           _t.Completed:Once(function()
-                _t:Destroy()
-           end)
-        elseif v:IsA("Attachment") then
-            disableAllParticleEmittersAndLights(v)
+function SmokeGrenade:FireGrenadePost(_, _, _, grenade)
+    self.PopBindable = self.PopBindable or Instance.new("BindableEvent", script)
+    game:GetService("CollectionService"):AddTag(grenade, "DestroyOnPlayerDied_" .. self.Player.Name)
+    self.Grenade = grenade
+    self:ConnectPop()
+    task.delay(self.Options.popLength, function()
+        self.PopBindable:Fire()
+    end)
+end
+
+function SmokeGrenade:RayHit(_, result, velocity, grenade)
+	local normal = result.Normal
+	local reflected = velocity - 2 * velocity:Dot(normal) * normal
+    grenade.CanCollide = true
+    grenade.CollisionGroup = "Grenades"
+    grenade.Velocity = reflected * 0.3
+    Sound.Sounds("PlayClone", AbilityObjects.Sounds.Hit:GetChildren(), grenade)
+    self:ConnectGrenadeHit(grenade)
+    return
+end
+
+function SmokeGrenade:Pop(position)
+    SmokeGrenade.CreateSmokeBubble(position)
+end
+
+local function setvel(grenade, touched)
+    local newMagnitude = grenade.Velocity.Magnitude * (touched and 0.8 or SmokeGrenade.Options.velocitySlowMultPerInterval)
+
+    if newMagnitude < SmokeGrenade.Options.velocityMinimum then
+        grenade.Anchored = true
+        return
+    end
+
+    grenade.Velocity = grenade.Velocity.Unit * newMagnitude
+end
+
+function SmokeGrenade:ConnectPop()
+    self.PopBindable.Event:Once(function()
+        self:DisconnectGrenade()
+        self:Pop(self.Grenade.CFrame.Position)
+        self.Grenade:Destroy()
+    end)
+end
+
+function SmokeGrenade:ConnectGrenadeHit(grenade)
+    local isInitialTouch = true
+    local hasInitSlowTime = false
+    grenade.Anchored = false
+    self.Connections = ConnectionsLib.TableConnect(self.Connections, "Touched", grenade.Touched:Connect(function()
+        if isInitialTouch then
+            isInitialTouch = false
+            return
         end
-    end
-end
 
---@summary Required Grenade Function RayHit
-function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
-    Debris:AddItem(grenadeModel, LongFlash.Configuration.popTime + LongFlash.Configuration.anchorTime + 0.3)
+        Sound.Sounds("PlayClone", AbilityObjects.Sounds.Hit:GetChildren(), grenade)
+        setvel(grenade, true)
 
-    -- send grenade outward
-    local outDirection = result.Normal * LongFlash.Configuration.anchorDistance
-    local newPos = grenadeModel.Position + outDirection
-
-    -- cehck for collision
-    local outResult = workspace:Raycast(grenadeModel.Position, outDirection)
-    if outResult then
-        newPos = outResult.Position
-    end
-
-    -- set emitter variables
-    for _, v in pairs(grenadeModel:GetChildren()) do
-        if not v:IsA("ParticleEmitter") or not v.Name == "Spark" then continue end
-        v = v :: ParticleEmitter
-        v.Speed = NumberRange.new(10, 20)
-        v.Lifetime = NumberRange.new(0.1, 0.1)
-        v.Rate = 30
-    end
-
-    -- init pop animation & position tweens
-    local tModelSize = TweenService:Create(grenadeModel, TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, true), {Size = grenadeModel.Size * 10})
-    local tPointLight = TweenService:Create(grenadeModel.PointLight, TweenInfo.new(0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, true), {Range = 60})
-    local tPosition = TweenService:Create(grenadeModel, TweenInfo.new(LongFlash.Configuration.anchorTime), {Position = newPos})
-
-    -- play anchor and hit sound
-    Sound.PlayClone(self.Module.Assets.Sounds.Anchor, grenadeModel)
-    Sound.PlayClone(self.Module.Assets.Sounds.Hit, grenadeModel)
-    
-    -- send grenade out reflected
-    tPosition:Play()
-    tPosition.Completed:Wait()
-
-    grenadeModel.Anchored = true
-    task.wait(LongFlash.Options.popTime)
-
-    for _, v in pairs(Players:GetPlayers()) do
-        if v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
-            local plr = v
-            task.spawn(function()
-                if self.FlashCast(plr, newPos) and AbilityServiceRF:InvokeClient(plr, "LongFlashCanSee", grenadeModel) then
-                    self:BlindPlayer(plr)
-                end
-            end)
+        if not hasInitSlowTime then
+            hasInitSlowTime = true
+            self:ConnectGrenadeSlow(grenade)
         end
-    end
-
-    -- play pop sound
-    self:PlaySound(self.Module.Asstets.Sounds.Pop, grenadeModel)
-
-    -- clear throwing sound
-    if grenadeModel:FindFirstChild("Throwing") then
-        TweenService:Create(grenadeModel.Throwing, TweenInfo.new(0.1), {Volume = 0}):Play()
-        task.delay(0.11, function()
-            pcall(function()grenadeModel.Throwing:Stop()end)
-        end)
-    end
-
-    tModelSize:Play()
-    tPointLight:Play()
-    tPointLight.Completed:Wait()
-
-    -- set emitter variables
-    for _, v in ipairs(grenadeModel:GetChildren()) do
-        if not v:IsA("ParticleEmitter") or not v.Name == "Spark" then continue end
-        v = v :: ParticleEmitter
-        v.Speed = NumberRange.new(40, 60)
-        v.Lifetime = NumberRange.new(0.1, 0.1)
-        v.Rate = 60
-    end
-
-    grenadeModel.Transparency = 1
-    disableAllParticleEmittersAndLights(grenadeModel)
+    end))
 end
 
--- check if flash can hit player (wall collision)
-function LongFlash.FlashCast(player, pos)
-    local params = RaycastParams.new()
-    params.FilterDescendantsInstances = {workspace.Temp, workspace.MovementIgnore}
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.CollisionGroup = "FlashCast"
-    local result = workspace:Raycast(pos, ((player.Character:WaitForChild("Head").CFrame.Position - Vector3.new(0,0,0)) - pos).Unit * 250, params)
-    local resultModel = result and result.Instance:FindFirstAncestorWhichIsA("Model")
-    if not result or (resultModel and resultModel ~= player.Character) or not string.match(result.Instance.Name, "Head") then
-        return false
-    end
-    return true
+function SmokeGrenade:ConnectGrenadeSlow(grenade)
+    local _time = 0
+    self.Connections = ConnectionsLib.TableConnect(self.Connections, "SlowTime", RunService.Heartbeat:Connect(function(dt)
+        _time += dt
+        if _time >= SmokeGrenade.Options.velocitySlowIntervalSec then
+            _time -= SmokeGrenade.Options.velocitySlowIntervalSec
+            setvel(grenade)
+        end
+    end))
 end
 
---@summary Check if the LocalPlayer can see part
-function LongFlash.CanSee(part)
-    local pos = part.Position
-    local vector, inViewport = workspace.CurrentCamera:WorldToViewportPoint(pos)
-    local onScreen = inViewport and vector.Z > 0
-    if onScreen then
-        return true
-    end
-    return false
+function SmokeGrenade:DisconnectGrenade()
+    ConnectionsLib.DisconnectAllIn(self.Connections)
 end
 
---@summary Blind a player if they are blindable
-function LongFlash.BlindPlayer(player, isBot)
-    -- create emitter
-    local c = LongFlash.flashEmitter:Clone()
-    c.Parent = player.Character.Head
-    c.Enabled = true
+function SmokeGrenade.CreateSmokeBubble(pos)
+    local bubble = AbilityObjects.Models.SmokeBubble:Clone()
+    local bubbleSize = bubble.Size
+    bubble.Size *= SmokeGrenade.Options.smokeBubbleStartSizeModifier
+    bubble.Anchored = true
+    bubble.CanCollide = false
+    bubble.CollisionGroup = "BulletAndMovementIgnore"
+    bubble:SetAttribute("SmokeLength", SmokeGrenade.Options.smokeLength)
+    bubble:SetAttribute("SmokeFadeInLength", SmokeGrenade.Options.smokeFadeInLength)
+    bubble:SetAttribute("SmokeFadeOutLength", SmokeGrenade.Options.smokeFadeOutLength)
+    bubble.Parent = workspace.Temp
+    bubble.CFrame = CFrame.new(pos)
 
-     -- gui responsible for "blinding" the player
-    if not isBot then
-        local gui = LongFlash.flashGui:Clone()
-        gui.FlashedFrame.Transparency = 1
-        gui.Parent = player.PlayerGui
+    Sound.PlayClone(AbilityObjects.Sounds.Pop, bubble)
 
-        -- create and play player blinded tweens
-        local fadeInTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.3), {Transparency = 0})
-        fadeInTween:Play()
-
-        local fadeOutTween = TweenService:Create(gui.FlashedFrame, TweenInfo.new(0.2), {Transparency = 1})
-        local cFadeTween = TweenService:Create(c, TweenInfo.new(0.25), {Rate = 0})
-        
-        -- fade out tweens
-        task.delay(LongFlash.Configuration.blindLength, function() 
-            fadeOutTween:Play()
-            cFadeTween:Play()
-            task.spawn(function()
-                cFadeTween.Completed:Wait()
-                cFadeTween:Destroy()
-            end)
-            Debris:AddItem(gui, 0.5) -- destroy gui
-            Debris:AddItem(c, 0.5)
-        end)
-    else
-        local cFadeTween = TweenService:Create(c, TweenInfo.new(0.25), {Rate = 0})
-        task.delay(LongFlash.Configuration.blindLength, function()
-            cFadeTween:Play()
-            task.spawn(function()
-                cFadeTween.Completed:Wait()
-                cFadeTween:Destroy()
-                Debris:AddItem(c, 0.5)
-            end)
-        end)
-    end
+    TweenService:Create(bubble, TweenInfo.new(SmokeGrenade.Options.smokeFadeInLength), {Size = bubbleSize, Transparency = 0}):Play()
+    local out = TweenService:Create(bubble, TweenInfo.new(SmokeGrenade.Options.smokeFadeOutLength), {Size = bubbleSize * SmokeGrenade.Options.smokeBubbleStartSizeModifier, Transparency = 1})
+    task.delay(SmokeGrenade.Options.smokeLength, function()
+        pcall(function() bubble.ParticleEmitter.Enabled = false bubble.SmokeT.Enabled = false bubble.SmokeB.Enabled = false end)
+        out:Play()
+        out.Completed:Wait()
+        Debris:AddItem(bubble, 3)
+    end)
 end
 
-return LongFlash
+function SmokeGrenade.ServerPop(position)
+    SmokeGrenade.CreateSmokeBubble(position)
+end
+
+return SmokeGrenade

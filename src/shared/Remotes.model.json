@@ -28,6 +28,10 @@
       {
         "Name": "AddCase",
         "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "BuyMenuSelected",
+        "ClassName": "RemoteEvent"
       }
     ]
   }

@@ -3,7 +3,8 @@ local main = gui:WaitForChild("MainFrame")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local UIState = require(Framework.Module.m_states).State("UI")
 
-local remoteEvent = script:WaitForChild("Events"):WaitForChild("RemoteEvent")
+--local remoteEvent = script:WaitForChild("Events"):WaitForChild("RemoteEvent")
+local buyMenuEvent = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("BuyMenuSelected")
 local popupText = require(gui:WaitForChild("BuyMenuPopupText"))
 local clickDebounce = tick()
 
@@ -12,7 +13,7 @@ for i, v in pairs(main:WaitForChild("AbilityMiddleFrame"):GetDescendants()) do
 	if not v:IsA("ImageButton") then continue end
 	v.MouseButton1Click:Connect(function()
 		local slot = v.Parent.Parent.Parent.Name == "Movement" and "primary" or "secondary"
-		remoteEvent:FireServer("AbilitySelected", v.Parent.Name, slot)
+		buyMenuEvent:FireServer("AbilitySelected", v.Parent.Name, slot)
 		popupText.burst("Selected " .. v.Parent.Name .. "! Press ESC and Reset Character to get ability.", 2)
 	end)
 end
@@ -22,7 +23,7 @@ for i, v in pairs(main:WaitForChild("GunMiddleFrame"):GetDescendants()) do
 	if not v:IsA("ImageButton") then continue end
 	v.MouseButton1Click:Connect(function()
 		local slot = v.Parent.Parent.Parent.Name == "Rifles" and "primary" or "secondary"
-		remoteEvent:FireServer("WeaponSelected", v.Parent.Name, slot)
+		buyMenuEvent:FireServer("WeaponSelected", v.Parent.Name, slot)
 		popupText.burst("Selected " .. v.Parent.Name .. "! Press ESC and Reset Character to get weapon.", 2)
 	end)
 end
@@ -62,6 +63,7 @@ game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
 			gui.Enabled = false
 			uistate:removeOpenUI("BuyMenu")
 		else
+			if uistate:getOpenUI("MainMenu") then return end
 			gui.Enabled = true
 			uistate:addOpenUI("BuyMenu", gui, true)
 		end

@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -113,6 +114,9 @@ function module.CreateBulletHole(result)
 	weld.Part1 = result.Instance
 	weld.Parent = bullet_hole
 	bullet_hole.Parent = workspace.Temp
+	if RunService:IsClient() then
+		CollectionService:AddTag(bullet_hole, "DestroyOnPlayerDied_" .. Players.LocalPlayer.Name)
+	end
 
 	Debris:AddItem(bullet_hole, 8)
 	return bullet_hole

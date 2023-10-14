@@ -42,6 +42,10 @@ function module:hasOpenUI()
 	return false
 end
 
+function module:getOpenUI(uiName)
+	return self.var.openUIs[uiName]
+end
+
 -- check if mouse icon should be enabled depending on currently open uis
 function module:shouldMouseBeEnabled() -- to be deprecated name is bad
 	for i, v in pairs(self.var.openUIs) do

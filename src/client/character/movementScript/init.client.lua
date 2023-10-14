@@ -129,8 +129,7 @@ Movement.Sounds = {
 
 local localRunVolume = 0.5
 local runv = localRunVolume
-
-local serverRunVolume = 1
+local serverRunVolume = 2
 
 Movement.Sounds.runDefault.Volume = runv
 

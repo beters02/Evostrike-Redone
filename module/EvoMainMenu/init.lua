@@ -53,7 +53,7 @@ end
 --@module Main Menu
 function MainMenu.init(gui)
     MainMenu.gui = gui
-    for _, frame in ipairs(gui:GetChildren()) do
+    for _, frame in pairs(gui:GetChildren()) do
         if string.match(frame.Name, "Frame") and frame:IsA("Frame") and not frame:GetAttribute("NotMain") then
             local page = Page.new(frame)
             MainMenu.Pages[page.Name] = page
@@ -64,7 +64,7 @@ function MainMenu.init(gui)
 end
 
 function MainMenu:Connect()
-    for _, frame in ipairs(self.gui:WaitForChild("TopBar"):GetChildren()) do
+    for _, frame in pairs(self.gui:WaitForChild("TopBar"):GetChildren()) do
         local page = string.gsub(frame.Name, "ButtonFrame", "")
         page = MainMenu.Pages[page]
         self.Connections[page.Name.."_Open"] = frame:WaitForChild("TextButton").MouseButton1Click:Connect(function()

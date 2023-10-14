@@ -65,9 +65,6 @@ local Satchel = {
 
 function Satchel:RayHit(_, result, _, grenade)
     if grenade then
-        print("SATCHEL RAY HIT")
-        print(result)
-        print(result.Instance.Parent.Name .. " - parent")
         local norm = result.Normal
         grenade.Anchored = true
         grenade.CFrame = CFrame.new(result.Position) * (CFrame.Angles(math.rad(-90), 0, 0))

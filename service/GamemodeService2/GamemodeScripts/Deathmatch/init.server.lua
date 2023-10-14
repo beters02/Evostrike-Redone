@@ -48,13 +48,15 @@ local GameData = {
 
 function Start()
     print('starting game')
-    for _, v in ipairs(Players:GetPlayers()) do
-        PlayerDataInit(v)
+    for _, v in pairs(Players:GetPlayers()) do
+        local pdata = PlayerDataInit(v)
+        if pdata then PlayerData[v.Name] = pdata end
     end
 
     if PlayerGetCount() < GameData.Options.min_players then
         GameData.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
-            PlayerDataInit(player)
+            local pdata = PlayerDataInit(player)
+            if pdata then PlayerData[player.Name] = pdata end
         end)
         while PlayerGetCount() < GameData.Options.min_players do
             print('Waiting for players.')
@@ -64,7 +66,9 @@ function Start()
 
     ConnectionsLib.SmartDisconnect(GameData.Connections.PlayerAdded)
     GameData.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
-        PlayerDataInit(player)
+        local pdata = PlayerDataInit(player)
+        if pdata then PlayerData[player.Name] = pdata end
+        print(PlayerData)
         PlayerSpawn(player)
         GuiTopBar(player)
         GuiBuyMenu(player)
@@ -78,6 +82,22 @@ function Start()
         if not stop then
             PlayerDied(player, killer)
         end
+    end)
+
+    GameData.Connections.BuyMenu = ReplicatedStorage.Remotes.BuyMenuSelected.OnServerEvent:Connect(function(_bmplayer, action, item, slot)
+        print(PlayerData)
+        if action == "AbilitySelected" then
+            PlayerData[_bmplayer.Name].Inventory.Abilities[slot] = item
+            if GameData.Options.buy_menu_add_instant then
+                AbilityService:AddAbility(_bmplayer, item)
+            end
+        elseif action == "WeaponSelected" then
+            PlayerData[_bmplayer.Name].Inventory.Weapons[slot] = item
+            if GameData.Options.buy_menu_add_instant then
+                WeaponService:AddWeapon(_bmplayer, item)
+            end
+        end
+        print(PlayerData)
     end)
 
     GuiAll(GuiTopBar)
@@ -190,11 +210,13 @@ end]]
 
 --@summary Processes whether or not the game should end
 function RoundProcessPlayerDied(player, killer): boolean
-    PlayerDataIncrement(player, "Deaths", 1)
+    local succ, result = pcall(function() return PlayerDataIncrement(player, "Deaths", 1) end)
+    if not succ then warn(result) else PlayerData[player.Name] = result end
     GuiTopBarUpdateScore(player, false, PlayerDataGetKey(player, "Deaths"))
 
     if killer and player ~= killer then
-        PlayerDataIncrement(killer, "Kills", 1)
+        succ, result = pcall(function() return PlayerDataIncrement(killer, "Kills", 1) end)
+        if not succ then warn(result) else PlayerData[killer.Name] = result end
         GuiTopBarUpdateScore(killer, PlayerDataGetKey(killer, "Kills"))
         if PlayerDataGetKey(killer, "Kills") >= GameData.Options.score_to_win_game then
             End("Condition", killer)
@@ -212,7 +234,7 @@ function PlayerSpawn(player)
         repeat task.wait() until player:GetAttribute("Loaded")
     end
 
-    local pd = PlayerDataGet(player)
+    local pd = PlayerData[player.Name] or PlayerDataGet(player)
     local cf = PlayerGetSpawnPoint()
     TagsLib.DestroyTagged("DestroyOnPlayerSpawning_"..player.Name)
     player:LoadCharacter()
@@ -288,33 +310,31 @@ end
 
 --
 
---@summary Returns success boolean. if false, then player was already initted
+--@summary Returns table if init
 function PlayerDataInit(player)
     if not PlayerData[player.Name] then
-        PlayerData[player.Name] = {
+        local pd = {
             Player = player,
             Kills = 0,
             Deaths = 0,
             Round = {Kills = 0, Deaths = 0},
             Score = 0,
-            Inventory = Tables.clone(GameData.Options.inventory),
+            Inventory = Tables.deepcopy(GameData.Options.inventory),
             Connections = {},
             States = {GuiTopBar = false}
         } :: PlayerData
-        PlayerData[player.Name].GuiContainer = GuiContainer(player)
-        
-        return PlayerData[player.Name]
+        task.spawn(function()
+            GuiContainer(player)
+        end)
+        return pd
     end
     return false
 end
 
-function PlayerDataResetRound(player)
-    PlayerDataGet(player)
-    PlayerData[player.Name].Round = {Kills = 0, Deaths = 0}
-end
-
 function PlayerDataGet(player)
-    while not PlayerData[player.Name] do
+    local pdata = PlayerData[player.Name]
+    while not pdata do
+        pdata = PlayerData[player.Name]
         task.wait(0.2)
     end
     return PlayerData[player.Name]
@@ -324,33 +344,40 @@ function PlayerDataGetKey(player, key)
     return PlayerDataGet(player)[key]
 end
 
+function PlayerDataIncrement(player, key, amnt)
+    local pd = PlayerDataGet(player)
+    pd[key] += amnt
+    return pd
+end
+
+function PlayerDataSetState(player, key, new)
+    local pd = PlayerDataGet(player)
+    pd.States[key] = new
+    return pd
+end
+
+--[[function PlayerDataResetRound(player)
+    PlayerDataGet(player)
+    PlayerData[player.Name].Round = {Kills = 0, Deaths = 0}
+end
+
 function PlayerDataSetKey(player, key, new)
     PlayerDataGet(player)
     PlayerData[player.Name][key] = new
     return new
 end
 
-function PlayerDataSetState(player, key, new)
-    PlayerDataGet(player)
-    PlayerData[player.Name].States[key] = new
-    return new
-end
-
-function PlayerDataIncrement(player, key, amnt)
-    PlayerDataGet(player)
-    PlayerData[player.Name][key] += amnt
-end
-
 function PlayerDataRoundIncrement(player, key, amnt)
     PlayerDataGet(player)
     PlayerData[player.Name].Round[key] += amnt
-end
+end]]
 
 --
 
 --@summary Add a gui to a player
 function Gui(player: Player, gui: string, resets: boolean?, tags: table?, attributes: table?)
     if not GameData.Guis:FindFirstChild(gui) then return end
+    if player.PlayerGui:FindFirstChild(gui) then return end
     local _guiScript = GameData.Guis[gui]:Clone()
     local _gui = _guiScript:WaitForChild("Gui")
 
@@ -377,7 +404,7 @@ function Gui(player: Player, gui: string, resets: boolean?, tags: table?, attrib
 end
 
 function GuiAll(callback, ...)
-    for _, player in ipairs(Players:GetPlayers()) do
+    for _, player in pairs(Players:GetPlayers()) do
         callback(player, ...)
     end
 end
@@ -390,14 +417,15 @@ function GuiPlayerDied(player, killer)
     killerObject.Value = killer or nil
     killerObject.Parent = gui
 
-    PlayerData[player.Name].Connections.Respawn = gui:WaitForChild("Events"):WaitForChild("RemoteEvent").OnServerEvent:Connect(function(_, action)
+    PlayerData[player.Name].Connections.Respawn = gui:WaitForChild("Events"):WaitForChild("RemoteEvent").OnServerEvent:Connect(function(plr, action)
+        if plr ~= player then return end
         if action == "Respawn" then
             gui:WaitForChild("Events"):WaitForChild("Finished"):FireClient(player)
             task.wait(0.2)
-            PlayerSpawn(player)
+            PlayerSpawn(plr)
             task.wait()
-            PlayerData[player.Name].Connections.Respawn:Disconnect()
-            PlayerData[player.Name].Connections.Respawn = nil
+            PlayerData[plr.Name].Connections.Respawn:Disconnect()
+            PlayerData[plr.Name].Connections.Respawn = nil
         end
     end)
 end
@@ -405,7 +433,8 @@ end
 function GuiTopBar(player)
     if not PlayerDataGetKey(player, "States")["GuiTopBar"] then
         local _gui = Gui(player, "TopBar", false, {"DestroyOnGameEnd", "DestroyOnPlayerRemoving_" .. player.Name}, {TimerLength = GameData.Timer and GameData.Timer.Time or GameData.Options.round_length})
-        PlayerDataSetState(player, "GuiTopBar", _gui)
+        local succ, result = pcall(function() return PlayerDataSetState(player, "GuiTopBar", _gui) end)
+        if not succ then warn(result) else PlayerData[player.Name] = result end
     end
 end
 
@@ -436,21 +465,10 @@ end
 function GuiBuyMenu(player)
     local pdata = PlayerDataGet(player)
     if not pdata.Connections.BuyMenu then
+        pdata.Connections.BuyMenu = true
         local gui = Gui(player, "BuyMenu", false, {"DestroyOnClose", "DestroyOnPlayerRemoving_" .. player.Name})
-        pdata.Connections.BuyMenu = gui:WaitForChild("Events"):WaitForChild("RemoteEvent").OnServerEvent:Connect(function(_, action, item, slot)
-            if action == "AbilitySelected" then
-                PlayerData[player.Name].Inventory.Abilities[slot] = item
-                if GameData.Options.buy_menu_add_instant then
-                    AbilityService:AddAbility(player, item)
-                end
-            elseif action == "WeaponSelected" then
-                PlayerData[player.Name].Inventory.Weapons[slot] = item
-                if GameData.Options.buy_menu_add_instant then
-                    WeaponService:AddWeapon(player, item)
-                end
-            end
-        end)
     end
+    PlayerData[player.Name] = pdata
 end
 
 function GuiGameOver(winner: Player | false, plrEarnings)

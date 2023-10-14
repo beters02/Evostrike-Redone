@@ -22,7 +22,7 @@ local intervention = {
 		
 		accuracy = {
 			firstBullet = 1,
-            unScopedBase = 25,
+            unScopedBase = 15,
 			base = 1,
 			crouch = 1,
 			spray = 2,
