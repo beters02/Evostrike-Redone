@@ -45,8 +45,6 @@ end
 
 --@override
 function Dash:Use()
-
-    print('PENIS')
     
     -- play sounds
     Sound.PlayReplicatedClone(self.Module.Assets.Sounds.Whisp, self.Player.Character.PrimaryPart)
