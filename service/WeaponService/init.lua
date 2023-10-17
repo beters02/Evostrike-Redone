@@ -141,4 +141,12 @@ function WeaponService:GetRegisteredWeapons()
 	return wep
 end
 
+function WeaponService:GetRegisteredKnives()
+    local wep = {}
+    for i, v in pairs(Weapons.knife.Assets:GetChildren()) do
+        table.insert(wep, v.Name)
+    end
+    return wep
+end
+
 return WeaponService
