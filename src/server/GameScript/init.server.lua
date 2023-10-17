@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local GamemodeService2 = require(Framework.Service.GamemodeService2)
 local ConnectionsLib = require(Framework.Module.lib.fc_rbxsignals)
+local EvoMM = require(Framework.Module.EvoMMWrapper)
 
 local Connections = {Ended = false}
 local CurrentGamemodeBaseScript = GamemodeService2:GetGamemodeScript(GamemodeService2.DefaultGamemode)
@@ -32,6 +33,9 @@ function Start(gmScript)
         CurrentGamemodeScript:Destroy()
     end
     CurrentGamemodeScript = gmScript
+    if CurrentGamemodeBaseScript.Name ~= "1v1" then
+        EvoMM:StartQueueService({"1v1"})
+    end
 end
 
 function Stop(restart: boolean?)
