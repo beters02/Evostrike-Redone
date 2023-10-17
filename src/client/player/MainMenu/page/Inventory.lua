@@ -7,8 +7,8 @@ local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
 local WeaponModules = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("WeaponService"):WaitForChild("Weapon")
 local WeaponService = require(Framework.Service.WeaponService)
---local WeaponGetRemote = game.ReplicatedStorage.weapon:WaitForChild("remote"):WaitForChild("get")
 local Strings = require(Framework.shfc_strings.Location)
+local Cases = game.ReplicatedStorage.Assets.Cases
 
 local inventory = {}
 
@@ -26,9 +26,20 @@ function inventory:init()
         end
     end)
 
+    PlayerData:Changed("inventory.case", function(newValue, properties)
+        if not properties then return end
+
+        if properties.isInsert then
+            -- insert skin frame
+        elseif properties.isRemove then
+            -- remove skin frame
+        end
+    end)
+
     -- then we grab the player's inventory
     self._currentStoredInventory = PlayerData:Get("inventory.skin")
     self._currentEquippedInventory = PlayerData:Get("inventory.equipped")
+    self._currentStoredCaseInventory = PlayerData:Get("inventory.case")
 
     -- initialize all default skins as frames
     -- first check if player has all skins
@@ -44,7 +55,6 @@ function inventory:init()
     local _regwep = WeaponService:GetRegisteredWeapons()
     for i, v in pairs(_regwep) do
         if v == "knife" then
-
             for _, knife in pairs({"karambit", "m9bayonet", "butterfly"}) do
                 for _, skin in pairs(self._currentStoredInventory) do
                     if string.match(knife, skin) or skin == "*" then
@@ -67,6 +77,9 @@ function inventory:init()
             self:InitializeSkinStringAsFrame(v)
         end
     end
+
+    -- initialize case inventory
+
 
     -- done!
     return self
@@ -99,7 +112,11 @@ function inventory:DisconnectButtons()
     self._bconnections = {}
 end
 
---
+-- [[ SKIN PAGE ]]
+
+function inventory:OpenSkinPage()
+    
+end
 
 function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|nil, isEquipped: boolean|nil, allSkins: boolean?)
     local frame
@@ -301,6 +318,21 @@ function inventory:InitializeSkinStringAsFrame(skinString: string)
     end
 
     self:CreateSkinFrame(_sep[1], _sep[2], nil, _equipped)
+end
+
+-- [[ CASE PAGE ]]
+function inventory:OpenCasePage()
+    
+end
+
+function inventory:CreateCaseFrame(case: string)
+   local caseFolder = Cases:FindFirstChild(case)
+   if not caseFolder then
+        warn("Could not find CaseFrame for case " .. tostring(case))
+        return
+   end
+
+   local model = caseFolder.Model:Clone()
 end
 
 return inventory
