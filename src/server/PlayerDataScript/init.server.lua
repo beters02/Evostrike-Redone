@@ -1,11 +1,11 @@
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 
 local serverPlayerDataModule = require(script:WaitForChild("m_serverPlayerData"))
 local Remotes = ReplicatedStorage.PlayerData.remote
 local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("AdminIDs"))
+local GroupInvMods = require(script:WaitForChild("groupInventories"))
 
 Remotes.sharedPlayerDataRF.OnServerInvoke = function(player, action, ...)
     if action == "Get" then
@@ -24,11 +24,7 @@ Remotes.sharedPlayerDataRF.OnServerInvoke = function(player, action, ...)
 end
 
 Players.PlayerAdded:Connect(function(player)
-    -- admin modifications
-    local isHighPerm, group = Admins:IsHigherPermission(player)
-    if isHighPerm then
-        require(script:WaitForChild("adminModifications"))(player, serverPlayerDataModule, group)
-    end
+    GroupInvMods.Init(player, serverPlayerDataModule, Admins:IsHigherPermission(player))
 end)
 
 Players.PlayerRemoving:Connect(function(player)

@@ -13,6 +13,7 @@ local WeaponTool = {}
 function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	local weapon = require(weaponModule).Configuration.name
 	local weaponAssets = weaponModule.Assets
+	local wepLow = string.lower(weapon)
 
 	local serverModel
 	local clientModel
@@ -25,7 +26,7 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	tool.Name = "Tool_" .. weapon
 
 	-- get weapon skin
-	skinInfo = InventoryInterface:GetEquippedWeaponSkin(player, string.lower(weapon))
+	skinInfo = InventoryInterface:GetEquippedWeaponSkin(player, wepLow)
 	local success, err
 
 	if skinInfo.model then
@@ -45,7 +46,9 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	end
 
 	if not success then
-		error("YOU NEED TO ADD THE WEAPON TO DEFAULTPLAYERDATA TO NEW WEAPON " .. tostring(err))
+		warn("YOU NEED TO ADD THE WEAPON TO DEFAULTPLAYERDATA TO NEW WEAPON " .. tostring(err))
+		InventoryInterface:SetEquippedWeaponSkin(player, wepLow, wepLow == "knife" and "default_default" or "default")
+		model = wepLow == "knife" and weaponAssets.default.Models.default or weaponAssets.Models.default
 	end
 
 	-- set collision groups
