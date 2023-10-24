@@ -10,6 +10,9 @@ local id = {
     }
 }
 
+export type map = {ID: number, Folder: Folder}
+export type mapids = {stable: map, unstable: map, warehouse: map, lobby: map, facility: map}
+
 -- Count IDs
 do
     id.count = 0

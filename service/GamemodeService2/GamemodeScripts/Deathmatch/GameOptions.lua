@@ -34,7 +34,7 @@ function GameOptions.new(overrideOptions: table?)
     local self: GameOptions = {
         min_players = 1,
         max_players = 8,
-        round_length = 10 * 60,
+        round_length = 5 * 60,
         score_to_win_round = 1,
         score_to_win_game = 100,
         can_damage = true,

@@ -19,6 +19,7 @@ local remoteFunction = script:WaitForChild("Events"):WaitForChild("RemoteFunctio
 local timer = false
 
 local timerLabel = gui:WaitForChild("NextGameTimerLabel")
+local nextMapLabel = gui:WaitForChild("NextMapLabel")
 
 local _lfr = gui:WaitForChild("LeaderboardFrame")
 local leaderboard = {itemFrame = _lfr:WaitForChild("ItemFrame")}
@@ -30,6 +31,7 @@ local timerLength = script:GetAttribute("TimerLength") or 15
 local earnedSC = script:GetAttribute("EarnedStrafeCoins") or 0
 local earnedPC = script:GetAttribute("EarnedPremiumCredits") or 0
 local earnedXP = script:GetAttribute("EarnedXP") or 0
+local newMapStr = script:GetAttribute("NewMapStr") or "Kicking players..."
 
 local leaderboardStart = 3
 
@@ -91,22 +93,33 @@ function init()
     earned.premiumCreditsLabel.Text = tostring(earnedPC)
     earned.strafeCoinsLabel.Text = tostring(earnedSC)
     earned.xpLabel.Text = tostring(earnedXP) .. " XP"
+    timer = true
+    if string.match(newMapStr, "Kicking") then
+        nextMapLabel.Visible = false
+        timerLabel.Text = "Kicking players..."
+    else
+        nextMapLabel.Text = "Next map: " .. newMapStr
+        timer = true
+    end
 end
 
 function connect()
     remoteEvent.OnClientEvent:Once(function(playerData)
         initLeaderboard(playerData)
     end)
-
-    local endt = st + timerLength
-    timer = RunService.RenderStepped:Connect(function()
-        timerLabel.Text = convertSecToMin(math.floor(endt - tick()))
-        if tick() >= endt then
-            Debris:AddItem(gui, 3)
-            --gui:Destroy()
-            timer:Disconnect()
-        end
-    end)
+    
+    if timer then
+        local endt = st + timerLength
+        timer = RunService.RenderStepped:Connect(function()
+            timerLabel.Text = convertSecToMin(math.floor(endt - tick()))
+            if tick() >= endt then
+                Debris:AddItem(gui, 3)
+                --gui:Destroy()
+                timer:Disconnect()
+            end
+        end)
+    end
+    
     remoteFunction.OnClientInvoke = finish
 end
 

@@ -63,26 +63,29 @@ end
 function PlayerInitRagdoll(plr)
     -- connect character added
     if playerConns[plr.Name] then return end
-	local didInit = false
     playerConns[plr.Name] = plr.CharacterAdded:Connect(function(character)
-        CreateRagdoll(character)
+        transparency(character, 0)
+		CreateRagdoll(character)
 		resetCharCollision(character)
-		transparency(character, 0)
 		didInit = true
     end)
-	if not didInit and plr.Character then
-		CreateRagdoll(plr.Character)
-		resetCharCollision(plr.Character)
+	if plr.Character then
 		transparency(plr.Character, 0)
-		didInit = true
+		if not didInit then
+			CreateRagdoll(plr.Character)
+			resetCharCollision(plr.Character)
+			didInit = true
+		end
 	end
 end
 
 -- Shared Functions
 
 function DiedRagdoll(character, ragdoll)
-	character.PrimaryPart.Anchored = true
-	character.Head.Anchored = true
+	pcall(function()
+		character.PrimaryPart.Anchored = true
+		character.Head.Anchored = true
+	end)
 	setCharCollision(character)
 	initRagdollParts(ragdoll)
 	
@@ -191,8 +194,8 @@ function finalizeRods(lRods: rodTable, rRods: rodTable)
 end
 
 function initRagdollParts(char)
-	local charHum = char.Humanoid
-	char.PrimaryPart = char.UpperTorso
+	local charHum = char:WaitForChild("Humanoid")
+	char.PrimaryPart = char:WaitForChild("UpperTorso")
 	charHum:Destroy()
 	char.HumanoidRootPart:Destroy()
 	--[[if char:FindFirstChild("EnemyHighlight") then
@@ -281,6 +284,7 @@ end
 function replaceCharacterWithRagdoll(char, clone)
 	--local highlight = char:FindFirstChild("EnemyHighlight")
 	--if highlight then highlight.Parent = clone end
+	if not char.PrimaryPart then return end
 	char.PrimaryPart.Anchored = true
 	clone:SetPrimaryPartCFrame(char.PrimaryPart.CFrame)
 	transparency(char, 1)
@@ -310,15 +314,15 @@ end
 
 -- [[ Run ]]
 
-local tplayers = Players:GetPlayers()
-if #tplayers > 0 then for _, v in pairs(tplayers) do PlayerInitRagdoll(v) end end -- Initialize all current players
+--[[local tplayers = Players:GetPlayers()
+if #tplayers > 0 then for _, v in pairs(tplayers) do PlayerInitRagdoll(v) end end -- Initialize all current players]]
 
 -- connections
-Players.PlayerAdded:Connect(PlayerInitRagdoll) -- Initialize new players
+--[[Players.PlayerAdded:Connect(PlayerInitRagdoll) -- Initialize new players
 RagdollRE.OnClientEvent:Connect(SharedRE)
 
 PlayerInitRagdoll(player)
 
-print('Ragdoll Service Started')
+print('Ragdoll Service Started')]]
 
 return Shared

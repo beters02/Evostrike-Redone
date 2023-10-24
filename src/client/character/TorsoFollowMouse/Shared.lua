@@ -26,6 +26,7 @@ local Packet = {}
 Packet.__index = Packet
 
 function Packet.new(_movePlayer, point, torsoLookVector, cameraLookVector, _neckOriginC0, _waistOriginC0, _lShoulderC0, _rShoulderC0)
+	if not _movePlayer.Character then return end
 	local packet: Packet = {
 		point = point,
 		distance = (_movePlayer.Character.Head.CFrame.Position - point).Magnitude,

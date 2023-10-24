@@ -32,6 +32,9 @@ local Timer = require(script:WaitForChild("Timer"))
 local Tables = require(Framework.Module.lib.fc_tables)
 local EvoEconomy = require(Framework.Module.EvoEconomy)
 local EvoPlayer = require(Framework.Module.EvoPlayer)
+local EvoMaps = require(Framework.Module.EvoMaps)
+local GamemodeSpawns = game.ServerStorage.Maps[EvoMaps:GetCurrentMap()].Spawns
+local Maps = require(Framework.Module.EvoMaps)
 
 local PlayerData = {}
 local GameData = {
@@ -41,7 +44,7 @@ local GameData = {
     CurrentRound = 1,
     RoundStatus = "Stopped" :: GameStatus,
     Timer = false,
-    Spawns = script:WaitForChild("Spawns"),
+    Spawns = GamemodeSpawns:FindFirstChild("Deathmatch") or GamemodeSpawns.Default,
     Events = script:WaitForChild("Events"),
     Guis = script:WaitForChild("Guis")
 }
@@ -64,11 +67,11 @@ function Start()
         end
     end
 
-    ConnectionsLib.SmartDisconnect(GameData.Connections.PlayerAdded)
+    if GameData.Connections.PlayerAdded then GameData.Connections.PlayerAdded:Disconnect() GameData.Connections.PlayerAdded = nil end
+
     GameData.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
         local pdata = PlayerDataInit(player)
         if pdata then PlayerData[player.Name] = pdata end
-        print(PlayerData)
         PlayerSpawn(player)
         GuiTopBar(player)
         GuiBuyMenu(player)
@@ -77,10 +80,14 @@ function Start()
     GameData.Connections.PlayerRemoving = false
 
     GameData.Connections.PlayerDied = Framework.Module.EvoPlayer.Events.PlayerDiedRemote.OnServerEvent:Connect(function(player, killer)
+        print(GameData.Status)
+
         TagsLib.DestroyTagged("DestroyOnPlayerDied_" .. player.Name)
-        local stop = RoundProcessPlayerDied(player, killer)
-        if not stop then
-            PlayerDied(player, killer)
+        if GameData.Status ~= "Stopped" then
+            local stop = RoundProcessPlayerDied(player, killer)
+            if not stop then
+                PlayerDied(player, killer)
+            end
         end
     end)
 
@@ -108,29 +115,45 @@ function Start()
 end
 
 function Stop()
+    GameData.Status = "Stopped"
     ConnectionsLib.DisconnectAllIn(GameData.Connections)
     TagsLib.DestroyTagged("DestroyOnClose")
 end
 
 --@summary Called when game ends naturally by condition/timer
 function End(result: RoundEndResult, winner: Player?)
-    GuiGameOver(winner or false, ProcessPlayerPostEarnings())
-    ConnectionsLib.SmartDisconnect(GameData.Connections.PlayerDied)
+    GameData.Status = "Stopped"
+
+    -- generate next map for gui and ended
+    local newMapStr = "Kicking players..."
+    if GameData.Options.restart_on_end then
+        newMapStr = Maps:GetRandomMapInGamemode("Deathmatch", {Maps:GetCurrentMap()})
+        newMapStr = newMapStr and newMapStr.Name or "warehouse"
+    end
+
+    GuiGameOver(winner or false, ProcessPlayerPostEarnings(), newMapStr)
+    GameData.Events.Ended:Fire(GameData.Options.restart_on_end, GameData.Options.end_screen_length, newMapStr)
+
+    task.delay(GameData.Options.end_screen_length, function()
+        Stop()
+        for _, v in pairs(PlayerData) do
+            PlayerRemoving(v.Player)
+        end
+    end)
+
+    if GameData.Connections.PlayerDied then
+        GameData.Connections.PlayerDied:Disconnect()
+    end
     WeaponService:ClearAllPlayerInventories()
+
+    task.wait(0.2)
+
     for _, v in pairs(Players:GetPlayers()) do
         if v.Character then
             pcall(function()AbilityService:GetPlayerAbilityFolder(v):ClearAllChildren()end)
             v.Character.Humanoid:TakeDamage(1000)
         end
     end
-    
-    task.delay(GameData.Options.end_screen_length, function()
-        Stop()
-        for _, v in pairs(PlayerData) do
-            PlayerRemoving(v.Player)
-        end
-        GameData.Events.Ended:Fire(GameData.Options.restart_on_end)
-    end)
 end
 
 function ProcessPlayerPostEarnings()
@@ -471,12 +494,15 @@ function GuiBuyMenu(player)
     PlayerData[player.Name] = pdata
 end
 
-function GuiGameOver(winner: Player | false, plrEarnings)
-    local earnings
+function GuiGameOver(winner: Player | false, plrEarnings, newMapStr)
     for _, v in pairs(Players:GetPlayers()) do
-        earnings = plrEarnings[v.Name]
-        earnings = earnings and {EarnedStrafeCoins = earnings.sc, EarnedXP = earnings.xp} or {}
-        Gui(v, "GameOver", false, {"DestroyOnClose"}, earnings)
+        local attributes = {NewMapStr = newMapStr, TimerLength = GameData.Options.end_screen_length}
+        local earnings = plrEarnings[v.Name]
+        if earnings then
+            attributes.EarnedStrafeCoins = earnings.sc
+            attributes.EarnedXP = earnings.xp
+        end
+        Gui(v, "GameOver", false, {"DestroyOnClose"}, attributes)
     end
 end
 
