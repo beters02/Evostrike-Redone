@@ -139,7 +139,6 @@ function createRagdollClone(character)
 	ragdollValue.Name = "RagdollValue"
 	ragdollValue.Value = clone
 	ragdollValue.Parent = character
-
     return clone
 end
 
