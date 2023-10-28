@@ -91,7 +91,3 @@ SoundsReplicate.OnClientEvent:Connect(function(action, sound, whereFrom)
         sound:Stop()
     end
 end)
---
-
--- Ragdolls
---require(Framework.Module.Ragdolls)
