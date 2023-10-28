@@ -55,7 +55,7 @@ local function CalcMolly(base: Types.Strafe, conditions: Types.Conditions)
     end
 
     -- success based on total damage given vs. total damage possible
-    local success = conditions.TotalMollyDamage / (conditions.MollyUsed * require(AbilityService.Ability.HEGrenade).Options.maxDamage)
+    local success = conditions.TotalMollyDamage / (conditions.MollyUsed * require(AbilityService.Ability.Molly).Options.maxDamage)
     if success >= 0.3 then
         base += (Strafe.Config.SuccessHE * GetCalcMod(conditions))
     end
