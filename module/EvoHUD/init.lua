@@ -68,7 +68,4 @@ function HUD:GetComponent(component: string)
     return v or false
 end
 
---@run
---HUD.init()
-
 return HUD

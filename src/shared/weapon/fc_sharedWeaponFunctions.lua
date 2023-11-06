@@ -462,7 +462,7 @@ function module.CalculateAccuracy(player, recoilVector3, weaponOptions, storedVa
 	return acc
 end
 
-function module.CalculateVectorRecoil(recoilVector3, weaponOptions, storedVar)
+function module.CalculateVectorRecoil(recoilVector3, weaponOptions, storedVar, distance)
 
 	-- before we were applying a mmabs of 1.5 on the y(side), and a math.min of 1 on the x(up)
 	-- this was a weird way to do it
@@ -486,7 +486,7 @@ function module.CalculateVectorRecoil(recoilVector3, weaponOptions, storedVar)
 
 	-- apply spread and return if spread only
 	if weaponOptions.spread then
-		return Vector2.new(Math.absr(new.X, new.Y))
+		return Vector2.new(Math.absr(new.X), new.Y)
 	end
 
 	local offset = weaponOptions.fireVectorCameraOffset * (storedVar.currentVectorModifier or 1)
@@ -505,14 +505,15 @@ function module.GetAccuracyAndRecoilDirection(player, mray, currVecRecoil, weapo
 
 	-- calculate vector recoil
 	local vecr
-	vecr, storedVar = module.CalculateVectorRecoil(currVecRecoil, weaponOptions, storedVar)
+	vecr, storedVar = module.CalculateVectorRecoil(currVecRecoil, weaponOptions, storedVar, mray)
 	vecr /= 500
 
 	-- combine acc and vec recoil
 	acc += vecr
 
 	local direction = mray.Direction
-	return Vector3.new(direction.X + (acc.X)*(direction.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X)*(direction.Z > 0 and 1 or -1)).Unit
+	local worldDirection = workspace.CurrentCamera.CFrame:VectorToWorldSpace(direction)
+	return Vector3.new(direction.X + (acc.X)*(worldDirection.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X)*(worldDirection.Z > 0 and -1 or 1)).Unit
 end
 
 -- Fire Ray

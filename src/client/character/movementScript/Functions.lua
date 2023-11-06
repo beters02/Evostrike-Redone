@@ -1,8 +1,3 @@
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local Math = require(Framework.shfc_math.Location)
-local Workspace = game:GetService("Workspace")
-local CastVisuals = require(Framework.shfc_castvisuals.Location)
-
 local module = {}
 
 -- [[ GET ]]

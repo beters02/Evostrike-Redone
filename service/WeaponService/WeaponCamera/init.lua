@@ -1,6 +1,4 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local WeaponGet = ReplicatedStorage.weapon.remote.get
 local Recoil = require(script:WaitForChild("fc_recoil"))
 
 local CameraObject = {}
@@ -23,6 +21,10 @@ function CameraObject.new(weaponName)
     self.weaponVar.vecModifier = 1
     self.weaponVar.lastSavedRecVec = Vector3.zero
     self.weaponVar.isSpread = self.weaponVar.options.spread or false
+    self.weaponVar.totalRecoiledPosSpring = Vector3.zero
+    self.weaponVar.totalRecoiledRotSpring = Vector3.zero
+
+    -- [[ Viewmodel Recoil Springs Initialized in WeaponClient ]]
 
     return self
 end

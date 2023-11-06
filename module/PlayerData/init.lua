@@ -44,7 +44,6 @@ export type dataChangedInfo = {location: "Set" | "Key" | "Path", key: Key | Path
 function PlayerData:Set(player, new, changed: dataChangedInfo?, save, ignoreRemote)
     if not changed then changed = {location = "Set"} end
     local store = _getStoreSafe(player)
-    print(new)
     store:Set(new)
     if save then
         store:Save()

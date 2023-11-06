@@ -102,8 +102,8 @@ end
 --
 
 --@summary Add a Weapon to the Controller (must have been created on the server first)
-function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: boolean?)
-    local wepObject: Types.Weapon = Weapon.new(weapon, tool)
+function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: boolean?, recoilScript)
+    local wepObject: Types.Weapon = Weapon.new(weapon, tool, recoilScript)
     self.Inventory[wepObject.Slot] = wepObject
 
     if forceEquip then
@@ -111,10 +111,10 @@ function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: bool
         task.delay(ForceEquipDelay, function()
             self:EquipWeapon(wepObject.Slot, true)
         end)
-        return true
+        return wepObject
     end
 
-    return true
+    return wepObject
 end
 
 --@summary Remove a Weapon from the Controller

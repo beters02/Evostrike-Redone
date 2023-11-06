@@ -99,7 +99,7 @@ function Strings.convertPathToInstance(str: string, start: any, ignoreError: boo
 	local current = start or game
 
 	local success, err = pcall(function()
-		for i,v in pairs(segments) do
+		for _,v in pairs(segments) do
 			current=current[v]
 		end
 	end)
@@ -108,7 +108,6 @@ function Strings.convertPathToInstance(str: string, start: any, ignoreError: boo
 		return ignoreError and "nil" or error(err)
 	end
 
-	--return success(current)
 	return current
 end
 

@@ -10,7 +10,7 @@ compiler.server = s
 compiler.shared = sh
 compiler.lib = sh.lib
 
-for i, v in pairs(sh:WaitForChild("Modules"):GetChildren()) do
+for _, v in pairs(sh:WaitForChild("Modules"):GetChildren()) do
     compiler[v.Name] = v
 end
 

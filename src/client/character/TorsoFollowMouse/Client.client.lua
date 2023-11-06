@@ -7,6 +7,7 @@ local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
 local cam = workspace.CurrentCamera
 local character = player.Character or player.CharacterAdded:Wait()
+local hum = character:WaitForChild("Humanoid")
 local head = character:WaitForChild("Head")
 local neck = head:WaitForChild("Neck")
 local torso = character:WaitForChild("UpperTorso")
@@ -78,7 +79,7 @@ end)
 
 clientToClientRemote.OnClientEvent:Connect(fulfillUpdateOtherTorsoVar)
 
-while true do
+while character and hum.Healh > 0 do
 	task.wait(update_rate)
 	updateYourTorsoVar()
 end

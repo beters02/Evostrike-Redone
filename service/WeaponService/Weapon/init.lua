@@ -18,7 +18,7 @@ local Strings = require(Framework.Module.lib.fc_strings)
 local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
-function Weapon.new(weapon: string, tool: Tool)
+function Weapon.new(weapon: string, tool: Tool, recoilScript)
     local weaponModule = require(ReplicatedStorage.Services.WeaponService):GetWeaponModule(weapon)
     local self = Tables.clone(require(weaponModule))
     self.Name = weapon
@@ -43,6 +43,7 @@ function Weapon.new(weapon: string, tool: Tool)
     self.RemoteEvent = self.Tool.WeaponRemoteEvent
     self.CameraObject = require(ReplicatedStorage.Services.WeaponService.WeaponCamera).new(weapon)
     self.Variables.CrosshairModule = require(self.Character:WaitForChild("CrosshairScript"):WaitForChild("m_crosshair"))
+    self.Variables.cameraFireThread = false
 
     if self.init then
         self:init()
@@ -113,6 +114,12 @@ function Weapon.new(weapon: string, tool: Tool)
     self = setmetatable(self, Weapon)
     self:_SetServerModelTransparency(1)
     self:SetIconEquipped(false)
+
+    if self.Name ~= "knife" then
+        local Recoil = require(recoilScript)
+        Recoil.init(self)
+    end
+    
     return self
 end
 
@@ -215,12 +222,16 @@ function Weapon:PrimaryFire()
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
     local fireTick = tick()
 
+    if not self.Variables.recoilReset then
+        self.Variables.recoilReset = self.Options.recoilResetMin
+    end
+
     -- set var
     PlayerActionsState:set(self.Player, "shooting", true)
 
 	self.Variables.firing = true
 	self.Variables.ammo.magazine -= 1
-	self.Variables.currentBullet = (fireTick - self.Variables.lastFireTime >= self.Options.recoilReset and 1 or self.Variables.currentBullet + 1)
+	self.Variables.currentBullet = (fireTick - self.Variables.lastFireTime >= (math.min(self._camReset, self.Options.recoilResetMax))) and 1 or self.Variables.currentBullet + 1
 	self.Variables.lastFireTime = fireTick
 	self.CameraObject.weaponVar.currentBullet = self.Variables.currentBullet
 
@@ -773,17 +784,20 @@ function Weapon:_SetServerModelTransparency(t)
     end
 end
 
---
+-- Final Recoil Functions
 
 function Weapon:RegisterRecoils()
+    local vecRecoil = self.Recoil.Fire(self, self.Variables.currentBullet)
+
     -- Vector Recoil
 	task.spawn(function()
 
 		-- grab vector recoil from pattern using the camera object
 		local m = self.Player:GetMouse()
         local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
-		local currVecRecoil, vecmod = self.CameraObject:getRecoilVector3(self.CameraObject:getSprayPatternKey())
-		self.Variables.currentVectorModifier = vecmod
+		--local currVecRecoil, vecmod, _, recoilReset = self.CameraObject:getRecoilVector3(self.CameraObject:getSprayPatternKey())
+		self.Variables.currentVectorModifier = self._vecModifier
+        self.Variables.recoilReset = self._camReset
 
 		-- recalculate mray direction to be the height of origin point
 		-- the origin point will be reset in conn_mouseUp
@@ -799,7 +813,7 @@ function Weapon:RegisterRecoils()
 		)
 
 		-- get total accuracy and recoil vec direction
-		local direction = SharedWeaponFunctions.GetAccuracyAndRecoilDirection(self.Player, mray, currVecRecoil, self.Options, self.Variables)
+		local direction = SharedWeaponFunctions.GetAccuracyAndRecoilDirection(self.Player, mray, vecRecoil, self.Options, self.Variables)
 
 		-- check to see if we're wallbanging
 		local wallDmgMult, hitchar, result
@@ -823,7 +837,9 @@ function Weapon:RegisterRecoils()
 
 	-- fire camera recoil once accuracy has been calculated
 	-- to avoid the bullet going where the camera recoil is
-	self.CameraObject:FireRecoil(self.Variables.currentBullet)
+	--self.CameraObject:FireRecoil(self.Variables.currentBullet)
+    --self:FireCameraRecoil(self.Variables.currentBullet)
+    self.Recoil.Fire(self, self.Variables.currentBullet)
 end
 
 --@return damageMultiplier (total damage reduction added up from recursion)

@@ -1,3 +1,6 @@
+--@summary Inventory Resets
+--         When a playerdata key needs to be reset, this is where you would do it.
+
 local resets = {}
 
 --@summary Loop through new reset states, reset through invs if necessary

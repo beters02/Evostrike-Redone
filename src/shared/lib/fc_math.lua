@@ -20,6 +20,16 @@ function Math.vector3Min(vec: Vector3, min: number): number
 	return Vector3.new(new.X, new.Y, new.Z)
 end
 
+--sv3min
+function Math.specificVector3Min(vec: Vector3, minVec: Vector3)
+	local new = {X = vec.X, Y = vec.Y, Z = vec.Z}
+	local min = {X = minVec.X, Y = minVec.Y, Z = minVec.Z}
+	for i, v in pairs(min) do
+		new[i] = math.min(new[i], v)
+	end
+	return new
+end
+
 --v3max
 -- Max all vector3 values
 function Math.vector3Max(vec: Vector3, max: number)
@@ -28,6 +38,26 @@ function Math.vector3Max(vec: Vector3, max: number)
 		new[i] = math.max(max, v)
 	end
 	return Vector3.new(new.X, new.Y, new.Z)
+end
+
+--v3abs
+-- Abs all vector3 values
+function Math.vector3Abs(vec: Vector3)
+	local new = {X = vec.X, Y = vec.Y, Z = vec.Z}
+	for i, v in pairs(new) do
+		new[i] = math.abs(v)
+	end
+	return Vector3.new(new.X, new.Y, new.Z)
+end
+
+--sv3max
+function Math.specificVector3Max(vec: Vector3, minVec: Vector3)
+	local new = {X = vec.X, Y = vec.Y, Z = vec.Z}
+	local min = {X = minVec.X, Y = minVec.Y, Z = minVec.Z}
+	for i, v in pairs(min) do
+		new[i] = math.max(new[i], v)
+	end
+	return new
 end
 
 --v3clamp
@@ -47,6 +77,13 @@ function Math.fixedVector3Clamp(vec: Vector3, min: number, max: number)
 		new[i] = Math.fixedClamp(v, min, max)
 	end
 	return Vector3.new(new.X, new.Y, new.Z)
+end
+
+--sv3clamp
+function Math.specificVector3Clamp(vec: Vector3, minVec: Vector3, maxVec: Vector3)
+	vec = Math.specificVector3Min(vec, minVec)
+	vec = Math.specificVector3Max(vec, maxVec)
+	return vec
 end
 
 --absr
@@ -141,5 +178,8 @@ Math.norm2face = Math.normalToFace
 Math.face2norm = Math.faceToNormal
 Math.v3clamp = Math.vector3Clamp
 Math.fv3clamp = Math.fixedVector3Clamp
+Math.sv3clamp = Math.specificVector3Clamp
+Math.sv3max = Math.specificVector3Max
+Math.sv3min = Math.specificVector3Min
 
 return Math

@@ -7,12 +7,16 @@ AK103.Configuration = {
 	equipLength = 0.9,
 	fireRate = 0.1, -- 600 rpm
 	reloadLength = 0.9,
-	recoilReset = 0.24,
-	camRecoilReset = 0.5,
+	recoilReset = 0.24, -- DEPRECATEd
+	camRecoilReset = 0.5, -- DEPRECATED
+
+	recoilResetMin = 0.25, -- 1st bullet reset
+	recoilResetMax = 0.45, -- Based on cameraRecoilReset in sprayPattern
 	
-	fireVectorCameraOffset = Vector2.new(5, 13), -- Side, Up
-	fireAccuracyCameraOffset = Vector2.new(1, 10), -- Side, Up
-	fireVectorCameraMax = Vector3.new(0.0135, 0.01, 0.3), -- Up, Side
+	fireVectorCameraOffset = Vector2.new(2, 23), -- Side, Up
+	fireAccuracyCameraOffset = Vector2.new(4, 4), -- Side, Up
+	fireVectorCameraMax = Vector3.new(0.03, 0.03, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
+	--fireVectorCameraMax = Vector3.new(1, 1, 3), -- Up, Side
 	
 	ammo = {
 		magazine = 30,
@@ -21,7 +25,7 @@ AK103.Configuration = {
 	
 	accuracy = {
 		firstBullet = 2,
-		base = 7,
+		base = 5,
 		crouch = 13,
 		walk = 200,
 		run = 200,
@@ -45,6 +49,36 @@ AK103.Configuration = {
 	movement = {
 		penalty = -2.6,
 		hitTagAmount = 6
+	},
+
+	fireSpring = {
+		pos = {
+			mass = 5,		-- 5
+			force = 50,		-- 50
+			damping = 4,	-- 4
+			speed = 3,		-- 4
+			multiplier = 0.2, -- 1
+			min = Vector3.new(0, -1.1, -1.1),
+			max = Vector3.new(0, 1.1, 1.1)
+		},
+		rotUp = {
+			mass = 5,		-- 5
+			force = 50,		-- 50
+			damping = 4,	-- 4
+			speed = 1,		-- 4
+			multiplier = 1, -- 1
+			min = -1.1,
+			max = 1.1
+		},
+		rotSide = {
+			mass = 5,		-- 5
+			force = 50,		-- 50
+			damping = 4,	-- 4
+			speed = 3,		-- 4
+			multiplier = 1.8, -- 1
+			min = -2,
+			max = 2
+		}
 	},
 
 	serverModelSize = 0.75
