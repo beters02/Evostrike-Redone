@@ -1,16 +1,22 @@
 local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Types = require(script:WaitForChild("Types"))
-local StoredMaps = {
+local Bridge = script:WaitForChild("Bridge")
+
+local StoredMaps
+if RunService:IsServer() then StoredMaps = {
     lobby = Types.Map.new("warehouse"),
     warehouse = Types.Map.new("warehouse", {Enabled = true, IgnoreGamemodes = {}}),
     apartments = Types.Map.new("apartments", {Enabled = false, IgnoreGamemodes = {}}),
     facility = Types.Map.new("facility", {Enabled = false}),
     house = Types.Map.new("house", {Enabled = true, IgnoreGamemodes = {}})
-}
+} end
+
 
 -- [[ Private Map Utility ]]
-local MapUtil = {
+local MapUtil
+if RunService:IsServer() then MapUtil = {
     Destroy = function()
         print("DESTROYING CURRENT MAP")
         workspace.Terrain:Clear()
@@ -62,7 +68,7 @@ local MapUtil = {
             end)
         end
     end
-}
+} end
 
 -- [[ Public Maps Functions ]]
 Maps = {
@@ -80,6 +86,7 @@ Maps = {
         MapUtil.Load(map)
         workspace:SetAttribute("CurrentMap", mapName)
         print("NEW MAP LOADED! [ " .. mapName .. " ]")
+        return true
     end,
 
     GetRandomMapInGamemode = function(self, gamemode: string, ignoreMaps: table?)
@@ -91,7 +98,27 @@ Maps = {
             table.insert(_maps, v)
         end
         return #_maps > 0 and _maps[math.random(1, #_maps)]
+    end,
+
+    RequestClientSetMap = function(self, player, mapName)
+        if RunService:IsServer() then
+            if require(game:GetService("ServerStorage").Stored.AdminIDs):IsAdmin(player) then
+                return Maps:SetMap(mapName)
+            end
+            return false
+        else
+            return Bridge:InvokeServer("RequestClientSetMap", mapName)
+        end
     end
 }
+
+if RunService:IsServer() then
+    script.Bridge.OnServerInvoke = function(player, action, ...)
+        if Maps[action] then
+            return Maps[action](Maps, player, ...)
+        end
+        return false
+    end
+end
 
 return Maps :: Types.MapsModule

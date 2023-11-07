@@ -79,7 +79,7 @@ end)
 
 clientToClientRemote.OnClientEvent:Connect(fulfillUpdateOtherTorsoVar)
 
-while character and hum.Healh > 0 do
+while character and hum.Health > 0 do
 	task.wait(update_rate)
 	updateYourTorsoVar()
 end

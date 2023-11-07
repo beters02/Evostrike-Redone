@@ -19,6 +19,7 @@ local SoundModule = require(Framework.Module.Sound)
 local Strings = require(Framework.Module.lib.fc_strings)
 local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
 local MovementState = States.State("Movement")
+local instanceLib = require(Framework.Module.lib.fc_instance)
 
 -- [[ Define Local Variables ]]
 local Inputs
@@ -581,6 +582,27 @@ function Movement.ProcessMovement()
 
 	local hitPart, hitPosition, hitNormal, yRatio, zRatio, ladderTable = Movement:FindCollisionRay()
 	playerGrounded = hitPart and true or false
+	if not playerGrounded or not hitPosition or not hitPart then
+		local params = instanceLib.New("RaycastParams", {
+			FilterType = Enum.RaycastFilterType.Exclude,
+			FilterDescendantsInstances = {player.Character, RunService:IsClient() and workspace.CurrentCamera or {}},
+			CollisionGroup = "PlayerMovement"
+		})
+	
+		local result = workspace:Blockcast(
+			CFrame.new(player.Character.HumanoidRootPart.CFrame.Position + Vector3.new(0, -3.25, 0)),
+			Vector3.new(1.5,1.5,1),
+			Vector3.new(0, -1, 0),
+			params
+		)
+	
+		if result then
+			hitPart = result.Instance
+			hitPosition = result.Position
+			hitNormal = result.Normal
+		end
+	end
+
 	playerVelocity = collider.Velocity - Vector3.new(0, collider.Velocity.y, 0)
 	
 	if Movement.jumpGrace and tick() < Movement.jumpGrace and collider.Velocity.Y > 0 then

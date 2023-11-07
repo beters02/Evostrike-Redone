@@ -1,3 +1,9 @@
+--[[
+
+
+    page.new(main: MainMenu, basePageTable: )
+]]
+
 local pageClass = {}
 pageClass.__index = pageClass
 

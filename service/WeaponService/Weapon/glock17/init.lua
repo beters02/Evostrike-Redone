@@ -8,6 +8,9 @@ local wepconfig = {
 		fireRate = 0.15,
 		reloadLength = 0.6,
 		recoilReset = 0.35,
+
+		recoilResetMin = 0.15, -- 1st bullet reset
+		recoilResetMax = 0.20, -- Based on cameraRecoilReset in sprayPattern
 		
 		fireVectorCameraOffset = Vector2.new(5, 5), -- Side, Up
 		fireAccuracyCameraOffset = Vector2.new(5, 5), -- Side, Up
@@ -46,6 +49,36 @@ local wepconfig = {
 		movement = {
 			penalty = -2.2,
 			hitTagAmount = 6
+		},
+
+		fireSpring = {
+			pos = {
+				mass = 5,		-- 5
+				force = 50,		-- 50
+				damping = 4,	-- 4
+				speed = 3,		-- 4
+				multiplier = 0.15, -- 1
+				min = Vector3.new(0, -0.65, -0.65),
+				max = Vector3.new(0, 0.65, 0.65)
+			},
+			rotUp = {
+				mass = 5,		-- 5
+				force = 50,		-- 50
+				damping = 4,	-- 4
+				speed = 1,		-- 4
+				multiplier = 1, -- 1
+				min = -.65,
+				max = .65
+			},
+			rotSide = {
+				mass = 5,		-- 5
+				force = 50,		-- 50
+				damping = 4,	-- 4
+				speed = 3,		-- 4
+				multiplier = 1.8, -- 1
+				min = -1,
+				max = 1
+			}
 		},
 
 		serverModelSize = 0.75

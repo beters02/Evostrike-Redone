@@ -1,3 +1,4 @@
+local RunService = game:GetService("RunService")
 export type map = {
     Name: string,
     Folder: Folder,
@@ -26,14 +27,17 @@ export type MapsModule = {
 }
 
 local types = {}
-types.Map = {
-    new = function(mapName: string, properties)
-        properties = properties or {}
-        return {
-            Name = mapName,
-            Folder = game.ServerStorage.Maps:FindFirstChild(mapName) or false,
-            Properties = {Enabled = properties.Enabled or false, IgnoreGamemodes = properties.IgnoreGamemodes or {"Deathmatch", "1v1", "Range"}}
-        } :: map
-    end
-}
+if RunService:IsServer() then
+    types.Map = {
+        new = function(mapName: string, properties)
+            properties = properties or {}
+            return {
+                Name = mapName,
+                Folder = game.ServerStorage.Maps:FindFirstChild(mapName) or false,
+                Properties = {Enabled = properties.Enabled or false, IgnoreGamemodes = properties.IgnoreGamemodes or {"Deathmatch", "1v1", "Range"}}
+            } :: map
+        end
+    }
+end
+
 return types

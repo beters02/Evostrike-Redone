@@ -3,6 +3,8 @@ local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Fra
 local EmitParticles = require(Framework.shfc_emitparticle.Location)
 --local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService"))
 local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService2"))
+local EvoMaps = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMaps"))
+local Globals = require(Framework.Module.lib.fc_global)
 
 local ParticlesTable
 task.spawn(function()
@@ -97,8 +99,8 @@ Commands.gm_restart = {
 
 }
 
-Commands.Map = {
-	Description = "Teleport player or players to map",
+Commands.Place = {
+	Description = "Teleport player or players to a different place",
 	Public = false,
 
 	Function = function(self, player, mapName, players, gamemode)
@@ -125,6 +127,18 @@ Commands.Map = {
 
 		self:Print("Teleporting!")
 		return true
+	end
+}
+
+Commands.Map = {
+	Description = "Set the game's map. Will restart the current gamemode.",
+	Public = false,
+
+	Function = function(self, player, mapName)
+		if not Globals.wassert(mapName, "Could not teleport, Map Name is required!") then return end
+		self:Print("Setting map to " .. mapName)
+		GamemodeService:RestartGamemode()
+		EvoMaps:RequestClientSetMap(player, mapName)
 	end
 }
 

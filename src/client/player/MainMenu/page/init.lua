@@ -1,5 +1,10 @@
 --[[
-    This is a MODULE which creates CLASSES
+    page.init() -- initialize all page frames
+
+    page:FindPage(pageName)
+    page:OpenPage(pageName, dontCloseOtherPages)
+    page:ClosePage(pageName)
+    page:CloseAllPages()
 ]]
 
 local page = {}
@@ -8,8 +13,7 @@ page.__index = page
 --[[ Page Module Private Access Functions ]]
 
 function page.init(self) -- self = main
-
-    -- create page table for main table in cm_mainMenu
+    -- create page table as main table in cm_mainMenu
     local _page = {}
     _page = {}
     _page._opened = {} -- currently opened pages
@@ -18,23 +22,16 @@ function page.init(self) -- self = main
         _page[i] = v
     end
     
-    -- initialize page location here since it is a client script
     _page._loc = self.player.PlayerScripts.MainMenu.page
-
-    -- init base page class
     _page._baseClass = require(_page._loc:WaitForChild("Base"))
-
-    -- this is where we will store the locations
-    -- of all the pages for easy access
     _page._stored = {}
 
-    for i, v in pairs(self.gui:GetChildren()) do
-
-        -- pages must be frames, and their names must end with "Frame"
+    -- init frames as pages
+    for _, v in pairs(self.gui:GetChildren()) do
         if not v:IsA("Frame") or not string.match(v.Name, "Frame") then continue end
 
         -- remove "Frame" from string,
-        -- create class with new name
+        -- create class with modified string as name
         _page._stored[string.gsub(v.Name, "Frame", "")] = _page._baseClass.new(self, _page, string.gsub(v.Name, "Frame", ""))
 
     end
@@ -65,17 +62,14 @@ function page:ClosePage(pageName: string)
 end
 
 function page:CloseAllPages()
-    for i, v in pairs(self._opened) do
+    for _, v in pairs(self._opened) do
         v:Close()
     end
     self._opened = {}
 end
 
 function page:FindPage(pageName: string) -- Do not add "Frame" when calling pageName
-    local sucess, foundClass = pcall(function()
-        return self._stored[pageName]
-    end)
-    return foundClass
+    return self._stored[pageName] or false
 end
 
 function page:GetOpenPages()

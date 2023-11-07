@@ -23,10 +23,6 @@ function Recoil:init()
 
     Viewmodel.init(self)
     Recoil.GetRecoilVector3(self, Recoil.GetSprayPatternKey(self, 1), true)
-
-    self.RecoilFire = function(currentBullet)
-        return Recoil.Fire(self, currentBullet)
-    end
 end
 
 function Recoil:Fire(currentBullet)

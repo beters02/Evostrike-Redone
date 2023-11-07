@@ -116,8 +116,8 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     self:SetIconEquipped(false)
 
     if self.Name ~= "knife" then
-        local Recoil = require(recoilScript)
-        Recoil.init(self)
+        self.Recoil = require(recoilScript)
+        self.Recoil.init(self)
     end
     
     return self

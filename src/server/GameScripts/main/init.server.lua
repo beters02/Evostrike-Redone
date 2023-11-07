@@ -2,7 +2,9 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local GamemodeService2 = require(Framework.Service.GamemodeService2)
+local GamemodeService2Loc = Framework.Service.GamemodeService2
+local GamemodeService2 = require(GamemodeService2Loc)
+local GamemodeService2Bindable = GamemodeService2Loc:WaitForChild("Bindable") :: BindableEvent
 local ConnectionsLib = require(Framework.Module.lib.fc_rbxsignals)
 local EvoMM = require(Framework.Module.EvoMMWrapper)
 local Maps = require(Framework.Module.EvoMaps)
@@ -71,4 +73,10 @@ end
 Players.CharacterAutoLoads = false
 Players.PlayerAdded:Once(function(player: Player)
     Init(player)
+end)
+
+GamemodeService2Bindable.Event:Connect(function(action, ...)
+    if action == "Restart" then
+        Stop(true, 0.5, ...)
+    end
 end)
