@@ -479,9 +479,7 @@ function module.CalculateVectorRecoil(recoilVector3, weaponOptions, storedVar, d
 		storedVar.lastYVec = 0
 	else
 		-- if the add vector is 0, don't keep climbing the vec recoil
-		if new.Y ~= 0 then
-			storedVar.lastYVec = new.Y
-		end
+		storedVar.lastYVec = new.Y ~= 0 and new.Y or storedVar.lastYVec
 	end
 
 	-- apply spread and return if spread only

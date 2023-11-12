@@ -4,11 +4,11 @@
 -- absr = absolute value random use: "numberValueabsr" ex: "1absr" = 1 or -1
 
 -- {side, up, shake}
--- spread = {x, y, z}
+-- spread = {x, y, z, vecMod, camMod, camReset}
 -- spread will apply each value by
 -- spread[i] * fireDirection[i] * baseAccuracy
 local sprayPattern = {
-	spread = {{"1absr", 1, "0.4absr"}}
+	spread = {{"1absr", 1.5, "0.4absr", 1, 1.2, 0.4}}
 }
 
 --sprayPattern.spread.bulletstart = 2 -- bullet when the spread starts to increase

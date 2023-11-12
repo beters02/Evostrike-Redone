@@ -8,6 +8,8 @@ local Tables = require(ReplicatedStorage.lib.fc_tables)
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local States = require(Framework.Module.m_states)
+local Math = require(Framework.Module.lib.fc_math)
+local InstLib = require(Framework.shfc_instance.Location)
 local UIState = States.State("UI")
 local PlayerActionsState = States.State("PlayerActions")
 local Types = require(script.Parent.Types)
@@ -38,6 +40,7 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     self.Character = self.Player.Character
     self.Humanoid = self.Character:WaitForChild("Humanoid")
     self.Module = weaponModule
+    self.MovementCfg = ReplicatedStorage:WaitForChild("Movement").get:InvokeServer()
     self.RemoteFunction = self.Tool.WeaponRemoteFunction
     self.ServerEquipEvent = self.Tool.WeaponServerEquippedEvent
     self.RemoteEvent = self.Tool.WeaponRemoteEvent
@@ -795,25 +798,11 @@ function Weapon:RegisterRecoils()
 		-- grab vector recoil from pattern using the camera object
 		local m = self.Player:GetMouse()
         local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
-		--local currVecRecoil, vecmod, _, recoilReset = self.CameraObject:getRecoilVector3(self.CameraObject:getSprayPatternKey())
 		self.Variables.currentVectorModifier = self._vecModifier
         self.Variables.recoilReset = self._camReset
 
-		-- recalculate mray direction to be the height of origin point
-		-- the origin point will be reset in conn_mouseUp
-		if not self.Variables.originPoint then
-			self.Variables.originPoint = {Direction = mray.Direction, Origin = mray.Origin}
-		end
-
-		mray = {Direction = mray.Direction, Origin = mray.Origin}
-		mray.Direction = Vector3.new(
-			mray.Direction.X,
-			mray.Direction.Y,
-			mray.Direction.Z
-		)
-
 		-- get total accuracy and recoil vec direction
-		local direction = SharedWeaponFunctions.GetAccuracyAndRecoilDirection(self.Player, mray, vecRecoil, self.Options, self.Variables)
+        local direction = self:CalculateRecoils(mray, vecRecoil)
 
 		-- check to see if we're wallbanging
 		local wallDmgMult, hitchar, result
@@ -821,7 +810,6 @@ function Weapon:RegisterRecoils()
 		wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
 
 		if result then
-            -- pass ray information to server for verification and damage
 			self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 
 			-- register client shot for bullet/blood/sound effects
@@ -829,17 +817,122 @@ function Weapon:RegisterRecoils()
 			return true
 		end
 
-		-- nothing hit
-		-- this shouldn't happen if the map is set
-		-- up with bullet colliders surrounding the map
 		return false
 	end)
+end
 
-	-- fire camera recoil once accuracy has been calculated
-	-- to avoid the bullet going where the camera recoil is
-	--self.CameraObject:FireRecoil(self.Variables.currentBullet)
-    --self:FireCameraRecoil(self.Variables.currentBullet)
-    self.Recoil.Fire(self, self.Variables.currentBullet)
+function Weapon:CalculateRecoils(mray, recoilVector3)
+    local acc = self:CalculateAccuracy(recoilVector3)
+    local new = Vector2.new(recoilVector3.Y, recoilVector3.X)
+    local vecr
+
+	-- first bullet remove vector recoil
+	if self.Variables.currentBullet == 1 then
+		new = Vector2.zero
+		self.Variables.lastYVec = 0
+	else
+		-- if the add vector is 0, don't keep climbing the vec recoil
+		self.Variables.lastYVec = new.Y ~= 0 and new.Y or self.Variables.lastYVec
+	end
+
+	-- apply spread and return if spread only
+	if self.Options.spread then
+		vecr = Vector2.new(Math.absr(new.X), new.Y)
+    else
+        local offset = self.Options.fireVectorCameraOffset * (self.Variables.currentVectorModifier or 1)
+        vecr = Vector2.new(new.X, self.Variables.lastYVec) * offset
+    end
+
+    vecr /= 500
+    acc /= 550
+
+	-- combine acc and vec recoil
+	acc += vecr
+
+	local direction = mray.Direction
+	local worldDirection = workspace.CurrentCamera.CFrame:VectorToWorldSpace(direction)
+	return Vector3.new(direction.X + (acc.X)*(worldDirection.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X)*(worldDirection.Z > 0 and -1 or 1)).Unit
+end
+
+function Weapon:CalculateAccuracy(vecRecoil)
+    local baseAccuracy
+
+	if self.Options.scope then
+		baseAccuracy = self.Variables.scopedWhenShot and self.Options.accuracy.base or self.Options.accuracy.unScopedBase
+	else
+		if self.Variables.currentBullet == 1 then
+			baseAccuracy = self.Options.accuracy.firstBullet and self.Options.accuracy.firstBullet or self.Options.accuracy.base
+		else
+			if self.Options.accuracy.spread then
+				baseAccuracy = {self.Options.accuracy.base, vecRecoil.X, vecRecoil.X}
+			else
+				baseAccuracy = self.Options.accuracy.base
+			end
+		end
+	end
+
+	local acc = self:CalculateMovementInaccuracy(baseAccuracy)
+	acc = Vector2.new(Math.absr(acc.X), Math.absr(acc.Y))
+	return acc
+end
+
+function Weapon:CalculateMovementInaccuracy(baseAccuracy)
+    local player = self.Player
+    local weaponOptions = self.Options
+    local _x
+	local _y
+	if type(baseAccuracy) == "table" then
+		_x, _y = baseAccuracy[2], baseAccuracy[3] -- recoilVectorX, recoilVectorY
+		baseAccuracy = baseAccuracy[1]
+	end
+	
+	-- movement speed inacc
+	local movementSpeed = player.Character.HumanoidRootPart.Velocity.Magnitude
+	local mstate = States.State("Movement")
+	local rspeed = self.MovementCfg.walkMoveSpeed + math.round((self.MovementCfg.groundMaxSpeed - self.MovementCfg.walkMoveSpeed)/2)
+
+	if mstate:get(player, "landing") or (movementSpeed > 14 and movementSpeed < rspeed) then
+		baseAccuracy = weaponOptions.accuracy.walk
+	elseif movementSpeed >= rspeed then
+		baseAccuracy = weaponOptions.accuracy.run
+	elseif mstate:get(player, "crouching") then
+		baseAccuracy = weaponOptions.accuracy.crouch
+	end
+	
+	-- jump inacc
+	if not self:IsGrounded() then
+		baseAccuracy += weaponOptions.accuracy.jump
+	end
+	
+	return util_vec2AddWithFixedAbsrRR(Vector2.zero, _x and _x * baseAccuracy or baseAccuracy, _y and _y * baseAccuracy or baseAccuracy)
+end
+
+function util_vec2AddWithFixedAbsrRR(vec, addX, addY)
+	addX = Math.frand(addX)
+	addY = Math.frand(addY)
+	return Vector2.new(vec.X + addX, vec.Y + addY)
+end
+
+function Weapon:IsGrounded()
+
+	local params = InstLib.New("RaycastParams", {
+		FilterType = Enum.RaycastFilterType.Exclude,
+		FilterDescendantsInstances = {self.Character, RunService:IsClient() and workspace.CurrentCamera or {}},
+		CollisionGroup = "PlayerMovement"
+	})
+
+	local result = workspace:Blockcast(
+		CFrame.new(self.Character.HumanoidRootPart.CFrame.Position + Vector3.new(0, -3.25, 0)),
+		Vector3.new(1.5,1.5,1),
+		Vector3.new(0, -1, 0),
+		params
+	)
+
+	if result then
+		return result.Instance, result.Position, result.Normal, result.Material
+	end
+
+	return false
 end
 
 --@return damageMultiplier (total damage reduction added up from recursion)

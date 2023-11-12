@@ -119,11 +119,11 @@ end
 
 --@summary Remove a Weapon from the Controller
 function WeaponController:RemoveWeapon(weaponSlot)
-    print('yuh')
     if self.Inventory.equipped.Slot == weaponSlot then
         self.Humanoid:UnequipTools()
     end
     self.Inventory[weaponSlot]:Remove()
+    RunService:UnbindFromRenderStep(weaponSlot .. "_CamRec")
 end
 
 --@summary Equip a Weapon via slot. Called when a player presses the corresponding equip key.

@@ -51,9 +51,9 @@ function Math.vector3Abs(vec: Vector3)
 end
 
 --sv3max
-function Math.specificVector3Max(vec: Vector3, minVec: Vector3)
+function Math.specificVector3Max(vec: Vector3, maxVec: Vector3)
 	local new = {X = vec.X, Y = vec.Y, Z = vec.Z}
-	local min = {X = minVec.X, Y = minVec.Y, Z = minVec.Z}
+	local min = {X = maxVec.X, Y = maxVec.Y, Z = maxVec.Z}
 	for i, v in pairs(min) do
 		new[i] = math.max(new[i], v)
 	end
@@ -80,6 +80,7 @@ function Math.fixedVector3Clamp(vec: Vector3, min: number, max: number)
 end
 
 --sv3clamp
+-- not a good way to do this.
 function Math.specificVector3Clamp(vec: Vector3, minVec: Vector3, maxVec: Vector3)
 	vec = Math.specificVector3Min(vec, minVec)
 	vec = Math.specificVector3Max(vec, maxVec)

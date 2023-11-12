@@ -4,6 +4,7 @@ local Types = require(ReplicatedStorage.Services.WeaponService.Types)
 local VMSprings = require(Framework.Module.lib.c_vmsprings)
 
 local player = game:GetService("Players").LocalPlayer
+local RunService = game:GetService("RunService")
 local character = player.Character or player.CharacterAdded:Wait()
 local tool = script.Parent.Parent
 local vmModule = require(character:WaitForChild("ViewmodelScript"):WaitForChild("m_viewmodel"))

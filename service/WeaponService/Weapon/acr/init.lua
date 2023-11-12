@@ -16,10 +16,6 @@ local ACR = {
 		fireVectorCameraOffset = Vector2.new(2, 20), -- Side, Up
 		fireAccuracyCameraOffset = Vector2.new(3.8, 3.8), -- Side, Up
 		fireVectorCameraMax = Vector3.new(0.03, 0.07, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
-
-		--[[fireVectorCameraOffset = Vector2.new(5, 13), -- Side, Up
-		fireAccuracyCameraOffset = Vector2.new(1, 10), -- Side, Up
-		fireVectorCameraMax = Vector3.new(0.009, 0.0101, 0.3), -- Up, Side]]
 		
 		ammo = {
 			magazine = 25,
@@ -29,7 +25,7 @@ local ACR = {
 		accuracy = {
 			firstBullet = 2,
 			base = 4,
-			crouch = 10,
+			crouch = 3.5,
 			walk = 190,
 			run = 190,
 			jump = 150

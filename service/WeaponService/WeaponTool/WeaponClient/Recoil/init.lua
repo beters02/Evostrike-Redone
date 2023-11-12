@@ -1,36 +1,107 @@
-local Recoil = {}
-local Camera = require(script:WaitForChild("Camera"))
-local Viewmodel = require(script:WaitForChild("Viewmodel"))
 local Strings = require(game:GetService("ReplicatedStorage"):WaitForChild("lib"):WaitForChild("fc_strings"))
+local Math = require(game.ReplicatedStorage.lib.fc_math)
+local RunService = game:GetService("RunService")
 
-function Recoil:init()
-    self.Player = game.Players.LocalPlayer
-    self.Character = self.Player.Character or self.Player.CharacterAdded:Wait()
+local Recoil = {}
+local GLOBAL_CAM_MULT = 0.027
+local Viewmodel = require(script:WaitForChild("Viewmodel"))
+
+function Recoil:init() -- Be sure to apply Vector and Camera values seperately
+    self.GLOBAL_VIEWMODEL_MULT = 0.27
     self.Camera = workspace.CurrentCamera
     self.ViewmodelModule = require(self.Character:WaitForChild("ViewmodelScript"):WaitForChild("m_viewmodel"))
-    self.GLOBAL_CAM_MULT = 0.027
-    self.GLOBAL_VIEWMODEL_MULT = 0.27
-
-    self._camModifier = 1
-    self._vecModifier = 1
-    self._camReset = 1
     self._sprayPattern = self.Options.sprayPattern
-    self._lastSavedRecVec = Vector3.zero
-    self._totalRecoiledVector = Vector3.zero
-    self._waiting = false
-    self._nextFireTime = 0
-    self._currentBullet = 1
-
+    
+    Recoil.ResetRecoilVar(self)
+    Recoil.GetKey(self, 1)
     Viewmodel.init(self)
-    Recoil.GetRecoilVector3(self, Recoil.GetSprayPatternKey(self, 1), true)
+
+    RunService:BindToRenderStep(self.Options.inventorySlot .. "_CamRec", Enum.RenderPriority.Camera.Value + 3, function(dt)
+        Recoil.Update(self, dt)
+    end)
 end
 
-function Recoil:Fire(currentBullet)
-    local vecRecoil = Recoil.GetRecoilVector3(self, Recoil.GetSprayPatternKey(self, currentBullet))
-    local camRecoil = Recoil.GetRecoilVector3(self, Recoil.GetSprayPatternKey(self, currentBullet), true)
-    Camera.Fire(self, camRecoil)
-    Viewmodel.Fire(self, currentBullet, vecRecoil)
-    return vecRecoil, camRecoil
+function Recoil:Fire(bullet)
+    local key = Recoil.GetKey(self, bullet)
+    Recoil.SetFireRecoilVar(self, key * GLOBAL_CAM_MULT * self._camModifier)
+    key *= self._vecModifier
+    Viewmodel.Fire(self, bullet, key)
+    return key
+end
+
+function Recoil:GetKey(bullet)
+    local key = Recoil.parseRecoilRuntimeString(self, {}, self._sprayPattern[bullet])
+    Recoil.convertKeyCamValues(self, key)
+    return Vector3.new(key[2], key[1], key[3])
+end
+
+function Recoil:SetFireRecoilVar(camRecoil)
+    if camRecoil.X == 0 then
+        camRecoil = Vector3.new(self.CamRecoil.X, camRecoil.Y, camRecoil.Z)
+    end
+    self.UpGoal = Vector3.new(camRecoil.X, camRecoil.Y, 0)
+    self.CamRecoil = camRecoil
+    self.UpAmount = Vector3.zero
+    self.NupGoal = Vector3.zero
+    self.Up = true
+    self.Unxt = false
+    self.Stop = false
+end
+
+function Recoil:ResetRecoilVar()
+    self._totalRecoiledVector = Vector3.zero
+    self._currentRecoilVector = Vector3.zero
+    self.UpGoal = Vector3.zero
+    self.UpAmount = Vector3.zero
+    self.NupGoal = Vector3.zero
+    self.Up = false
+    self.Unxt = false
+    self.Stop = true
+end
+
+function Recoil:Update(dt)
+    if self.Stop then return end
+
+    local rupf, rdpf
+    local goalRotation
+    local us, ds = 1/60, self._camReset
+
+    self.processing = true
+        
+    dt = self._stepDT or dt
+    
+    if self.Up and self.Unxt and self.Unxt == "skip" then
+        self.Unxt = nil
+        self.Up = false
+        self.NupGoal = self._totalRecoiledVector
+        self.UpGoal = Math.vector3Abs(self._totalRecoiledVector)
+        self.UpAmount = Vector3.zero
+    end
+
+    if self.Up then
+        rupf = self.CamRecoil/us
+        goalRotation = Vector3.new(rupf.X, rupf.Y, 0) * dt
+        if (self.UpAmount + goalRotation).Magnitude >= self.CamRecoil.Magnitude then
+            goalRotation = self.CamRecoil - self.UpAmount
+        end
+        self.UpAmount += goalRotation
+
+        if (math.abs(self.UpGoal.X) <= math.abs(self.UpAmount.X) and math.abs(self.UpGoal.Y) <= math.abs(self.UpAmount.Y)) then
+            self.Unxt = "skip"
+        end
+    else
+        rdpf = self.NupGoal/ds
+        goalRotation = Vector3.new(-rdpf.X, -rdpf.Y, 0) * dt
+        self.UpAmount += Vector3.new(math.abs(goalRotation.X), math.abs(goalRotation.Y), 0)
+
+        if (self.UpGoal.X <= self.UpAmount.X and self.UpGoal.Y <= self.UpAmount.Y) then
+            self.Stop = true
+        end
+    end
+
+    self.Camera.CFrame = self.Camera.CFrame:ToWorldSpace(CFrame.Angles(goalRotation.X, goalRotation.Y, 0)) --self.Camera.CFrame:ToWorldSpace()
+    self._totalRecoiledVector += goalRotation
+    self.processing = false
 end
 
 -- [[ UTIL ]]
@@ -96,6 +167,12 @@ function Recoil:parseRecoilRuntimeString(tableCombine: table, patternKey: table)
 		end
 	end
     return new
+end
+
+function Recoil:convertKeyCamValues(key)
+    self._vecModifier = key[4] or self._vecModifier
+    self._camModifier = key[5] or self._camModifier
+    self._camReset = key[6] or self._camReset
 end
 
 -- pass in the recoil Vector3 and ensure the Y value will not be 0
