@@ -7,10 +7,10 @@ local wepconfig = {
 		equipLength = 0.65,
 		fireRate = 0.16,
 		reloadLength = 0.65,
-		recoilReset = 0.35,
+		recoilReset = 0.32,
 		
-		recoilResetMin = 0.15, -- 1st bullet reset
-		recoilResetMax = 0.25, -- Based on cameraRecoilReset in sprayPattern
+		recoilResetMin = 0.32, -- 1st bullet reset
+		recoilResetMax = 0.32, -- Based on cameraRecoilReset in sprayPattern
 		
 		fireVectorCameraOffset = Vector2.new(5, 5), -- Side, Up
 		fireAccuracyCameraOffset = Vector2.new(8, 8), -- Side, Up
@@ -22,9 +22,9 @@ local wepconfig = {
 		},
 		
 		accuracy = {
-			firstBullet = 2,
-			base = 18,
-			crouch = 17,
+			firstBullet = 4,
+			base = 36,
+			crouch = 32,
 			spray = 2,
 			walk = 25,
 			run = 30,
