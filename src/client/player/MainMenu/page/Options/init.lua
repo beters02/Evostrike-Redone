@@ -44,7 +44,7 @@ end
 function options:Open()
 	self:ConnectMain()
 	self:SetCurrentOptionsPageOpen("general") -- open with general page
-	self.Location.Visible = true
+	self:OpenAnimations()
 end
 
 function options:Close()

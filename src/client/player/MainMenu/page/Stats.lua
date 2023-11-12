@@ -7,7 +7,7 @@ local Stats = {}
 
 function Stats:Open()
 	self:Connect()
-	self.Location.Visible = true
+	self:OpenAnimations()
 end
 
 function Stats:Close()

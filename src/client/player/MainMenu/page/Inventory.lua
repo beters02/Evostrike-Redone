@@ -88,6 +88,7 @@ end
 function inventory:Open()
     self.Location.Visible = true
     self:ConnectButtons()
+    self:OpenAnimations()
 end
 
 function inventory:Close()

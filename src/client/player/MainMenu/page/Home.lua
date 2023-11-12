@@ -36,7 +36,8 @@ end
 --
 
 function play:Open()
-    self.Location.Visible = true
+    --self.Location.Visible = true
+    self:OpenAnimations()
     self:_connectPlayButtons()
 end
 
