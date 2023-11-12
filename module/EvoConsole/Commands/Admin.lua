@@ -89,7 +89,7 @@ Commands.Gamemode = {
 	
 	Function = function(self, _, gamemodeName)
 		print('Attempt change the mothjercucking j')
-		GamemodeService:ChangeGamemode(gamemodeName)
+		GamemodeService:SetGamemode(gamemodeName)
 		print("Post attempt change the motherufkcing ad")
 		--game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName)
 	end,

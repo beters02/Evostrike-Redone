@@ -24,10 +24,24 @@ function GamemodeService:RestartGamemode(map)
     end
 end
 
+function GamemodeService:SetGamemode(gamemode)
+    if RunService:IsClient() then
+        Bridge:FireServer("SetGamemode", gamemode)
+    else
+        Bindable:Fire("Set", gamemode)
+    end
+end
+
 if RunService:IsServer() then
     Bridge.OnServerEvent:Connect(function(player, action, ...)
-        if not require(game:GetService("ServerStorage").Stored.AdminIDs):IsAdmin(player) then return end
-        GamemodeService:RestartGamemode(...)
+        if action == "RestartGamemode" then
+            if not require(game:GetService("ServerStorage").Stored.AdminIDs):IsAdmin(player) then return end
+            GamemodeService:RestartGamemode(...)
+        else
+            if not require(game:GetService("ServerStorage").Stored.AdminIDs):IsAdmin(player) then return end
+            GamemodeService:SetGamemode(...)
+        end
+        
     end)
 end
 

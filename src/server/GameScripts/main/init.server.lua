@@ -46,10 +46,15 @@ function Start(gmScript)
     CurrentGamemodeScript = newScript
 end
 
-function Stop(restart: boolean?, delayLength: number?, map: string?)
+function Stop(restart: boolean?, delayLength: number?, map: string?, newGamemode: string?)
     restart = restart or false
     map = map or DefaultMap
     delayLength = delayLength or 15
+
+    if newGamemode then
+        CurrentGamemodeScript:Destroy()
+        CurrentGamemodeBaseScript = GamemodeService2:GetGamemodeScript(newGamemode)
+    end
 
     ConnectionsLib.SmartDisconnect(Connections.Ended)
 
@@ -78,5 +83,7 @@ end)
 GamemodeService2Bindable.Event:Connect(function(action, ...)
     if action == "Restart" then
         Stop(true, 0.5, ...)
+    elseif action == "Set" then
+        Stop(true, 1, false, ...)
     end
 end)
