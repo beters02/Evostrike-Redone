@@ -12,6 +12,12 @@ Items.Keys = {
 }
 
 Items.Skins = {
+    AK103 = {
+        hexstripe = {buy_sc = 1000, sell_sc = 600, buy_pc = 100, sell_pc = false}
+    },
+    Glock17 = {
+        hexstripe = {buy_sc = 750, sell_sc = 450, buy_pc = 75, sell_pc = false}
+    }
 }
 
 return Items

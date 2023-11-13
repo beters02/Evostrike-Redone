@@ -14,7 +14,6 @@ local player = Players.LocalPlayer
 local main = {}
 
 -- init
-
 function main.initialize(gui)
     main.player = Players.LocalPlayer
     main.gui = gui

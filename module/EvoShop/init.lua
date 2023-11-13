@@ -14,7 +14,7 @@ Shop.Items = require(script:WaitForChild("Items"))
 
 --
 
-function Shop:AttemptItemPurchase(player: Player, PurchaseType: "StrafeCoins" | "PremiumCredits", ItemType: "Case" | "Key" | "Weapon", Item: string)
+function Shop:AttemptItemPurchase(player: Player, PurchaseType: "StrafeCoins" | "PremiumCredits", ItemType: "Case" | "Key" | "Skin", Item: string)
     local item = Shop.Items[ItemType][Item]
     local priceIndex = PurchaseType == "StrafeCoins" and "buy_sc" or "buy_pc"
     assert(item, "This item does not exist. " .. tostring(Item) .. ": " .. tostring(ItemType))
