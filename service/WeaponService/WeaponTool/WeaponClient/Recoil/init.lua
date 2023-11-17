@@ -11,6 +11,8 @@ function Recoil:init() -- Be sure to apply Vector and Camera values seperately
     self.Camera = workspace.CurrentCamera
     self.ViewmodelModule = require(self.Character:WaitForChild("ViewmodelScript"):WaitForChild("m_viewmodel"))
     self._sprayPattern = self.Options.sprayPattern
+
+    self.Origin = CFrame.new() -- Origin Mouse.Hit Updated on Fire when currentBullet == 1
     
     Recoil.ResetRecoilVar(self)
     Recoil.GetKey(self, 1)
@@ -22,6 +24,7 @@ function Recoil:init() -- Be sure to apply Vector and Camera values seperately
 end
 
 function Recoil:Fire(bullet)
+    -- Camera & Viewmodel
     local key = Recoil.GetKey(self, bullet)
     Recoil.SetFireRecoilVar(self, key * GLOBAL_CAM_MULT * self._camModifier)
     key *= self._vecModifier
