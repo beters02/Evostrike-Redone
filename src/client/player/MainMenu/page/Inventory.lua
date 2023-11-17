@@ -42,39 +42,32 @@ function inventory:init()
     self._currentStoredCaseInventory = PlayerData:Get("inventory.case")
 
     -- initialize all default skins as frames
-    -- first check if player has all skins
-    local initAll = false
-    for i, v in pairs(self._currentStoredInventory)do
-        if v == "*" then
-            self:CreateSkinFrame(false, false, false, false, true)
-            initAll = true
-            break
-        end
-    end
-
     local _regwep = WeaponService:GetRegisteredWeapons()
     for i, v in pairs(_regwep) do
         if v == "knife" then
             for _, knife in pairs({"karambit", "m9bayonet", "butterfly"}) do
                 for _, skin in pairs(self._currentStoredInventory) do
                     if string.match(knife, skin) or skin == "*" then
-                        self:InitializeSkinStringAsFrame("knife_" .. knife .. "_default")
+                        self:InitializeSkinStringAsFrame("knife_" .. knife .. "_default", 0)
                         break
                     end
                 end
             end
 
-            --self:InitializeSkinStringAsFrame("knife_defenddefault_default")
-            self:InitializeSkinStringAsFrame("knife_attackdefault_default")
+            self:InitializeSkinStringAsFrame("knife_attackdefault_default", 0)
             continue
         end
-        self:InitializeSkinStringAsFrame(v .. "_default")
+        self:InitializeSkinStringAsFrame(v .. "_default", 0)
     end
 
-    -- initialize all player skins as frames
-    if not initAll then
-        for i, v in pairs(self._currentStoredInventory) do
-            self:InitializeSkinStringAsFrame(v)
+    -- initialize player's skin inventory
+    for id, v in pairs(self._currentStoredInventory) do
+        if v == "*" then
+            self:CreateSkinFrame(false, false, false, false, true)
+        elseif string.match(v, "*") then
+            continue
+        else
+            self:InitializeSkinStringAsFrame(v, id)
         end
     end
 
@@ -119,7 +112,7 @@ function inventory:OpenSkinPage()
     
 end
 
-function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|nil, isEquipped: boolean|nil, allSkins: boolean?)
+function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|nil, isEquipped: boolean|nil, allSkins: boolean?, uuid: number?)
     local frame
     local weaponModelObj
     local displayName
@@ -127,7 +120,6 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     -- check if player has access to all skins
     -- if so, we recurse CreateSkinFrame until all skins (except default) are added.
     if allSkins then
-
         for _, weaponFolder in pairs(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon:GetChildren()) do
             local weaponAssets = weaponFolder.Assets
 
@@ -135,7 +127,7 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
                 for _, knifeFolder in pairs(weaponAssets:GetChildren()) do
                     for _, v in pairs(knifeFolder.Models:GetChildren()) do
                         if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
-                            self:InitializeSkinStringAsFrame("knife" .. "_" .. knifeFolder.Name .. "_" .. v.Name)
+                            self:InitializeSkinStringAsFrame("knife" .. "_" .. knifeFolder.Name .. "_" .. v.Name, 0)
                         end
                     end
                 end
@@ -143,12 +135,11 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
                 for _, v in pairs(weaponAssets.Models:GetChildren()) do
                     if not v:GetAttribute("Ignore") and v:IsA("Model") and v.Name ~= "default" then
                         local _str = weaponFolder.Name .. "_" .. v.Name
-                        self:InitializeSkinStringAsFrame(_str)
+                        self:InitializeSkinStringAsFrame(_str, 0)
                     end
                 end
             end
         end
-
         return
     else
     
@@ -156,14 +147,13 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
         -- if so, we recurse CreateSkinFrame until all skins are added.
         local parent = weapon == "knife" and WeaponModules.knife.Assets:WaitForChild(model).Models or WeaponModules:WaitForChild(weapon).Assets.Models
         if skin == "*" then
-            for i, v in pairs(parent:GetChildren()) do
+            for _, v in pairs(parent:GetChildren()) do
                 if not v:IsA("Model") or v.Name == "default" or v:GetAttribute("Ignore") then continue end
                 local _str = model and weapon .. "_" .. model .. "_" .. v.Name or weapon .. "_" .. skin
-                self:InitializeSkinStringAsFrame(_str)
+                self:InitializeSkinStringAsFrame(_str, 0)
             end
             return
         end
-    
     end
 
     if weapon == "knife" then
@@ -189,6 +179,7 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
 
     frame:SetAttribute("gunName", weapon)
     frame:SetAttribute("skinName", model and model.."_"..skin or skin)
+    frame:SetAttribute("uuid", uuid)
 
     -- set labels
     frame:WaitForChild("NameLabel").Text = displayName
@@ -239,10 +230,10 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     return frame
 end
 
-function inventory:GetSkinFrame(weapon: string, skin: string)
-    for i, v in pairs(self.Location.Skin.Content:GetChildren()) do
+function inventory:GetSkinFrame(weapon: string, skin: string, uuid)
+    for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
         if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
-        if v:GetAttribute("gunName") == weapon and v:GetAttribute("skinName") == skin then
+        if v:GetAttribute("gunName") == weapon and v:GetAttribute("skinName") == skin and tostring(v:GetAttribute("uuid")) == tostring(uuid) then
             return v
         end
     end
@@ -262,7 +253,7 @@ function inventory:SetSkinFrameEquipped(skinFrame, equipped, weapon, previousSki
         if not _prev then
             if ignoreUnequip then return end
             _prev = weapon == "knife" and previousSkinfo.model.."_"..previousSkinfo.skin or previousSkinfo.skin
-            _prev = self:GetSkinFrame(weapon, _prev)
+            _prev = self:GetSkinFrame(weapon, _prev, previousSkinfo.uuid)
         end
         if not _prev then
             warn("Could not find previous skin frame to unequip")
@@ -278,17 +269,21 @@ end
 function inventory:SkinButtonClicked(skinFrame)
     local weapon = skinFrame:GetAttribute("gunName")
     local skin = skinFrame:GetAttribute("skinName")
+    local uuid = skinFrame:GetAttribute("uuid")
 
     -- Check already equipped
     if skinFrame:GetAttribute("Equipped") then return end
 
     local equippedSkinfo = InventoryInterface:GetEquippedWeaponSkin(self.player, weapon)
-    if (equippedSkinfo.model and equippedSkinfo.model .. "_" .. equippedSkinfo.skin == skin) or equippedSkinfo.skin == skin then
+    if equippedSkinfo.model and equippedSkinfo.model .. "_" .. equippedSkinfo.skin == skin and equippedSkinfo.uuid == uuid then
+        return
+    end
+    if equippedSkinfo.skin == skin and equippedSkinfo.uuid == uuid then
         return
     end
 
     -- Set equipped
-    local success, err = InventoryInterface:SetEquippedWeaponSkin(self.player, weapon, skin)
+    local success, err = InventoryInterface:SetEquippedWeaponSkin(self.player, weapon, skin, uuid)
     if not success then error(err) end
 
     self:SetSkinFrameEquipped(skinFrame, true, weapon, equippedSkinfo)
@@ -298,27 +293,27 @@ end
     @title InitializeSkinStringAsFrame
     @summary Automatically inintialize a skinString "weapon_modelName_skinName" as a frame with the equipped data set.
 ]]
-function inventory:InitializeSkinStringAsFrame(skinString: string)
+function inventory:InitializeSkinStringAsFrame(skinString: string, uuid: number)
     local _sep = skinString:split("_")
     local _equipped = false
 
     if #_sep == 3 then
 
         -- if this is the skin that the player has equipped, send the data (knife)
-        if self._currentEquippedInventory.knife == _sep[2] .. "_" .. _sep[3] or (self._currentEquippedInventory.knife == "default_default" and string.match(_sep[2], "default") and _sep[3] == "default") then
+        if self._currentEquippedInventory.knife == _sep[2] .. "_" .. _sep[3] .. "_" .. tostring(uuid) or (self._currentEquippedInventory.knife == "default_default" and string.match(_sep[2], "default") and _sep[3] == "default") then
             _equipped = true
         end
 
-        self:CreateSkinFrame(_sep[1], _sep[3], _sep[2], _equipped)
+        self:CreateSkinFrame(_sep[1], _sep[3], _sep[2], _equipped, false, uuid)
         return
     end
 
     -- same here (guns)
-    if self._currentEquippedInventory[_sep[1]] == _sep[2] then
+    if self._currentEquippedInventory[_sep[1]] == _sep[2] .. "_" .. tostring(uuid) then
         _equipped = true
     end
 
-    self:CreateSkinFrame(_sep[1], _sep[2], nil, _equipped)
+    self:CreateSkinFrame(_sep[1], _sep[2], nil, _equipped, false, uuid)
 end
 
 -- [[ CASE PAGE ]]

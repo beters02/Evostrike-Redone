@@ -18,7 +18,7 @@ export type SkinInfo = {
 }
 
 function interface:GetEquippedWeaponSkin(player: Player, weapon: string) -- returns skinInfo: {weapon: string, skin: string, model: string|nil}
-    local skinInfo = {weapon = weapon, skin = nil, model = nil}
+    local skinInfo = {weapon = weapon, skin = nil, model = nil, uuid = nil}
 
     if RunService:IsClient() then
         skinInfo.skin = PlayerData:Get("inventory.equipped." .. string.lower(weapon))
@@ -26,23 +26,38 @@ function interface:GetEquippedWeaponSkin(player: Player, weapon: string) -- retu
         skinInfo.skin = PlayerData.GetPlayerData(player).inventory.equipped[string.lower(weapon)]
     end
 
+    local _sep = skinInfo.skin:split("_")
+    local uuid = weapon == "knife" and _sep[3] or _sep[2]
+
+    if not uuid or not tonumber(uuid) then
+        local def = weapon == "knife" and "default_default" or "default"
+        uuid = 0
+        self:SetEquippedWeaponSkin(player, weapon, def, uuid)
+        return self:GetEquippedWeaponSkin(player, weapon)
+    end
+
     -- convert "model_Skin" into {"model", "skin"}
     if weapon == "knife" then
-        local _sep = self:SeperateKnifeSkinStrings(skinInfo.skin)
+        _sep = self:SeperateKnifeSkinStrings(skinInfo.skin)
         skinInfo.skin, skinInfo.model = _sep.skin, _sep.model
+    else
+        skinInfo.skin = _sep[1]
     end
+
+    skinInfo.uuid = uuid
 
     return skinInfo
 end
 
-function interface:SetEquippedWeaponSkin(player: Player, weapon: string, skin: string)
+function interface:SetEquippedWeaponSkin(player: Player, weapon: string, skin: string, uuid: number)
+    if not uuid then return false end
     if RunService:IsClient() then
-        local _pack = table.pack(PlayerData:Set("inventory.equipped." .. string.lower(weapon), skin))
+        local _pack = table.pack(PlayerData:Set("inventory.equipped." .. string.lower(weapon), skin .. "_" .. tostring(uuid)))
         PlayerData:Save()
         return table.unpack(_pack)
     else
         local pd = PlayerData.GetPlayerData(player)
-        pd.inventory.equipped[string.lower(weapon)] = skin
+        pd.inventory.equipped[string.lower(weapon)] = skin .. "_" .. tostring(uuid)
         return PlayerData.SetPlayerData(player, pd, true)
     end
 end

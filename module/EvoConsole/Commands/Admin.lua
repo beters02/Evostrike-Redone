@@ -173,16 +173,22 @@ Commands.as_add = {
 
 --
 
---[[Commands.addecon = {
-	Description = "Add economy to a player"
-}]]
-
-Commands.addcase = {
-	Description = "Add a case to a player's inventory",
+Commands.addsc = {
+	Description = "Add Strafe Coins to a player",
 	Public = false,
 
-	Function = function()
-		game.ReplicatedStorage.Remotes.AddCase:FireServer()
+	Function = function(self, _, player, amount)
+		player = player == "self" and game.Players.LocalPlayer or Players:FindFirstChild(player)
+		if not player then
+			self:Error("Cannot find player " .. tostring(player) .. ". If you want to add to yourself, put 'self' for {player}")
+			return
+		end
+		local success, err = game.ReplicatedStorage.Modules.ShopInterface.Events.c_AddStrafeCoins:InvokeServer(player, amount)
+		if not success then
+			self:Error("Cannot add funds to player. " .. tostring(err))
+			return
+		end
+		self:Print("Added " .. tostring(amount) .. " to " .. player.Name .. "'s economy.")
 	end
 }
 

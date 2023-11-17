@@ -12,19 +12,22 @@ local profile = {
 		-- "weaponName_skinName"
 
 		-- if it is a skin of a weapon with multiple models:
-		-- "weaponName_modelName_skinName
+		-- "weaponName_modelName_skinName"
+
+	-- The table index value of the item is it's UUID.
+	-- All default skins have a UUID of 0.
 
     inventory = {case = {}, skin = {}, equipped = {
-		ak47 = "default",
-		glock17 = "default",
-		knife = "default_default",
-		vityaz = "default",
-		ak103 = "default",
-		usp = "default",
-		acr = "default",
-		deagle = "default",
-		intervention = "default",
-		hkp30 = "default",
+		ak47 = "default_0",
+		glock17 = "default_0",
+		knife = "default_default_0",
+		vityaz = "default_0",
+		ak103 = "default_0",
+		usp = "default_0",
+		acr = "default_0",
+		deagle = "default_0",
+		intervention = "default_0",
+		hkp30 = "default_0",
 	}},
 
     options = {

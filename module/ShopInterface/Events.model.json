@@ -1,0 +1,17 @@
+{
+    "ClassName": "Folder",
+    "Children": [
+      {
+        "Name": "rf_AttemptItemPurchase",
+        "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "rf_GetItemPrice",
+        "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "c_AddStrafeCoins",
+        "ClassName": "RemoteFunction"
+      }
+    ]
+  }

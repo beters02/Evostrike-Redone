@@ -1,10 +1,14 @@
 local DataStoreService = game:GetService("DataStoreService")
 local resets = require(script:WaitForChild("inventoryResets"))
+local mods = require(script:WaitForChild("mods"))
 
---@summary Initialize Player's Group & Event Inventory Modifications
+--@summary Initialize Player's Inventory Modifications
 local Invs = {}
 Invs.Init = function(player, serverPlayerDataModule, group)
-    if not group then return end
+    mods.ApplyMods(player, serverPlayerDataModule)
+    if not group then
+        return
+    end
     local data = serverPlayerDataModule.GetPlayerData(player)
     if group == "admin" then
         if not data.hasBeenGivenAdminInventoryA or not table.find(data.inventory.skin, "*") then

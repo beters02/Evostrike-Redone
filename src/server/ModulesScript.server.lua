@@ -94,4 +94,4 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 --Shop
-require(Framework.Module.EvoShop)
+--require(Framework.Module.EvoShop)

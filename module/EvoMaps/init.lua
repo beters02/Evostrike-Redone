@@ -10,7 +10,7 @@ if RunService:IsServer() then StoredMaps = {
     warehouse = Types.Map.new("warehouse", {Enabled = true, IgnoreGamemodes = {}}),
     apartments = Types.Map.new("apartments", {Enabled = false, IgnoreGamemodes = {}}),
     facility = Types.Map.new("facility", {Enabled = false}),
-    house = Types.Map.new("house", {Enabled = true, IgnoreGamemodes = {}})
+    house = Types.Map.new("house", {Enabled = false, IgnoreGamemodes = {}})
 } end
 
 

@@ -18,7 +18,8 @@ function main.initialize(gui)
     main.player = Players.LocalPlayer
     main.gui = gui
     main.bgframe = main.gui:WaitForChild("BG")
-	main.topbar = main.gui:WaitForChild("TopBar")
+
+	main.topBar.init()
 	
     main.var = {opened = false}
 	main.page = require(Players.LocalPlayer.PlayerScripts.MainMenu.page).init(main)
@@ -43,7 +44,6 @@ function main.setMenuType(mtype: MenuType)
 end
 
 -- main
-
 function main.open()
 	main.var.opened = true
 
@@ -54,7 +54,8 @@ function main.open()
 	main.topBar.connect()
 
 	-- open menu
-	main.page:OpenPage("Home")
+	main.topBar.activated(main.topBar.buttonFrames.Home)
+	--main.page:OpenPage("Home")
 	main.gui.Enabled = true
 
 	-- set mouse icon enabled
@@ -102,7 +103,6 @@ function main.disconectOpenInput()
 end
 
 -- main util
-
 function main.closeAllFrames(button)
 	for i, v in pairs(main.gui:GetChildren()) do -- close all frames except mainButtonFr
 		if v:IsA("Frame") and (not button and string.match(v.Name, "Frame")) then
@@ -132,28 +132,89 @@ function main.stopAllMenuTweens()
 end
 
 -- top bar
-main.topBar = {}
+export type TopBarButtonFrame = {
+	PageName: string,
+	Frame: Frame,
+	Var: table
+}
+
+local TOPBAR_BUTTON_ACTIVE_COLOR = Color3.fromRGB(95, 120, 157)
+
+main.topBar = {
+	gui = false,
+	buttonFrames = {}
+}
+
+function main.topBar.init()
+	main.topBar.gui =  main.gui:WaitForChild("TopBar")
+	for _, frame in pairs(main.topBar.gui:GetChildren()) do
+		local pageName =  frame.Name:gsub("ButtonFrame", "")
+		if not frame:IsA("Frame") or main.topBar.buttonFrames[pageName] then continue end
+		
+		main.topBar.buttonFrames[pageName] = {
+			PageName = pageName,
+			Frame = frame,
+			Button = frame:WaitForChild("TextButton"),
+			Var = {isHovering = false, defaultStrokeColor = frame.TextButton:WaitForChild("UIStroke").Color}
+		}:: TopBarButtonFrame
+		main.topBar.buttonFrames[pageName].Tweens = main.topBar.initTweens(main.topBar.buttonFrames[pageName])
+	end
+end
+
+function main.topBar.initTweens(frame: TopBarButtonFrame)
+	return {
+		hoverOn = TweenService:Create(frame.Button.UIStroke, TweenInfo.new(1), {Color = TOPBAR_BUTTON_ACTIVE_COLOR}),
+		hoverOff = TweenService:Create(frame.Button.UIStroke, TweenInfo.new(1), {Color = frame.Var.defaultStrokeColor})
+	}
+end
 
 function main.topBar.connect()
+	main.topBar.disconnect()
+	main.topBar.connections = {}
 
-	main.topBar._connections = {}
-
-	for _, topBarFrame in pairs(main.topbar:GetChildren()) do
-		if not topBarFrame:IsA("Frame") then continue end
-		local pageName = topBarFrame.Name:gsub("ButtonFrame", "")
-		
-		topBarFrame.TextButton.MouseButton1Click:Connect(function()
-			main.page:OpenPage(pageName)
+	for _, frame: TopBarButtonFrame in pairs(main.topBar.buttonFrames) do
+		main.topBar.connections[frame.PageName .. "Began"] = frame.Frame.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				main.topBar.hoverOn(frame)
+			end
+		end)
+		main.topBar.connections[frame.PageName .. "Ended"] = frame.Frame.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				main.topBar.hoverOff(frame)
+			end
+		end)
+		main.topBar.connections[frame.PageName .. "Activated"] = frame.Button.MouseButton1Click:Connect(function()
+			main.topBar.activated(frame)
 		end)
 	end
-
 end
 
 function main.topBar.disconnect()
-	if not main.topBar._connections then return end
-	for _, v in pairs(main.topBar._connections) do
+	if not main.topBar.connections then return end
+	for _, v in pairs(main.topBar.connections) do
 		v:Disconnect()
 	end
+	main.topBar.connections = false
+end
+
+function main.topBar.activated(frame: TopBarButtonFrame)
+	main.page:OpenPage(frame.PageName)
+end
+
+function main.topBar.hoverOn(frame: TopBarButtonFrame)
+	frame.Var.isHovering = true
+	if frame.Tweens.hoverOff.PlaybackState == Enum.PlaybackState.Playing then
+		frame.Tweens.hoverOff:Pause()
+	end
+	frame.Tweens.hoverOn:Play()
+end
+
+function main.topBar.hoverOff(frame: TopBarButtonFrame)
+	frame.Var.isHovering = false
+	if frame.Tweens.hoverOn.PlaybackState == Enum.PlaybackState.Playing then
+		frame.Tweens.hoverOn:Pause()
+	end
+	frame.Tweens.hoverOff:Play()
 end
 
 return main

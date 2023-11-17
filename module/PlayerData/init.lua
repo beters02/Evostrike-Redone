@@ -81,6 +81,28 @@ function PlayerData:IncrementPath(player, path, amnt)
     return PlayerData:Set(player, playerdata, {location = "Path", key = path, new = new})
 end
 
+--@summary Decrement the value of a key from the PlayerData path
+function PlayerData:DecrementPath(player, path, amnt)
+    local playerdata = PlayerData:GetAsync(player)
+    local new
+    Strings.doActionViaPath(path, playerdata, function(gotTableParent, key)
+        new = gotTableParent[key] - amnt
+        gotTableParent[key] = new
+    end)
+    return PlayerData:Set(player, playerdata, {location = "Path", key = path, new = new})
+end
+
+--@summary Insert a value into a table via path
+function PlayerData:TableInsert(player, path, object)
+    local playerdata = PlayerData:GetAsync(player)
+    local new
+    Strings.doActionViaPath(path, playerdata, function(gotTableParent, key)
+        table.insert(gotTableParent[key], object)
+        new = gotTableParent[key]
+    end)
+    return PlayerData:Set(player, playerdata, {location = "Path", key = path, new = new})
+end
+
 --@summary Save the PlayerData
 function PlayerData:Save(player)
     local store = _getStoreSafe(player)
