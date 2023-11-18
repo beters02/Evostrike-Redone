@@ -3,7 +3,7 @@
 ]]
 
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
+local PlayerData = require(Framework.Module.PlayerData)
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
 local WeaponModules = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("WeaponService"):WaitForChild("Weapon")
 local WeaponService = require(Framework.Service.WeaponService)
@@ -13,33 +13,31 @@ local Cases = game.ReplicatedStorage.Assets.Cases
 local inventory = {}
 
 function inventory:init()
-    self._currentStoredInventory = {}
+    self:Update()
+    return self
+end
 
-    -- first, we connect the changed (skin added/removed) listener
-    PlayerData:Changed("inventory.skin", function(newValue, properties)
-        if not properties then return end
+function inventory:Open()
+    self.Location.Visible = true
+    self:ConnectButtons()
+    self:OpenAnimations()
+end
 
-        if properties.isInsert then
-            -- insert skin frame
-        elseif properties.isRemove then
-            -- remove skin frame
-        end
-    end)
+function inventory:Close()
+    self.Location.Visible = false
+    self:DisconnectButtons()
+end
 
-    PlayerData:Changed("inventory.case", function(newValue, properties)
-        if not properties then return end
+function inventory:Update(withClear: boolean?)
+    print('Update Recieved!')
+    if withClear then
+        self:Clear()
+    end
 
-        if properties.isInsert then
-            -- insert skin frame
-        elseif properties.isRemove then
-            -- remove skin frame
-        end
-    end)
-
-    -- then we grab the player's inventory
-    self._currentStoredInventory = PlayerData:Get("inventory.skin")
-    self._currentEquippedInventory = PlayerData:Get("inventory.equipped")
-    self._currentStoredCaseInventory = PlayerData:Get("inventory.case")
+    local playerdata = PlayerData:UpdateFromServer(true)
+    self._currentStoredInventory = playerdata.inventory.skin
+    self._currentEquippedInventory = playerdata.inventory.equipped
+    self._currentStoredCaseInventory = playerdata.inventory.case
 
     -- initialize all default skins as frames
     local _regwep = WeaponService:GetRegisteredWeapons()
@@ -62,6 +60,7 @@ function inventory:init()
 
     -- initialize player's skin inventory
     for id, v in pairs(self._currentStoredInventory) do
+        if string.match(v, "case_") then continue end
         if v == "*" then
             self:CreateSkinFrame(false, false, false, false, true)
         elseif string.match(v, "*") then
@@ -71,32 +70,52 @@ function inventory:init()
         end
     end
 
-    -- initialize case inventory
-
-
-    -- done!
-    return self
+    -- initialize player's case inventory
+    for _, v: string in pairs(self._currentStoredCaseInventory) do
+        self:CreateCaseFrame(v:gsub("case_", ""))
+    end
 end
 
-function inventory:Open()
-    self.Location.Visible = true
-    self:ConnectButtons()
-    self:OpenAnimations()
-end
-
-function inventory:Close()
-    self.Location.Visible = false
-    self:DisconnectButtons()
+function inventory:Clear()
+    for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
+        if v:IsA("Frame") and v.Name ~= "ItemFrame" then
+            v:Destroy()
+        end
+    end
+    for _, v in pairs(self.Location.Case.Content:GetChildren()) do
+        if v:IsA("Frame") and v.Name ~= "ItemFrame" then
+            v:Destroy()
+        end
+    end
 end
 
 function inventory:ConnectButtons()
     self._bconnections = {}
-    for i, v in pairs(self.Location.Skin.Content:GetChildren()) do
+
+    self._bconnections.openskin = self.Location.SkinsButton.MouseButton1Click:Connect(function()
+        if self.Location.Skin.Visible then
+            return
+        end
+        self:OpenSkinPage()
+    end)
+
+    self._bconnections.opencase = self.Location.CasesButton.MouseButton1Click:Connect(function()
+        if self.Location.Case.Visible then
+            return
+        end
+        self:OpenCasePage()
+    end)
+
+    -- connect skin buttons
+    for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
         if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
         table.insert(self._bconnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
             self:SkinButtonClicked(v)
         end))
     end
+
+    --TODO: connect case buttons
+
 end
 
 function inventory:DisconnectButtons()
@@ -109,7 +128,10 @@ end
 -- [[ SKIN PAGE ]]
 
 function inventory:OpenSkinPage()
-    
+    self.Location.Skin.Visible = true
+    self.Location.Case.Visible = false
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
 end
 
 function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|nil, isEquipped: boolean|nil, allSkins: boolean?, uuid: number?)
@@ -264,8 +286,6 @@ function inventory:SetSkinFrameEquipped(skinFrame, equipped, weapon, previousSki
     end
 end
 
---
-
 function inventory:SkinButtonClicked(skinFrame)
     local weapon = skinFrame:GetAttribute("gunName")
     local skin = skinFrame:GetAttribute("skinName")
@@ -318,17 +338,65 @@ end
 
 -- [[ CASE PAGE ]]
 function inventory:OpenCasePage()
-    
+    self.Location.Case.Visible = true
+    self.Location.Skin.Visible = false
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
 end
 
 function inventory:CreateCaseFrame(case: string)
-   local caseFolder = Cases:FindFirstChild(case)
-   if not caseFolder then
-        warn("Could not find CaseFrame for case " .. tostring(case))
+    local caseFolder = Cases:FindFirstChild(string.lower(case))
+    if not caseFolder then
+        warn("Could not find CaseFolder for case " .. tostring(case))
         return
-   end
+    end
 
-   local model = caseFolder.Model:Clone()
+    local itemFrame = self.Location.Case.Content.ItemFrame:Clone()
+    local itemModel = caseFolder.DisplayFrame.Model:Clone()
+    itemModel.Parent = itemFrame:WaitForChild("ViewportFrame")
+    itemModel:SetPrimaryPartCFrame(CFrame.new(Vector3.new(0, 0, -5)))
+
+    itemFrame.Name = "SkinFrame_" .. string.lower(case)
+    itemFrame:WaitForChild("NameLabel").Text = caseFolder:GetAttribute("DisplayName") or case
+    itemFrame.NameLabel.Text = string.upper(itemFrame.NameLabel.Text)
+    itemFrame.Visible = true
+    itemFrame.Parent = self.Location.Case.Content
 end
+
+-- [[ OPEN CASE ]]
+--[[function itemDisplay.mainClicked_Case(self, case)
+    if self.itemDisplayVar.caseOpeningActive then
+        return
+    end
+    self.itemDisplayVar.caseOpeningActive = true
+
+    -- Confirm Case Open/Key Purchase
+    local hasKey = ShopInterface:HasKey(case)
+    local hasConfirmed = false
+    local confirmGui = AttemptOpenCaseGui:Clone()
+    local keyAcceptButton = confirmGui:WaitForChild("Frame"):WaitForChild("KeyAcceptButton")
+    CollectionService:AddTag(confirmGui, "CloseItemDisplay")
+    
+    if hasKey then
+        keyAcceptButton.Text = "use key"
+        confirmGui.Frame.KeyNotOwnedLabel.Visible = false
+    else
+        keyAcceptButton.Text = "purchase key"
+        confirmGui.Frame.KeyNotOwnedLabel.Visible = true
+    end
+
+    self.itemDisplayConns.CaseConfirmation = keyAcceptButton.MouseButton1Click:Connect(function()
+        if hasConfirmed then return end
+        hasConfirmed = true
+        if hasKey then
+            local success, result = ShopInterface:OpenCase()
+            self:BeginCaseOpening(case)
+        else
+            self:SkinDisplayPurchase("key_weaponcase1")
+        end
+        confirmGui:Destroy()
+        self.itemDisplayConns.CaseConfirmation:Disconnect()
+    end)
+end]]
 
 return inventory

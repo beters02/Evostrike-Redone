@@ -18,7 +18,11 @@ Shop = {
             insert_type = "table",
             path = split[2],
             price_sc = 0,
-            price_pc = 0
+            price_pc = 0,
+            item_type = split[1],
+            model = split[2],
+            skin = split[3],
+            knifeWrap = split[4]
         }
 
         if split[1] == "skin" then
@@ -33,7 +37,10 @@ Shop = {
             returnObject.price_sc = pd.buy_sc
             returnObject.path = weapon .. "_" .. skin
         else
-            returnObject = false
+            local pd = Strings.convertPathToInstance("Cases." .. returnObject.model, Items)
+            returnObject.price_pc = pd.buy_pc
+            returnObject.price_sc = pd.buy_sc
+            returnObject.path = "case_" .. returnObject.model
         end
 
         return returnObject
@@ -62,7 +69,8 @@ Shop.PurchaseItem = function(player, purchaseType, item)
         price = priceData[price]
 
         if priceData.insert_type == "table" then
-            PlayerData:TableInsert(player, "inventory.skin", priceData.path)
+            local inventoryStr = priceData.item_type == "case" and "inventory.case" or "inventory.skin"
+            PlayerData:TableInsert(player, inventoryStr, priceData.path)
         else
             PlayerData:IncrementPath(player, "economy.pc", priceData.path)
         end
@@ -78,7 +86,7 @@ end
 RemoteFunctions = {
     GetItemPrice = function(_, item)
         local i = Shop.parseItemString(item)
-        return {sc = i.price_sc, pc = i.price_pc}
+        return {sc = i.price_sc, pc = i.price_pc, parsed = i}
     end,
     CanAffordItem = Shop.canAffordItem,
     AttemptItemPurchase = Shop.PurchaseItem

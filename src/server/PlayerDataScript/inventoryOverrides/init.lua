@@ -1,44 +1,48 @@
-local DataStoreService = game:GetService("DataStoreService")
-local resets = require(script:WaitForChild("inventoryResets"))
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+
+local resets = require(script:WaitForChild("resets"))
 local mods = require(script:WaitForChild("mods"))
 
 --@summary Initialize Player's Inventory Modifications
 local Invs = {}
-Invs.Init = function(player, serverPlayerDataModule, group)
-    mods.ApplyMods(player, serverPlayerDataModule)
-    if not group then
-        return
-    end
-    local data = serverPlayerDataModule.GetPlayerData(player)
+Invs.Init = function(data, group)
+    local changed = false
+    changed = mods.ApplyMods(data)
+
     if group == "admin" then
         if not data.hasBeenGivenAdminInventoryA or not table.find(data.inventory.skin, "*") then
-            Invs.Give.admin(data, player, serverPlayerDataModule)
+            print('has not admined')
+            Invs.Give.admin(data)
+            changed = true
         end
     elseif group == "playtester" then
         if not data.hasBeenGivenPlaytesterInventory then
-            Invs.Give.playtester(data, player, serverPlayerDataModule, group)
-        else
-            resets.main(Invs, player, serverPlayerDataModule, group) -- check for new reset states
+            print('has not playtestered')
+            Invs.Give.playtester(data, group)
+            changed = true
         end
     end
+
+    --[[local changedFromReset = resets.main(Invs, data, group) -- check for new reset states
+    changed = changed or changedFromReset]]
+
+    return changed
 end
 
 Invs.Give = {
-    playtester = function(data, player, serverPlayerDataModule, group)
-        resets.new(player, serverPlayerDataModule, group) -- since they are getting a fresh inventory, they have receieved all reset states
+    playtester = function(data, group)
+        resets.new(data, group) -- since they are getting a fresh inventory, they have receieved all reset states
         data.hasBeenGivenPlaytesterInventory = true
         data.inventory.skin = {
             "knife_karambit_default",
             "knife_karambit_sapphire",
             "knife_m9bayonet_default"
         }
-        serverPlayerDataModule.SetPlayerData(player, data, true)
     end,
 
-    admin = function(data, player, serverPlayerDataModule)
+    admin = function(data)
         data.hasBeenGivenAdminInventoryA = true
         table.insert(data.inventory.skin, "*")
-        serverPlayerDataModule.SetPlayerData(player, data, true)
     end
 }
 

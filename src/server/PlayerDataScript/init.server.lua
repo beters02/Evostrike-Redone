@@ -5,7 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local serverPlayerDataModule = require(script:WaitForChild("m_serverPlayerData"))
 local Remotes = ReplicatedStorage.PlayerData.remote
 local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("AdminIDs"))
-local GroupInvMods = require(script:WaitForChild("groupInventories"))
+--local inventoryOverrides = require(script:WaitForChild("inventoryOverrides"))
 
 Remotes.sharedPlayerDataRF.OnServerInvoke = function(player, action, ...)
     if action == "Get" then
@@ -24,7 +24,7 @@ Remotes.sharedPlayerDataRF.OnServerInvoke = function(player, action, ...)
 end
 
 Players.PlayerAdded:Connect(function(player)
-    GroupInvMods.Init(player, serverPlayerDataModule, Admins:IsHigherPermission(player))
+    --inventoryOverrides.Init(player, serverPlayerDataModule, Admins:IsHigherPermission(player))
 end)
 
 Players.PlayerRemoving:Connect(function(player)

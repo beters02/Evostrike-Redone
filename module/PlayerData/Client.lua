@@ -43,6 +43,10 @@ function Client:Get(): Shared.PlayerData | false
     return _waitForCache()
 end
 
+function Client:UpdateFromServer()
+    return _getFromServer(true)
+end
+
 function Client:GetKey(key)
     return Client._cache[key]
 end

@@ -4,24 +4,26 @@
 local resets = {}
 
 --@summary Loop through new reset states, reset through invs if necessary
-function resets.main(invs, player, serverPlayerDataModule, group)
+function resets.main(invs, data, group)
+    local changed, reset = false, false
     for i, func in pairs(resets) do
         if i == "main" then continue end
-        local reset, data = func(player, serverPlayerDataModule, group)
+        reset = func(data)
         if reset then
             data[i] = true
-            invs.Give[i](data, player, serverPlayerDataModule, group)
+            invs.Give[i](data, group)
+            changed = true
         end
+        reset = false
     end
+    return changed
 end
 
 --@summary new inventory reset state data, sets all resets to true
-function resets.new(player, serverPlayerDataModule, group)
-    local data = serverPlayerDataModule.GetPlayerData(player)
+function resets.new(data)
     for i, v in pairs(resets.get()) do
         data[i] = true
     end
-    serverPlayerDataModule.SetPlayerData(player, data, true)
 end
 
 --@summary get all reset keys
@@ -37,10 +39,9 @@ end
 --[[ inventory reset functions ]]
 
 --@return to reset - bool
-function resets.hasBeenGivenInventoryReset2(player, serverPlayerDataModule, group)
-    local data = serverPlayerDataModule.GetPlayerData(player)
+function resets.hasBeenGivenInventoryReset2(data)
     if not data.hasBeenGivenInventoryReset2 then
-        return true, data
+        return true
     end
 end
 

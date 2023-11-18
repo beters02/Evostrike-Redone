@@ -12,6 +12,8 @@ local Strings = require(script:WaitForChild("Strings"))
 local Default = require(script:WaitForChild("Shared"))
 local RemoteFunction = script:WaitForChild("Events").RemoteFunction
 local RemoteEvent = script.Events.RemoteEvent
+local InventoryOverrides = require(game:GetService("ServerScriptService"):WaitForChild("PlayerDataScript"):WaitForChild("inventoryOverrides"))
+local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored").AdminIDs)
 
 local PlayerData = {}
 PlayerData._storecache = {}
@@ -202,13 +204,13 @@ end
 local function compareRecurse(start, defloc)
     local changed = false
     for i, v in pairs(defloc) do
-        if not start[i] then
+        if start[i] == nil then
             start[i] = v
             changed = true
         end
         if type(v) == "table" then
             local _c = compareRecurse(start[i], defloc[i])
-            if not changed then changed = _c end
+            changed = changed or _c
         end
     end
     return changed
@@ -216,10 +218,11 @@ end
 
 function _compareToDefault(player, playerData)
     local changed = compareRecurse(playerData, PlayerData._def)
+    local invChanged = InventoryOverrides.Init(playerData, Admins:IsHigherPermission(player))
+    changed = changed or invChanged
     if changed then
         PlayerData:Set(player, playerData)
-        print(playerData)
-        print("Updated PlayerData during Get!")
+        PlayerData:Save(player)
     end
     return playerData, changed
 end

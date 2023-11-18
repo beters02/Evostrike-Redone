@@ -6,8 +6,7 @@ local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainM
 
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
-local AttemptShopPurchaseGui = ShopAssets:WaitForChild("AttemptItemPurchase")
-local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
+local AttemptItemPurchaseGui = ShopAssets:WaitForChild("AttemptItemPurchase")
 
 local Shop = {}
 
@@ -16,15 +15,14 @@ function Shop:init()
     self.Player = game.Players.LocalPlayer
     self.button_connections = {}
 
-    self._sdframe = self.Location:WaitForChild("SkinDisplayFrame")
-    self._sdvar = {}
-    self._sdconns = {}
+    self.itemDisplayFrame = self.Location:WaitForChild("ItemDisplayFrame")
+    self.itemDisplayVar = {active = false, purchaseActive = false, purchaseProcessing = false}
+    self.itemDisplayConns = {}
 
-    self._cdframe = self.Location:WaitForChild("CaseDisplayFrame")
-    self._cdvar = {}
-    self._cdconns = {}
-
-    self._ilconns = {}
+    self.itemListDefaultFrame = self.Location.ItemListContainer_Skins.MainList
+    self.itemListFrame = self.itemListDefaultFrame
+    self.itemListConns = {}
+    self.itemListVar = {OpenListName = "MainList"}
 
     self.core_connections = {
         sc = PlayerData:PathValueChanged("economy.strafeCoins", function(new)
@@ -52,23 +50,34 @@ function Shop:Open()
 end
 
 function Shop:Close()
-    self:CloseSkinDisplay()
+    self:CloseItemDisplay()
     self:CloseItemList()
     self.Location.Visible = false
     self:DisconnectButtons()
 end
 
 function Shop:ConnectButtons()
+
+    -- [[ Connect Case Buttons]]
+    for _, itemButton in pairs(self.Location.ItemListContainer_Cases.MainListFrame:GetChildren()) do
+        if itemButton:IsA("TextButton") and not itemButton:GetAttribute("Disabled") then
+            self.button_connections["case_" .. tostring(itemButton.Name)] = itemButton.MouseButton1Click:Connect(function()
+                self:OpenItemDisplay(itemButton:GetAttribute("Item"), itemButton:GetAttribute("ItemDisplayName"))
+            end)
+        end
+    end
+
+    -- [[ Connect Skin Buttons ]]
     self:CloseItemList()
-    self.button_connections.skfback = self.Location.SkinsFrame.BackButton.MouseButton1Click:Connect(function()
-        local curr, last = self.Location.SkinsFrame:GetAttribute("CurrentItemList"), self.Location.SkinsFrame:GetAttribute("LastItemList")
-        if curr == last or curr == "WeaponList" then return end
-        if last == "WeaponList" then
+    self.button_connections.skfback = self.Location.ItemListContainer_Skins.BackButton.MouseButton1Click:Connect(function()
+        local curr, last = self.Location.ItemListContainer_Skins:GetAttribute("CurrentItemList"), self.Location.ItemListContainer_Skins:GetAttribute("LastItemList")
+        if curr == last or curr == "MainList" then return end
+        if last == "MainList" then
             self:CloseItemList()
         else
-            self:OpenItemList(string.gsub(last, "SkinList_"))
+            self:OpenItemList(string.gsub(last, "ItemList_"))
         end
-        self.Location.SkinsFrame:SetAttribute("CurrentItemList", last)
+        self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", last)
     end)
 end
 
@@ -93,275 +102,216 @@ function Shop:Update(sc: number?, pc: number?)
     end
 end
 
--- [[ ITEM LIST ]]
-function Shop:OpenItemList(weapon)
-    for _, v in pairs(self.Location.SkinsFrame) do
-        if not v:IsA("Frame") then continue end
-        if string.match(v.Name, weapon) then
-            v.Visible = true
-            self:ConnectItemList(v)
-            self.Location.SkinFrame:SetAttribute("CurrentItemList", v.Name)
-        else
-            v.Visible = false
-            self:DisconnectItemList(v)
-        end
+-- [[ ITEM DISPLAY ]]
+function Shop:OpenItemDisplay(item, itemDisplayName)
+    if self.itemDisplayVar.active then return end
+    self.itemDisplayVar.active = true -- turned off in CloseItemDisplay()
+
+    local price = ShopInterface:GetItemPrice(item)
+    local itemType = price.parsed.item_type
+
+    self.itemDisplayFrame.Price_PC.Text = tostring(price.pc)
+    self.itemDisplayFrame.Price_SC.Text = tostring(price.sc)
+
+    if itemType == "case" then
+        self.itemDisplayFrame.CaseDisplay.Visible = true
+        self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
+        self.itemDisplayFrame.ItemName.Text = string.upper(itemDisplayName) or string.upper(price.parsed.model)
+    else
+        self.itemDisplayFrame.CaseDisplay.Visible = false
+        local imgLabel = self.itemDisplayFrame.ItemDisplayImageLabel
+        imgLabel.Image = self:GetSkinDisplayImageID(price.parsed.model, price.parsed.skin) or imgLabel.Image
+        self.itemDisplayFrame.ItemDisplayImageLabel.Visible = true
+        self.itemDisplayFrame.ItemName.Text = tostring(price.parsed.skin)
     end
+
+    self.itemDisplayConns.MainButton = self.itemDisplayFrame.MainButton.MouseButton1Click:Connect(function()
+        if self.itemDisplayVar.purchaseActive then
+            return
+        end
+        self.itemDisplayVar.purchaseActive = true -- turned off in itemDisplayDisconectMainClicked()
+        self:_MainClickedItemDisplay(item, itemType, price)
+    end)
+
+    self.itemDisplayConns.BackButton = self.itemDisplayFrame.BackButton.MouseButton1Click:Connect(function()
+        if self.itemDisplayVar.purchaseActive then
+            return
+        end
+        self:CloseItemDisplay()
+    end)
+
+    self.Location.ItemListContainer_Cases.Visible = false
+    self.Location.ItemListContainer_Skins.Visible = false
+    self.itemDisplayFrame.Visible = true
+    print('YUH')
 end
 
-function Shop:CloseItemList() -- back to default, WeaponList
-    for _, v in pairs(self.Location.SkinsFrame:GetChildren()) do
-        if not v:IsA("Frame") then continue end
-        if string.match(v.Name, "SkinList") then
-            self:DisconnectItemList(v)
-            if v.Visible then
-                self.Location.SkinsFrame:SetAttribute("LastItemList", v.Name)
+function Shop:CloseItemDisplay()
+    for _, v in pairs(CollectionService:GetTagged("CloseItemDisplay")) do
+        v:Destroy()
+    end
+    for _, v in pairs(self.itemDisplayConns) do
+        v:Disconnect()
+        v = false
+    end
+    self.itemDisplayVar.purchaseActive = false
+    self.itemDisplayVar.active = false
+    self.Location.ItemListContainer_Cases.Visible = true
+    self.Location.ItemListContainer_Skins.Visible = true
+    self.itemDisplayFrame.Visible = false
+end
+
+function Shop:_MainClickedItemDisplay(item, itemType, price)
+    local confirmGui = AttemptItemPurchaseGui:Clone()
+    local confirmFrame = confirmGui:WaitForChild("Frame")
+    CollectionService:AddTag(confirmGui, "CloseItemDisplay")
+
+    local pcAcceptButton = confirmFrame:WaitForChild("PCAcceptButton")
+    local scAcceptButton = confirmFrame:WaitForChild("SCAcceptButton")
+    local declineButton = confirmFrame:WaitForChild("DeclineButton")
+    local skinLabel = confirmFrame:WaitForChild("SkinLabel")
+    local weaponLabel = confirmFrame:WaitForChild("WeaponLabel")
+    local caseLabel = confirmFrame:WaitForChild("CaseLabel")
+
+    pcAcceptButton.Text = tostring(price.pc) .. " PC"
+    scAcceptButton.Text = tostring(price.sc) .. " SC"
+    if itemType == "case" then
+        skinLabel.Visible = false
+        weaponLabel.Visible = false
+        caseLabel.Text = string.upper(tostring(price.parsed.model))
+        caseLabel.Visible = true
+    else
+        skinLabel.Text = string.upper(tostring(price.parsed.skin))
+        weaponLabel.Text = string.upper(tostring(price.parsed.model))
+        caseLabel.Visible = false
+    end
+    local conns = {}
+    local function otherDisconnect(index)
+        for i, v in pairs(conns) do
+            if index and i == index then
+                continue
             end
+            v:Disconnect()
         end
-        v.Visible = false
     end
-    self.Location.SkinsFrame.WeaponList.Visible = true
-    self.Location.SkinsFrame:SetAttribute("CurrentItemList", "WeaponList")
-    self:ConnectItemList(self.Location.SkinsFrame.WeaponList, "OpenCorrespondingList")
+
+    local function selfDisconnect(index)
+        task.spawn(function()
+            conns[index]:Disconnect()
+        end)
+    end
+    
+    conns[1] = pcAcceptButton.MouseButton1Click:Once(function()
+        if self.itemDisplayVar.purchaseProcessing then
+            return
+        end
+        self.itemDisplayVar.purchaseProcessing = true
+        otherDisconnect(1)
+        itemDisplayPurchaseItem(self, item, "PremiumCredits", price.parsed)
+        confirmGui:Destroy()
+        selfDisconnect(1)
+        self:CloseItemDisplay()
+        self.itemDisplayVar.purchaseProcessing = false
+        self.itemDisplayVar.purchaseActive = false
+        conns = nil
+    end)
+
+    conns[2] = scAcceptButton.MouseButton1Click:Once(function()
+        if self.itemDisplayVar.purchaseProcessing then
+            return
+        end
+        self.itemDisplayVar.purchaseProcessing = true
+        otherDisconnect(2)
+        itemDisplayPurchaseItem(self, item, "StrafeCoins", price.parsed)
+        confirmGui:Destroy()
+        selfDisconnect(2)
+        self:CloseItemDisplay()
+        self.itemDisplayVar.purchaseProcessing = false
+        self.itemDisplayVar.purchaseActive = false
+        conns = nil
+    end)
+
+    conns[3] = declineButton.MouseButton1Click:Connect(function()
+        otherDisconnect(3)
+        confirmGui:Destroy()
+        selfDisconnect(3)
+        self:CloseItemDisplay()
+        conns = nil
+    end)
+
+    confirmGui.Parent = game.Players.LocalPlayer.PlayerGui
 end
 
-function Shop:ConnectItemList(frame, action: "OpenCorrespondingList" | "OpenSkinDisplay")
-    self:DisconnectItemList(frame)
-    self._ilconns[frame.Name] = {}
+function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem)
+    if ShopInterface:PurchaseItem(item, purchaseType) then
+        task.delay(0.5, function()
+            self:FindPage("Inventory"):Update(true)
+        end)
+        Popup.burst("Successfully bought item! " .. tostring(parsedItem.model), 3)
+        return true
+    else
+        Popup.burst("Could not buy item " .. tostring(parsedItem.model), 3)
+        return false
+    end
+end
+
+-- [[ ITEM LIST (only Skins uses these) ]]
+function Shop:OpenItemList(frame, action)
+    if self.itemListVar.OpenListName == frame.Name then
+        return
+    end
+    self:DisconnectItemList()
+    self.Location.ItemListContainer_Skins:SetAttribute("LastItemList", self.itemListVar.OpenListName)
+    self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", frame.Name)
+    self.itemListVar.OpenListName = frame.Name
+    self.itemListFrame.Visible = false
+
+    frame.Visible = true
+    self.itemListFrame = frame
+    self:ConnectItemList(frame, action or "OpenCorrespondingList")
+end
+
+function Shop:CloseItemList() -- back to default, MainList
+    self:DisconnectItemList()
+    if self.itemListVar.OpenListName ~= "MainList" then
+        self.Location.ItemListContainer_Skins:SetAttribute("LastItemList", self.itemListVar.OpenListName)
+        self.itemListFrame.Visible = false
+        self.itemListVar.OpenListName = "MainList"
+    end
+    self.itemListFrame = self.itemListDefaultFrame
+    self.itemListFrame.Visible = true
+    self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", "MainList")
+    self:ConnectItemList(self.Location.ItemListContainer_Skins.MainList, "OpenCorrespondingList")
+end
+
+function Shop:ConnectItemList(frame, action: "OpenCorrespondingList" | "OpenItemDisplay")
+    self:DisconnectItemList()
+
     for _, v in pairs(frame:GetChildren()) do
         if v:IsA("TextButton") then
-            table.insert(self._ilconns, v.MouseButton1Click:Connect(function()
+            table.insert(self.itemListConns, v.MouseButton1Click:Once(function()
                 if action == "OpenCorrespondingList" then
-                    frame.Visible = false
-                    frame.Parent[v.Name].Visible = true
-                    self:ConnectItemList(frame.Parent[v.Name], "OpenSkinDisplay")
-                    self.Location.SkinsFrame:SetAttribute("CurrentItemList", v.Name)
-                    self.Location.SkinsFrame:SetAttribute("LastItemList", "WeaponList")
-                elseif action == "OpenSkinDisplay" then
-                    self:OpenSkinDisplay(frame:GetAttribute("weaponKey"), v:GetAttribute("skinKey"))
+                    local corrList = string.gsub(v.Name, "text_", ""):gsub("ItemList_", ""):gsub("SkinList_", "")
+                    corrList = frame.Parent["ItemList_" .. corrList]
+                    self:OpenItemList(corrList, "OpenItemDisplay")
+                elseif action == "OpenItemDisplay" then
+                    self:OpenItemDisplay(v:GetAttribute("Item"), v:GetAttribute("ItemDisplayName"))
                 end
-                self:DisconnectItemList(frame)
             end))
         end
     end
 end
 
-function Shop:DisconnectItemList(frame)
-    if self._ilconns[frame.Name] then
-        for _, v in pairs(self._ilconns[frame.Name]) do
-            v:Disconnect()
-        end
-        self._ilconns[frame.Name] = nil
-    end
-end
-
--- [[ SKIN DISPLAY ]]
-
-function Shop:OpenSkinDisplay(weapon, skin)
-    if self.Location:GetAttribute("SkinDisplayActive") then
-        return
-    end
-    self.Location:SetAttribute("SkinDisplayActive", true)
-
-    local item = "skin_" .. weapon .. "_" .. skin
-    local price = ShopInterface:GetItemPrice(item)
-
-    self._sdframe.ImageLabel.Image = self:GetSkinDisplayImageID(weapon, skin)
-    self._sdframe.SkinName.Text = skin
-    self._sdframe:WaitForChild("Price_SC").Text = tostring(price.sc)
-    self._sdframe:WaitForChild("Price_PC").Text = tostring(price.pc)
-
-    self.button_connections.SkinDisplayPurchase = self._sdframe:WaitForChild("PurchaseButton").MouseButton1Click:Connect(function()
-        self:SkinDisplayPurchase(item, price, weapon, skin)
-    end)
-
-    self.button_connections.SkinDisplayBack = self._sdframe:WaitForChild("BackButton").MouseButton1Click:Connect(function()
-        self:CloseSkinDisplay()
-    end)
-
-    self.Location.SkinsFrame.Visible = false
-    self.Location.CasesFrame.Visible = false
-    self.Location.SkinDisplayFrame.Visible = true
-end
-
-function Shop:CloseSkinDisplay()
-    if not self.Location:GetAttribute("SkinDisplayActive") then
-        return
-    end
-    self.Location:SetAttribute("SkinDisplayActive", false)
-
-    for _, v in pairs(CollectionService:GetTagged("CloseSkinDisplay")) do
-        v:Destroy()
-    end
-    self._sdvar.purchasing = false
-    self:DisconnectSkinDisplay()
-
-    self.Location.SkinDisplayFrame.Visible = false
-    self.Location.SkinsFrame.Visible = true
-    self.Location.CasesFrame.Visible = true
-end
-
-function Shop:DisconnectSkinDisplay()
-    for _, v in pairs(self._sdconns) do
+function Shop:DisconnectItemList()
+    for _, v in pairs(self.itemListConns) do
         v:Disconnect()
     end
+    self.itemListConns = {}
 end
 
+-- [[ UTIL ]]
 function Shop:GetSkinDisplayImageID(weapon, skin): string
     return ReplicatedStorage:WaitForChild("Assets").Shop.SkinImages[skin][weapon].Image
-end
-
-function Shop:SkinDisplayPurchase(item, price, weapon, skin)
-    if self._sdvar.purchasing then return end
-    self._sdvar.purchasing = true
-    --self:DisconnectSkinDisplay()
-
-    local case = not skin and weapon or false
-    price = price or ShopInterface:GetItemPrice(item)
-
-    local close = case and function() self:CloseCaseDisplay() end or self:CloseSkinDisplay()
-
-    local pgui = AttemptShopPurchaseGui:Clone()
-    CollectionService:AddTag(pgui, case and "CloseCaseDisplay" or "CloseSkinDisplay")
-
-    pgui:WaitForChild("Frame"):WaitForChild("PCAcceptButton").Text = tostring(price.pc) .. " PC"
-    pgui:WaitForChild("Frame"):WaitForChild("SCAcceptButton").Text = tostring(price.sc) .. " SC"
-
-    local boughtSuccessStr
-    local boughtFailedStr
-    if case then
-        boughtSuccessStr = "Successfully bought key! " .. tostring(case)
-        boughtFailedStr = "Could not buy key"
-        pgui.Frame.SkinLabel.Visible = false
-        pgui.Frame.WeaponLabel.Text = tostring(case)
-    else
-        boughtSuccessStr = "Successfully bought skin! " .. weapon .. " | " .. skin
-        boughtFailedStr = "Could not buy skin"
-        pgui.Frame.SkinLabel.Text = tostring(skin)
-        pgui.Frame.WeaponLabel.Text = tostring(weapon)
-    end
-    
-    pgui.Parent = self.Player.PlayerGui
-    pgui.Enabled = true
-
-    -- [[ CLICK: PURCHASE ]]
-    self._sdconns[1] = pgui.Frame.SCAcceptButton.MouseButton1Click:Once(function()
-        if ShopInterface:PurchaseItem(item, "StrafeCoins") then
-            Popup.burst(boughtSuccessStr, 3)
-        else
-            Popup.burst(boughtFailedStr, 3)
-        end
-
-        pgui:Destroy()
-        self._sdconns[3]:Disconnect()
-        self._sdconns[2]:Disconnect()
-        self._sdvar.purchasing = false
-        close()
-        self._sdconns[1]:Disconnect()
-    end)
-
-    self._sdconns[2] = pgui.Frame.PCAcceptButton.MouseButton1Click:Once(function()
-        if ShopInterface:PurchaseItem(item, "PremiumCredits") then
-            Popup.burst(boughtSuccessStr, 3)
-        else
-            Popup.burst(boughtFailedStr, 3)
-        end
-
-        pgui:Destroy()
-        self._sdconns[3]:Disconnect()
-        self._sdconns[1]:Disconnect()
-        self._sdvar.purchasing = false
-        self._sdconns[2]:Disconnect()
-    end)
-
-    self._sdconns[3] = pgui.Frame.DeclineButton.MouseButton1Click:Once(function()
-        pgui:Destroy()
-        self._sdconns[1]:Disconnect()
-        self._sdconns[2]:Disconnect()
-        self._sdvar.purchasing = false
-        self._sdconns[3]:Disconnect()
-    end)
-end
-
--- [[ CASE DISPLAY ]]
-
-function Shop:OpenCaseDisplay(case)
-    if self.Location:GetAttribute("CaseDisplayActive") then
-        return
-    end
-    self.Location:SetAttribute("CaseDisplayActive", true)
-
-    local caseModel = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Cases"):FindFirstChild(case)
-    assert(caseModel, "Case Model for " .. tostring(case) .. " non-existent.")
-
-    self._cdframe.MainFrame.CaseNameLabel.Text = string.upper(tostring(case))
-    local viewport = self._cdframe.MainFrame.CaseDisplay.ViewportFrame
-    viewport:ClearAllChildren()
-    caseModel:Clone().Parent = viewport
-
-    local openingActive = false
-
-    -- OPEN BUTTON
-    self._cdconns.Open = self._cdframe.OpenButton.MouseButton1Click:Connect(function()
-        if openingActive then return end
-        openingActive = true
-
-        local hasPurchased = false
-        local pgui = AttemptOpenCaseGui:Clone()
-        CollectionService:AddTag(pgui, "CloseCaseDisplay")
-
-        local keyAcceptButton = pgui:WaitForChild("Frame"):WaitForChild("KeyAcceptButton")
-        local hasKey = ShopInterface:HasKey(case)
-        if hasKey then
-            keyAcceptButton.Text = "use key"
-            pgui.Frame.KeyNotOwnedLabel.Visible = false
-        else
-            pgui.Frame.KeyNotOwnedLabel.Visible = true
-        end
-
-        self._cdconns.Purchase = keyAcceptButton.MouseButton1Click:Connect(function()
-            if hasPurchased then return end
-            hasPurchased = true
-            if hasKey then
-                self:BeginCaseOpening(case)
-            else
-                self:SkinDisplayPurchase("key_weaponcase1")
-            end
-        end)
-    end)
-
-    self.Location.SkinsFrame.Visible = false
-    self.Location.CasesFrame.Visible = false
-    self._cdframe.Visible = true
-end
-
-function Shop:CloseCaseDisplay()
-    if not self.Location:GetAttribute("CaseDisplayActive") then
-        return
-    end
-    self.Location:SetAttribute("CaseDisplayActive", false)
-
-    for _, v in pairs(CollectionService:GetTagged("CloseCaseDisplay")) do
-        v:Destroy()
-    end
-    self._sdvar.purchasing = false
-    self:DisconnectCaseDisplay()
-
-    self.Location.CaseDisplayFrame.Visible = false
-    self.Location.SkinsFrame.Visible = true
-    self.Location.CasesFrame.Visible = true
-end
-
-function Shop:DisconnectCaseDisplay()
-    for _, v in pairs(self._sdconns) do
-        v:Disconnect()
-    end
-    for _, v in pairs(self._cdconns) do
-        v:Disconnect()
-    end
-end
-
-function Shop:BeginCaseOpening(case)
-    
 end
 
 return Shop

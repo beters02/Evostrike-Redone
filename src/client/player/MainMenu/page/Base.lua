@@ -85,4 +85,8 @@ function pageClass:PlaySound(sound: "Open" | "Hover")
     self._sounds[sound]:Play()
 end
 
+function pageClass:FindPage(pageName)
+    return self._mainPageModule:FindPage(pageName)
+end
+
 return pageClass
