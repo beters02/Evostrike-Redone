@@ -3,13 +3,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
+local Tables = require(Framework.Module.lib.fc_tables)
 
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
 local AttemptItemPurchaseGui = ShopAssets:WaitForChild("AttemptItemPurchase")
 
 local Shop = {}
+--TODO: change all Shop-Personal functions to be a script function rather than a module function.
 
+-- [[ PAGE CLASS FUNCTIONS ]]
 function Shop:init()
     self = setmetatable(Shop, self)
     self.Player = game.Players.LocalPlayer
@@ -26,10 +29,10 @@ function Shop:init()
 
     self.core_connections = {
         sc = PlayerData:PathValueChanged("economy.strafeCoins", function(new)
-            self:Update(new)
+            self:UpdateEconomy(new)
         end),
         pc = PlayerData:PathValueChanged("economy.premiumCredits", function(new)
-            self:Update(false, new)
+            self:UpdateEconomy(false, new)
         end)
     }
 
@@ -37,27 +40,25 @@ function Shop:init()
     self.pcLabel = owned:WaitForChild("PremiumCreditAmountLabel")
     self.scLabel = owned:WaitForChild("StrafeCoinAmountLabel")
     
-    local sc, pc = self:GetEconomy()
-    self:Update(sc, pc)
+    local pd = PlayerData:GetKey("economy")
+    self:UpdateEconomy(pd.strafeCoins, pd.premiumCredits)
     return self
 end
 
---
-
 function Shop:Open()
     self:OpenAnimations()
-    self:ConnectButtons()
+    ConnectButtons(self)
 end
 
 function Shop:Close()
     self:CloseItemDisplay()
     self:CloseItemList()
     self.Location.Visible = false
-    self:DisconnectButtons()
+    DisconnectButtons(self)
 end
 
-function Shop:ConnectButtons()
-
+--[[ BUTTONS ]]
+function ConnectButtons(self)
     -- [[ Connect Case Buttons]]
     for _, itemButton in pairs(self.Location.ItemListContainer_Cases.MainListFrame:GetChildren()) do
         if itemButton:IsA("TextButton") and not itemButton:GetAttribute("Disabled") then
@@ -75,31 +76,17 @@ function Shop:ConnectButtons()
         if last == "MainList" then
             self:CloseItemList()
         else
-            self:OpenItemList(string.gsub(last, "ItemList_"))
+            self:OpenItemList(self.Location.ItemListContainer_Skins[last])
         end
         self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", last)
     end)
 end
 
-function Shop:DisconnectButtons()
+function DisconnectButtons(self)
     for _, v in pairs(self.button_connections) do
         v:Disconnect()
     end
     self.button_connections = {}
-end
-
-function Shop:GetEconomy() --: sc, pc
-    local pd = PlayerData:Get()
-    return pd.economy.strafeCoins, pd.economy.premiumCredits
-end
-
-function Shop:Update(sc: number?, pc: number?)
-    if sc then
-        self.scLabel.Text = tostring(sc)
-    end
-    if pc then
-        self.pcLabel.Text = tostring(pc)
-    end
 end
 
 -- [[ ITEM DISPLAY ]]
@@ -143,7 +130,6 @@ function Shop:OpenItemDisplay(item, itemDisplayName)
     self.Location.ItemListContainer_Cases.Visible = false
     self.Location.ItemListContainer_Skins.Visible = false
     self.itemDisplayFrame.Visible = true
-    print('YUH')
 end
 
 function Shop:CloseItemDisplay()
@@ -255,12 +241,11 @@ function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem)
     end
 end
 
--- [[ ITEM LIST (only Skins uses these) ]]
-function Shop:OpenItemList(frame, action)
+-- [[ ITEM LIST (CURRENTLY SKINS ONLY) ]]
+function Shop:OpenItemList(frame, ignoreDisconnect)
     if self.itemListVar.OpenListName == frame.Name then
         return
     end
-    self:DisconnectItemList()
     self.Location.ItemListContainer_Skins:SetAttribute("LastItemList", self.itemListVar.OpenListName)
     self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", frame.Name)
     self.itemListVar.OpenListName = frame.Name
@@ -268,11 +253,10 @@ function Shop:OpenItemList(frame, action)
 
     frame.Visible = true
     self.itemListFrame = frame
-    self:ConnectItemList(frame, action or "OpenCorrespondingList")
+    self:_ConnectItemList(frame)
 end
 
 function Shop:CloseItemList() -- back to default, MainList
-    self:DisconnectItemList()
     if self.itemListVar.OpenListName ~= "MainList" then
         self.Location.ItemListContainer_Skins:SetAttribute("LastItemList", self.itemListVar.OpenListName)
         self.itemListFrame.Visible = false
@@ -280,38 +264,89 @@ function Shop:CloseItemList() -- back to default, MainList
     end
     self.itemListFrame = self.itemListDefaultFrame
     self.itemListFrame.Visible = true
+    self:_ConnectItemList(self.itemListFrame)
     self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", "MainList")
-    self:ConnectItemList(self.Location.ItemListContainer_Skins.MainList, "OpenCorrespondingList")
 end
 
-function Shop:ConnectItemList(frame, action: "OpenCorrespondingList" | "OpenItemDisplay")
-    self:DisconnectItemList()
+function Shop:OpenLastItemList()
+    local curr, last = self.Location.ItemListContainer_Skins:GetAttribute("CurrentItemList"), self.Location.ItemListContainer_Skins:GetAttribute("LastItemList")
+    if curr == last or curr == "MainList" then return end
+    if last == "MainList" then
+        self:CloseItemList()
+    else
+        self:OpenItemList(self.Location.ItemListContainer_Skins[last])
+    end
+    self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", last)
+end
 
-    for _, v in pairs(frame:GetChildren()) do
-        if v:IsA("TextButton") then
-            table.insert(self.itemListConns, v.MouseButton1Click:Once(function()
-                if action == "OpenCorrespondingList" then
-                    local corrList = string.gsub(v.Name, "text_", ""):gsub("ItemList_", ""):gsub("SkinList_", "")
-                    corrList = frame.Parent["ItemList_" .. corrList]
-                    self:OpenItemList(corrList, "OpenItemDisplay")
-                elseif action == "OpenItemDisplay" then
-                    self:OpenItemDisplay(v:GetAttribute("Item"), v:GetAttribute("ItemDisplayName"))
-                end
-            end))
+function Shop:_ConnectItemList(listFrame)
+    local isMain = listFrame.Name == "MainList"
+
+    if isMain then
+        self.Location.ItemListContainer_Skins.BackButton.Visible = false
+    else
+        if self.itemListConns.Back then
+            self.itemListConns.Back:Disconnect()
         end
+        local backConnection = self.Location.ItemListContainer_Skins.BackButton.MouseButton1Click:Connect(function()
+            self:OpenLastItemList()
+        end)
+        self.Location.ItemListContainer_Skins.BackButton.Visible = true
+        self.itemListConns.Back = backConnection
+    end
+
+    self:_DelayDisconnectList(#self.itemListConns)
+    
+    for _, item in pairs(listFrame:GetChildren()) do
+        if not item:IsA("Frame") then
+            continue
+        end
+
+        local button = item:WaitForChild("TextButton")
+        local connection = button.MouseButton1Click:Connect(function()
+            if item.Parent.Name == "MainList" then
+                local corrList = string.gsub(item.Name, "ButtonFrame_", "")
+                corrList = item.Parent.Parent["ItemList_" .. corrList]
+                self:OpenItemList(corrList, true)
+            else
+                local displayName = item:GetAttribute("ItemDisplayName") or string.upper(string.gsub(item.Name, "ItemList_", ""))
+                self:OpenItemDisplay(item:GetAttribute("Item"), displayName)
+            end
+        end)
+
+        table.insert(self.itemListConns, connection)
     end
 end
 
-function Shop:DisconnectItemList()
+function Shop:_DisconnectItemList()
     for _, v in pairs(self.itemListConns) do
         v:Disconnect()
     end
     self.itemListConns = {}
 end
 
+function Shop:_DelayDisconnectList(total)
+    if total > 0 then
+        task.delay(0.1, function()
+            for i = 1, #self.itemListConns do
+                self.itemListConns[i] = nil
+            end
+        end)
+    end
+end
+
 -- [[ UTIL ]]
 function Shop:GetSkinDisplayImageID(weapon, skin): string
     return ReplicatedStorage:WaitForChild("Assets").Shop.SkinImages[skin][weapon].Image
+end
+
+function Shop:UpdateEconomy(sc: number?, pc: number?)
+    if sc then
+        self.scLabel.Text = tostring(sc)
+    end
+    if pc then
+        self.pcLabel.Text = tostring(pc)
+    end
 end
 
 return Shop
