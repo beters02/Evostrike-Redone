@@ -13,7 +13,7 @@ local Math = require(Framework.Module.lib.fc_math)
 local InstLib = require(Framework.shfc_instance.Location)
 local UIState = States.State("UI")
 local PlayerActionsState = States.State("PlayerActions")
-local Types = require(script.Parent.Types)
+--local Types = require(script.Parent.Types)
 local SoundModule = require(Framework.Module.Sound)
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
 local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
@@ -65,7 +65,7 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     if not controller then
         repeat controller = controllermodule.currentController until controller
     end
-    controller = controller :: Types.WeaponController
+    controller = controller
     self.Controller = controller
 
     -- init animations

@@ -84,6 +84,31 @@ RemoteFunctions = {
     AttemptItemPurchase = Shop.PurchaseItem
 }
 
+RemoteFunctions.HasKey = function(player, caseName) -- Returns Key Inventory Index or False
+    local keyInventory = PlayerData:GetPath(player, "inventory.key")
+    for i, v in pairs(keyInventory) do
+        if string.match(v, caseName) then
+            return i
+        end
+    end
+end
+
+RemoteFunctions.UseKey = function(player, caseName)
+    local keyIndex = false
+    local keyInventory = PlayerData:GetPath(player, "inventory.key")
+    for i, v in pairs(keyInventory) do
+        if string.match(v, caseName) then
+            keyIndex = i
+            break
+        end
+    end
+
+    if not keyIndex then return false end
+    table.remove(keyInventory, keyIndex)
+    PlayerData:SetPath(player, "inventory.key", keyInventory)
+    PlayerData:Save(player)
+end
+
 -- INIT
 for _, v in pairs(Events:GetChildren()) do
     if string.match(v.Name, "rf_") then

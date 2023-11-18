@@ -12,6 +12,14 @@
       {
         "Name": "c_AddStrafeCoins",
         "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "rf_HasKey",
+        "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "rf_UseKey",
+        "ClassName": "RemoteFunction"
       }
     ]
   }

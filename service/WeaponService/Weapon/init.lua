@@ -791,6 +791,7 @@ end
 
 function Weapon:RegisterRecoils()
     local vecRecoil = self.Recoil.Fire(self, self.Variables.currentBullet)
+    local bullet = self.Variables.currentBullet
 
     -- Vector Recoil
 	task.spawn(function()
@@ -802,7 +803,7 @@ function Weapon:RegisterRecoils()
         self.Variables.recoilReset = self._camReset
 
 		-- get total accuracy and recoil vec direction
-        local direction = self:CalculateRecoils(mray, vecRecoil)
+        local direction = self:CalculateRecoils(mray, vecRecoil, bullet)
 
 		-- check to see if we're wallbanging
 		local wallDmgMult, hitchar, result
@@ -821,13 +822,13 @@ function Weapon:RegisterRecoils()
 	end)
 end
 
-function Weapon:CalculateRecoils(mray, recoilVector3)
+function Weapon:CalculateRecoils(mray, recoilVector3, bullet)
     local acc = self:CalculateAccuracy(recoilVector3)
     local new = Vector2.new(recoilVector3.Y, recoilVector3.X)
     local vecr
 
 	-- first bullet remove vector recoil
-	if self.Variables.currentBullet == 1 then
+	if bullet == 1 then
 		new = Vector2.zero
 		self.Variables.lastYVec = 0
 	else

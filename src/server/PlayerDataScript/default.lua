@@ -17,7 +17,7 @@ local profile = {
 	-- The table index value of the item is it's UUID.
 	-- All default skins have a UUID of 0.
 
-    inventory = {case = {}, skin = {}, equipped = {
+    inventory = {case = {}, key = {}, skin = {}, equipped = {
 		ak47 = "default_0",
 		glock17 = "default_0",
 		knife = "default_default_0",

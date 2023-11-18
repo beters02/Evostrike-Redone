@@ -2,9 +2,12 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
-local ShopInterface = require(Framework.Module.ShopInterface)
-local AttemptShopPurchaseGui = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop"):WaitForChild("AttemptItemPurchase")
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
+
+local ShopInterface = require(Framework.Module.ShopInterface)
+local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
+local AttemptShopPurchaseGui = ShopAssets:WaitForChild("AttemptItemPurchase")
+local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
 
 local Shop = {}
 
@@ -16,6 +19,11 @@ function Shop:init()
     self._sdframe = self.Location:WaitForChild("SkinDisplayFrame")
     self._sdvar = {}
     self._sdconns = {}
+
+    self._cdframe = self.Location:WaitForChild("CaseDisplayFrame")
+    self._cdvar = {}
+    self._cdconns = {}
+
     self._ilconns = {}
 
     self.core_connections = {
@@ -163,59 +171,7 @@ function Shop:OpenSkinDisplay(weapon, skin)
     self._sdframe:WaitForChild("Price_PC").Text = tostring(price.pc)
 
     self.button_connections.SkinDisplayPurchase = self._sdframe:WaitForChild("PurchaseButton").MouseButton1Click:Connect(function()
-        print('yuh')
-
-        if self._sdvar.purchasing then return end
-        self._sdvar.purchasing = true
-        --self:DisconnectSkinDisplay()
-
-        local pgui = AttemptShopPurchaseGui:Clone()
-        CollectionService:AddTag(pgui, "CloseSkinDisplay")
-
-        pgui:WaitForChild("Frame"):WaitForChild("PCAcceptButton").Text = tostring(price.pc) .. " PC"
-        pgui:WaitForChild("Frame"):WaitForChild("SCAcceptButton").Text = tostring(price.sc) .. " SC"
-        pgui.Frame.SkinLabel.Text = tostring(skin)
-        pgui.Frame.WeaponLabel.Text = tostring(weapon)
-        pgui.Parent = self.Player.PlayerGui
-        pgui.Enabled = true
-
-        -- [[ CLICK: PURCHASE ]]
-        self._sdconns[1] = pgui.Frame.SCAcceptButton.MouseButton1Click:Once(function()
-            if ShopInterface:PurchaseItem(item, "StrafeCoins") then
-                Popup.burst("Successfully bought skin! " .. weapon .. " | " .. skin, 3)
-            else
-                Popup.burst("Could not buy skin.", 3)
-            end
-
-            pgui:Destroy()
-            self._sdconns[3]:Disconnect()
-            self._sdconns[2]:Disconnect()
-            self._sdvar.purchasing = false
-            self:CloseSkinDisplay()
-            self._sdconns[1]:Disconnect()
-        end)
-
-        self._sdconns[2] = pgui.Frame.PCAcceptButton.MouseButton1Click:Once(function()
-            if ShopInterface:PurchaseItem(item, "PremiumCredits") then
-                Popup.burst("Successfully bought skin! " .. weapon .. " | " .. skin, 3)
-            else
-                Popup.burst("Could not buy skin.", 3)
-            end
-
-            pgui:Destroy()
-            self._sdconns[3]:Disconnect()
-            self._sdconns[1]:Disconnect()
-            self._sdvar.purchasing = false
-            self._sdconns[2]:Disconnect()
-        end)
-
-        self._sdconns[3] = pgui.Frame.DeclineButton.MouseButton1Click:Once(function()
-            pgui:Destroy()
-            self._sdconns[1]:Disconnect()
-            self._sdconns[2]:Disconnect()
-            self._sdvar.purchasing = false
-            self._sdconns[3]:Disconnect()
-        end)
+        self:SkinDisplayPurchase(item, price, weapon, skin)
     end)
 
     self.button_connections.SkinDisplayBack = self._sdframe:WaitForChild("BackButton").MouseButton1Click:Connect(function()
@@ -252,6 +208,160 @@ end
 
 function Shop:GetSkinDisplayImageID(weapon, skin): string
     return ReplicatedStorage:WaitForChild("Assets").Shop.SkinImages[skin][weapon].Image
+end
+
+function Shop:SkinDisplayPurchase(item, price, weapon, skin)
+    if self._sdvar.purchasing then return end
+    self._sdvar.purchasing = true
+    --self:DisconnectSkinDisplay()
+
+    local case = not skin and weapon or false
+    price = price or ShopInterface:GetItemPrice(item)
+
+    local close = case and function() self:CloseCaseDisplay() end or self:CloseSkinDisplay()
+
+    local pgui = AttemptShopPurchaseGui:Clone()
+    CollectionService:AddTag(pgui, case and "CloseCaseDisplay" or "CloseSkinDisplay")
+
+    pgui:WaitForChild("Frame"):WaitForChild("PCAcceptButton").Text = tostring(price.pc) .. " PC"
+    pgui:WaitForChild("Frame"):WaitForChild("SCAcceptButton").Text = tostring(price.sc) .. " SC"
+
+    local boughtSuccessStr
+    local boughtFailedStr
+    if case then
+        boughtSuccessStr = "Successfully bought key! " .. tostring(case)
+        boughtFailedStr = "Could not buy key"
+        pgui.Frame.SkinLabel.Visible = false
+        pgui.Frame.WeaponLabel.Text = tostring(case)
+    else
+        boughtSuccessStr = "Successfully bought skin! " .. weapon .. " | " .. skin
+        boughtFailedStr = "Could not buy skin"
+        pgui.Frame.SkinLabel.Text = tostring(skin)
+        pgui.Frame.WeaponLabel.Text = tostring(weapon)
+    end
+    
+    pgui.Parent = self.Player.PlayerGui
+    pgui.Enabled = true
+
+    -- [[ CLICK: PURCHASE ]]
+    self._sdconns[1] = pgui.Frame.SCAcceptButton.MouseButton1Click:Once(function()
+        if ShopInterface:PurchaseItem(item, "StrafeCoins") then
+            Popup.burst(boughtSuccessStr, 3)
+        else
+            Popup.burst(boughtFailedStr, 3)
+        end
+
+        pgui:Destroy()
+        self._sdconns[3]:Disconnect()
+        self._sdconns[2]:Disconnect()
+        self._sdvar.purchasing = false
+        close()
+        self._sdconns[1]:Disconnect()
+    end)
+
+    self._sdconns[2] = pgui.Frame.PCAcceptButton.MouseButton1Click:Once(function()
+        if ShopInterface:PurchaseItem(item, "PremiumCredits") then
+            Popup.burst(boughtSuccessStr, 3)
+        else
+            Popup.burst(boughtFailedStr, 3)
+        end
+
+        pgui:Destroy()
+        self._sdconns[3]:Disconnect()
+        self._sdconns[1]:Disconnect()
+        self._sdvar.purchasing = false
+        self._sdconns[2]:Disconnect()
+    end)
+
+    self._sdconns[3] = pgui.Frame.DeclineButton.MouseButton1Click:Once(function()
+        pgui:Destroy()
+        self._sdconns[1]:Disconnect()
+        self._sdconns[2]:Disconnect()
+        self._sdvar.purchasing = false
+        self._sdconns[3]:Disconnect()
+    end)
+end
+
+-- [[ CASE DISPLAY ]]
+
+function Shop:OpenCaseDisplay(case)
+    if self.Location:GetAttribute("CaseDisplayActive") then
+        return
+    end
+    self.Location:SetAttribute("CaseDisplayActive", true)
+
+    local caseModel = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Cases"):FindFirstChild(case)
+    assert(caseModel, "Case Model for " .. tostring(case) .. " non-existent.")
+
+    self._cdframe.MainFrame.CaseNameLabel.Text = string.upper(tostring(case))
+    local viewport = self._cdframe.MainFrame.CaseDisplay.ViewportFrame
+    viewport:ClearAllChildren()
+    caseModel:Clone().Parent = viewport
+
+    local openingActive = false
+
+    -- OPEN BUTTON
+    self._cdconns.Open = self._cdframe.OpenButton.MouseButton1Click:Connect(function()
+        if openingActive then return end
+        openingActive = true
+
+        local hasPurchased = false
+        local pgui = AttemptOpenCaseGui:Clone()
+        CollectionService:AddTag(pgui, "CloseCaseDisplay")
+
+        local keyAcceptButton = pgui:WaitForChild("Frame"):WaitForChild("KeyAcceptButton")
+        local hasKey = ShopInterface:HasKey(case)
+        if hasKey then
+            keyAcceptButton.Text = "use key"
+            pgui.Frame.KeyNotOwnedLabel.Visible = false
+        else
+            pgui.Frame.KeyNotOwnedLabel.Visible = true
+        end
+
+        self._cdconns.Purchase = keyAcceptButton.MouseButton1Click:Connect(function()
+            if hasPurchased then return end
+            hasPurchased = true
+            if hasKey then
+                self:BeginCaseOpening(case)
+            else
+                self:SkinDisplayPurchase("key_weaponcase1")
+            end
+        end)
+    end)
+
+    self.Location.SkinsFrame.Visible = false
+    self.Location.CasesFrame.Visible = false
+    self._cdframe.Visible = true
+end
+
+function Shop:CloseCaseDisplay()
+    if not self.Location:GetAttribute("CaseDisplayActive") then
+        return
+    end
+    self.Location:SetAttribute("CaseDisplayActive", false)
+
+    for _, v in pairs(CollectionService:GetTagged("CloseCaseDisplay")) do
+        v:Destroy()
+    end
+    self._sdvar.purchasing = false
+    self:DisconnectCaseDisplay()
+
+    self.Location.CaseDisplayFrame.Visible = false
+    self.Location.SkinsFrame.Visible = true
+    self.Location.CasesFrame.Visible = true
+end
+
+function Shop:DisconnectCaseDisplay()
+    for _, v in pairs(self._sdconns) do
+        v:Disconnect()
+    end
+    for _, v in pairs(self._cdconns) do
+        v:Disconnect()
+    end
+end
+
+function Shop:BeginCaseOpening(case)
+    
 end
 
 return Shop
