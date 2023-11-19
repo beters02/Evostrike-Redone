@@ -11,9 +11,9 @@ local module = {
 	walkNoiseSpeed = 15.5,
 
 	--[[ Ground Settings ]]
-	groundAccelerate = 10.2,
-	groundDeccelerate = 16, -- the lower this number is, the longer it takes to decel btw
-	groundMaxSpeed = 21,
+	groundAccelerate = 10.6,
+	groundDeccelerate = 17, -- the lower this number is, the longer it takes to decel btw
+	groundMaxSpeed = 21.5,
 
 	walkMoveSpeed = 14,
 	walkAccelerate = 12,

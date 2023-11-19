@@ -1,46 +1,45 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local ClientInterface = ReplicatedStorage.Modules.ShopInterface
 local Events = ClientInterface.Events
 local Shared = require(ClientInterface.Shared)
-local Items = require(script:WaitForChild("Items"))
 local Strings = require(Framework.Module.lib.fc_strings)
+local Tables = require(Framework.Module.lib.fc_tables)
 local PlayerData = require(Framework.Module.PlayerData)
-local Admins = require(game:GetService("ServerStorage").Stored.AdminIDs)
+local Admins = require(ServerStorage.Stored.AdminIDs)
+local Cases = require(ServerStorage.Stored.Cases)
+local Skins = require(ServerStorage.Stored.Skins)
+local Keys = require(ServerStorage.Stored.Keys)
 
 local Shop = {}
 local RemoteFunctions = {}
 
+-- [[ SHOP PRIVATE ]]
 Shop = {
     parseItemString = function(item: Shared.TShopItem)
         local split = string.split(item, "_")
-        local returnObject = {
-            insert_type = "table",
-            path = split[2],
-            price_sc = 0,
-            price_pc = 0,
-            item_type = split[1],
-            model = split[2],
-            skin = split[3],
-            knifeWrap = split[4]
-        }
+        local returnObject
 
         if split[1] == "skin" then
-            local weapon = split[2]
-            local skin = split[3]
-            if weapon == "knife" then
-                skin = split[3] .. "_" .. split[4]
-            end
-
-            local pd = Strings.convertPathToInstance("Skins." .. weapon .. "." .. skin, Items)
-            returnObject.price_pc = pd.buy_pc
-            returnObject.price_sc = pd.buy_sc
-            returnObject.path = weapon .. "_" .. skin
-        else
-            local pd = Strings.convertPathToInstance("Cases." .. returnObject.model, Items)
-            returnObject.price_pc = pd.buy_pc
-            returnObject.price_sc = pd.buy_sc
-            returnObject.path = "case_" .. returnObject.model
+            local skin = string.gsub(item, "skin_", "")
+            returnObject = Tables.clone(Skins.GetSkinFromString(skin))
+            returnObject.item_type = "skin"
+            returnObject.insert_type = "table"
+            returnObject.path = skin
+            returnObject.inventoryKey = skin
+        elseif split[1] == "case" then
+            returnObject = Tables.clone(Cases.Cases[split[2]])
+            returnObject.item_type = "case"
+            returnObject.insert_type = "table"
+            returnObject.path = "case_" .. split[2]
+            returnObject.inventoryKey = returnObject.path
+        elseif split[1] == "key" then
+            returnObject = Tables.clone(Keys[split[2]])
+            returnObject.item_type = "key"
+            returnObject.insert_type = "table"
+            returnObject.path = "key_" .. split[2]
+            returnObject.inventoryKey = returnObject.path
         end
 
         return returnObject
@@ -59,6 +58,7 @@ Shop = {
     end
 }
 
+-- [[ SHOP PUBLIC ]]
 Shop.PurchaseItem = function(player, purchaseType, item)
     local canPurchase = Shop.canAffordItem(player, purchaseType, item)
     if canPurchase then
@@ -69,9 +69,9 @@ Shop.PurchaseItem = function(player, purchaseType, item)
         price = priceData[price]
 
         if priceData.insert_type == "table" then
-            local inventoryStr = priceData.item_type == "case" and "inventory.case" or "inventory.skin"
-            PlayerData:TableInsert(player, inventoryStr, priceData.path)
-        else
+            local inventoryStr = "inventory." .. priceData.item_type
+            PlayerData:TableInsert(player, inventoryStr, priceData.inventoryKey)
+        else -- this is for when players want to buy premiumCredits
             PlayerData:IncrementPath(player, "economy.pc", priceData.path)
         end
 
@@ -96,25 +96,48 @@ RemoteFunctions.HasKey = function(player, caseName) -- Returns Key Inventory Ind
     local keyInventory = PlayerData:GetPath(player, "inventory.key")
     for i, v in pairs(keyInventory) do
         if string.match(v, caseName) then
-            return i
+            return i, keyInventory
         end
     end
+    return false
 end
 
-RemoteFunctions.UseKey = function(player, caseName)
-    local keyIndex = false
-    local keyInventory = PlayerData:GetPath(player, "inventory.key")
-    for i, v in pairs(keyInventory) do
+RemoteFunctions.HasCase = function(player, caseName)
+    local caseInventory = PlayerData:GetPath(player, "inventory.case")
+    for i, v in pairs(caseInventory) do
         if string.match(v, caseName) then
-            keyIndex = i
-            break
+            return i, caseInventory
         end
     end
+    return false
+end
 
-    if not keyIndex then return false end
+RemoteFunctions.OpenCase = function(player, caseName)
+    local caseIndex, caseInventory = RemoteFunctions.HasCase(player, caseName)
+    local keyIndex, keyInventory = RemoteFunctions.HasKey(player, caseName)
+    if not caseIndex or not keyIndex then
+        return false
+    end
+
+    --local openedItem, potentialItems = EvoCases:Open(caseName)
+    local openedSkin, potentialSkins = Cases.OpenCase(caseName)
+    assert(openedSkin and potentialSkins, "Could not get Opened Case Item from server. Credits were not spent.")
+
+    print(caseInventory)
+    table.remove(caseInventory, caseIndex)
+    print(caseInventory)
+
     table.remove(keyInventory, keyIndex)
+    PlayerData:SetPath(player, "inventory.case", caseInventory)
     PlayerData:SetPath(player, "inventory.key", keyInventory)
+    print("Successfully removed Case and Key from player's inventory for Case Opening.")
+
+    PlayerData:TableInsert(player, "inventory.skin", openedSkin.inventoryKey)
+    print("Successfully added received Case Item to player's inventory.")
+
     PlayerData:Save(player)
+
+    return openedSkin, potentialSkins
 end
 
 -- INIT

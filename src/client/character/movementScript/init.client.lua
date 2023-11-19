@@ -469,7 +469,7 @@ function Movement.SetFrictionVars(frictionVarKey: string)
 		Movement.groundAccelerate = Movement.walkAccelerate
 		Movement.friction = Movement.crouchFriction
 	elseif frictionVarKey == "run" then
-		local sub = Movement.LastFrictionVar == "crouch" and Movement.crouchMoveSpeed or Movement.walkMoveSpeed
+		local sub = (Movement.LastFrictionVar == "crouch" and Movement.crouchMoveSpeed) or (Movement.LastFrictionVar == "walk" and Movement.walkMoveSpeed) or 0
 		Movement.LastFrictionVar = "run"
 		Movement.maxSpeedAdd += (Movement.groundMaxSpeed - sub)
 		Movement.groundAccelerate = Movement.defGroundAccelerate

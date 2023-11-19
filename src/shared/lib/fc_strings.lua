@@ -94,8 +94,8 @@ end
 	@return value: any = location instance/table
 ]]
 
-function Strings.convertPathToInstance(str: string, start: any, ignoreError: boolean?)
-	local segments = str:split(".")
+function Strings.convertPathToInstance(str: string, start: any, ignoreError: boolean?, divider: string?)
+	local segments = str:split(divider or ".")
 	local current = start or game
 
 	local success, err = pcall(function()

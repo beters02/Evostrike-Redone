@@ -9,15 +9,15 @@ function Shop:PurchaseItem(item: Shared.TShopItem, purchaseType: "StrafeCoins" |
 end
 
 function Shop:HasKey(caseName)
-    Events.rf_HasKey:InvokeServer(caseName)
-end
-
-function Shop:UseKey(caseName)
-    Events.rf_UseKey:InvokeServer(caseName)
+    return Events.rf_HasKey:InvokeServer(caseName)
 end
 
 function Shop:GetItemPrice(item)
     return Events.rf_GetItemPrice:InvokeServer(item)
+end
+
+function Shop:OpenCase(caseName)
+    return Events.rf_OpenCase:InvokeServer(caseName)
 end
 
 return Shop

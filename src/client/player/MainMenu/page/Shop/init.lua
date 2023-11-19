@@ -8,6 +8,7 @@ local Tables = require(Framework.Module.lib.fc_tables)
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
 local AttemptItemPurchaseGui = ShopAssets:WaitForChild("AttemptItemPurchase")
+local ItemList = require(script.Parent.Parent.components.ItemList)
 
 local Shop = {}
 --TODO: change all Shop-Personal functions to be a script function rather than a module function.
@@ -22,10 +23,14 @@ function Shop:init()
     self.itemDisplayVar = {active = false, purchaseActive = false, purchaseProcessing = false}
     self.itemDisplayConns = {}
 
-    self.itemListDefaultFrame = self.Location.ItemListContainer_Skins.MainList
-    self.itemListFrame = self.itemListDefaultFrame
-    self.itemListConns = {}
-    self.itemListVar = {OpenListName = "MainList"}
+    -- ItemLists
+    self.itemLists = {}
+    for _, itemListFrame in pairs(self.Location:GetChildren()) do
+        if itemListFrame:IsA("Frame") and string.match(itemListFrame.Name, "ItemList_") then
+            local OItemList = ItemList.init(self, itemListFrame)
+            self.itemLists[itemListFrame.Name] = OItemList
+        end
+    end
 
     self.core_connections = {
         sc = PlayerData:PathValueChanged("economy.strafeCoins", function(new)
@@ -46,47 +51,107 @@ function Shop:init()
 end
 
 function Shop:Open()
+    self:ConnectButtons()
     self:OpenAnimations()
-    ConnectButtons(self)
+    self:TogglePages(true)
 end
 
 function Shop:Close()
+    self:DisconnectButtons()
     self:CloseItemDisplay()
-    self:CloseItemList()
     self.Location.Visible = false
-    DisconnectButtons(self)
+    self:TogglePages()
 end
 
---[[ BUTTONS ]]
-function ConnectButtons(self)
-    -- [[ Connect Case Buttons]]
-    for _, itemButton in pairs(self.Location.ItemListContainer_Cases.MainListFrame:GetChildren()) do
-        if itemButton:IsA("TextButton") and not itemButton:GetAttribute("Disabled") then
-            self.button_connections["case_" .. tostring(itemButton.Name)] = itemButton.MouseButton1Click:Connect(function()
-                self:OpenItemDisplay(itemButton:GetAttribute("Item"), itemButton:GetAttribute("ItemDisplayName"))
-            end)
-        end
-    end
+--
 
-    -- [[ Connect Skin Buttons ]]
-    self:CloseItemList()
-    self.button_connections.skfback = self.Location.ItemListContainer_Skins.BackButton.MouseButton1Click:Connect(function()
-        local curr, last = self.Location.ItemListContainer_Skins:GetAttribute("CurrentItemList"), self.Location.ItemListContainer_Skins:GetAttribute("LastItemList")
-        if curr == last or curr == "MainList" then return end
-        if last == "MainList" then
-            self:CloseItemList()
-        else
-            self:OpenItemList(self.Location.ItemListContainer_Skins[last])
-        end
-        self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", last)
+function Shop:ConnectButtons()
+    self.button_connections.skins = self.Location.SkinsButton.MouseButton1Click:Connect(function()
+        self:OpenSkinsPage()
+    end)
+    self.button_connections.collections = self.Location.CollectionsButton.MouseButton1Click:Connect(function()
+        self:OpenCollectionsPage()
+    end)
+    self.button_connections.cases = self.Location.CasesButton.MouseButton1Click:Connect(function()
+        self:OpenCasesPage()
     end)
 end
 
-function DisconnectButtons(self)
-    for _, v in pairs(self.button_connections) do
-        v:Disconnect()
+function Shop:DisconnectButtons()
+    self.button_connections.skins:Disconnect()
+    self.button_connections.collections:Disconnect()
+    self.button_connections.cases:Disconnect()
+end
+
+-- [[ COLLECTIONS / SKINS / CASES PAGE ]]
+function Shop:OpenSkinsPage(async)
+    if not async and self.openItemList == "Skins" then
+        return
     end
-    self.button_connections = {}
+    self.openItemList = "Skins"
+
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
+    self.Location.CollectionsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.itemLists.ItemList_Skins:Enable()
+    self.itemLists.ItemList_Cases:Disable()
+    self.itemLists.ItemList_Keys:Disable()
+    self.itemLists.ItemList_Collections:Disable()
+end
+
+function Shop:OpenCollectionsPage(async)
+    if not async and self.openItemList == "Collections" then
+        return
+    end
+    self.openItemList = "Collections"
+
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.CollectionsButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.itemLists.ItemList_Skins:Disable()
+    self.itemLists.ItemList_Cases:Disable()
+    self.itemLists.ItemList_Keys:Disable()
+    self.itemLists.ItemList_Collections:Enable()
+end
+
+function Shop:OpenCasesPage(async)
+    if not async and self.openItemList == "Cases" then
+        return
+    end
+    self.openItemList = "Cases"
+
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.CollectionsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
+    self.itemLists.ItemList_Cases:Enable()
+    self.itemLists.ItemList_Keys:Enable()
+    self.itemLists.ItemList_Skins:Disable()
+    self.itemLists.ItemList_Collections:Disable()
+end
+
+-- Toggle All Pages On/Off
+function Shop:TogglePages(toggle)
+    if toggle then
+        self.openItemList = self.openItemList or "Collections"
+        if self.openItemList == "Collections" then
+            self:OpenCollectionsPage(true)
+        elseif self.openItemList == "Skins" then
+            self:OpenSkinsPage(true)
+        else
+            self:OpenCasesPage(true)
+        end
+        self.Location.SkinsButton.Visible = true
+        self.Location.CollectionsButton.Visible = true
+        self.Location.CasesButton.Visible = true
+    else
+        self.itemLists.ItemList_Skins:Disable()
+        self.itemLists.ItemList_Cases:Disable()
+        self.itemLists.ItemList_Keys:Disable()
+        self.itemLists.ItemList_Collections:Disable()
+        self.Location.SkinsButton.Visible = false
+        self.Location.CollectionsButton.Visible = false
+        self.Location.CasesButton.Visible = false
+    end
 end
 
 -- [[ ITEM DISPLAY ]]
@@ -96,20 +161,23 @@ function Shop:OpenItemDisplay(item, itemDisplayName)
 
     local price = ShopInterface:GetItemPrice(item)
     local itemType = price.parsed.item_type
+    itemDisplayName = itemDisplayName or price.parsed.name
 
     self.itemDisplayFrame.Price_PC.Text = tostring(price.pc)
     self.itemDisplayFrame.Price_SC.Text = tostring(price.sc)
 
-    if itemType == "case" then
+    if itemType == "case" or itemType == "key" then
         self.itemDisplayFrame.CaseDisplay.Visible = true
         self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
-        self.itemDisplayFrame.ItemName.Text = string.upper(itemDisplayName) or string.upper(price.parsed.model)
+        self.itemDisplayFrame.ItemName.Text = string.upper(itemDisplayName)
     else
+        local skin = price.parsed
+
         self.itemDisplayFrame.CaseDisplay.Visible = false
         local imgLabel = self.itemDisplayFrame.ItemDisplayImageLabel
-        imgLabel.Image = self:GetSkinDisplayImageID(price.parsed.model, price.parsed.skin) or imgLabel.Image
+        imgLabel.Image = self:GetSkinDisplayImageID(skin.weapon, skin.index) or imgLabel.Image
         self.itemDisplayFrame.ItemDisplayImageLabel.Visible = true
-        self.itemDisplayFrame.ItemName.Text = tostring(price.parsed.skin)
+        self.itemDisplayFrame.ItemName.Text = tostring(skin.index)
     end
 
     self.itemDisplayConns.MainButton = self.itemDisplayFrame.MainButton.MouseButton1Click:Connect(function()
@@ -127,8 +195,7 @@ function Shop:OpenItemDisplay(item, itemDisplayName)
         self:CloseItemDisplay()
     end)
 
-    self.Location.ItemListContainer_Cases.Visible = false
-    self.Location.ItemListContainer_Skins.Visible = false
+    self:TogglePages()
     self.itemDisplayFrame.Visible = true
 end
 
@@ -142,9 +209,8 @@ function Shop:CloseItemDisplay()
     end
     self.itemDisplayVar.purchaseActive = false
     self.itemDisplayVar.active = false
-    self.Location.ItemListContainer_Cases.Visible = true
-    self.Location.ItemListContainer_Skins.Visible = true
     self.itemDisplayFrame.Visible = false
+    self:TogglePages(true)
 end
 
 function Shop:_MainClickedItemDisplay(item, itemType, price)
@@ -161,14 +227,14 @@ function Shop:_MainClickedItemDisplay(item, itemType, price)
 
     pcAcceptButton.Text = tostring(price.pc) .. " PC"
     scAcceptButton.Text = tostring(price.sc) .. " SC"
-    if itemType == "case" then
+    if itemType == "case" or itemType == "key" then
         skinLabel.Visible = false
         weaponLabel.Visible = false
-        caseLabel.Text = string.upper(tostring(price.parsed.model))
+        caseLabel.Text = string.upper(tostring(price.parsed.name))
         caseLabel.Visible = true
     else
-        skinLabel.Text = string.upper(tostring(price.parsed.skin))
-        weaponLabel.Text = string.upper(tostring(price.parsed.model))
+        skinLabel.Text = string.upper(tostring(price.parsed.name))
+        weaponLabel.Text = string.upper(tostring(price.parsed.weapon))
         caseLabel.Visible = false
     end
     local conns = {}
@@ -233,105 +299,11 @@ function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem)
         task.delay(0.5, function()
             self:FindPage("Inventory"):Update(true)
         end)
-        Popup.burst("Successfully bought item! " .. tostring(parsedItem.model), 3)
+        Popup.burst("Successfully bought item! " .. tostring(parsedItem.name), 3)
         return true
     else
-        Popup.burst("Could not buy item " .. tostring(parsedItem.model), 3)
+        Popup.burst("Could not buy item " .. tostring(parsedItem.name), 3)
         return false
-    end
-end
-
--- [[ ITEM LIST (CURRENTLY SKINS ONLY) ]]
-function Shop:OpenItemList(frame, ignoreDisconnect)
-    if self.itemListVar.OpenListName == frame.Name then
-        return
-    end
-    self.Location.ItemListContainer_Skins:SetAttribute("LastItemList", self.itemListVar.OpenListName)
-    self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", frame.Name)
-    self.itemListVar.OpenListName = frame.Name
-    self.itemListFrame.Visible = false
-
-    frame.Visible = true
-    self.itemListFrame = frame
-    self:_ConnectItemList(frame)
-end
-
-function Shop:CloseItemList() -- back to default, MainList
-    if self.itemListVar.OpenListName ~= "MainList" then
-        self.Location.ItemListContainer_Skins:SetAttribute("LastItemList", self.itemListVar.OpenListName)
-        self.itemListFrame.Visible = false
-        self.itemListVar.OpenListName = "MainList"
-    end
-    self.itemListFrame = self.itemListDefaultFrame
-    self.itemListFrame.Visible = true
-    self:_ConnectItemList(self.itemListFrame)
-    self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", "MainList")
-end
-
-function Shop:OpenLastItemList()
-    local curr, last = self.Location.ItemListContainer_Skins:GetAttribute("CurrentItemList"), self.Location.ItemListContainer_Skins:GetAttribute("LastItemList")
-    if curr == last or curr == "MainList" then return end
-    if last == "MainList" then
-        self:CloseItemList()
-    else
-        self:OpenItemList(self.Location.ItemListContainer_Skins[last])
-    end
-    self.Location.ItemListContainer_Skins:SetAttribute("CurrentItemList", last)
-end
-
-function Shop:_ConnectItemList(listFrame)
-    local isMain = listFrame.Name == "MainList"
-
-    if isMain then
-        self.Location.ItemListContainer_Skins.BackButton.Visible = false
-    else
-        if self.itemListConns.Back then
-            self.itemListConns.Back:Disconnect()
-        end
-        local backConnection = self.Location.ItemListContainer_Skins.BackButton.MouseButton1Click:Connect(function()
-            self:OpenLastItemList()
-        end)
-        self.Location.ItemListContainer_Skins.BackButton.Visible = true
-        self.itemListConns.Back = backConnection
-    end
-
-    self:_DelayDisconnectList(#self.itemListConns)
-    
-    for _, item in pairs(listFrame:GetChildren()) do
-        if not item:IsA("Frame") then
-            continue
-        end
-
-        local button = item:WaitForChild("TextButton")
-        local connection = button.MouseButton1Click:Connect(function()
-            if item.Parent.Name == "MainList" then
-                local corrList = string.gsub(item.Name, "ButtonFrame_", "")
-                corrList = item.Parent.Parent["ItemList_" .. corrList]
-                self:OpenItemList(corrList, true)
-            else
-                local displayName = item:GetAttribute("ItemDisplayName") or string.upper(string.gsub(item.Name, "ItemList_", ""))
-                self:OpenItemDisplay(item:GetAttribute("Item"), displayName)
-            end
-        end)
-
-        table.insert(self.itemListConns, connection)
-    end
-end
-
-function Shop:_DisconnectItemList()
-    for _, v in pairs(self.itemListConns) do
-        v:Disconnect()
-    end
-    self.itemListConns = {}
-end
-
-function Shop:_DelayDisconnectList(total)
-    if total > 0 then
-        task.delay(0.1, function()
-            for i = 1, #self.itemListConns do
-                self.itemListConns[i] = nil
-            end
-        end)
     end
 end
 

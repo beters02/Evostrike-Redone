@@ -2,17 +2,28 @@
     When creating a new knife, make sure to init in the init function
 ]]
 
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
 local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
 local WeaponModules = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("WeaponService"):WaitForChild("Weapon")
 local WeaponService = require(Framework.Service.WeaponService)
 local Strings = require(Framework.shfc_strings.Location)
 local Cases = game.ReplicatedStorage.Assets.Cases
+local ShopInterface = require(Framework.Module.ShopInterface)
+local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
+local TweenService = game:GetService("TweenService")
+
+local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
+local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
 
 local inventory = {}
 
 function inventory:init()
+    self.itemDisplayFrame = self.Location:WaitForChild("ItemDisplayFrame")
+    self.itemDisplayVar = {active = false, caseOpeningActive = false}
+    self.itemDisplayConns = {}
     self:Update()
     return self
 end
@@ -38,6 +49,7 @@ function inventory:Update(withClear: boolean?)
     self._currentStoredInventory = playerdata.inventory.skin
     self._currentEquippedInventory = playerdata.inventory.equipped
     self._currentStoredCaseInventory = playerdata.inventory.case
+    self._currentStoredKeyInventory = playerdata.inventory.key
 
     -- initialize all default skins as frames
     local _regwep = WeaponService:GetRegisteredWeapons()
@@ -74,6 +86,11 @@ function inventory:Update(withClear: boolean?)
     for _, v: string in pairs(self._currentStoredCaseInventory) do
         self:CreateCaseFrame(v:gsub("case_", ""))
     end
+
+    -- init player's key inventory
+    for _, v: string in pairs(self._currentStoredKeyInventory) do
+        self:CreateKeyFrame(v:gsub("key_", ""))
+    end
 end
 
 function inventory:Clear()
@@ -89,49 +106,110 @@ function inventory:Clear()
     end
 end
 
+--
 function inventory:ConnectButtons()
     self._bconnections = {}
 
     self._bconnections.openskin = self.Location.SkinsButton.MouseButton1Click:Connect(function()
-        if self.Location.Skin.Visible then
+        if self.Location.Skin.Visible or not self.Location.SkinsButton.Visible then
             return
         end
         self:OpenSkinPage()
     end)
 
     self._bconnections.opencase = self.Location.CasesButton.MouseButton1Click:Connect(function()
-        if self.Location.Case.Visible then
+        if self.Location.Case.Visible or not self.Location.CasesButton.Visible then
             return
         end
         self:OpenCasePage()
+    end)
+
+    self._bconnections.openkey = self.Location.KeysButton.MouseButton1Click:Connect(function()
+        if self.Location.Key.Visible or not self.Location.KeysButton.Visible then
+            return
+        end
+        self:OpenKeyPage()
     end)
 
     -- connect skin buttons
     for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
         if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
         table.insert(self._bconnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
+            if not self.Location.Skin.Visible then return end
             self:SkinButtonClicked(v)
         end))
     end
 
-    --TODO: connect case buttons
+    -- connect case buttons
+    for _, v in pairs(self.Location.Case.Content:GetChildren()) do
+        if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
+        table.insert(self._bconnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
+            if not self.Location.Case.Visible then return end
+            self:CaseButtonClicked(v)
+        end))
+    end
 
+    --TODO: connect key buttons
 end
 
 function inventory:DisconnectButtons()
-    for i, v in pairs(self._bconnections) do
+    for _, v in pairs(self._bconnections) do
         v:Disconnect()
     end
     self._bconnections = {}
 end
 
--- [[ SKIN PAGE ]]
+-- [[ ITEM DISPLAY ]]
+function inventory:OpenItemDisplay(caseFrame)
+    if self.itemDisplayVar.active then return end
+    self.itemDisplayVar.active = true -- turned off in CloseItemDisplay()
 
-function inventory:OpenSkinPage()
-    self.Location.Skin.Visible = true
+    self.itemDisplayFrame.CaseDisplay.Visible = true
+    self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
+    local itemDisplayName = caseFrame:GetAttribute("ItemDisplayName") or caseFrame.Name
+    self.itemDisplayFrame.ItemName.Text = string.upper(itemDisplayName)
+    self.itemDisplayFrame.MainButton.Text = "OPEN"
+
+    self.itemDisplayConns.MainButton = self.itemDisplayFrame.MainButton.MouseButton1Click:Connect(function()
+        if self.itemDisplayVar.caseOpeningActive then
+            return
+        end
+        self.itemDisplayVar.caseOpeningActive = true
+        self:OpenCaseButtonClicked(caseFrame)
+        self.itemDisplayVar.caseOpeningActive = false
+    end)
+
+    self.itemDisplayConns.BackButton = self.itemDisplayFrame.BackButton.MouseButton1Click:Connect(function()
+        if self.itemDisplayVar.caseOpeningActive then
+            return
+        end
+        self:CloseItemDisplay()
+    end)
+
+    self.LastOpenPage = self.Location.Case.Visible and self.Location.Case or self.Location.Skin
     self.Location.Case.Visible = false
-    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+    self.Location.Skin.Visible = false
+    self.Location.CasesButton.Visible = false
+    self.Location.SkinsButton.Visible = false
+    self.itemDisplayFrame.Visible = true
+end
+
+function inventory:CloseItemDisplay()
+    self.itemDisplayVar.active = false
+    self.itemDisplayConns.MainButton:Disconnect()
+    self.itemDisplayConns.BackButton:Disconnect()
+    self.itemDisplayFrame.Visible = false
+    self.LastOpenPage.Visible = true
+end
+
+-- [[ SKIN PAGE ]]
+function inventory:OpenSkinPage()
+    self.Location.Case.Visible = false
+    self.Location.Key.Visible = false
+    self.Location.Skin.Visible = true
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+    self.Location.KeysButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
 end
 
 function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|nil, isEquipped: boolean|nil, allSkins: boolean?, uuid: number?)
@@ -252,6 +330,60 @@ function inventory:CreateSkinFrame(weapon: string, skin: string, model: string|n
     return frame
 end
 
+function inventory:CreateSkinFrameModel(weapon: string, knifeModel: string, skin: string)
+    if weapon == "knife" then
+        weaponModelObj = WeaponModules.knife.Assets:WaitForChild(knifeModel).Models:WaitForChild(skin)
+        displayName = (knifeModel == "attackdefault" and "Attack Default Knife") or (knifeModel == "defenddefault" and "Defend Default Knife") or Strings.firstToUpper(knifeModel)
+    else
+        weaponModelObj = WeaponModules:WaitForChild(weapon).Assets.Models:WaitForChild(skin)
+        displayName = Strings.firstToUpper(weapon)
+    end
+
+    -- if model == defaultattack or defaultdefend, set back to default
+    if knifeModel and knifeModel ~= "default" and string.match(knifeModel, "default") then
+        knifeModel = "default"
+    end
+
+    -- add weapons to viewport (this shit sucks)
+    weaponModelObj = weaponModelObj:Clone()
+    if weaponModelObj:FindFirstChild("Server") then
+        local server = weaponModelObj.Server
+        server.Parent = weaponModelObj.Parent
+        weaponModelObj:Destroy()
+        weaponModelObj = server
+    end
+
+    weaponModelObj.PrimaryPart = weaponModelObj.GunComponents.WeaponHandle
+
+    local wepcf = CFrame.new(Vector3.new(1,0,-4))
+    local wepor = Vector3.new(90, 0, 0)
+    
+    if weapon == "knife" then
+        if knifeModel == "karambit" then
+            wepcf = CFrame.new(Vector3.new(-0.026, -0.189, -1.399))
+        elseif knifeModel == "default" then
+            wepcf = CFrame.new(Vector3.new(0.143, -0.5, -2.1))
+            wepor = Vector3.new(0, 180, 180)
+        elseif knifeModel == "m9bayonet" then
+            wepcf = CFrame.new(Vector3.new(-0.029, -0, -1.674))
+        else
+            wepcf = CFrame.new(Vector3.new(1, 0, -3))
+        end
+    elseif weapon == "ak47" then
+        wepor = Vector3.new(90, 170, 0)
+    elseif weapon == "deagle" then
+        wepcf = CFrame.new(Vector3.new(-0.1, 0, -1.5))
+        wepor = Vector3.new(0, -180, -180)
+    elseif weapon == "glock17" then
+        wepcf = CFrame.new(Vector3.new(-0.4, 0.2, -1.4))
+        wepor = Vector3.new(0, 90, -180)
+    end
+
+    weaponModelObj:SetPrimaryPartCFrame(wepcf)
+    weaponModelObj.PrimaryPart.Orientation = wepor
+    return weaponModelObj
+end
+
 function inventory:GetSkinFrame(weapon: string, skin: string, uuid)
     for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
         if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
@@ -262,7 +394,6 @@ function inventory:GetSkinFrame(weapon: string, skin: string, uuid)
     return false
 end
 
--- Changes the visual elements of a skin frame to be Equipped or Unequipped
 -- Will automatically set currently equipped to unequipped during SetSkinFrameEquipped(any, any, any, true)
 function inventory:SetSkinFrameEquipped(skinFrame, equipped, weapon, previousSkinfo, ignoreUnequip)
     if equipped then
@@ -309,10 +440,6 @@ function inventory:SkinButtonClicked(skinFrame)
     self:SetSkinFrameEquipped(skinFrame, true, weapon, equippedSkinfo)
 end
 
---[[
-    @title InitializeSkinStringAsFrame
-    @summary Automatically inintialize a skinString "weapon_modelName_skinName" as a frame with the equipped data set.
-]]
 function inventory:InitializeSkinStringAsFrame(skinString: string, uuid: number)
     local _sep = skinString:split("_")
     local _equipped = false
@@ -339,9 +466,11 @@ end
 -- [[ CASE PAGE ]]
 function inventory:OpenCasePage()
     self.Location.Case.Visible = true
+    self.Location.Key.Visible = false
     self.Location.Skin.Visible = false
-    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.KeysButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
 end
 
 function inventory:CreateCaseFrame(case: string)
@@ -361,17 +490,19 @@ function inventory:CreateCaseFrame(case: string)
     itemFrame.NameLabel.Text = string.upper(itemFrame.NameLabel.Text)
     itemFrame.Visible = true
     itemFrame.Parent = self.Location.Case.Content
+    itemFrame:SetAttribute("CaseName", string.lower(case))
+    return itemFrame
 end
 
--- [[ OPEN CASE ]]
---[[function itemDisplay.mainClicked_Case(self, case)
-    if self.itemDisplayVar.caseOpeningActive then
-        return
-    end
-    self.itemDisplayVar.caseOpeningActive = true
+function inventory:CaseButtonClicked(caseFrame)
+    self:OpenItemDisplay(caseFrame)
+end
+
+function inventory:OpenCaseButtonClicked(caseFrame)
+    local caseName = caseFrame:GetAttribute("CaseName")
 
     -- Confirm Case Open/Key Purchase
-    local hasKey = ShopInterface:HasKey(case)
+    local hasKey = ShopInterface:HasKey(caseName)
     local hasConfirmed = false
     local confirmGui = AttemptOpenCaseGui:Clone()
     local keyAcceptButton = confirmGui:WaitForChild("Frame"):WaitForChild("KeyAcceptButton")
@@ -389,14 +520,103 @@ end
         if hasConfirmed then return end
         hasConfirmed = true
         if hasKey then
-            local success, result = ShopInterface:OpenCase()
-            self:BeginCaseOpening(case)
+            local openedSkin, potentialSkins
+            local success, result = pcall(function()
+                openedSkin, potentialSkins = ShopInterface:OpenCase(caseName)
+            end)
+            if success then
+                task.spawn(function()
+                    self:OpenCase(openedSkin, potentialSkins)
+                end)
+            else
+                Popup.burst(tostring(result), 3)
+            end
         else
-            self:SkinDisplayPurchase("key_weaponcase1")
+            self._mainPageModule:OpenPage("Shop")
         end
         confirmGui:Destroy()
         self.itemDisplayConns.CaseConfirmation:Disconnect()
     end)
-end]]
+
+    confirmGui.Parent = game.Players.LocalPlayer.PlayerGui
+end
+
+-- [[ KEY PAGE ]]
+function inventory:OpenKeyPage()
+    self.Location.Case.Visible = false
+    self.Location.Key.Visible = true
+    self.Location.Skin.Visible = false
+    self.Location.KeysButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+end
+
+function inventory:CreateKeyFrame(case: string)
+    local caseFolder = Cases:FindFirstChild(string.lower(case))
+    if not caseFolder then
+        warn("Could not find CaseFolder for case " .. tostring(case))
+        return
+    end
+
+    local itemFrame = self.Location.Key.Content.ItemFrame:Clone()
+    local itemModel = caseFolder.DisplayFrame.Model:Clone()
+    itemModel.Parent = itemFrame:WaitForChild("ViewportFrame")
+    itemModel:SetPrimaryPartCFrame(CFrame.new(Vector3.new(0, 0, -5)))
+
+    itemFrame.Name = "SkinFrame_" .. string.lower(case)
+    itemFrame:WaitForChild("NameLabel").Text = caseFolder:GetAttribute("DisplayName") or case
+    itemFrame.NameLabel.Text = string.upper(itemFrame.NameLabel.Text) .. " KEY"
+    itemFrame.Visible = true
+    itemFrame.Parent = self.Location.Key.Content
+    itemFrame:SetAttribute("CaseName", string.lower(case))
+    return itemFrame
+end
+
+
+-- [[ CASE OPENING SEQUENCE ]]
+
+function inventory:OpenCase(gotSkin, potentialSkins)
+    self.itemDisplayVar.caseOpeningActive = true
+    self:CloseItemDisplay()
+
+    -- Prepare Var & Tween
+    local crates = self.Location.CaseOpeningSequence.CaseDisplay.ViewportFrame.Crates
+    local endCF = crates.PrimaryPart.CFrame - Vector3.new(0, 0, 1)
+    local GrowTween = TweenService:Create(crates.PrimaryPart, TweenInfo.new(1), {CFrame = endCF})
+    local WheelTween = TweenService:Create(self.Location.CaseOpeningSequence.ItemWheelDisplay.Wheel, TweenInfo.new(3, Enum.EasingStyle.Quad), {CanvasPosition = Vector2.new(2150, 0)})
+
+    -- Fill Wheel CaseFrames with Models
+    self:FillCaseFrame(1, gotSkin)
+    local count = 1
+    for _, v in pairs(potentialSkins) do
+        count += 1
+        self:FillCaseFrame(count, v)
+    end
+
+    -- Play Grow Tween
+    self.Location.CaseOpeningSequence.CaseDisplay.Visible = true
+    self.Location.CaseOpeningSequence.ItemWheelDisplay.Visible = false
+    self.Location.CaseOpeningSequence.Visible = true
+    GrowTween:Play()
+    GrowTween.Completed:Wait()
+    
+    -- Play Wheel Tween
+    self.Location.CaseOpeningSequence.CaseDisplay.Visible = false
+    self.Location.CaseOpeningSequence.ItemWheelDisplay.Visible = true
+    WheelTween:Play()
+    WheelTween.Completed:Wait()
+
+    -- play Received Item Screen
+    task.delay(1, function()
+        self:OpenCasePage()
+        self.Location.CaseOpeningSequence.Visible = false
+    end)
+end
+
+function inventory:FillCaseFrame(index, skin)
+    local itemFrame = self.Location.CaseOpeningSequence.ItemWheelDisplay.Wheel["Item_" .. index]
+    local model = self:CreateSkinFrameModel(skin.weapon, skin.knifeModel, skin.index)
+    model.Parent = itemFrame:WaitForChild("ViewportFrame")
+end
 
 return inventory
