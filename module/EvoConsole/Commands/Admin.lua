@@ -192,4 +192,23 @@ Commands.addsc = {
 	end
 }
 
+Commands.addinvitem = {
+	Description = "Add Strafe Coins to a player",
+	Public = false,
+
+	Function = function(self, _, player, item)
+		player = player == "self" and game.Players.LocalPlayer or Players:FindFirstChild(player)
+		if not player then
+			self:Error("Cannot find player " .. tostring(player) .. ". If you want to add to yourself, put 'self' for {player}")
+			return
+		end
+		local success, err = game.ReplicatedStorage.Modules.ShopInterface.Events.c_AddInventoryItem:InvokeServer(player, item)
+		if not success then
+			self:Error("Cannot add funds to player. " .. tostring(err))
+			return
+		end
+		self:Print("Added " .. tostring(item) .. " to " .. player.Name .. "'s inventory.")
+	end
+}
+
 return Commands

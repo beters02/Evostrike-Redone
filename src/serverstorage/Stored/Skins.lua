@@ -1,3 +1,5 @@
+--TODO: create folder called "ShopItems" and stores Cases, Keys and Skins
+
 local Strings = require(game:GetService("ReplicatedStorage"):WaitForChild("lib"):WaitForChild("fc_strings"))
 
 -- Skin Object Type

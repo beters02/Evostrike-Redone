@@ -50,8 +50,8 @@ local Cases = {}
 local Skins = require(script.Parent:WaitForChild("Skins"))
 
 Cases.weaponcase1 = OCase.new({name = "Weapon Case 1"}):: OCase
-Cases.weaponcase1.loot.common = {"vityaz_olReliable", "glock17_hexstripe", "ak103_hexstripe"}
-Cases.weaponcase1.loot.rare = {"glock17_curvedPurple", "hkp30_curvedPurple"}
+Cases.weaponcase1.loot.common = {"vityaz_olReliable", "acr_jade"}
+Cases.weaponcase1.loot.rare = {"hkp30_curvedPurple"}
 Cases.weaponcase1.loot.epic = {"ak103_knight", "glock17_matteObsidian"}
 
 -- [[ MODULE PRIVATE ]]

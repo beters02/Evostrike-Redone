@@ -3,7 +3,6 @@ local ServerStorage = game:GetService("ServerStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local ClientInterface = ReplicatedStorage.Modules.ShopInterface
 local Events = ClientInterface.Events
-local Shared = require(ClientInterface.Shared)
 local Strings = require(Framework.Module.lib.fc_strings)
 local Tables = require(Framework.Module.lib.fc_tables)
 local PlayerData = require(Framework.Module.PlayerData)
@@ -41,6 +40,16 @@ function init()
             end)
         end
         return false, "Sender is not Admin"
+    end
+
+    Events.c_AddInventoryItem.OnServerInvoke = function(sndPlr, addPlr, item)
+        if Admins:IsAdmin(sndPlr) then
+            return pcall(function()
+                PlayerData:TableInsert(addPlr, "ownedItems.skin", item .. "_" .. game:GetService("HttpService"):GenerateGUID(false))
+                PlayerData:Save(addPlr)
+            end)
+        end
+        return false, "Sender is not admin."
     end
 end
 

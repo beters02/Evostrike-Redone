@@ -20,6 +20,10 @@
       {
         "Name": "rf_OpenCase",
         "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "c_AddInventoryItem",
+        "ClassName": "RemoteFunction"
       }
     ]
   }
