@@ -11,9 +11,7 @@ local Console = require(Framework.Module.EvoConsole)
 local States = require(Framework.Module.m_states)
 local StatesRemoteFunction: RemoteFunction = Framework.Module.m_states.remote.RemoteFunction
 local UIState = States.State("UI")
-local PlayerData = require(Framework.Module.PlayerData.Client)
 local SoundsReplicate = Framework.Module.Sound:WaitForChild("remote"):WaitForChild("replicate")
-local clientPlayerDataModule = require(Framework.Module.shared.PlayerData.m_clientPlayerData).initialize()
 require(Framework.Module.EvoMMWrapper)
 task.delay(2, function() require(Framework.Module.EvoPlayer) end)
 
@@ -65,14 +63,6 @@ end)
 
 -- EvoEconomy
 require(Framework.Module.EvoEconomy)
---
-
--- [DEPRECATED] m_clientPlayerData
-Players.PlayerRemoving:Connect(function(plr)
-    if player == plr then
-        clientPlayerDataModule:Save()
-    end
-end)
 --
 
 -- Sounds

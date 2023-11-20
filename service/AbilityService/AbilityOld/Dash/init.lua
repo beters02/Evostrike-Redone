@@ -41,10 +41,6 @@ local Dash = {
     }
 }
 
-if RunService:IsClient() then
-    Dash.PlayerData = require(ReplicatedStorage.PlayerData.m_clientPlayerData)
-end
-
 --@override
 function Dash:Use()
     

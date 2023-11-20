@@ -1,4 +1,7 @@
 local UserInputService = game:GetService("UserInputService")
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local PlayerData = require(Framework.Module.PlayerData)
+
 local keybinds = {}
 
 function keybinds:_connectKeybindsFrame()
@@ -63,7 +66,7 @@ function keybinds:_connectKeybindsFrame()
 end
 
 function keybinds:_updateKeybindsFrame()
-    local playerKeybinds = self.playerdata:Get("options.keybinds")
+    local playerKeybinds = PlayerData:GetPath("options.keybinds")
     for i, frame in pairs(self.keybindsFrame.Text:GetChildren()) do
         if not frame:IsA("Frame") then continue end
         frame.textBox.Text = playerKeybinds[frame:GetAttribute("DataName")]
@@ -74,7 +77,7 @@ function keybinds:_textBoxCaptureInput(box, input)
 
     local parentSettingDataPrefix = box.Parent:FindFirstAncestorWhichIsA("Frame"):GetAttribute("DataPrefix")
 	local dataKey = box.Parent:GetAttribute("DataName") or string.lower(string.sub(box.Parent.Name, 3))
-	local currValue = self.playerdata:Get("options.keybinds." .. dataKey)
+	local currValue = PlayerData:GetPath("options.keybinds." .. dataKey)
 
     if input.UserInputType ~= Enum.UserInputType.Keyboard then
         if input.UserInputType == Enum.UserInputType.MouseWheel then
@@ -107,7 +110,7 @@ end
 function keybinds:_setKey(dataKey, newKeyStr, textBox, currValue)
     
     -- check if key is already bound to another action
-    for i, v in pairs(self.playerdata:Get("options.keybinds")) do
+    for i, v in pairs(PlayerData:GetPath("options.keybinds")) do
         if v == newKeyStr then
             self._sendMessageGui(self.player, "[" .. string.upper(newKeyStr) .. "] already bound to " .. i, "error")
             textBox.Text = currValue
@@ -117,7 +120,7 @@ function keybinds:_setKey(dataKey, newKeyStr, textBox, currValue)
 
     -- attempt to set
     local success, err = pcall(function()
-        self.playerdata:Set("options.keybinds." .. dataKey, newKeyStr)
+        PlayerData:SetPath("options.keybinds." .. dataKey, newKeyStr)
     end)
 
     if success then

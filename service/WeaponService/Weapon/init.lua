@@ -15,7 +15,7 @@ local PlayerActionsState = States.State("PlayerActions")
 local Types = require(script.Parent.Types)
 local SoundModule = require(Framework.Module.Sound)
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
-local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
+local PlayerData2 = require(Framework.Module.PlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
 local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
@@ -97,7 +97,7 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
 	self.Variables.weaponBar.SideBar[self.Options.inventorySlot .. "Key"].Text = Strings.convertFullNumberStringToNumberString(self.Controller.Keybinds[self.Slot .. "Weapon"])
 
 	-- connect key changed bind for hud elements
-    self.Connections["KeybindChanged"] = PlayerData:Changed("options.keybinds." .. self.Slot .. "Weapon", function(new)
+    self.Connections["KeybindChanged"] = PlayerData2:PathValueChanged("options.keybinds." .. self.Slot .. "Weapon", function(new)
         self.Variables.weaponBar.SideBar[self.Options.inventorySlot .. "Key"].Text = Strings.convertFullNumberStringToNumberString(new)
     end)
 
@@ -440,7 +440,7 @@ function Weapon:ScopeIn()
     self.Variables.scopeGui.Enabled = true
 
     -- fov tweens
-    local currfov = PlayerData:Get("options.camera.FOV")
+    local currfov = PlayerData2:GetPath("options.camera.FOV")
     self.Variables.currFov = currfov
     self.Variables.ScopeTweens.Tweens.FOVIn = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(self.Options.scopeLength), {FieldOfView = currfov * 0.5})
     self.Variables.ScopeTweens.Tweens.FOVOut = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(self.Options.scopeLength * 0.8), {FieldOfView = currfov})

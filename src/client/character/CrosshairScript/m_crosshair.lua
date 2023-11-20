@@ -1,6 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
+local PlayerData = require(Framework.Module.PlayerData)
+local PlayerDataShared = require(Framework.Module.PlayerData.Shared)
 
 local crosshair = {}
 crosshair._isInit = false
@@ -17,11 +19,8 @@ function crosshair.initialize(hud)
 
     -- this is a brute force way to get client stored player data
     -- alternatively, you could use module:Get() or module:GetAsync()
-    local clientPlayerDataModule = require(ReplicatedStorage.PlayerData.m_clientPlayerData)
-	if not clientPlayerDataModule.stored then repeat task.wait() until clientPlayerDataModule.stored end
-    self.clientModule = clientPlayerDataModule
 
-    for i, v in pairs(clientPlayerDataModule.stored.options.crosshair) do
+    for i, v in pairs(PlayerDataShared.def.options.crosshair) do
         self[i] = v
     end
 
@@ -68,7 +67,7 @@ function crosshair:updateCrosshair(dataKey: string?, newValue: any?)
         self[dataKey] = newValue
     end
 
-    for i, v in pairs(self.clientModule.stored.options.crosshair) do
+    for i, v in pairs(PlayerData:Get().options.crosshair) do
         self[i] = v
     end
 

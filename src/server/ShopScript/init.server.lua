@@ -11,89 +11,94 @@ local Admins = require(ServerStorage.Stored.AdminIDs)
 local Cases = require(ServerStorage.Stored.Cases)
 local Skins = require(ServerStorage.Stored.Skins)
 local Keys = require(ServerStorage.Stored.Keys)
+local HTTPService = game:GetService("HttpService")
 
 local Shop = {}
 local RemoteFunctions = {}
 
--- [[ SHOP PRIVATE ]]
-Shop = {
-    parseItemString = function(item: Shared.TShopItem)
-        local split = string.split(item, "_")
-        local returnObject
-
-        if split[1] == "skin" then
-            local skin = string.gsub(item, "skin_", "")
-            returnObject = Tables.clone(Skins.GetSkinFromString(skin))
-            returnObject.item_type = "skin"
-            returnObject.insert_type = "table"
-            returnObject.path = skin
-            returnObject.inventoryKey = skin
-        elseif split[1] == "case" then
-            returnObject = Tables.clone(Cases.Cases[split[2]])
-            returnObject.item_type = "case"
-            returnObject.insert_type = "table"
-            returnObject.path = "case_" .. split[2]
-            returnObject.inventoryKey = returnObject.path
-        elseif split[1] == "key" then
-            returnObject = Tables.clone(Keys[split[2]])
-            returnObject.item_type = "key"
-            returnObject.insert_type = "table"
-            returnObject.path = "key_" .. split[2]
-            returnObject.inventoryKey = returnObject.path
-        end
-
-        return returnObject
-    end,
-    canAffordItem = function(player, purchaseType: "StrafeCoins" | "PremiumCredits", item)
-        if purchaseType ~= "StrafeCoins" and purchaseType ~= "PremiumCredits" then
-            error("Invalid PurchaseType!")
-        end
+function init()
+    RemoteFunctions = {
+        GetShopItemFromString = Shop.parseItemString,
+        CanAffordItem = Shop.canAffordItem,
+        AttemptItemPurchase = Shop.PurchaseItem,
+        HasKey = Shop.HasKey,
+        HasCase = Shop.HasCase,
+        OpenCase = Shop.OpenCase
+    }
     
-        local pd = PlayerData:Get(player)
-        local currAmnt = purchaseType == "StrafeCoins" and pd.economy.strafeCoins or pd.economy.premiumCredits
-    
-        local p = RemoteFunctions.GetItemPrice(false, item)
-        p = purchaseType == "StrafeCoins" and p.sc or p.pc
-        return currAmnt >= p, p
+    for _, v in pairs(Events:GetChildren()) do
+        if string.match(v.Name, "rf_") then
+            v.OnServerInvoke = RemoteFunctions[v.Name:gsub("rf_", "")]
+        end
     end
-}
+    
+    --TEMP
+    Events.c_AddStrafeCoins.OnServerInvoke = function(sndPlr, addPlr, amount)
+        if Admins:IsAdmin(sndPlr) then
+            return pcall(function()
+                PlayerData:IncrementPath(addPlr, "economy.strafeCoins", amount)
+                PlayerData:Save(addPlr)
+            end)
+        end
+        return false, "Sender is not Admin"
+    end
+end
+
+-- [[ SHOP PRIVATE ]]
+function Shop.parseItemString(item: string)
+    local split = item:split("_")
+    local returnObject = {}
+    if split[1] == "skin" then
+        local skin = string.gsub(item, "skin_", "")
+        returnObject = Tables.clone(Skins.GetSkinFromString(skin))
+        returnObject.item_type = "skin"
+        returnObject.insert_type = "table"
+        returnObject.inventory_key = skin
+    elseif split[1] == "case" then
+        returnObject = Tables.clone(Cases.Cases[split[2]])
+        returnObject.item_type = "case"
+        returnObject.insert_type = "table"
+        returnObject.inventory_key = split[2]
+    elseif split[1] == "key" then
+        returnObject = Tables.clone(Keys[split[2]])
+        returnObject.item_type = "key"
+        returnObject.insert_type = "table"
+        returnObject.inventory_key = split[2]
+    end
+    return returnObject
+end
+
+function Shop.canAffordItem(player, purchaseType: "StrafeCoins" | "PremiumCredits", item)
+    if purchaseType ~= "StrafeCoins" and purchaseType ~= "PremiumCredits" then
+        error("Invalid PurchaseType!")
+    end
+
+    local pd = PlayerData:Get(player)
+    local currAmnt = purchaseType == "StrafeCoins" and pd.economy.strafeCoins or pd.economy.premiumCredits
+
+    local shopSkin = Shop.parseItemString(item)
+    local price = purchaseType == "StrafeCoins" and shopSkin.price_sc or shopSkin.price_pc
+    return currAmnt >= price, price, shopSkin
+end
 
 -- [[ SHOP PUBLIC ]]
-Shop.PurchaseItem = function(player, purchaseType, item)
-    local canPurchase = Shop.canAffordItem(player, purchaseType, item)
+function Shop.PurchaseItem(player, item, purchaseType)
+    local canPurchase, price, shopItem = Shop.canAffordItem(player, purchaseType, item)
     if canPurchase then
-        local pathStr = purchaseType == "StrafeCoins" and "strafeCoins" or "premiumCredits"
-
-        local priceData = Shop.parseItemString(item)
-        local price = pathStr == "strafeCoins" and "price_sc" or "price_pc"
-        price = priceData[price]
-
-        if priceData.insert_type == "table" then
-            local inventoryStr = "inventory." .. priceData.item_type
-            PlayerData:TableInsert(player, inventoryStr, priceData.inventoryKey)
-        else -- this is for when players want to buy premiumCredits
-            PlayerData:IncrementPath(player, "economy.pc", priceData.path)
+        local insertKey = shopItem.inventory_key
+        if shopItem.item_type == "skin" then
+            insertKey = insertKey .. "_" .. HTTPService:GenerateGUID(false)
         end
-
-        PlayerData:DecrementPath(player, "economy." .. pathStr, price)
+        PlayerData:TableInsert(player, "ownedItems." .. shopItem.item_type, insertKey)
+        PlayerData:DecrementPath(player, "economy." .. Strings.firstToLower(purchaseType), price)
         PlayerData:Save(player)
         return true
     end
     return false
 end
 
--- RemoteFunctions (RemoteFunctions in ShopInterface.Events will correspond to functions via name. ["rf_GetItemPrice"])
-RemoteFunctions = {
-    GetItemPrice = function(_, item)
-        local i = Shop.parseItemString(item)
-        return {sc = i.price_sc, pc = i.price_pc, parsed = i}
-    end,
-    CanAffordItem = Shop.canAffordItem,
-    AttemptItemPurchase = Shop.PurchaseItem
-}
-
-RemoteFunctions.HasKey = function(player, caseName) -- Returns Key Inventory Index or False
-    local keyInventory = PlayerData:GetPath(player, "inventory.key")
+function Shop.HasKey(player, caseName)
+    local keyInventory = PlayerData:GetPath(player, "ownedItems.key")
     for i, v in pairs(keyInventory) do
         if string.match(v, caseName) then
             return i, keyInventory
@@ -102,8 +107,8 @@ RemoteFunctions.HasKey = function(player, caseName) -- Returns Key Inventory Ind
     return false
 end
 
-RemoteFunctions.HasCase = function(player, caseName)
-    local caseInventory = PlayerData:GetPath(player, "inventory.case")
+function Shop.HasCase(player, caseName)
+    local caseInventory = PlayerData:GetPath(player, "ownedItems.case")
     for i, v in pairs(caseInventory) do
         if string.match(v, caseName) then
             return i, caseInventory
@@ -112,7 +117,7 @@ RemoteFunctions.HasCase = function(player, caseName)
     return false
 end
 
-RemoteFunctions.OpenCase = function(player, caseName)
+function Shop.OpenCase(player, caseName)
     local caseIndex, caseInventory = RemoteFunctions.HasCase(player, caseName)
     local keyIndex, keyInventory = RemoteFunctions.HasKey(player, caseName)
     if not caseIndex or not keyIndex then
@@ -140,19 +145,11 @@ RemoteFunctions.OpenCase = function(player, caseName)
     return openedSkin, potentialSkins
 end
 
--- INIT
-for _, v in pairs(Events:GetChildren()) do
-    if string.match(v.Name, "rf_") then
-        v.OnServerInvoke = RemoteFunctions[v.Name:gsub("rf_", "")]
-    end
-end
+--this is for when players want to buy premiumCredits
+--[[if priceData.insert_type == "table" then
+    PlayerData:TableInsert(player, inventoryStr, priceData.inventoryKey)
+else
+    PlayerData:IncrementPath(player, "economy.pc", priceData.path)
+end]]
 
-Events.c_AddStrafeCoins.OnServerInvoke = function(sndPlr, addPlr, amount)
-    if Admins:IsAdmin(sndPlr) then
-        return pcall(function()
-            PlayerData:IncrementPath(addPlr, "economy.strafeCoins", amount)
-            PlayerData:Save(addPlr)
-        end)
-    end
-    return false, "Sender is not Admin"
-end
+init()

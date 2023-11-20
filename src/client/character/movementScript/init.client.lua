@@ -17,7 +17,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local States = require(Framework.Module.m_states)
 local SoundModule = require(Framework.Module.Sound)
 local Strings = require(Framework.Module.lib.fc_strings)
-local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
+local PlayerData2 = require(Framework.Module.PlayerData)
 local MovementState = States.State("Movement")
 local instanceLib = require(Framework.Module.lib.fc_instance)
 
@@ -791,14 +791,14 @@ function Inputs.ChangeKey(key: string, value: string)
 end
 
 function Inputs.InitKeys()
-	Inputs.ChangeKey("jump", PlayerData:Get("options.keybinds.jump"))
-	Inputs.ChangeKey("crouch", PlayerData:Get("options.keybinds.crouch"))
+	Inputs.ChangeKey("jump", PlayerData2:GetPath("options.keybinds.jump"))
+	Inputs.ChangeKey("crouch", PlayerData2:GetPath("options.keybinds.crouch"))
 end
 
 function Inputs.ListenForKeyBindChanges()
 	return {
-		jump = PlayerData:Changed("options.keybinds.jump", function(new) Inputs.ChangeKey("jump", new) end),
-		crouch = PlayerData:Changed("options.keybinds.crouch", function(new) Inputs.ChangeKey("crouch", new) end)
+		jump = PlayerData2:PathValueChanged("options.keybinds.jump", function(new) Inputs.ChangeKey("jump", new) end),
+		crouch = PlayerData2:PathValueChanged("options.keybinds.crouch", function(new) Inputs.ChangeKey("crouch", new) end)
 	}
 end
 

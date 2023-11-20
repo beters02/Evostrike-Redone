@@ -1,7 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local TweenService = game:GetService("TweenService")
-local Playerdata = require(ReplicatedStorage.PlayerData.m_clientPlayerData)
+local PlayerData = require(Framework.Module.PlayerData)
 local EvoPlayer = Framework.Module.EvoPlayer
 
 local player = game:GetService("Players").LocalPlayer
@@ -30,7 +30,7 @@ end)
 -- Initialize Camera Variables
 task.delay(1, function()
     -- initial
-    local deffov = Playerdata:Get("options.camera.FOV")
+    local deffov = PlayerData:GetPath("options.camera.FOV")
 
     -- smoothen out fov transfer if necessary
     local function smooth(newFov)
@@ -42,7 +42,7 @@ task.delay(1, function()
     end
 
     -- FOV changed
-    local fovChangeConn = Playerdata:Changed("options.camera.FOV", function(newValue)
+    local fovChangeConn = PlayerData:PathValueChanged("options.camera.FOV", function(newValue)
         deffov = newValue
         smooth(deffov)
     end)

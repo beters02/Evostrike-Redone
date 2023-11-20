@@ -2,7 +2,8 @@ if game:GetService("RunService"):IsClient() then return end
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
+--local InventoryInterface = require(Framework.shfc_inventoryPlayerDataInterface.Location)
+local InventoryInterface2 = require(Framework.Module.InventoryInterface)
 
 local ServiceAssets = script.Parent:WaitForChild("ServiceAssets")
 local WeaponClient = script:WaitForChild("WeaponClient")
@@ -11,45 +12,19 @@ local WeaponServer = script:WaitForChild("WeaponServer")
 local WeaponTool = {}
 
 function WeaponTool.new(player: Player, weaponModule: ModuleScript)
-	local weapon = require(weaponModule).Configuration.name
-	local weaponAssets = weaponModule.Assets
-	local wepLow = string.lower(weapon)
-
 	local serverModel
 	local clientModel
 	local tool
 	local model
-	local skinInfo
+	local weaponName = require(weaponModule).Configuration.name
 
 	tool = Instance.new("Tool")
 	tool.RequiresHandle = false
-	tool.Name = "Tool_" .. weapon
+	tool.Name = "Tool_" .. weaponName
 
 	-- get weapon skin
-	skinInfo = InventoryInterface:GetEquippedWeaponSkin(player, wepLow)
-	local success, err
-
-	if skinInfo.model then
-
-		-- ## TEMPORARY KNIFE SKIN NAME = DEFAULT, SET TO ATTACKDEFAULT
-		if skinInfo.model == "default" then
-			skinInfo.model = "attackdefault"
-		end
-
-		success, err = pcall(function()
-			model = weaponAssets[skinInfo.model].Models[skinInfo.skin]
-		end)
-	else
-		success, err = pcall(function()
-			model = weaponAssets.Models[skinInfo.skin]
-		end)
-	end
-
-	if not success then
-		warn("YOU NEED TO ADD THE WEAPON TO DEFAULTPLAYERDATA TO NEW WEAPON " .. tostring(err))
-		InventoryInterface:SetEquippedWeaponSkin(player, wepLow, wepLow == "knife" and "default_default" or "default")
-		model = wepLow == "knife" and weaponAssets.default.Models.default or weaponAssets.Models.default
-	end
+	local invSkin = InventoryInterface2.GetEquippedSkin(player, string.lower(weaponName))
+	model = InventoryInterface2.GetSkinModelFromSkinObject(invSkin)
 
 	-- set collision groups
 	for _, v in pairs(model:GetDescendants()) do
@@ -72,13 +47,13 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	clientModel.Name = "ClientModel"
 	clientModel.Parent = ReplicatedStorage:WaitForChild("temp")
 
-	clientModel:SetAttribute("Skin", tostring(skinInfo.skin))
-	if skinInfo.model then
-		clientModel:SetAttribute("SkinModel", tostring(skinInfo.model))
+	clientModel:SetAttribute("Skin", tostring(invSkin.skin))
+	if invSkin.model then
+		clientModel:SetAttribute("SkinModel", tostring(invSkin.model))
 	end
 
 	-- add necessary particles
-	if string.lower(weapon) ~= "knife" then
+	if string.lower(weaponName) ~= "knife" then
 		local a
 		for i, v in pairs({clientModel, serverModel}) do
 			a = ServiceAssets.Emitters.MuzzleFlash:Clone()
@@ -92,7 +67,7 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	local newFolder = Instance.new("Folder") -- create folder
 	newFolder.Name = "Scripts"
 	clientScript = WeaponClient:Clone()
-	clientScript:SetAttribute("weaponName", weapon)
+	clientScript:SetAttribute("weaponName", weaponName)
 	serverScript = WeaponServer:Clone()
 	clientScript.Parent, serverScript.Parent = newFolder, newFolder
 	newFolder.Parent = tool
@@ -118,7 +93,7 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	ClientModelObject.Parent = tool
 	local WeaponObjectsFolderObject = Instance.new("ObjectValue")
 	WeaponObjectsFolderObject.Name = "WeaponObjectsFolderObject"
-	WeaponObjectsFolderObject.Value = weaponAssets
+	WeaponObjectsFolderObject.Value = weaponModule.Assets
 	WeaponObjectsFolderObject.Parent = tool
 	local WeaponModuleObject = Instance.new("ObjectValue")
 	WeaponModuleObject.Name = "WeaponModuleObject"

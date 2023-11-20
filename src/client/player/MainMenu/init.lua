@@ -25,6 +25,8 @@ function main.initialize(gui)
 	main.page = require(Players.LocalPlayer.PlayerScripts.MainMenu.page).init(main)
 
 	main.isInit = true
+
+	print('Initialized MainMenu!')
 	return main
 end
 

@@ -4,6 +4,10 @@ function Strings.firstToUpper(str)
 	return (str:gsub("^%l", string.upper))
 end
 
+function Strings.firstToLower(str)
+	return (str:gsub("^%l", string.lower))
+end
+
 function Strings.seperateToChar(str)
 	local new = {}
 	for i = 1, str:len() do

@@ -19,16 +19,9 @@ end
 
 function Stats:init(main)
     self = setmetatable(self, Stats)
-	local clientPlayerDataModule = require(Framework.shm_clientPlayerData.Location)
-
-	-- wait for data module to init
-	if not clientPlayerDataModule.stored then
-		repeat task.wait() until clientPlayerDataModule.stored
-	end
 
 	self.connections = {}
 	self.player = main.player
-	self.playerdata = clientPlayerDataModule
     self.Location.PlayerName.Text = self.player.Name
 
 	local _statObjs = {}

@@ -39,9 +39,7 @@ local Dash = {
     }
 }
 
-if RunService:IsClient() then
-    Dash.PlayerData = require(ReplicatedStorage.PlayerData.m_clientPlayerData)
-end
+local PlayerData = require(Framework.Module.PlayerData)
 
 --@override
 function Dash:Use()
@@ -51,7 +49,7 @@ function Dash:Use()
     Sound.PlayReplicatedClone(self.Module.Assets.Sounds.Woosh, self.Player.Character.PrimaryPart)
 
     -- play fov tween
-    local playerfov = Dash.PlayerData:Get("options.camera.FOV")
+    local playerfov = PlayerData:GetPath("options.camera.FOV")
     task.spawn(function()
         local tween = TweenService:Create(workspace.CurrentCamera, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {FieldOfView = playerfov * 1.2})
         local conn

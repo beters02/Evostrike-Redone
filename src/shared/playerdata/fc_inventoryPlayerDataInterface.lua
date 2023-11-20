@@ -1,13 +1,6 @@
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
-
-local PlayerData
-
-if RunService:IsServer() then
-    PlayerData = require(Framework.Module.server.PlayerDataScript.m_serverPlayerData)
-else
-    PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
-end
+local PlayerData = require(Framework.Module.PlayerData)
 
 local interface = {}
 

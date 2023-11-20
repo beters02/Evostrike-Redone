@@ -1,3 +1,5 @@
+local PlayerData = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("PlayerData"))
+
 local general = {}
 
 function general:_baseConnectFrame(frameTable)
@@ -36,7 +38,7 @@ function general:_updateOptionValue(prefix, key, value)
 	--main.page.options.profile[parentSettingDataPrefix][dataKey] = newValue
 	--local new, wasChanged, notChangedError = self.playerdata:Set("options." .. parentSettingDataPrefix ..  "." .. dataKey, newValue)
 	--if not wasChanged then end
-	self.playerdata:Set("options." .. prefix ..  "." .. key, value)
+	PlayerData:SetPath("options." .. prefix ..  "." .. key, value)
 
 	if prefix == "crosshair" then
 		self:_updateCrosshairFrame()
@@ -50,7 +52,7 @@ end
 function general:_typingFocusFinished(enterPressed, button, frame, isButton)
 	local parentSettingDataPrefix = frame:FindFirstAncestorWhichIsA("Frame"):GetAttribute("DataPrefix")
 	local dataKey = frame:GetAttribute("DataName") or string.lower(string.sub(frame.Name, 3))
-	local currValue = self.playerdata:Get("options." .. parentSettingDataPrefix ..  "." .. dataKey)
+	local currValue = PlayerData:GetPath("options." .. parentSettingDataPrefix ..  "." .. dataKey)
 
 	if enterPressed then
 		local newValue = tonumber(button.Text)
@@ -67,7 +69,7 @@ end
 function general:_booleanInteract(textButton, frame)
 	local parentSettingDataPrefix = frame:FindFirstAncestorWhichIsA("Frame"):GetAttribute("DataPrefix")
 	local dataKey = frame:GetAttribute("DataName") or string.lower(string.sub(frame.Name, 3))
-	local currValue = self.playerdata:Get("options." .. parentSettingDataPrefix ..  "." .. dataKey)
+	local currValue = PlayerData:GetPath("options." .. parentSettingDataPrefix ..  "." .. dataKey)
 	self:_updateOptionValue(parentSettingDataPrefix, dataKey, not currValue)
 end
 
@@ -75,7 +77,7 @@ function general:_updateCrosshairFrame()
 	for _, frame in pairs(self.crosshairFrame:GetChildren()) do
 		if not frame:IsA("Frame") then continue end
 		local dataKey = string.lower(string.sub(frame.Name, 3))
-		frame:WaitForChild("button").Text = tostring(self.playerdata:Get("options.crosshair." .. dataKey))
+		frame:WaitForChild("button").Text = tostring(PlayerData:GetPath("options.crosshair." .. dataKey))
 	end
 end
 
@@ -83,7 +85,7 @@ function general:_updateViewmodelFrame()
 	for _, frame in pairs(self.viewmodelFrame:GetChildren()) do
 		if not frame:IsA("Frame") then continue end
 		local dataKey = frame:GetAttribute("DataName")
-		frame:WaitForChild("button").Text = tostring(self.playerdata:Get("options.camera." .. dataKey))
+		frame:WaitForChild("button").Text = tostring(PlayerData:GetPath("options.camera." .. dataKey))
 	end
 end
 

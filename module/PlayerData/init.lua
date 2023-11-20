@@ -6,14 +6,13 @@ if RunService:IsClient() then
     return require(script:WaitForChild("Client"))
 end
 
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local DataStore2 = require(script:WaitForChild("DataStore2"))
 local Strings = require(script:WaitForChild("Strings"))
 local Default = require(script:WaitForChild("Shared"))
 local RemoteFunction = script:WaitForChild("Events").RemoteFunction
 local RemoteEvent = script.Events.RemoteEvent
-local InventoryOverrides = require(game:GetService("ServerScriptService"):WaitForChild("PlayerDataScript"):WaitForChild("inventoryOverrides"))
 local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored").AdminIDs)
+local Overrides = require(script:WaitForChild("Overrides"))
 
 local PlayerData = {}
 PlayerData._storecache = {}
@@ -107,19 +106,17 @@ end
 
 --@summary Save the PlayerData
 function PlayerData:Save(player)
-    local store = _getStoreSafe(player)
-    print(_getDataSafe(player))
     _getStoreSafe(player):Save()
 end
 
 function PlayerData:SaveWithRetry(player, sec, isAssert)
-    local succ, err = pcall(function()
+    local succ, _ = pcall(function()
         PlayerData:Save(player)
     end)
     if succ then return end
     local _et = tick() + sec
     while not succ and tick() < _et do
-        succ, err = pcall(function()
+        succ, _ = pcall(function()
             PlayerData:Save(player)
         end)
     end
@@ -200,25 +197,10 @@ end
 
 --@private
 --[[Default Player Data]]
-
-local function compareRecurse(start, defloc)
-    local changed = false
-    for i, v in pairs(defloc) do
-        if start[i] == nil then
-            start[i] = v
-            changed = true
-        end
-        if type(v) == "table" then
-            local _c = compareRecurse(start[i], defloc[i])
-            changed = changed or _c
-        end
-    end
-    return changed
-end
-
 function _compareToDefault(player, playerData)
-    local changed = compareRecurse(playerData, PlayerData._def)
-    local invChanged = InventoryOverrides.Init(playerData, Admins:IsHigherPermission(player))
+    local changed = _compareRecurse(playerData, PlayerData._def)
+    local _, group = Admins:IsHigherPermission(player)
+    local invChanged = Overrides.InitPlayerInventory(playerData, group)
     changed = changed or invChanged
     if changed then
         PlayerData:Set(player, playerData)
@@ -227,6 +209,20 @@ function _compareToDefault(player, playerData)
     return playerData, changed
 end
 
+function _compareRecurse(start, defloc)
+    local changed = false
+    for i, v in pairs(defloc) do
+        if start[i] == nil then
+            start[i] = v
+            changed = true
+        end
+        if type(v) == "table" then
+            local _c = _compareRecurse(start[i], defloc[i])
+            changed = changed or _c
+        end
+    end
+    return changed
+end
 
 --@run
 --[[Script Start]]

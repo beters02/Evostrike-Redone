@@ -1,7 +1,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Framework = require(game.ReplicatedStorage.Framework)
-local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
+local PlayerData2 = require(Framework.Module.PlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
 local UIState = require(Framework.Module.m_states).State("UI")
 local Bindable = Framework.Service.AbilityService.Events.BindableEvent
@@ -53,7 +53,7 @@ end
 
 function InitKeybinds()
     Const.KeyPath = "options.keybinds." .. Ability.Options.inventorySlot .. "Ability"
-    Var.Key = PlayerData:Get(Const.KeyPath)
+    Var.Key = PlayerData2:GetPath(Const.KeyPath)
     Ability.Key = Var.Key
 end
 
@@ -72,7 +72,7 @@ end
 
 function Connect()
     UserInputService.InputBegan:Connect(InputBegan)
-    PlayerData:Changed(Const.KeyPath, function(newValue)
+    PlayerData2:PathValueChanged(Const.KeyPath, function(newValue)
         Var.Key = newValue
         Ability.Key = newValue
         Ability.Frame.Key.Text = Strings.convertFullNumberStringToNumberString(Var.Key)

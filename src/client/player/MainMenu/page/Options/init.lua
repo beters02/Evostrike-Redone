@@ -1,16 +1,7 @@
-local LocalizationService = game:GetService("LocalizationService")
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-
 local options = {}
 
 function options:init(main)
     self = setmetatable(self, options)
-	local clientPlayerDataModule = require(Framework.shm_clientPlayerData.Location)
-
-	-- wait for data module to init
-	if not clientPlayerDataModule.stored then
-		repeat task.wait() until clientPlayerDataModule.stored
-	end
 
 	-- compile options page module functions
 	_compile(self)
@@ -18,7 +9,6 @@ function options:init(main)
 	self.connections = {}
 	self.pageconnections = {}
 	self.player = main.player
-	self.playerdata = clientPlayerDataModule
 	self.crosshairModule = self:_getPlayerCrosshairModule()
 	self.crosshairFrame = self.Location.General.Crosshair
 	self.viewmodelFrame = self.Location.General.Viewmodel

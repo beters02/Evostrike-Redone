@@ -4,6 +4,10 @@ local Shop = {}
 local Events = script:WaitForChild("Events")
 local Shared = require(script:WaitForChild("Shared"))
 
+if game:GetService("RunService"):IsServer() then
+    return require(script:WaitForChild("Server"))
+end
+
 function Shop:PurchaseItem(item: Shared.TShopItem, purchaseType: "StrafeCoins" | "PremiumCredits")
     return Events.rf_AttemptItemPurchase:InvokeServer(purchaseType, item)
 end

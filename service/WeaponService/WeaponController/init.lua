@@ -21,7 +21,7 @@ local Types = require(script.Parent:WaitForChild("Types"))
 local Tables = require(Framework.Module.lib.fc_tables)
 local PlayerDiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local UserInputService = game:GetService("UserInputService")
-local PlayerData = require(Framework.Module.shared.PlayerData.m_clientPlayerData)
+local PlayerData2 = require(Framework.Module.PlayerData)
 local Remote = ReplicatedStorage.Services.WeaponService.Events.RemoteEvent
 local UIState = require(Framework.Module.m_states).State("UI")
 local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon)
@@ -47,12 +47,12 @@ function WeaponController.new()
     self.GroundMaxSpeed = self.MovementCommunicate.GetVar("groundMaxSpeed")
 
     -- init keybinds
-    local playerOptions = PlayerData:Get("options.keybinds")
+    local playerOptions = PlayerData2:GetPath("options.keybinds")
     self.Keybinds = {}
     for i, v in pairs(Tables.clone(NeededKeybindKeys)) do
         self.Keybinds[v] = playerOptions[v]
         table.remove(self.Keybinds, i)
-        self.Connections["KeybindChanged_" .. v] = PlayerData:Changed("options.keybinds." .. v, function(new)
+        self.Connections["KeybindChanged_" .. v] = PlayerData2:PathValueChanged("options.keybinds." .. v, function(new)
             self.Keybinds[v] = new
         end)
     end
