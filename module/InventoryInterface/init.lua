@@ -31,31 +31,4 @@ function InventoryInterface.SetEquippedSkinFromString(skinStr)
     PlayerData:Save()
 end
 
-function InventoryInterface.GetSkinModelFromSkinObject(skin) -- Returns Default Skin if Necessary
-    print(skin)
-    local weaponModule = WeaponService:GetWeaponModule(skin.weapon)
-    local success, model = pcall(function()
-        if skin.weapon == "knife" then
-            return weaponModule.Assets[skin.model].Models[skin.skin]
-        end
-        return weaponModule.Assets.Models[skin.skin]
-    end)
-    if success then
-        return model
-    end
-    warn("Could not find skin for model " .. tostring(skin.weapon) .. "_" .. tostring(skin.skin) .. ". " .. tostring(model))
-    return InventoryInterface.GetDefaultSkinForWeapon(skin.weapon)
-end
-
-function InventoryInterface.GetDefaultSkinForWeapon(weapon)
-    if weapon == "knife" then
-        return WeaponService:GetWeaponModule("knife").Assets.default.Models.default
-    end
-    return WeaponService:GetWeaponModule(weapon).Assets.Models.default
-end
-
-function InventoryInterface.GetSkinModelFromString(skinStr)
-    return InventoryInterface.GetSkinModelFromSkinObject(Shared.ParseSkinString(skinStr))
-end
-
 return InventoryInterface

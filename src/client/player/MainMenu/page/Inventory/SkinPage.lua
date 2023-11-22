@@ -50,8 +50,9 @@ function SkinPage:Update()
     local playerInventory = PlayerData:Get().ownedItems
     local frames = {}
 
+    SkinPage.CreateSkinFramesForAllDefaultWeapons(self, frames)
+
     for _, unsplit in pairs(playerInventory.skin) do
-        print(unsplit)
         local invSkin = InventoryInterface2.ParseSkinString(unsplit)
         if frames[unsplit] then
             continue
@@ -70,10 +71,9 @@ function SkinPage:Update()
     end
 
     for _, unsplit in pairs(playerInventory.equipped) do
-        print(unsplit)
-
         local invSkin = InventoryInterface2.ParseSkinString(unsplit)
         if frames[unsplit] then
+            SkinPage.SetSkinFrameEquipped(self, frames[unsplit], invSkin, true)
             continue
         end
         
@@ -81,8 +81,7 @@ function SkinPage:Update()
         for i, v in pairs(invSkin) do
             frame:SetAttribute(i, v)
         end
-        SkinPage.SetSkinFrameEquipped(self, frame, invSkin, true)
-
+        
         frames[unsplit] = frame
     end
 
@@ -187,6 +186,32 @@ function SkinPage:ParseSkinString(str)
     return {weapon = _sep[1], model = _sep[2], knifeSkin = _sep[3]}
 end
 
+function SkinPage:GetSkinFromFrame(frame)
+    local str = ""
+    local tab = {"weapon", "model", "skin", "uuid"}
+    for i, v in pairs(tab) do
+        str = str .. frame:GetAttribute(v)
+        if i ~= #tab then
+            str = str .. "_"
+        end
+    end
+    return InventoryInterface2.ParseSkinString(str)
+end
+
+function SkinPage:_getDefaultSkins(equippedInventory)
+    local defaults = {}
+    for i, _ in pairs(equippedInventory) do
+        if i == "knife" then
+            defaults[i] = "knife_default_default_0"
+        else
+            defaults[i] = i .. "_" .. i .. "_" .. "default_0"
+        end
+    end
+    return defaults
+end
+
+-- [[ UNNECCESSARY BUT HERE IT IS UTIL ]]
+
 function SkinPage:CreateSkinFramesForAllWeapons()
     for _, weaponFolder in pairs(WeaponModules:GetChildren()) do
         local weaponName = weaponFolder.Name
@@ -218,28 +243,21 @@ function SkinPage:CreateSkinFramesForAllWeapons()
     end
 end
 
-function SkinPage:GetSkinFromFrame(frame)
-    local str = ""
-    local tab = {"weapon", "model", "skin", "uuid"}
-    for i, v in pairs(tab) do
-        str = str .. frame:GetAttribute(v)
-        if i ~= #tab then
-            str = str .. "_"
+function SkinPage:CreateSkinFramesForAllDefaultWeapons(frames)
+    for _, weaponFolder in pairs(WeaponModules:GetChildren()) do
+        if not weaponFolder:FindFirstChild("Assets") then
+            continue
         end
-    end
-    return InventoryInterface2.ParseSkinString(str)
-end
 
-function SkinPage:_getDefaultSkins(equippedInventory)
-    local defaults = {}
-    for i, _ in pairs(equippedInventory) do
-        if i == "knife" then
-            defaults[i] = "knife_default_default_0"
-        else
-            defaults[i] = i .. "_" .. i .. "_" .. "default_0"
+        local weaponName = weaponFolder.Name
+        local inventoryKey = weaponName .. "_" .. weaponName .. "_default_0"
+
+        if weaponName == "knife" then
+            inventoryKey = "knife_default_default_0"
         end
+
+        frames[inventoryKey] = SkinPage.CreateSkinFrame(self, inventoryKey)
     end
-    return defaults
 end
 
 return SkinPage
