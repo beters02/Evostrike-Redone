@@ -91,6 +91,8 @@ function Recoil:Update(dt)
             self.Unxt = "skip"
         end
     else
+        --self:UpdateOrigin(dt)
+
         rdpf = self.NupGoal/ds
         goalRotation = Vector3.new(-rdpf.X, -rdpf.Y, 0) * dt
         self.UpAmount += Vector3.new(math.abs(goalRotation.X), math.abs(goalRotation.Y), 0)

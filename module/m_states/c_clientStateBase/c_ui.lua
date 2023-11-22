@@ -7,7 +7,6 @@ local module = {
 
 -- A ui can be any UI element that has the Enabled or Visible property.
 function module:addOpenUI(uiName, ui, mouseIconEnabled)
-	
 	if not uiName then warn("Must specifiy UI name.") return false end
 
 	-- we dont want to add the same UI twice here

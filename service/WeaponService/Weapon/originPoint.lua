@@ -1,6 +1,7 @@
 local Weapon = {}
 Weapon.__index = Weapon
 
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
@@ -12,7 +13,7 @@ local Math = require(Framework.Module.lib.fc_math)
 local InstLib = require(Framework.shfc_instance.Location)
 local UIState = States.State("UI")
 local PlayerActionsState = States.State("PlayerActions")
-local Types = require(script.Parent.Types)
+--local Types = require(script.Parent.Types)
 local SoundModule = require(Framework.Module.Sound)
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
 local PlayerData2 = require(Framework.Module.PlayerData)
@@ -64,7 +65,7 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     if not controller then
         repeat controller = controllermodule.currentController until controller
     end
-    controller = controller :: Types.WeaponController
+    controller = controller
     self.Controller = controller
 
     -- init animations
@@ -220,13 +221,11 @@ function Weapon:Remove()
     self = nil
 end
 
-function Weapon:PrimaryFire(moveSpeed)
-    local fireTick = tick()
-    --local moveSpeed = self.Character.HumanoidRootPart.Velocity
-
+function Weapon:PrimaryFire()
     if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get(self.Player, "grenadeThrowing") then return end
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
-    
+    local fireTick = tick()
+
     if not self.Variables.recoilReset then
         self.Variables.recoilReset = self.Options.recoilResetMin
     end
@@ -239,6 +238,13 @@ function Weapon:PrimaryFire(moveSpeed)
 	self.Variables.currentBullet = (fireTick - self.Variables.lastFireTime >= (math.min(self._camReset, self.Options.recoilResetMax))) and 1 or self.Variables.currentBullet + 1
 	self.Variables.lastFireTime = fireTick
 	self.CameraObject.weaponVar.currentBullet = self.Variables.currentBullet
+
+    if self.Variables.currentBullet == 1 then
+        local mos = game.Players.LocalPlayer:GetMouse()
+        self.Variables.originMosPos = Vector2.new(mos.X, mos.Y)
+        self.Variables.originMray = workspace.CurrentCamera:ScreenPointToRay(mos.X, mos.Y)
+        self.Variables.originCFrame = game.Players.LocalPlayer:GetMouse().Origin
+    end
 
 	-- Play Emitters and Sounds
 	task.spawn(function()
@@ -264,7 +270,7 @@ function Weapon:PrimaryFire(moveSpeed)
     end
 
 	-- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
-	self:RegisterRecoils(moveSpeed)
+	self:RegisterRecoils(self.Variables.currentBullet)
 
 	-- play animations
 	self:PlayAnimation("client", "Fire")
@@ -528,8 +534,6 @@ function Weapon:DisconnectActions()
 end
 
 function Weapon:MouseDown(isSecondary: boolean?)
-    local moveSpeed = self.Character.HumanoidRootPart.Velocity
-    print(moveSpeed.Magnitude)
     self.Variables.mousedown = true
     if self.Options.automatic then
         return self:AutomaticMouseDown()
@@ -559,7 +563,7 @@ function Weapon:MouseDown(isSecondary: boolean?)
                 if isSecondary then
                     self:SecondaryFire()
                 else
-                    self:PrimaryFire(moveSpeed)
+                    self:PrimaryFire()
                 end
             end
 
@@ -574,13 +578,12 @@ function Weapon:MouseDown(isSecondary: boolean?)
     if isSecondary then
         self:SecondaryFire()
     else
-        self:PrimaryFire(moveSpeed)
+        self:PrimaryFire()
     end
     self.Variables.fireDebounce = false
 end
 
 function Weapon:AutomaticMouseDown()
-    local moveSpeed = self.Character.HumanoidRootPart.Velocity
     if not self.Variables.fireLoop then
 
         -- register initial fire boolean
@@ -598,11 +601,10 @@ function Weapon:AutomaticMouseDown()
         self.Variables.fireLoop = RunService.RenderStepped:Connect(function(dt)
             self.Variables.accumulator += dt
             while self.Variables.accumulator >= self.Options.fireRate and self.Variables.mousedown do
-                moveSpeed = self.Character.HumanoidRootPart.Velocity
                 self.Variables.nextFireTime = tick() + self.Options.fireRate
                 self.Variables.accumulator -= self.Options.fireRate
                 task.spawn(function()
-                    self:PrimaryFire(moveSpeed)
+                    self:PrimaryFire()
                 end)
                 if self.Variables.accumulator >= self.Options.fireRate then task.wait(self.Options.fireRate) end
             end
@@ -610,7 +612,7 @@ function Weapon:AutomaticMouseDown()
 
         -- initial fire if necessary
         if startWithInit then
-            self:PrimaryFire(moveSpeed)
+            self:PrimaryFire()
         end
     end
 end
@@ -795,32 +797,36 @@ end
 
 -- Final Recoil Functions
 
-function Weapon:RegisterRecoils(moveSpeed)
+function Weapon:RegisterRecoils(bullet)
     local vecRecoil = self.Recoil.Fire(self, self.Variables.currentBullet)
-    local bullet = self.Variables.currentBullet
 
     -- Vector Recoil
 	task.spawn(function()
 
 		-- grab vector recoil from pattern using the camera object
 		local m = self.Player:GetMouse()
-        local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
+        --local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
 		self.Variables.currentVectorModifier = self._vecModifier
         self.Variables.recoilReset = self._camReset
 
 		-- get total accuracy and recoil vec direction
-        local direction = self:CalculateRecoils(mray, vecRecoil, bullet, moveSpeed)
+        --local direction = self:CalculateRecoils(mray, vecRecoil)
+        --local direction = mray.Direction
+        --local origin = self:CalculateRecoils(mray, vecRecoil, bullet)
+        local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
+        local origin = mray.Origin
+        local direction = self:CalculateRecoils(mray, vecRecoil, bullet)
 
 		-- check to see if we're wallbanging
 		local wallDmgMult, hitchar, result
 		local normParams = SharedWeaponFunctions.getFireCastParams(self.Player, workspace.CurrentCamera)
-		wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
+		wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(origin, direction * 250, normParams, nil, 1)
 
 		if result then
 			self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 
 			-- register client shot for bullet/blood/sound effects
-			SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel)
+			SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel)
 			return true
 		end
 
@@ -828,13 +834,19 @@ function Weapon:RegisterRecoils(moveSpeed)
 	end)
 end
 
-function Weapon:CalculateRecoils(mray, recoilVector3, bullet, moveSpeed)
-    local acc = self:CalculateAccuracy(recoilVector3, moveSpeed)
+function Weapon:CalculateRecoils(mray, recoilVector3, bullet)
+    local acc = self:CalculateAccuracy(recoilVector3)
     local new = Vector2.new(recoilVector3.Y, recoilVector3.X)
+    local hit = self.Player:GetMouse().Hit
+    local dir
     local vecr
 
+    --[[if bullet == 1 then
+        self.Origin = hit
+    end]]
+
 	-- first bullet remove vector recoil
-	if bullet == 1 then
+	if self.Variables.currentBullet == 1 then
 		new = Vector2.zero
 		self.Variables.lastYVec = 0
 	else
@@ -850,18 +862,98 @@ function Weapon:CalculateRecoils(mray, recoilVector3, bullet, moveSpeed)
         vecr = Vector2.new(new.X, self.Variables.lastYVec) * offset
     end
 
-    vecr /= 500
+    vecr /= 550
     acc /= 550
 
-	-- combine acc and vec recoil
-	acc += vecr
+    local cam = workspace.CurrentCamera
 
-	local direction = mray.Direction
-	local worldDirection = workspace.CurrentCamera.CFrame:VectorToWorldSpace(direction)
-	return Vector3.new(direction.X + (acc.X)*(worldDirection.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X)*(worldDirection.Z > 0 and -1 or 1)).Unit
+    if bullet == 1 then
+        self.originVector = cam.CFrame.LookVector --workspace.CurrentCamera.CFrame:VectorToWorldSpace(Vector3.new(0,0,1))
+        self.originPoint = cam.CFrame.Position + (self.originVector * 10)
+        dir = self.originVector
+    else
+        local crosshairPoint = cam.CFrame.Position + (cam.CFrame.LookVector * 10)
+        local wallVector = (crosshairPoint - self.originPoint) * 2
+        local rayPoint = self.originPoint + wallVector
+        dir = rayPoint - cam.CFrame.Position
+    end
+
+    return dir
+            --l
+            --[[Vector3 crosshairPoint = cam.transform.position + (cam.transform.TransformDirection(Vector3.forward) * 10);
+            Vector3 wallVector = (crosshairPoint - m_originPoint) * 2f;
+            Vector3 rayPoint = m_originPoint + wallVector;
+            rayDirection = rayPoint - cam.transform.position;]]
+
+    --[[m_originVector = cam.transform.TransformDirection(Vector3.forward);
+    m_originPoint = cam.transform.position + (m_originVector * 10);
+    rayDirection = m_originVector;]]
+
+	-- combine acc and vec recoil
+	--acc += vecr
+
+    --local originDirection = self.Variables.originMray
+    --originDirection = originDirection and originDirection.Direction
+
+    --local direction = mray.Direction
+    --local direction = workspace.CurrentCamera:ScreenPointToRay(self.Variables.originMosPos.X, self.Variables.originMosPos.Y, 10).Direction
+    --local cf: CFrame = Players.LocalPlayer:GetMouse().Origin
+    --[[ocal originCF = self.Variables.originCFrame
+
+    --print(cf)
+    print(originCF)
+
+    local diff = (cf.LookVector-originCF.LookVector)/2
+    local ydiff = (cf.LookVector)]]
+    --local diff = cf.LookVector:Cross(originCF.LookVector)
+    --direction *= direction
+    --local direction = cf.LookVector + (diff*1.5)
+    --direction = Vector3.new()
+    --local add = (direction+originCF.LookVector)/2
+    --direction = Vector3.new(direction.)
+
+    --local diffCF = cf:ToWorldSpace(originCF)
+    --diffCF *= diffCF
+    --direction = diffCF.LookVector
+
+    --[[if originDirection then
+        --local fac = direction:Cross(originDirection)
+        --direction = fac * 2
+        --local norm = (originDirection - direction).Unit
+        --direction = (originDirection + direction)/2
+        --direction = direction - 2 * direction:Dot(norm) * norm
+    end]]
+
+    --direction = direction + ((direction + originDirection))--direction:Cross(originDirection)*2
+    --local cross = direction:Cross(originDirection)
+    --direction -= cross*4
+    --direction += (originDirection - direction)*2
+
+	--local worldDirection = workspace.CurrentCamera.CFrame:VectorToWorldSpace(direction)
+	--return Vector3.new(direction.X + (acc.X)*(worldDirection.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X)*(worldDirection.Z > 0 and -1 or 1)).Unit
+
+    -- Vector
+    --local hit = game.Players.LocalPlayer:GetMouse().Hit
+
+    --[[local diff = hit.Position:Cross(self.Origin.Position)
+    local pos = hit:ToWorldSpace(CFrame.new(diff.Unit*2)).Position
+    return Vector3.new((pos.X * (acc.X))/pos.X, (pos.Y * (acc.X))/pos.Y, (pos.Z * (acc.X))/pos.Z)]]
+    --return diff
+    --return Vector3.new(direction.X + (acc.X) * (worldDirection.X > 0 and 1 or -1), direction.Y + acc.Y, direction.Z + (acc.X) * (worldDirection.Z > 0 and -1 or 1))
 end
 
-function Weapon:CalculateAccuracy(vecRecoil, moveSpeed)
+local uis = game:GetService("UserInputService")
+
+function Weapon:UpdateOrigin(dt)
+    local mos = game.Players.LocalPlayer:GetMouse()
+    local delta = uis:GetMouseDelta() * dt
+    local xRot = delta.X
+    local yRot = delta.Y
+    self.originVector = CFrame.Angles(-xRot, yRot, 0) * self.originVector
+    self.originPoint = workspace.CurrentCamera.CFrame.Position + (self.originVector * 10);
+end
+
+function Weapon:CalculateAccuracy(vecRecoil)
     local baseAccuracy
 
 	if self.Options.scope then
@@ -878,12 +970,12 @@ function Weapon:CalculateAccuracy(vecRecoil, moveSpeed)
 		end
 	end
 
-	local acc = self:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
+	local acc = self:CalculateMovementInaccuracy(baseAccuracy)
 	acc = Vector2.new(Math.absr(acc.X), Math.absr(acc.Y))
 	return acc
 end
 
-function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
+function Weapon:CalculateMovementInaccuracy(baseAccuracy)
     local player = self.Player
     local weaponOptions = self.Options
     local _x
@@ -894,19 +986,17 @@ function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
 	end
 	
 	-- movement speed inacc
-	local movementSpeed = moveSpeed.Magnitude
+	local movementSpeed = player.Character.HumanoidRootPart.Velocity.Magnitude
 	local mstate = States.State("Movement")
 	local rspeed = self.MovementCfg.walkMoveSpeed + math.round((self.MovementCfg.groundMaxSpeed - self.MovementCfg.walkMoveSpeed)/2)
-    --local inaccSpeed = 2.9 -- After some testing, 2.8 is a "poorly done" counter-strafe. A good counter strafe results in 1.2 or lower. We will give them 2.9 for now.
-    local inaccSpeed = 7 -- 7 feels better for spraying for the time being.
 
-    if mstate:get(player, "crouching") then
-        baseAccuracy = weaponOptions.accuracy.crouch
-    elseif mstate:get(player, "landing") or (movementSpeed > inaccSpeed and movementSpeed < rspeed) then
-        baseAccuracy = weaponOptions.accuracy.walk
-    elseif movementSpeed >= rspeed then
-        baseAccuracy = weaponOptions.accuracy.run
-    end
+	if mstate:get(player, "landing") or (movementSpeed > 14 and movementSpeed < rspeed) then
+		baseAccuracy = weaponOptions.accuracy.walk
+	elseif movementSpeed >= rspeed then
+		baseAccuracy = weaponOptions.accuracy.run
+	elseif mstate:get(player, "crouching") then
+		baseAccuracy = weaponOptions.accuracy.crouch
+	end
 	
 	-- jump inacc
 	if not self:IsGrounded() then

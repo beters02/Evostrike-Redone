@@ -1,9 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
+--local UserInputService = game:GetService("UserInputService")
 
 local player = game:GetService("Players").LocalPlayer
 
-if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
+--if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
 
 local gui = player.PlayerGui:WaitForChild("MainMenu")
 local module = require(script.Parent).initialize(gui)

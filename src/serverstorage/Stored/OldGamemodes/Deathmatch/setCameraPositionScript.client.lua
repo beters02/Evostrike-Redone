@@ -1,1 +1,0 @@
-workspace.CurrentCamera.CFrame = CFrame.new(129.178, 54.325, -128.393) --* CFrame.Angles(math.rad(-24.031), math.rad(117.17), 0)

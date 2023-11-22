@@ -74,7 +74,7 @@ function Stop(restart: boolean?, delayLength: number?, map: string?, newGamemode
     Maps:SetMap(map) -- change map randomly, ignore current map
 end
 
---@run
+-- [[ SCRIPT RUN ]]
 Players.CharacterAutoLoads = false
 Players.PlayerAdded:Once(function(player: Player)
     Init(player)

@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 --[[
     This Service acts less like a Service and more like an Interface,
@@ -9,6 +10,8 @@ type GamemodeObject = {Name: string, Script: Script, Interface: any}
 local GamemodeService = {}
 GamemodeService.Location = script
 GamemodeService.DefaultGamemode = "Deathmatch"
+GamemodeService.MenuType = "Lobby"
+
 local Bridge = script:WaitForChild("Bridge")
 local Bindable = script:WaitForChild("Bindable")
 
@@ -32,6 +35,20 @@ function GamemodeService:SetGamemode(gamemode)
     end
 end
 
+function GamemodeService:SetMenuType(menuType: "Lobby" | "Game")
+    if RunService:IsClient() then
+        return
+    end
+    GamemodeService.MenuType = menuType
+    for _, v in pairs(Players:GetPlayers()) do
+        local mm = v.PlayerGui and v.PlayerGui:FindFirstChild("MainMenu")
+        if mm then
+            mm:SetAttribute("MenuType", menuType)
+        end
+        Bridge:FireClient(v, "ChangeMenuType", menuType)
+    end
+end
+
 if RunService:IsServer() then
     Bridge.OnServerEvent:Connect(function(player, action, ...)
         if action == "RestartGamemode" then
@@ -41,7 +58,6 @@ if RunService:IsServer() then
             if not require(game:GetService("ServerStorage").Stored.AdminIDs):IsAdmin(player) then return end
             GamemodeService:SetGamemode(...)
         end
-        
     end)
 end
 

@@ -18,61 +18,60 @@ function main.initialize(gui)
     main.player = Players.LocalPlayer
     main.gui = gui
     main.bgframe = main.gui:WaitForChild("BG")
-
 	main.topBar.init()
-	
-    main.var = {opened = false}
+    main.var = {opened = false, menuType = main.gui:GetAttribute("MenuType"), loading = false}
 	main.page = require(Players.LocalPlayer.PlayerScripts.MainMenu.page).init(main)
 
 	main.isInit = true
 
-	print('Initialized MainMenu!')
+	if player:GetAttribute("Loaded") then
+		main.open()
+	else
+		main.close()
+		main.var.loading = true
+		task.spawn(function()
+			repeat task.wait() until player:GetAttribute("Loaded")
+			main.open()
+			main.var.loading = false
+		end)
+	end
 	return main
 end
 
 -- menu type
 type MenuType = "Game" | "Lobby"
 function main.setMenuType(mtype: MenuType)
-	if mtype == "Game" then
-		main.page._stored.Home:_preparePageGamemode("Default")
-		main.conectOpenInput()
-	else
-		main.page._stored.Home:_preparePageGamemode("Lobby")
-		main.disconectOpenInput()
-		if not main.var.opened then
-			main.open()
+	if not main.isInit then
+		if not main.processing then
+			main.processing = task.spawn(function()
+				print("MainMenu accessed before init. Waiting..")
+				repeat task.wait() until main.isInit
+				main.setMenuType(mtype)
+				main.processing = nil
+			end)
 		end
+		return
 	end
+	main.page._stored.Home:SetMenuType(mtype)
+	print("Set MainMenu Type!")
 end
 
 -- main
 function main.open()
 	main.var.opened = true
-
-	-- prepare frames
 	main.page:CloseAllPages()
-
-	-- top bar
 	main.topBar.connect()
-
-	-- open menu
 	main.topBar.activated(main.topBar.buttonFrames.Home)
-	--main.page:OpenPage("Home")
 	main.gui.Enabled = true
-
-	-- set mouse icon enabled
+	UIState:removeOpenUI("MainMenu")
 	UIState:addOpenUI("MainMenu", main.gui, true)
 end
 
 function main.close()
 	main.var.opened = false
-
 	main.topBar.disconnect()
-
 	main.page:CloseAllPages()
-	
 	main.gui.Enabled = false
-	
 	UIState:removeOpenUI("MainMenu")
 end
 
@@ -87,9 +86,7 @@ function main.toggle()
 end
 
 function main.conectOpenInput()
-	if main.inputConn then
-		main.disconectOpenInput()
-	end
+	main.disconectOpenInput()
 	main.inputConn = UserInputService.InputBegan:Connect(function(input, gp)
 		if input.KeyCode == Enum.KeyCode.M then
 			if player:GetAttribute("Typing") then return end
@@ -100,8 +97,10 @@ function main.conectOpenInput()
 end
 
 function main.disconectOpenInput()
-	main.inputConn:Disconnect()
-	main.inputConn = nil
+	if main.inputConn then
+		main.inputConn:Disconnect()
+		main.inputConn = nil
+	end
 end
 
 -- main util

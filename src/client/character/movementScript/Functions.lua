@@ -230,7 +230,8 @@ function module:ApplyAntiSticking(wishedSpeed, inAir, addSpeed)
 		end
 	end
 
-	for _, v in pairs({Vector3.new(0, -3.1, 0), Vector3.new(0, 1.5, 0), "Head"}) do
+	local lookVecs = {Vector3.new(0, -3.1, 0), Vector3.new(0, 1.5, 0), "Head"}
+	for _, v in pairs(lookVecs) do
 		local currForDir
 		local currSideDir
 		local dontAddFor = false

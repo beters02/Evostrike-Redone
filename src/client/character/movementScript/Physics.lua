@@ -75,13 +75,14 @@ function module:ApplyGroundVelocity(groundNormal: Vector3)
 	-- apply acceleration
 	self:ApplyGroundAcceleration(accelDir, wishSpeed)
 
+	self:ApplyAntiSticking(self.movementVelocity.Velocity)
+
 	-- calculate slope movement
 	local forwardVelocity: Vector3 = groundNormal:Cross(CFrame.Angles(0,math.rad(90),0).LookVector * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z))
 	local yVel = forwardVelocity.Unit.Y * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z).Magnitude
 
 	-- apply slope movement
 	self.movementVelocity.Velocity = Vector3.new(self.movementVelocity.Velocity.X, yVel * (accelDir.Y < 0 and 1.2 or 1), self.movementVelocity.Velocity.Z)
-
 end
 
 --[[
@@ -92,21 +93,11 @@ end
 ]]
 
 function module:ApplyGroundAcceleration(wishDir, wishSpeed)
-
 	local addSpeed
 	local accelerationSpeed
 	local currentSpeed
 	local currentVelocity = self.movementVelocity.Velocity
 	local newVelocity = currentVelocity
-	
-	-- if no inputs, don't accelerate
-	if wishDir.Magnitude == 0 then
-		if self.dashing then
-			self.movementVelocity.Velocity = self:ApplyAntiSticking(currentVelocity)
-			return
-		end
-		self.movementVelocity.Velocity = self:ApplyAntiSticking(currentVelocity)
-	end
 	
 	-- get current/add speed
 	currentSpeed = currentVelocity:Dot(wishDir)
@@ -114,9 +105,6 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	
 	-- if we're not adding speed, dont do anything
 	if addSpeed <= 0 then return end
-
-	-- if a wall was hit, dont accelerate in that direction
-	--ewVelocity = self:ApplyWallHit(wallHit, newVelocity, wishDir)
 	
 	-- get accelSpeed, cap at addSpeed
 	accelerationSpeed = math.min(self.groundAccelerate * self.currentDT * wishSpeed, addSpeed)
@@ -125,9 +113,6 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 	newVelocity += (accelerationSpeed * wishDir)
 	newVelocity = Vector3.new(newVelocity.X, self.sliding and newVelocity.Y or 0, newVelocity.Z)
 
-	-- detect if player is against wall
-	newVelocity = self:ApplyAntiSticking(newVelocity)
-
 	-- clamp magnitude (max speed)
 	if newVelocity.Magnitude > (self.groundMaxSpeed + self.maxSpeedAdd + self.equippedWeaponPenalty) and not self.dashing then
 		newVelocity = newVelocity.Unit * math.min(newVelocity.Magnitude, (self.groundMaxSpeed + self.maxSpeedAdd + self.equippedWeaponPenalty))
@@ -135,7 +120,6 @@ function module:ApplyGroundAcceleration(wishDir, wishSpeed)
 
 	-- apply acceleration
 	self.movementVelocity.Velocity = newVelocity
-
 end
 
 --[[
@@ -171,7 +155,17 @@ function module:ApplyAirVelocity()
 	
 	-- apply acceleration
 	local accelspeed = self:ApplyAirAcceleration(accelDir, wishSpeed)
+
 	self:ApplyAntiSticking(self.movementVelocity.Velocity, self.dashing, accelspeed)
+
+	-- calculate slope movement
+	if self.sliding then
+		local forwardVelocity: Vector3 = self.slideNormal:Cross(CFrame.Angles(0,math.rad(90),0).LookVector * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z))
+		local yVel = forwardVelocity.Unit.Y * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z).Magnitude
+
+		-- apply slope movement
+		self.movementVelocity.Velocity = Vector3.new(self.movementVelocity.Velocity.X, yVel * (accelDir.Y < 0 and 1.2 or 1), self.movementVelocity.Velocity.Z)
+	end
 end
 
 --[[
@@ -182,34 +176,16 @@ end
 ]]
 
 function module:ApplyAirAcceleration(wishDir, wishSpeed)
-
 	local currentSpeed
 	local addSpeed
 	local accelerationSpeed
-	
-	-- apply anti sticking on collider velocity
-	-- resolves head collision ** THIS IS A MUST HAVE **
-	--self.collider.Velocity = self:ApplyAntiSticking(self.collider.Velocity, true, wishSpeed - self.collider.Velocity.Magnitude)
-	
-	-- if no inputs, don't accelerate
-	if wishDir.Magnitude == 0 then
-		if self.dashing then
-			wishDir = self.collider.Velocity.Unit * wishSpeed
-		else
-			--self.movementVelocity.Velocity = self:ApplyAntiSticking(self.movementVelocity.Velocity, true, wishSpeed - self.movementVelocity.Velocity.Magnitude)
-			return wishSpeed - self.movementVelocity.Velocity.Magnitude
-		end
-	end
 
 	-- get current/add speed
 	currentSpeed = self.movementVelocity.Velocity:Dot(wishDir)
 	addSpeed = wishSpeed - currentSpeed
 
 	-- if we're not adding speed, dont do anything
-	if addSpeed <= 0 then
-		--return addSpeed
-		if not self.sliding then return end
-	end
+	if addSpeed <= 0 then return end
 
 	-- get accelSpeed, cap at addSpeed
 	accelerationSpeed = math.min(self.airAccelerate * self.currentDT * wishSpeed, addSpeed)

@@ -330,15 +330,15 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 	local runsnd = Movement.Sounds.runDefault
 
 	runsnd.Volume = 0
-	if landsnd.IsPlaying then
-		SoundModule.StopReplicated(landsnd)
+	if not landsnd.IsPlaying then
+		--SoundModule.StopReplicated(landsnd)
+		SoundModule.PlayReplicated(landsnd)
+		task.delay(0.1, function()
+			SoundModule.StopReplicated(landsnd)
+			runsnd.Volume = runv
+		end)
 	end
-	SoundModule.PlayReplicated(landsnd)
-	task.delay(0.1, function()
-		SoundModule.StopReplicated(landsnd)
-		runsnd.Volume = runv
-	end)
-
+	
 	-- STATES
 	MovementState:set(player, "landing", true)
 
@@ -402,7 +402,6 @@ function Movement.Crouch(crouch: boolean)
 		hum.CameraOffset = Vector3.new(0, -Movement.crouchDownAmount, 0)
 
 		-- movement state
-
 		MovementState:set(player, "crouching", true)
 		Movement.crouching = true
 
@@ -567,6 +566,20 @@ local processCrouch
 local processWalk
 local lastSavedHitPos
 
+-- THE FIX IS RIGHT HERE BABY!***
+-- This fixes the Crouching in corners bugs. Thank god. Be sure to apply it to collider and movementVelocity
+local function fixVel(vel)
+	local currVel = vel
+	if not currVel.X or currVel.X ~= currVel.X then vel = Vector3.new(0,0,0)
+	elseif not currVel.Y or currVel.Y ~= currVel.Y then vel = Vector3.new(0,0,0)
+	elseif not currVel.Z or currVel.Z ~= currVel.Z then vel = Vector3.new(0,0,0) end
+	return vel
+end
+
+function getMoveSum()
+	return math.abs(currentInputSum.Forward) + math.abs(currentInputSum.Side)
+end
+
 function Movement.ProcessMovement()
 	cameraYaw = Movement:GetYaw()
 	cameraLook = cameraYaw.lookVector
@@ -574,11 +587,10 @@ function Movement.ProcessMovement()
 	Movement.cameraLook = cameraLook
 	
 	if cameraLook == nil then print('NILLAGE') return end
-	
-	local currVel = Movement.movementVelocity.Velocity
-	if currVel.X ~= currVel.X then Movement.movementVelocity.Velocity = Vector3.new(0,0,0)
-	elseif currVel.Y ~= currVel.Y then Movement.movementVelocity.Velocity = Vector3.new(0,0,0)
-	elseif currVel.Z ~= currVel.Z then Movement.movementVelocity.Velocity = Vector3.new(0,0,0) end
+
+	-- THIS IS THE FIX!***
+	Movement.movementVelocity.Velocity = fixVel(Movement.movementVelocity.Velocity)
+	Movement.collider.Velocity = fixVel(Movement.collider.Velocity)
 
 	local hitPart, hitPosition, hitNormal, yRatio, zRatio, ladderTable = Movement:FindCollisionRay()
 	playerGrounded = hitPart and true or false
@@ -590,7 +602,7 @@ function Movement.ProcessMovement()
 		})
 	
 		local result = workspace:Blockcast(
-			CFrame.new(player.Character.HumanoidRootPart.CFrame.Position + Vector3.new(0, -3.25, 0)),
+			CFrame.new(player.Character.HumanoidRootPart.CFrame.Position + Vector3.new(0, -3.25 + (Movement.crouching and Movement.crouchDownAmount or 0), 0)),
 			Vector3.new(1.5,1.5,1),
 			Vector3.new(0, -1, 0),
 			params
@@ -611,9 +623,19 @@ function Movement.ProcessMovement()
 
 	if not playerGrounded then
 		if Movement.sliding then Movement.sliding = false end
-	elseif playerGrounded and hitNormal.Y < Movement.surfSlopeAngle then
+	elseif playerGrounded and hitNormal.Y < Movement.surfSlopeAngle and hitNormal.Y ~= 0 then
 		playerGrounded = false
 		Movement.sliding = true
+		Movement.slideNormal = hitNormal
+	end
+
+	if Movement.sliding and hitNormal.Magnitude == 0 then
+		Movement.sliding = false
+		playerGrounded = false
+	end
+
+	if not playerGrounded and not inAir then
+		inAir = tick()
 	end
 
 	-- attempt resolve players flying out of the map
@@ -626,7 +648,6 @@ function Movement.ProcessMovement()
 	
 	-- [[ LANDING REGISTRATION ]]
 	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then
-		
 		local a = inAir
 		inAir = false
 		inAirMovementState = false
@@ -636,8 +657,6 @@ function Movement.ProcessMovement()
 			Movement.Land(false, false, hitPart.Material)
 			landed:Fire()
 		else
-			
-			-- if we didn't register a land, we run (shouldnt happen)
 			Movement.Run(hitPosition, hitNormal, hitPart.Material)
 			return
 		end
@@ -927,6 +946,9 @@ function Main()
 
 	local function _init()
 		if hum.Health > 0 then
+			if not player:GetAttribute("Loaded") then
+				repeat task.wait() until player:GetAttribute("Loaded")
+			end
 			collider.Anchored = false
 			Movement.movementVelocity.Velocity = Vector3.zero
 			collider.Velocity = Vector3.zero

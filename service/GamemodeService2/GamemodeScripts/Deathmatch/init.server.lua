@@ -40,6 +40,7 @@ local PlayerData = {}
 local GameData = {
     Status = "Waiting" :: GameStatus,
     Connections = {PlayerAdded = false, PlayerRemoving = false, PlayerDied = false, TimerFinished = false, BuyMenu = false},
+    Variables = {PlayersCanSpawn = false},
     Options = GameOptionsModule.new(),
     CurrentRound = 1,
     RoundStatus = "Stopped" :: GameStatus,
@@ -49,8 +50,13 @@ local GameData = {
     Guis = script:WaitForChild("Guis")
 }
 
+local GamemodeService2 = require(Framework.Service.GamemodeService2)
+local RequestSpawnEvent = Framework.Service.GamemodeService2.RequestSpawn
+local RequestDeathEvent = Framework.Service.GamemodeService2.RequestDeath
+GamemodeService2:SetMenuType("Lobby")
+GamemodeService2.CurrentGamemode = "Deathmatch"
+
 function Start()
-    print('starting game')
     for _, v in pairs(Players:GetPlayers()) do
         local pdata = PlayerDataInit(v)
         if pdata then PlayerData[v.Name] = pdata end
@@ -72,7 +78,6 @@ function Start()
     GameData.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
         local pdata = PlayerDataInit(player)
         if pdata then PlayerData[player.Name] = pdata end
-        PlayerSpawn(player)
         GuiTopBar(player)
         GuiBuyMenu(player)
     end)
@@ -80,8 +85,6 @@ function Start()
     GameData.Connections.PlayerRemoving = false
 
     GameData.Connections.PlayerDied = Framework.Module.EvoPlayer.Events.PlayerDiedRemote.OnServerEvent:Connect(function(player, killer)
-        print(GameData.Status)
-
         TagsLib.DestroyTagged("DestroyOnPlayerDied_" .. player.Name)
         if GameData.Status ~= "Stopped" then
             local stop = RoundProcessPlayerDied(player, killer)
@@ -107,9 +110,27 @@ function Start()
         print(PlayerData)
     end)
 
+    RequestSpawnEvent.OnServerInvoke = function(player)
+        if GameData.Variables.PlayersCanSpawn then
+            GuiPlayerInitialSpawn(player)
+            return true
+        end
+        return false
+    end
+
+    RequestDeathEvent.OnServerInvoke = function(player)
+        PlayerData[player.Name].Variables.InGame = false
+        if player.Character and player.Character.Humanoid then
+            player.Character.Humanoid:TakeDamage(1000)
+        end
+        return true
+    end
+
     GuiAll(GuiTopBar)
     GuiAll(GuiBuyMenu)
     
+    GameData.Variables.PlayersCanSpawn = true
+
     RoundStart(1)
     print('round started')
 end
@@ -215,7 +236,7 @@ function RoundStart(round: number)
     GameData.CurrentRound = round
 
     for _, v in pairs(PlayerData) do
-        PlayerSpawn(v.Player)
+        --GuiPlayerInitialSpawn(v.Player)
     end
 
     GameData.Timer = Timer.new(GameData.Options.round_length)
@@ -281,7 +302,9 @@ function PlayerSpawn(player)
 end
 
 function PlayerDied(player, killer)
-    GuiPlayerDied(player, killer)
+    if PlayerData[player.Name].Variables.InGame then
+        GuiPlayerDied(player, killer)
+    end
 end
 
 function PlayerRemoving(player)
@@ -344,7 +367,8 @@ function PlayerDataInit(player)
             Score = 0,
             Inventory = Tables.deepcopy(GameData.Options.inventory),
             Connections = {},
-            States = {GuiTopBar = false}
+            States = {GuiTopBar = false},
+            Variables = {InGame = true}
         } :: PlayerData
         task.spawn(function()
             GuiContainer(player)
@@ -430,6 +454,23 @@ function GuiAll(callback, ...)
     for _, player in pairs(Players:GetPlayers()) do
         callback(player, ...)
     end
+end
+
+function GuiPlayerInitialSpawn(player)
+    PlayerDataGet(player)
+    local gui = Gui(player, "PlayerInitialSpawn", false, {"DestroyOnPlayerSpawning_" .. player.Name, "DestroyOnStop"}, {KilledString = "Spawn"})
+
+    PlayerData[player.Name].Connections.Respawn = gui:WaitForChild("Events"):WaitForChild("RemoteEvent").OnServerEvent:Connect(function(plr, action)
+        if plr ~= player then return end
+        if action == "Respawn" then
+            gui:WaitForChild("Events"):WaitForChild("Finished"):FireClient(player)
+            task.wait(0.2)
+            PlayerSpawn(plr)
+            task.wait()
+            PlayerData[plr.Name].Connections.Respawn:Disconnect()
+            PlayerData[plr.Name].Connections.Respawn = nil
+        end
+    end)
 end
 
 function GuiPlayerDied(player, killer)

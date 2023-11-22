@@ -15,8 +15,10 @@ function pageClass.new(main, basePageTable, pageName)
     self.Name = pageName
     self.Location = main.gui[pageName.."Frame"]
     self._mainPageModule = basePageTable
+    self._main = main
     self._sendMessageGui = require(basePageTable._loc.Parent.sendMessageGui)
     self._closeMain = main.close
+    self._openMain = main.open
 
     local soundsFolder = main.gui:WaitForChild("Sounds")
     self._sounds = {Open = soundsFolder:WaitForChild("selectSound"), Hover = soundsFolder:WaitForChild("hoverSound")}

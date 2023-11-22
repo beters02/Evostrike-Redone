@@ -37,15 +37,6 @@ function SkinPage:init()
     end
 end
 
-function SkinPage:OpenSkinPage()
-    self.Location.Case.Visible = false
-    self.Location.Key.Visible = false
-    self.Location.Skin.Visible = true
-    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
-    self.Location.KeysButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-end
-
 function SkinPage:Clear()
     for _, v in pairs(self.SkinPageFrames) do
         v:Destroy()
@@ -96,6 +87,16 @@ function SkinPage:Update()
     end
 
     self.SkinPageFrames = frames
+end
+
+function SkinPage:ConnectButtons()
+    for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
+        if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
+        table.insert(self._bconnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
+            if not self.Location.Skin.Visible then return end
+            SkinPage.SkinFrameButtonClicked(self, v)
+        end))
+    end
 end
 
 function SkinPage:CreateSkinFrame(skinStr)
