@@ -529,7 +529,6 @@ end
 
 function Weapon:MouseDown(isSecondary: boolean?)
     local moveSpeed = self.Character.HumanoidRootPart.Velocity
-    print(moveSpeed.Magnitude)
     self.Variables.mousedown = true
     if self.Options.automatic then
         return self:AutomaticMouseDown()

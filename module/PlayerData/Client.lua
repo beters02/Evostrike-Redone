@@ -88,10 +88,12 @@ function Client:SetKey(key, new)
 end
 
 function Client:SetPath(path, new)
+	Client:Get()
     local _pd = Client._cache
-    Client:Get()
     Strings.doActionViaPath(path, _pd, function(parent, key, segments)
-        assert(not Client._defvar[segments[1]].clientReadOnly, "Cannot edit this value on the client.")
+        if Client._defvar[segments[1]] then
+            assert(not Client._defvar[segments[1]].clientReadOnly, "Cannot edit this value on the client.")
+        end
         parent[key] = new
     end)
     Client._cache = _pd

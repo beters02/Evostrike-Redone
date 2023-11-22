@@ -36,6 +36,7 @@ Mods.GlobalInventoryModifications = {
         end
     end
 }
+Mods.GlobalInventoryModifications.inventoryReset3 = Mods.GlobalInventoryModifications.inventoryReset2
 
 -- [[ MODULE ]]
 return {

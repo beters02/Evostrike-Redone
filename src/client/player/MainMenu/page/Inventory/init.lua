@@ -18,7 +18,9 @@ function inventory:init()
     self.itemDisplayVar = {active = false, caseOpeningActive = false}
     self.itemDisplayConns = {}
     skinPage.init(self)
-    self:Update()
+    task.spawn(function()
+        self:Update()
+    end)
     return self
 end
 

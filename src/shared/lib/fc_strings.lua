@@ -4,6 +4,7 @@ function Strings.firstToUpper(str)
 	return (str:gsub("^%l", string.upper))
 end
 
+-- doesnt work
 function Strings.firstToLower(str)
 	return (str:gsub("^%l", string.lower))
 end
@@ -130,14 +131,13 @@ end
 function Strings.doActionViaPath(path: string, start: any, callback: (...any) -> (...any))
 	local segments = path:split(".")
 	local current = start or game
-
 	local success, err = pcall(function()
 		for i,v in pairs(segments) do
 
 			-- this will return the location the entire Path prefix except the last segment
 			-- we will do what we need to do to the table in callback by current[segments[#segments]] = ...
 			if i == #segments then
-				return callback(current, segments[#segments], segments)
+				return callback(current, segments[i], segments)
 			end
 
 			current = current[v]

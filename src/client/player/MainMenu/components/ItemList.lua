@@ -91,7 +91,7 @@ function ItemList:InitPages()
             if not itemFrame:IsA("Frame") or not string.match(itemFrame.Name, "ItemFrame_") then
                 continue
             end
-            table.insert(pageObject.connections, itemFrame.Button.MouseButton1Click:Connect(function() print('ASDKJGASD') pageObject.ItemClicked(itemFrame) end))
+            table.insert(pageObject.connections, itemFrame.Button.MouseButton1Click:Connect(function() pageObject.ItemClicked(itemFrame) end))
         end
 
         pageFrame.Visible = false

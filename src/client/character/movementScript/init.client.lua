@@ -980,7 +980,7 @@ function InitMovers()
 	Movement.movementVelocity = movementVelocity
 	local gravityForce = Instance.new("BodyForce", collider)
 	gravityForce.Name = "gravityForce"
-	gravityForce.force = Vector3.new(0, (1-Movement.gravity)*196.2, 0) * Movement:GetCharacterMass()
+	gravityForce.force = Vector3.new(0, (1-Movement.gravity)*196.2, 0) * Movement.mass
 	Movement.gravityForce = gravityForce
 end
 

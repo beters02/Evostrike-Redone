@@ -29,12 +29,9 @@ function page.init(self) -- self = main
     -- init frames as pages
     for _, v in pairs(self.gui:GetChildren()) do
         if not v:IsA("Frame") or not string.match(v.Name, "Frame") then continue end
-
-        print('Page Begin page init ' .. v.Name)
         -- remove "Frame" from string,
         -- create class with modified string as name
         _page._stored[string.gsub(v.Name, "Frame", "")] = _page._baseClass.new(self, _page, string.gsub(v.Name, "Frame", ""))
-        print('Page initialized ' .. v.Name)
     end
 
     return setmetatable(_page, page)

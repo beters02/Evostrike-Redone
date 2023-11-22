@@ -2,7 +2,7 @@ local module = {
 
 	--[[ General Settings ]]
 	mass = 16, -- def 8.85
-	gravity = 0.3,
+	gravity = 0.6, -- 0.3
 	friction = 6,
 	maxVelocity = 50,
 	maxMovementPitch = 0.6,

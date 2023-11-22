@@ -9,7 +9,7 @@ if game:GetService("RunService"):IsServer() then
 end
 
 function Shop:PurchaseItem(item: Shared.TShopItem, purchaseType: "StrafeCoins" | "PremiumCredits")
-    return Events.rf_AttemptItemPurchase:InvokeServer(purchaseType, item)
+    return Events.rf_AttemptItemPurchase:InvokeServer(item, purchaseType)
 end
 
 function Shop:HasKey(caseName)

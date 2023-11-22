@@ -22,7 +22,8 @@ function init()
         AttemptItemPurchase = Shop.PurchaseItem,
         HasKey = Shop.HasKey,
         HasCase = Shop.HasCase,
-        OpenCase = Shop.OpenCase
+        OpenCase = Shop.OpenCase,
+        GetItemPrice = function(_, itemStr) return Shop.parseItemString(itemStr) end
     }
     
     for _, v in pairs(Events:GetChildren()) do
@@ -92,14 +93,18 @@ end
 
 -- [[ SHOP PUBLIC ]]
 function Shop.PurchaseItem(player, item, purchaseType)
+    local ptkey = purchaseType == "StrafeCoins" and "strafeCoins" or "premiumCredits"
     local canPurchase, price, shopItem = Shop.canAffordItem(player, purchaseType, item)
     if canPurchase then
         local insertKey = shopItem.inventory_key
         if shopItem.item_type == "skin" then
             insertKey = insertKey .. "_" .. HTTPService:GenerateGUID(false)
+            if shopItem.weapon ~= "knife" then
+                insertKey = shopItem.weapon .. "_" .. insertKey
+            end
         end
         PlayerData:TableInsert(player, "ownedItems." .. shopItem.item_type, insertKey)
-        PlayerData:DecrementPath(player, "economy." .. Strings.firstToLower(purchaseType), price)
+        PlayerData:DecrementPath(player, "economy." .. ptkey, price)
         PlayerData:Save(player)
         return true
     end

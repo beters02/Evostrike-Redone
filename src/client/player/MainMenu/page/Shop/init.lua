@@ -159,19 +159,19 @@ function Shop:OpenItemDisplay(item, itemDisplayName)
     if self.itemDisplayVar.active then return end
     self.itemDisplayVar.active = true -- turned off in CloseItemDisplay()
 
-    local price = ShopInterface:GetItemPrice(item)
-    local itemType = price.parsed.item_type
-    itemDisplayName = itemDisplayName or price.parsed.name
+    local shopItem = ShopInterface:GetItemPrice(item)
+    local itemType = shopItem.item_type
+    itemDisplayName = itemDisplayName or shopItem.name
 
-    self.itemDisplayFrame.Price_PC.Text = tostring(price.pc)
-    self.itemDisplayFrame.Price_SC.Text = tostring(price.sc)
+    self.itemDisplayFrame.Price_PC.Text = tostring(shopItem.price_pc)
+    self.itemDisplayFrame.Price_SC.Text = tostring(shopItem.price_sc)
 
     if itemType == "case" or itemType == "key" then
         self.itemDisplayFrame.CaseDisplay.Visible = true
         self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
         self.itemDisplayFrame.ItemName.Text = string.upper(itemDisplayName)
     else
-        local skin = price.parsed
+        local skin = shopItem
 
         self.itemDisplayFrame.CaseDisplay.Visible = false
         local imgLabel = self.itemDisplayFrame.ItemDisplayImageLabel
@@ -185,7 +185,7 @@ function Shop:OpenItemDisplay(item, itemDisplayName)
             return
         end
         self.itemDisplayVar.purchaseActive = true -- turned off in itemDisplayDisconectMainClicked()
-        self:_MainClickedItemDisplay(item, itemType, price)
+        self:_MainClickedItemDisplay(item, itemType, shopItem)
     end)
 
     self.itemDisplayConns.BackButton = self.itemDisplayFrame.BackButton.MouseButton1Click:Connect(function()
@@ -213,7 +213,7 @@ function Shop:CloseItemDisplay()
     self:TogglePages(true)
 end
 
-function Shop:_MainClickedItemDisplay(item, itemType, price)
+function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
     local confirmGui = AttemptItemPurchaseGui:Clone()
     local confirmFrame = confirmGui:WaitForChild("Frame")
     CollectionService:AddTag(confirmGui, "CloseItemDisplay")
@@ -225,16 +225,16 @@ function Shop:_MainClickedItemDisplay(item, itemType, price)
     local weaponLabel = confirmFrame:WaitForChild("WeaponLabel")
     local caseLabel = confirmFrame:WaitForChild("CaseLabel")
 
-    pcAcceptButton.Text = tostring(price.pc) .. " PC"
-    scAcceptButton.Text = tostring(price.sc) .. " SC"
+    pcAcceptButton.Text = tostring(shopItem.price_pc) .. " PC"
+    scAcceptButton.Text = tostring(shopItem.price_sc) .. " SC"
     if itemType == "case" or itemType == "key" then
         skinLabel.Visible = false
         weaponLabel.Visible = false
-        caseLabel.Text = string.upper(tostring(price.parsed.name))
+        caseLabel.Text = string.upper(tostring(shopItem.name))
         caseLabel.Visible = true
     else
-        skinLabel.Text = string.upper(tostring(price.parsed.name))
-        weaponLabel.Text = string.upper(tostring(price.parsed.weapon))
+        skinLabel.Text = string.upper(tostring(shopItem.name))
+        weaponLabel.Text = string.upper(tostring(shopItem.weapon))
         caseLabel.Visible = false
     end
     local conns = {}
@@ -259,7 +259,7 @@ function Shop:_MainClickedItemDisplay(item, itemType, price)
         end
         self.itemDisplayVar.purchaseProcessing = true
         otherDisconnect(1)
-        itemDisplayPurchaseItem(self, item, "PremiumCredits", price.parsed)
+        itemDisplayPurchaseItem(self, item, "PremiumCredits", shopItem)
         confirmGui:Destroy()
         selfDisconnect(1)
         self:CloseItemDisplay()
@@ -274,7 +274,7 @@ function Shop:_MainClickedItemDisplay(item, itemType, price)
         end
         self.itemDisplayVar.purchaseProcessing = true
         otherDisconnect(2)
-        itemDisplayPurchaseItem(self, item, "StrafeCoins", price.parsed)
+        itemDisplayPurchaseItem(self, item, "StrafeCoins", shopItem)
         confirmGui:Destroy()
         selfDisconnect(2)
         self:CloseItemDisplay()
@@ -291,11 +291,14 @@ function Shop:_MainClickedItemDisplay(item, itemType, price)
         conns = nil
     end)
 
+    confirmGui.Enabled = true
     confirmGui.Parent = game.Players.LocalPlayer.PlayerGui
+    print('Aded!')
 end
 
 function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem)
     if ShopInterface:PurchaseItem(item, purchaseType) then
+        print('yuh')
         task.delay(0.5, function()
             self:FindPage("Inventory"):Update(true)
         end)
