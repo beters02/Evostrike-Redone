@@ -29,12 +29,23 @@ SkinPage.CustomWeaponPositions = {
     deagle = {wepcf = CFrame.new(Vector3.new(-0.1, 0, -1.5)), wepor = Vector3.new(0, -180, -180)}
 }
 
-function SkinPage:init()
+function SkinPage:init(frame)
     self.SkinPageFrames = {}
     self.EquippedSkinPageFrames = {}
     for i, _ in pairs(PlayerData:Get().ownedItems.equipped) do
         self.EquippedSkinPageFrames[i] = false
     end
+    SkinPage.MainFrame = frame
+end
+
+function SkinPage:Open()
+    self.Location.Case.Visible = false
+    self.Location.Key.Visible = false
+    self.Location.Skin.Visible = true
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+    self.Location.KeysButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    SkinPage.ConnectButtons(self)
 end
 
 function SkinPage:Clear()
@@ -44,10 +55,9 @@ function SkinPage:Clear()
     self.SkinPageFrames = {}
 end
 
-function SkinPage:Update()
+function SkinPage:Update(playerInventory)
     SkinPage.Clear(self)
     
-    local playerInventory = PlayerData:Get().ownedItems
     local frames = {}
 
     SkinPage.CreateSkinFramesForAllDefaultWeapons(self, frames)
@@ -91,7 +101,7 @@ end
 function SkinPage:ConnectButtons()
     for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
         if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
-        table.insert(self._bconnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
+        table.insert(self.currentPageButtonConnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
             if not self.Location.Skin.Visible then return end
             SkinPage.SkinFrameButtonClicked(self, v)
         end))
@@ -141,16 +151,6 @@ function SkinPage:CreateSkinFrameModel(invSkin: InventoryInterface2.InventorySki
     return weaponModelObj
 end
 
-function SkinPage:GetSkinFrame(weapon: string, skin: string, uuid)
-    for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
-        if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
-        if v:GetAttribute("gunName") == weapon and v:GetAttribute("skinName") == skin and tostring(v:GetAttribute("uuid")) == tostring(uuid) then
-            return v
-        end
-    end
-    return false
-end
-
 function SkinPage:SkinFrameButtonClicked(skinFrame)
     if skinFrame:GetAttribute("Equipped") then return end
 
@@ -184,6 +184,16 @@ end
 function SkinPage:ParseSkinString(str)
     local _sep = str:split("_")
     return {weapon = _sep[1], model = _sep[2], knifeSkin = _sep[3]}
+end
+
+function SkinPage:GetSkinFrame(weapon: string, skin: string, uuid)
+    for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
+        if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
+        if v:GetAttribute("gunName") == weapon and v:GetAttribute("skinName") == skin and tostring(v:GetAttribute("uuid")) == tostring(uuid) then
+            return v
+        end
+    end
+    return false
 end
 
 function SkinPage:GetSkinFromFrame(frame)

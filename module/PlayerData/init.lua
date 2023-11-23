@@ -101,6 +101,12 @@ function PlayerData:TableInsert(player, path, object)
         table.insert(gotTableParent[key], object)
         new = gotTableParent[key]
     end)
+    task.spawn(function()
+        local event = player:WaitForChild("PlayerDataChanged", 3)
+        if event then
+            event:FireClient(player, "Path", new, path)
+        end
+    end)
     return PlayerData:Set(player, playerdata, {location = "Path", key = path, new = new})
 end
 

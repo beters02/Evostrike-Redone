@@ -28,19 +28,22 @@ end}
 -- [[ SKIN DEFS ]]
 local Skins = {
     ak103 = {
-        hexstripe = OSkin.new({name = "Hexstripe", index = "hexstripe", weapon = "ak103", price_pc = 100, price_sc = 1000, sell_sc = 750}),
+        hexstripe = OSkin.new({name = "Hexstripe", index = "hexstripe", weapon = "ak103", price_pc = 200, price_sc = 2000, sell_sc = 1500}),
         knight = OSkin.new({name = "Knight", index = "knight", weapon = "ak103", price_pc = 600, price_sc = 6000, sell_sc = 4500})
     },
     glock17 = {
         hexstripe = OSkin.new({name = "Hexstripe", index = "hexstripe", weapon = "glock17", price_pc = 75, price_sc = 750, sell_sc = 562}),
-        curvedPurple = OSkin.new({name = "Curved Purple", index = "curvedPurple", weapon = "glock17", price_pc = 300, price_sc = 3000, sell_sc = 2250}),
+        curvedPurple = OSkin.new({name = "Curved Purple", index = "curvedPurple", weapon = "glock17", price_pc = 200, price_sc = 2000, sell_sc = 1500}),
         matteObsidian = OSkin.new({name = "Matte Obsidian", index = "matteObsidian", weapon = "glock17", price_pc = 800, price_sc = 8000, sell_sc = 6000})
     },
     vityaz = {
-        olReliable = OSkin.new({name = "Ol' Reliable", index = "olReliable", weapon = "vityaz", price_pc = 100, price_sc = 1000, sell_sc = 750})
+        olReliable = OSkin.new({name = "Ol' Reliable", index = "olReliable", weapon = "vityaz", price_pc = 300, price_sc = 3000, sell_sc = 2250})
     },
     hkp30 = {
-        curvedPurple = OSkin.new({name = "Curved Purple", index = "curvedPurple", weapon = "hkp30", price_pc = 300, price_sc = 3000, sell_sc = 2250}),
+        curvedPurple = OSkin.new({name = "Curved Purple", index = "curvedPurple", weapon = "hkp30", price_pc = 200, price_sc = 2000, sell_sc = 1500}),
+    },
+    acr = {
+        jade = OSkin.new({name = "Jade", index = "jade", weapon = "acr", price_pc = 100, price_sc = 1000, sell_sc = 750})
     }
 }
 
@@ -50,6 +53,15 @@ local SkinsModule = {
         local skin = Strings.convertPathToInstance(str, Skins, false, "_")
         skin.inventoryKey = str
         return skin
+    end,
+
+    ConvertShopSkinStrToInvStr = function(str)  -- UUID needs to be added on own
+        -- shopstr = weapon_skin or knife_model_skin
+        local split = str:split("_")
+        if #split == 3 then
+            return str
+        end
+        return split[1] .. "_" .. str -- weapon_weapon_skin
     end,
 
     Skins = Skins

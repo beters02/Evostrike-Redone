@@ -112,6 +112,7 @@ function Start()
 
     RequestSpawnEvent.OnServerInvoke = function(player)
         if GameData.Variables.PlayersCanSpawn then
+            PlayerData[player.Name].Variables.InGame = true
             GuiPlayerInitialSpawn(player)
             return true
         end

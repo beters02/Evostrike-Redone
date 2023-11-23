@@ -115,6 +115,7 @@ export type KeyChangedCallback = (new: any, key: string) -> ()
 function Client:Changed(callback: ChangedCallback)
     local connection = {}
     connection.Connection = Client._changedEvent.Event:Connect(callback)
+    connection.ServerConnection = game.Players.LocalPlayer:WaitForChild("PlayerDataChanged").OnClientEvent:Connect(callback)
     function connection:Disconnect()
         connection.Connection:Disconnect()
         table.remove(Client._listeners, connection.ID)
@@ -127,6 +128,7 @@ end
 --@summary Listen for a change on a path value
 function Client:PathValueChanged(path: string, callback: PathChangedCallback)
     local connection = Client:Changed(function(changedLocation, new, key)
+        print(changedLocation)
         if changedLocation == "Path" and key == path then
             callback(new, path)
         end

@@ -24,18 +24,17 @@ function Stats:init(main)
 	self.player = main.player
     self.Location.PlayerName.Text = self.player.Name
 
-	local _statObjs = {}
-	_statObjs._pc = {path = "economy.premiumCredits", label = self.Location.PCAmountLabel}
+	self.statsObjs = {}
+	--[[_statObjs._pc = {path = "economy.premiumCredits", label = self.Location.PCAmountLabel}
 	_statObjs._sc = {path = "economy.strafeCoins", label = self.Location.SCAmountLabel}
 	_statObjs._xp = {path = "economy.xp", label = self.Location:WaitForChild("AccountLevelFrame"):WaitForChild("PlayerXP"), suffix = " XP"}
 	_statObjs._wins = {path = "pstats.wins", label = self.Location.StatsFrame.Wins.Amount}
 	_statObjs._losses = {path = "pstats.losses", label = self.Location.StatsFrame.Losses.Amount}
 	_statObjs._kills = {path = "pstats.kills", label = self.Location.StatsFrame.Kills.Amount}
 	_statObjs._deaths = {path = "pstats.deaths", label = self.Location.StatsFrame.Deaths.Amount}
-	self.statObjs = _statObjs
+	self.statObjs = _statObjs]]
 
-	_updateAll(self)
-
+	--_updateAll(self)
     return self
 end
 

@@ -142,20 +142,16 @@ function Shop.OpenCase(player, caseName)
     local openedSkin, potentialSkins = Cases.OpenCase(caseName)
     assert(openedSkin and potentialSkins, "Could not get Opened Case Item from server. Credits were not spent.")
 
-    print(caseInventory)
     table.remove(caseInventory, caseIndex)
-    print(caseInventory)
-
     table.remove(keyInventory, keyIndex)
-    PlayerData:SetPath(player, "inventory.case", caseInventory)
-    PlayerData:SetPath(player, "inventory.key", keyInventory)
+    PlayerData:SetPath(player, "ownedItems.case", caseInventory)
+    PlayerData:SetPath(player, "ownedItems.key", keyInventory)
     print("Successfully removed Case and Key from player's inventory for Case Opening.")
 
-    PlayerData:TableInsert(player, "inventory.skin", openedSkin.inventoryKey)
+    PlayerData:TableInsert(player, "ownedItems.skin", openedSkin .. "_" .. HTTPService:GenerateGUID(false))
     print("Successfully added received Case Item to player's inventory.")
 
     PlayerData:Save(player)
-
     return openedSkin, potentialSkins
 end
 

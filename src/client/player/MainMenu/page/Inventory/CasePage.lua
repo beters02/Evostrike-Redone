@@ -3,6 +3,7 @@ local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
 
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local InventoryInterface = require(Framework.Module.InventoryInterface.Shared)
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
 
@@ -12,10 +13,42 @@ local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
 
 local CasePage = {}
 
+function CasePage:init(frame)
+    CasePage.MainFrame = frame
+    self.CasePageFrames = {}
+    self.itemDisplayFrame = self.Location:WaitForChild("ItemDisplayFrame")
+    self.itemDisplayVar = {active = false, caseOpeningActive = false}
+    self.itemDisplayConns = {}
+end
+
+function CasePage:Open()
+    self.Location.Case.Visible = true
+    self.Location.Key.Visible = false
+    self.Location.Skin.Visible = false
+    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Location.KeysButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    CasePage.ConnectButtons(self)
+end
+
+function CasePage:Clear()
+    for _, v in pairs(self.CasePageFrames) do
+        v:Destroy()
+    end
+    self.CasePageFrames = {}
+end
+
+function CasePage:Update(playerInventory)
+    CasePage.Clear(self)
+    for i, case in pairs(playerInventory.case) do
+        self.CasePageFrames[i] = CasePage.CreateCaseFrame(self, case)
+    end
+end
+
 function CasePage:ConnectButtons()
     for _, v in pairs(self.Location.Case.Content:GetChildren()) do
         if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
-        table.insert(self._bconnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
+        table.insert(self.currentPageButtonConnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
             if not self.Location.Case.Visible then return end
             CasePage.CaseButtonClicked(self, v)
         end))
@@ -44,7 +77,7 @@ function CasePage:CreateCaseFrame(case: string)
 end
 
 function CasePage:CaseButtonClicked(caseFrame)
-    self:OpenItemDisplay(caseFrame)
+    CasePage.OpenItemDisplay(self, caseFrame)
 end
 
 function CasePage:OpenCaseButtonClicked(caseFrame)
@@ -88,11 +121,12 @@ function CasePage:OpenCaseButtonClicked(caseFrame)
     end)
 
     confirmGui.Parent = game.Players.LocalPlayer.PlayerGui
+    self.itemDisplayVar.caseOpeningActive = false
 end
 
 function CasePage:OpenCase(gotSkin, potentialSkins)
     self.itemDisplayVar.caseOpeningActive = true
-    self:CloseItemDisplay()
+    CasePage.CloseItemDisplay(self)
 
     -- Prepare Var & Tween
     local crates = self.Location.CaseOpeningSequence.CaseDisplay.ViewportFrame.Crates
@@ -100,12 +134,12 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
     local GrowTween = TweenService:Create(crates.PrimaryPart, TweenInfo.new(1), {CFrame = endCF})
     local WheelTween = TweenService:Create(self.Location.CaseOpeningSequence.ItemWheelDisplay.Wheel, TweenInfo.new(3, Enum.EasingStyle.Quad), {CanvasPosition = Vector2.new(2150, 0)})
 
-    -- Fill Wheel CaseFrames with Models
-    CasePage.FillCaseFrame(self, 1, gotSkin)
+    -- Fill Wheel CaseFrames with Model
+    CasePage.FillCaseFrame(self, 1, InventoryInterface.ParseSkinString(gotSkin))
     local count = 1
     for _, v in pairs(potentialSkins) do
         count += 1
-        self:FillCaseFrame(count, v)
+        CasePage.FillCaseFrame(self, count, InventoryInterface.ParseSkinString(v))
     end
 
     -- Play Grow Tween
@@ -123,15 +157,62 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
 
     -- play Received Item Screen
     task.delay(1, function()
-        self:OpenCasePage()
+        CasePage.Open(self)
         self.Location.CaseOpeningSequence.Visible = false
     end)
+    self.itemDisplayVar.caseOpeningActive = false
 end
 
 function CasePage:FillCaseFrame(index, skin)
     local itemFrame = self.Location.CaseOpeningSequence.ItemWheelDisplay.Wheel["Item_" .. index]
-    local model = self.skinPage.CreateSkinFrameModel(self, skin.weapon, skin.knifeModel, skin.index)
+    local model = self.skinPage.CreateSkinFrameModel(self, skin)
     model.Parent = itemFrame:WaitForChild("ViewportFrame")
+end
+
+function CasePage:OpenItemDisplay(caseFrame) -- Currently this is set up for cases only.
+    if self.itemDisplayVar.active then return end
+    self.itemDisplayVar.active = true -- turned off in CloseItemDisplay()
+
+    self.itemDisplayFrame.CaseDisplay.Visible = true
+    self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
+    local itemDisplayName = caseFrame:GetAttribute("ItemDisplayName") or caseFrame.Name
+    self.itemDisplayFrame.ItemName.Text = string.upper(itemDisplayName)
+    self.itemDisplayFrame.MainButton.Text = "OPEN"
+
+    self.itemDisplayConns.MainButton = self.itemDisplayFrame.MainButton.MouseButton1Click:Connect(function()
+        if self.itemDisplayVar.caseOpeningActive then
+            return
+        end
+        self.itemDisplayVar.caseOpeningActive = true
+        CasePage.OpenCaseButtonClicked(self, caseFrame)
+        self.itemDisplayVar.caseOpeningActive = false
+    end)
+
+    self.itemDisplayConns.BackButton = self.itemDisplayFrame.BackButton.MouseButton1Click:Connect(function()
+        if self.itemDisplayVar.caseOpeningActive then
+            return
+        end
+        CasePage.CloseItemDisplay(self)
+    end)
+
+    self.LastOpenPage = self.Location.Case.Visible and self.Location.Case or self.Location.Skin
+    self.Location.Case.Visible = false
+    self.Location.Skin.Visible = false
+    self.Location.CasesButton.Visible = false
+    self.Location.SkinsButton.Visible = false
+    self.Location.KeysButton.Visible = false
+    self.itemDisplayFrame.Visible = true
+end
+
+function CasePage:CloseItemDisplay()
+    self.itemDisplayVar.active = false
+    self.itemDisplayConns.MainButton:Disconnect()
+    self.itemDisplayConns.BackButton:Disconnect()
+    self.itemDisplayFrame.Visible = false
+    self.LastOpenPage.Visible = true
+    self.Location.CasesButton.Visible = true
+    self.Location.SkinsButton.Visible = true
+    self.Location.KeysButton.Visible = true
 end
 
 return CasePage

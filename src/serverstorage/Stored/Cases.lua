@@ -59,13 +59,20 @@ local CaseModule = {
     getCaseFromString = function(caseStr)
         return Cases[caseStr]
     end,
-    getLootItemFromCase = function(case: OCase)
+    getLootItemFromCase = function(case: OCase) -- Loot comes as "weapon_model_skin"
         local random = math.random(100, 10000)/100
-        print(random)
         local rarity = getRarityFromNumber(random)
-        print(rarity)
         local loot = case.loot[rarity][math.random(1, #case.loot[rarity])]
-        return Skins.GetSkinFromString(loot)
+        local success, skin = pcall(function() return Skins.GetSkinFromString(loot) end)
+        if success then
+            skin = loot
+        else
+            skin = case.loot[rarity][1]
+            warn("Skin from case does not exist. " .. tostring(loot) .. " - Did you make a def in 'Skins' ? " .. tostring(skin))
+        end
+
+        skin = Skins.ConvertShopSkinStrToInvStr(skin)
+        return skin
     end
 }
 

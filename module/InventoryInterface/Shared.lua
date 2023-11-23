@@ -13,6 +13,7 @@ function Shared.ParseSkinString(str: string)
 end
 
 function Shared.GetSkinModelFromSkinObject(skin) -- Returns Default Skin if Necessary
+    print(skin)
     local weaponModule = GetWeaponModule(skin.weapon)
     local success, model = pcall(function()
         if skin.weapon == "knife" then

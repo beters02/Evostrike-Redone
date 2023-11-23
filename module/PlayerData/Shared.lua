@@ -82,6 +82,11 @@ Shared.def.options = {
     }
 }
 
+Shared.def.pstats = {
+    kills = 0,
+    deaths = 0
+}
+
 Shared.def.economy = {
     strafeCoins = 0,
     premiumCredits = 0
