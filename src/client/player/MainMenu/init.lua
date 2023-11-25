@@ -20,8 +20,7 @@ function main.initialize(gui)
     main.bgframe = main.gui:WaitForChild("BG")
 	main.topBar.init()
     main.var = {opened = false, menuType = main.gui:GetAttribute("MenuType"), loading = false}
-	main.page = require(Players.LocalPlayer.PlayerScripts.MainMenu.page).init(main)
-
+	main.page = require(Players.LocalPlayer.PlayerScripts.MainMenu.page).init(main, main.gui:GetAttribute("IsAdmin"))
 	main.isInit = true
 
 	if player:GetAttribute("Loaded") then

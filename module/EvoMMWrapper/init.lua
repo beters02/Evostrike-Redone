@@ -84,6 +84,7 @@ function module:RemovePlayerFromQueue(player)
     return MatchmakingService:RemovePlayerFromQueue(player)
 end
 
+
 function module:GetGamemodeQueueCount(gamemode)
     if RunService:IsClient() then
         return Bridge:InvokeServer("GetGamemodeQueueCount", gamemode)
@@ -93,17 +94,20 @@ function module:GetGamemodeQueueCount(gamemode)
     if not counts or type(counts) ~= "table" then return 0 end
 
     local count = 0
-    for map, info in pairs(counts) do
-        if not info then continue end
-        if string.match(map, gamemode) then
-            for _, tab in pairs(info) do
-                for _, cnt in pairs(tab) do
-                    count += cnt
-                end
+    for map, info in pairs(counts) do -- Each gamemode has multiple queues with maps for the gamemode.
+        if not info then continue end -- We will only need to count one of the maps since players queue for all maps when queueing for gamemode.
+        if not string.match(map, gamemode) then
+            continue
+        end
+
+        for _, tab in pairs(info) do -- Queue has multiple categories
+            for _, cnt in pairs(tab) do -- Categories have player categories
+                count += cnt
             end
         end
+
+        return count -- Counted once, now we return.
     end
-    return count
 end
 
 function module:PushGamemodeQueueCount(gamemode)

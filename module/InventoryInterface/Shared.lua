@@ -5,6 +5,7 @@ function GetWeaponModule(weapon)
 end
 
 local Shared = {}
+Shared.GetWeaponModule = GetWeaponModule
 
 -- Remember that model will return weapon if weapon is not "knife".
 function Shared.ParseSkinString(str: string)
@@ -13,7 +14,6 @@ function Shared.ParseSkinString(str: string)
 end
 
 function Shared.GetSkinModelFromSkinObject(skin) -- Returns Default Skin if Necessary
-    print(skin)
     local weaponModule = GetWeaponModule(skin.weapon)
     local success, model = pcall(function()
         if skin.weapon == "knife" then
@@ -33,6 +33,13 @@ function Shared.GetDefaultSkinForWeapon(weapon)
         return GetWeaponModule("knife").Assets.default.Models.default
     end
     return GetWeaponModule(weapon).Assets.Models.default
+end
+
+function Shared.GetDefaultSkinStrForWeapon(weapon)
+    if weapon == "knife" then
+        return "knife_default_default_0"
+    end
+    return weapon .. "_" .. weapon .. "_default_0"
 end
 
 function Shared.GetSkinModelFromString(skinStr)

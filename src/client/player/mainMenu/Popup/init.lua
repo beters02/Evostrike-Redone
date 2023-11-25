@@ -48,6 +48,7 @@ function module.stop()
 end
 
 function module.burst(text, length)
+	length = length or 3
 	if currentCoro then currentTextOut() coroutine.close(currentCoro) end
 	textIn(text)
 	currentCoro = coroutine.create(function()

@@ -30,14 +30,16 @@ function inventory:Open()
     self.Location.Visible = true
     self:ConnectMainButtons()
     self:OpenAnimations()
-    self:OpenItemPage(self.currentOpenPage)
     self:Update()
+    self:OpenItemPage(self.currentOpenPage)
 end
 
 function inventory:Close()
     self.Location.Visible = false
     self:DisconnectMainButtons()
     self:CloseCurrentItemPage()
+    skinPage.CloseItemDisplay(self)
+    casePage.CloseItemDisplay(self)
 end
 
 function inventory:Update()

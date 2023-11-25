@@ -12,7 +12,7 @@ page.__index = page
 
 --[[ Page Module Private Access Functions ]]
 
-function page.init(self) -- self = main
+function page.init(self, isPlayerAdmin) -- self = main
     -- create page table as main table in cm_mainMenu
     local _page = {}
     _page = {}
@@ -31,7 +31,7 @@ function page.init(self) -- self = main
         if not v:IsA("Frame") or not string.match(v.Name, "Frame") then continue end
         -- remove "Frame" from string,
         -- create class with modified string as name
-        _page._stored[string.gsub(v.Name, "Frame", "")] = _page._baseClass.new(self, _page, string.gsub(v.Name, "Frame", ""))
+        _page._stored[string.gsub(v.Name, "Frame", "")] = _page._baseClass.new(self, _page, string.gsub(v.Name, "Frame", ""), isPlayerAdmin)
     end
 
     return setmetatable(_page, page)

@@ -6,10 +6,12 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local InventoryInterface = require(Framework.Module.InventoryInterface.Shared)
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
+local Strings = require(Framework.Module.lib.fc_strings)
 
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
 local Cases = game.ReplicatedStorage.Assets.Cases
 local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
+local AttemptItemSellGui = ShopAssets:WaitForChild("AttemptItemSell")
 
 local CasePage = {}
 
@@ -129,43 +131,80 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
     CasePage.CloseItemDisplay(self)
 
     -- Prepare Var & Tween
-    local crates = self.Location.CaseOpeningSequence.CaseDisplay.ViewportFrame.Crates
+    local seq = self.Location.CaseOpeningSequence
+    local seqItem = seq.ItemDisplay
+    local seqCase = seq.CaseDisplay
+    local seqWheel = seq.ItemWheelDisplay
+    local crates = seq.CaseDisplay.ViewportFrame.Crates
     local endCF = crates.PrimaryPart.CFrame - Vector3.new(0, 0, 1)
     local GrowTween = TweenService:Create(crates.PrimaryPart, TweenInfo.new(1), {CFrame = endCF})
-    local WheelTween = TweenService:Create(self.Location.CaseOpeningSequence.ItemWheelDisplay.Wheel, TweenInfo.new(3, Enum.EasingStyle.Quad), {CanvasPosition = Vector2.new(2150, 0)})
+    local WheelTween = TweenService:Create(seqWheel.Wheel, TweenInfo.new(3, Enum.EasingStyle.Quad), {CanvasPosition = Vector2.new(2150, 0)})
+
+    if not self.itemDisplayVar.initCaseOpen then
+        self.itemDisplayVar.initCaseOpen = true
+        self.itemDisplayVar.cratesPos = crates.PrimaryPart.CFrame
+    end
+
+    crates:SetPrimaryPartCFrame(self.itemDisplayVar.cratesPos)
+    seqWheel.Wheel.CanvasPosition = Vector2.new(0,0)
 
     -- Fill Wheel CaseFrames with Model
-    CasePage.FillCaseFrame(self, 1, InventoryInterface.ParseSkinString(gotSkin))
+    local gotParsed = InventoryInterface.ParseSkinString(gotSkin)
+    CasePage.FillCaseFrame(self, 1, gotParsed)
     local count = 1
     for _, v in pairs(potentialSkins) do
         count += 1
         CasePage.FillCaseFrame(self, count, InventoryInterface.ParseSkinString(v))
     end
 
+    -- Fill ItemDisplay with Got Item
+    seqItem.ItemName.Text =  Strings.firstToUpper(gotParsed.model) .. " | " .. Strings.firstToUpper(gotParsed.skin)
+    local itemDisplayModel = InventoryInterface.GetSkinModelFromSkinObject(gotParsed):Clone()
+    itemDisplayModel.PrimaryPart = itemDisplayModel:WaitForChild("GunComponents"):WaitForChild("WeaponHandle")
+    seqItem.Display.ViewportFrame:ClearAllChildren()
+    itemDisplayModel:SetPrimaryPartCFrame(CFrame.new(Vector3.zero))
+    itemDisplayModel.Parent = seqItem.Display.ViewportFrame
+
+    -- Case Opening Sequence
+    self.Location.Case.Visible = false
+    self.Location.Key.Visible = false
+    self.Location.Skin.Visible = false
+    self.Location.CasesButton.Visible = false
+    self.Location.KeysButton.Visible = false
+    self.Location.SkinsButton.Visible = false
+    seq.Visible = true
+
     -- Play Grow Tween
-    self.Location.CaseOpeningSequence.CaseDisplay.Visible = true
-    self.Location.CaseOpeningSequence.ItemWheelDisplay.Visible = false
-    self.Location.CaseOpeningSequence.Visible = true
+    seqCase.Visible = true
+    seqWheel.Visible = false
+    seqItem.Visible = false
     GrowTween:Play()
     GrowTween.Completed:Wait()
     
     -- Play Wheel Tween
-    self.Location.CaseOpeningSequence.CaseDisplay.Visible = false
-    self.Location.CaseOpeningSequence.ItemWheelDisplay.Visible = true
+    seqCase.Visible = false
+    seqWheel.Visible = true
     WheelTween:Play()
     WheelTween.Completed:Wait()
 
     -- play Received Item Screen
-    task.delay(1, function()
+    seqWheel.Visible = false
+    seqItem.Visible = true
+
+    seqItem.BackButton.MouseButton1Click:Once(function()
+        self.itemDisplayVar.caseOpeningActive = false
         CasePage.Open(self)
-        self.Location.CaseOpeningSequence.Visible = false
+        self.Location.CasesButton.Visible = true
+        self.Location.KeysButton.Visible = true
+        self.Location.SkinsButton.Visible = true
+        seq.Visible = false
     end)
-    self.itemDisplayVar.caseOpeningActive = false
 end
 
 function CasePage:FillCaseFrame(index, skin)
     local itemFrame = self.Location.CaseOpeningSequence.ItemWheelDisplay.Wheel["Item_" .. index]
     local model = self.skinPage.CreateSkinFrameModel(self, skin)
+    itemFrame:WaitForChild("ViewportFrame"):ClearAllChildren()
     model.Parent = itemFrame:WaitForChild("ViewportFrame")
 end
 
@@ -173,11 +212,18 @@ function CasePage:OpenItemDisplay(caseFrame) -- Currently this is set up for cas
     if self.itemDisplayVar.active then return end
     self.itemDisplayVar.active = true -- turned off in CloseItemDisplay()
 
-    self.itemDisplayFrame.CaseDisplay.Visible = true
-    self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
     local itemDisplayName = caseFrame:GetAttribute("ItemDisplayName") or caseFrame.Name
     self.itemDisplayFrame.ItemName.Text = string.upper(itemDisplayName)
     self.itemDisplayFrame.MainButton.Text = "OPEN"
+    self.itemDisplayFrame.SecondaryButton.Text = "SELL"
+    self.itemDisplayFrame.SecondaryButton.Visible = true
+    self.itemDisplayFrame.IDLabel.Visible = false
+
+    self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
+    self.itemDisplayFrame.CaseDisplay.Visible = true
+    self.itemDisplayFrame.CaseDisplay.ViewportFrame:ClearAllChildren()
+    local model = ReplicatedStorage.Assets.Cases.weaponcase1.Model:Clone()
+    model.Parent = self.itemDisplayFrame.CaseDisplay.ViewportFrame
 
     self.itemDisplayConns.MainButton = self.itemDisplayFrame.MainButton.MouseButton1Click:Connect(function()
         if self.itemDisplayVar.caseOpeningActive then
@@ -186,6 +232,54 @@ function CasePage:OpenItemDisplay(caseFrame) -- Currently this is set up for cas
         self.itemDisplayVar.caseOpeningActive = true
         CasePage.OpenCaseButtonClicked(self, caseFrame)
         self.itemDisplayVar.caseOpeningActive = false
+    end)
+
+    -- "Sell"
+    self.itemDisplayConns.SecondaryButton = self.itemDisplayFrame.SecondaryButton.MouseButton1Click:Connect(function()
+        if self.itemDisplayVar.isSelling then
+            return
+        end
+        self.itemDisplayVar.isSelling = true
+
+        local caseName = caseFrame:GetAttribute("CaseName")
+        local shopItemStr = "case_" .. caseName
+        local shopItem = ShopInterface:GetItemPrice(shopItemStr)
+
+        local confirmgui = AttemptItemSellGui:Clone()
+        local mainframe = confirmgui:WaitForChild("Frame")
+        confirmgui.Parent = game.Players.LocalPlayer.PlayerGui
+
+        mainframe:WaitForChild("CaseLabel").Visible = true
+        mainframe:WaitForChild("WeaponLabel").Visible = false
+        mainframe:WaitForChild("SkinLabel").Visible = false
+
+        mainframe.CaseLabel.Text = string.upper(caseName)
+        mainframe.SCAcceptButton.Text = tostring(shopItem.sell_sc) .. " SC"
+
+        local conns = {}
+        conns[1] = mainframe.SCAcceptButton.MouseButton1Click:Once(function()
+            conns[2]:Disconnect()
+            local succ = ShopInterface:SellItem(shopItemStr, caseName)
+            if succ then
+                Popup.burst("Successfully sold item for " .. tostring(shopItem.sell_sc) .. " SC!", 3)
+                CasePage.CloseItemDisplay(self)
+                CasePage.ConnectButtons(self)
+            else
+                Popup.burst("Could not sell item.", 3)
+            end
+            self.itemDisplayVar.isSelling = false
+            confirmgui:Destroy()
+            conns[1]:Disconnect()
+        end)
+
+        conns[2] = mainframe.DeclineButton.MouseButton1Click:Once(function()
+            conns[1]:Disconnect()
+            confirmgui:Destroy()
+            self.itemDisplayVar.isSelling = false
+            conns[2]:Disconnect()
+        end)
+
+        confirmgui.Enabled = true
     end)
 
     self.itemDisplayConns.BackButton = self.itemDisplayFrame.BackButton.MouseButton1Click:Connect(function()
@@ -206,8 +300,9 @@ end
 
 function CasePage:CloseItemDisplay()
     self.itemDisplayVar.active = false
-    self.itemDisplayConns.MainButton:Disconnect()
-    self.itemDisplayConns.BackButton:Disconnect()
+    for _, v in pairs(self.itemDisplayConns) do
+        v:Disconnect()
+    end
     self.itemDisplayFrame.Visible = false
     self.LastOpenPage.Visible = true
     self.Location.CasesButton.Visible = true

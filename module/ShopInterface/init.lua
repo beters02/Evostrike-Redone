@@ -8,8 +8,12 @@ if game:GetService("RunService"):IsServer() then
     return require(script:WaitForChild("Server"))
 end
 
-function Shop:PurchaseItem(item: Shared.TShopItem, purchaseType: "StrafeCoins" | "PremiumCredits")
+function Shop:PurchaseItem(item: Shared.TShopItemStr, purchaseType: "StrafeCoins" | "PremiumCredits")
     return Events.rf_AttemptItemPurchase:InvokeServer(item, purchaseType)
+end
+
+function Shop:SellItem(item: Shared.TShopItemStr, invItem)
+    return Events.rf_AttemptItemSell:InvokeServer(item, invItem)
 end
 
 function Shop:HasKey(caseName)

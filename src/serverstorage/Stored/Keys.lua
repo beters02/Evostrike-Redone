@@ -5,9 +5,9 @@ local OKey = {new = function(prop)
     prop = prop or {}
     local _okey = {
         name = "Weapon_Case_1",
-        price_pc = 10,
-        price_sc = 100,
-        sell_sc = 65
+        price_pc = 100,
+        price_sc = 1000,
+        sell_sc = 1000*.75
     }:: OKey
     for i, v in pairs(prop) do
         _okey[i] = v

@@ -28,4 +28,9 @@ function Server.SetEquippedSkinFromString(player, skinStr)
     PlayerData:Save(player)
 end
 
+function Server.SetEquippedAsDefault(player, weapon)
+    PlayerData:SetPath(player, "ownedItems.equipped." .. weapon, Shared.GetDefaultSkinStrForWeapon(weapon))
+    PlayerData:Save(player)
+end
+
 return Server

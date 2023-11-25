@@ -6,7 +6,7 @@
 -- itemType == "skin" {skin_weaponName_skinName}
 -- Examples: [ "key_weaponcase1" ] [ "premiumCredit" ] [ "skin_ak103_knight" ] [ "skin_knife_karambit_default" ]
 export type TShopItem = string
-
+export type TShopItemStr = TShopItem
 --
 
 return nil

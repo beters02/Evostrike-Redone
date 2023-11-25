@@ -153,28 +153,26 @@ function Home:BottomClickedLobby_LeaveDM()
 end
 
 function Home:SoloButtonClicked()
-
-    if self.CurrentGamemodeSelected ~= "Lobby" then
-        Popup.burst("You can only do this in the lobby! Current Gamemode is: " .. tostring(self.CurrentGamemodeSelected), 3)
-        return
-    end
-
     self.Location.Visible = false
     self.Location.Parent.SoloPopupRequest.Visible = true
 
+    local processing = false
     local connections
     connections = {
         self.Location.Parent.SoloPopupRequest.Card_Stable.MouseButton1Click:Once(function()
-            connections[2]:Disconnect()
-            connections[3]:Disconnect()
+            if processing then
+                return
+            end
+            processing = true
             Popup.burst("Teleporting!", 3)
             self.Location.Parent.SoloPopupRequest.Visible = false
             self.Location.Visible = true
 
             RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Stable")
+            connections[2]:Disconnect()
             connections[1]:Disconnect()
         end),
-        self.Location.Parent.SoloPopupRequest.Card_Unstable.MouseButton1Click:Once(function()
+        --[[self.Location.Parent.SoloPopupRequest.Card_Unstable.MouseButton1Click:Once(function()
             connections[1]:Disconnect()
             connections[3]:Disconnect()
             Popup.burst("Teleporting!", 3)
@@ -183,17 +181,19 @@ function Home:SoloButtonClicked()
 
             RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Unstable")
             connections[2]:Disconnect()
-        end),
+        end),]]
         self.Location.Parent.SoloPopupRequest.Card_Cancel.MouseButton1Click:Once(function()
-            connections[1]:Disconnect()
-            connections[2]:Disconnect()
+            if processing then
+                return
+            end
+            processing = true
             self.Location.Parent.SoloPopupRequest.Visible = false
             self.Location.Visible = true
             self._playSoloDebounce = false
-            connections[3]:Disconnect()
+            connections[1]:Disconnect()
+            connections[2]:Disconnect()
         end)
     }
-
 end
 
 function Home:QueueButtonClicked(card, queue)

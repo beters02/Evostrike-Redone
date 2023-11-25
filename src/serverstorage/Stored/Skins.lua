@@ -27,25 +27,65 @@ end}
 
 -- [[ SKIN DEFS ]]
 local Skins = {
+    
     ak103 = {
-        hexstripe = OSkin.new({name = "Hexstripe", index = "hexstripe", weapon = "ak103", price_pc = 200, price_sc = 2000, sell_sc = 1500}),
-        knight = OSkin.new({name = "Knight", index = "knight", weapon = "ak103", price_pc = 600, price_sc = 6000, sell_sc = 4500})
+        hexstripe = {           name = "Hexstripe",       price_pc = 200,    price_sc = 2000,    sell_sc = 1500},
+        knight = {              name = "Knight",          price_pc = 600,    price_sc = 6000,    sell_sc = 4500}
     },
+
     glock17 = {
-        hexstripe = OSkin.new({name = "Hexstripe", index = "hexstripe", weapon = "glock17", price_pc = 75, price_sc = 750, sell_sc = 562}),
-        curvedPurple = OSkin.new({name = "Curved Purple", index = "curvedPurple", weapon = "glock17", price_pc = 200, price_sc = 2000, sell_sc = 1500}),
-        matteObsidian = OSkin.new({name = "Matte Obsidian", index = "matteObsidian", weapon = "glock17", price_pc = 800, price_sc = 8000, sell_sc = 6000})
+        hexstripe = {           name = "Hexstripe",       price_pc = 75,     price_sc = 750,     sell_sc = 562},
+        curvedPurple = {        name = "Curved Purple",   price_pc = 200,    price_sc = 2000,    sell_sc = 1500},
+        matteObsidian = {       name = "Matte Obsidian",   price_pc = 500,    price_sc = 5000,    sell_sc = 3750},
     },
+
     vityaz = {
-        olReliable = OSkin.new({name = "Ol' Reliable", index = "olReliable", weapon = "vityaz", price_pc = 300, price_sc = 3000, sell_sc = 2250})
+        olReliable = {          name = "Ol' Reliable",    price_pc = 300,    price_sc = 3000,    sell_sc = 2250},
     },
+
     hkp30 = {
-        curvedPurple = OSkin.new({name = "Curved Purple", index = "curvedPurple", weapon = "hkp30", price_pc = 200, price_sc = 2000, sell_sc = 1500}),
+        curvedPurple = {        name = "Curved Purple",   price_pc = 200,    price_sc = 2000,    sell_sc = 1500},
     },
+
     acr = {
-        jade = OSkin.new({name = "Jade", index = "jade", weapon = "acr", price_pc = 100, price_sc = 1000, sell_sc = 750})
+        jade = {                name = "Jade",            price_pc = 100,    price_sc = 1000,    sell_sc = 700}
+    },
+
+    knife = {
+        m9bayonet = {
+            default = {         name = "Default",         price_pc = 1500,   price_sc = 15000,   sell_sc = 11250},
+            ruby = {            name = "Ruby",            price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
+            sapphire = {        name = "Sapphire",        price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
+            matteObsidian = {   name = "Matte Obsidian",  price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
+        },
+        karambit = {
+            default = {         name = "Default",         price_pc = 1500,   price_sc = 15000,   sell_sc = 11250},
+            ruby = {            name = "Ruby",            price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
+            sapphire = {        name = "Sapphire",        price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
+            matteObsidian = {   name = "Matte Obsidian",  price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
+        }
     }
 }
+
+-- [[SKINDEF -> OSKIN]]
+for wepStr, wep in pairs(Skins) do
+    if wepStr == "knife" then
+        for modelStr, model in pairs(wep) do
+            for skinStr, skin in pairs(model) do
+                skin.index = skinStr
+                skin.weapon = "knife"
+                skin.model = modelStr
+                Skins.knife[modelStr][skinStr] = OSkin.new(skin)
+            end
+        end
+        continue
+    end
+    for skinStr, skin in pairs(wep) do
+        skin.index = skinStr
+        skin.weapon = wepStr
+        Skins[wepStr][skinStr] = OSkin.new(skin)
+    end
+end
 
 -- [[ SKINS MODULE ]]
 local SkinsModule = {

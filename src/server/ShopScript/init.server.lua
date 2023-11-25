@@ -23,7 +23,8 @@ function init()
         HasKey = Shop.HasKey,
         HasCase = Shop.HasCase,
         OpenCase = Shop.OpenCase,
-        GetItemPrice = function(_, itemStr) return Shop.parseItemString(itemStr) end
+        GetItemPrice = function(_, itemStr) return Shop.parseItemString(itemStr) end,
+        AttemptItemSell = Shop.SellItem
     }
     
     for _, v in pairs(Events:GetChildren()) do
@@ -109,6 +110,29 @@ function Shop.PurchaseItem(player, item, purchaseType)
         return true
     end
     return false
+end
+
+function Shop.SellItem(player, shopItemStr, inventoryItemStr)
+    local shopSkin = Shop.parseItemString(shopItemStr)
+    local skinInventory = PlayerData:GetPath(player, "ownedItems." .. shopSkin.item_type)
+
+    local hasSkinIndex = false
+    for i, v in pairs(skinInventory) do
+        if v == inventoryItemStr then
+            hasSkinIndex = i
+            break
+        end
+    end
+    if not hasSkinIndex then
+        warn("Player does not have item to sell. " .. tostring(inventoryItemStr))
+        return false
+    end
+
+    table.remove(skinInventory, hasSkinIndex)
+    PlayerData:SetPath(player, "ownedItems." .. shopSkin.item_type, skinInventory)
+    PlayerData:IncrementPath(player, "economy.strafeCoins", shopSkin.sell_sc or (shopSkin.price_sc*0.75))
+    PlayerData:Save(player)
+    return true
 end
 
 function Shop.HasKey(player, caseName)

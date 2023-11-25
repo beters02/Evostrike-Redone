@@ -31,4 +31,11 @@ function InventoryInterface.SetEquippedSkinFromString(skinStr)
     PlayerData:Save()
 end
 
+function InventoryInterface.SetEquippedAsDefault(weapon)
+    local defStr = Shared.GetDefaultSkinStrForWeapon(weapon)
+    PlayerData:SetPath("ownedItems.equipped." .. weapon, defStr)
+    PlayerData:Save()
+    return defStr
+end
+
 return InventoryInterface

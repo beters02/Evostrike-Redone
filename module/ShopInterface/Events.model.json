@@ -6,6 +6,10 @@
         "ClassName": "RemoteFunction"
       },
       {
+        "Name": "rf_AttemptItemSell",
+        "ClassName": "RemoteFunction"
+      },
+      {
         "Name": "rf_GetItemPrice",
         "ClassName": "RemoteFunction"
       },
