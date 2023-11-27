@@ -7,12 +7,10 @@ local EvoPlayer = Framework.Module.EvoPlayer
 local player = game:GetService("Players").LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hum = char:WaitForChild("Humanoid")
-local health = hum.Health
 
 -- Register Death & Damage
 local DiedEvent = EvoPlayer.Events:WaitForChild("PlayerDiedRemote")
 local DiedBind = EvoPlayer.Events:WaitForChild("PlayerDiedBindable")
---local ToServerDamagedEvent = script:WaitForChild("PlayerDamaged")
 local FromEvoPlayerDamagedEvent = char:WaitForChild("EvoPlayerDamagedEvent")
 local DamagedAnimationObj = char:WaitForChild("DamagedAnimation")
 local DamagedAnimation = hum.Animator:LoadAnimation(DamagedAnimationObj)
@@ -42,7 +40,7 @@ task.delay(1, function()
     end
 
     -- FOV changed
-    local fovChangeConn = PlayerData:PathValueChanged("options.camera.FOV", function(newValue)
+    PlayerData:PathValueChanged("options.camera.FOV", function(newValue)
         deffov = newValue
         smooth(deffov)
     end)

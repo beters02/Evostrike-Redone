@@ -53,9 +53,9 @@ Cases.weaponcase1 = OCase.new({name = "Weapon Case 1"}):: OCase
 Cases.weaponcase1.loot.common = {"vityaz_olReliable", "acr_jade"}
 Cases.weaponcase1.loot.rare = {"hkp30_curvedPurple"}
 Cases.weaponcase1.loot.epic = {"ak103_knight", "glock17_matteObsidian"}
-Cases.weaponcase1.price_pc = 25
-Cases.weaponcase1.price_sc = 250
-Cases.weaponcase1.sell_sc = 187.5
+Cases.weaponcase1.price_pc = 50
+Cases.weaponcase1.price_sc = 500
+Cases.weaponcase1.sell_sc = 500*0.75
 
 -- [[ MODULE PRIVATE ]]
 local CaseModule = {

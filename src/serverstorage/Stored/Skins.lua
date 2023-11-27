@@ -40,7 +40,7 @@ local Skins = {
     },
 
     vityaz = {
-        olReliable = {          name = "Ol' Reliable",    price_pc = 300,    price_sc = 3000,    sell_sc = 2250},
+        olReliable = {          name = "Ol' Reliable",    price_pc = 150,    price_sc = 1500,    sell_sc = 1125},
     },
 
     hkp30 = {
