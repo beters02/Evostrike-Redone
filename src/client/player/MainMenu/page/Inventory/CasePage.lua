@@ -13,7 +13,14 @@ local Cases = game.ReplicatedStorage.Assets.Cases
 local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
 local AttemptItemSellGui = ShopAssets:WaitForChild("AttemptItemSell")
 
-local CasePage = {}
+local spr = require(Framework.Module.lib.c_spr)
+
+local CasePage = {
+    config = {
+        DefaultOpeningCaseCFrame = CFrame.new(Vector3.new(0.2, 0.4, 0)) * CFrame.Angles(0, 9.766, 0),
+        FinalItemCanvasPosition = Vector2.new(2023, 0)
+    }
+}
 
 function CasePage:init(frame)
     CasePage.MainFrame = frame
@@ -134,27 +141,28 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
     local seq = self.Location.CaseOpeningSequence
     local seqItem = seq.ItemDisplay
     local seqCase = seq.CaseDisplay
+
     local seqWheel = seq.ItemWheelDisplay
-    local crates = seq.CaseDisplay.ViewportFrame.Crates
+    seqWheel.Wheel.CanvasPosition = Vector2.new(0,0)
+
+    local viewportFr = seq.CaseDisplay.ViewportFrame
+    viewportFr:ClearAllChildren()
+
+    local crates: Model = Cases.weaponcase1.Model:Clone()
+    crates.Parent = viewportFr
+    crates:PivotTo(CasePage.config.DefaultOpeningCaseCFrame)
+
     local endCF = crates.PrimaryPart.CFrame - Vector3.new(0, 0, 1)
     local GrowTween = TweenService:Create(crates.PrimaryPart, TweenInfo.new(1), {CFrame = endCF})
-    local WheelTween = TweenService:Create(seqWheel.Wheel, TweenInfo.new(3, Enum.EasingStyle.Quad), {CanvasPosition = Vector2.new(2150, 0)})
-
-    if not self.itemDisplayVar.initCaseOpen then
-        self.itemDisplayVar.initCaseOpen = true
-        self.itemDisplayVar.cratesPos = crates.PrimaryPart.CFrame
-    end
-
-    crates:SetPrimaryPartCFrame(self.itemDisplayVar.cratesPos)
-    seqWheel.Wheel.CanvasPosition = Vector2.new(0,0)
+    local WheelTween = TweenService:Create(seqWheel.Wheel, TweenInfo.new(3, Enum.EasingStyle.Quad), {CanvasPosition = CasePage.config.FinalItemCanvasPosition})
 
     -- Fill Wheel CaseFrames with Model
     local gotParsed = InventoryInterface.ParseSkinString(gotSkin)
-    CasePage.FillCaseFrame(self, 1, gotParsed)
-    local count = 1
-    for _, v in pairs(potentialSkins) do
-        count += 1
-        CasePage.FillCaseFrame(self, count, InventoryInterface.ParseSkinString(v))
+    CasePage.FillCaseFrame(self, #potentialSkins, gotParsed) -- fill second to last frame with got skin
+    CasePage.FillCaseFrame(self, #potentialSkins + 1, InventoryInterface.ParseSkinString(potentialSkins[#potentialSkins])) -- fill last frame with last potential skin
+
+    for i = 1, #potentialSkins - 1 do
+        CasePage.FillCaseFrame(self, i, InventoryInterface.ParseSkinString(potentialSkins[i]))
     end
 
     -- Fill ItemDisplay with Got Item
@@ -202,7 +210,11 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
 end
 
 function CasePage:FillCaseFrame(index, skin)
-    local itemFrame = self.Location.CaseOpeningSequence.ItemWheelDisplay.Wheel["Item_" .. index]
+    if index/10 < 1 then
+        index = "0" .. tostring(index)
+    end
+
+    local itemFrame = self.Location.CaseOpeningSequence.ItemWheelDisplay.Wheel["Item_" .. tostring(index)]
     local model = self.skinPage.CreateSkinFrameModel(self, skin)
     itemFrame:WaitForChild("ViewportFrame"):ClearAllChildren()
     model.Parent = itemFrame:WaitForChild("ViewportFrame")
@@ -304,7 +316,9 @@ function CasePage:CloseItemDisplay()
         v:Disconnect()
     end
     self.itemDisplayFrame.Visible = false
-    self.LastOpenPage.Visible = true
+    if self.LastOpenPage then
+        self.LastOpenPage.Visible = true
+    end
     self.Location.CasesButton.Visible = true
     self.Location.SkinsButton.Visible = true
     self.Location.KeysButton.Visible = true

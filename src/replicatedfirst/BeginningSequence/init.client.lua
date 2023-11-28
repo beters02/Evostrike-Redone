@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 local PlayerLoadedEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("playerLoadedEvent")
+local Services = ReplicatedStorage:WaitForChild("Services")
 
 local gui = script:WaitForChild("LoadingGUI")
 local player = Players.LocalPlayer
@@ -29,14 +30,20 @@ local map = workspace:WaitForChild("Map")
 local isPlayingIntro = false
 local intro = script:WaitForChild("Intro")
 
-local thread = false
 local loading = true
 local hudconn = false
+local forceStop = true
 
 local preloads = {
     loading = {},
     map = map:GetChildren(),
     assets = {}
+}
+
+local decToLoad = {
+    Services:WaitForChild("WeaponService"):WaitForChild("Weapon"),
+    Services:WaitForChild("AbilityService"):WaitForChild("Ability"),
+    game:GetService("MaterialService")
 }
 
 local preloadsVar = {
@@ -90,9 +97,9 @@ local function intro_finished_animation()
     end
 
     tweens._out1:Play()
-	tweens._out1.Completed:Wait()
-	gui.MainFrame.Visible = false
-	gui.TeamFrame.Visible = false
+    tweens._out1.Completed:Wait()
+    gui.MainFrame.Visible = false
+    gui.TeamFrame.Visible = false
     gui.IntroFrame.Visible = false
 	tweens._out2:Play()
     tweens._out2.Completed:Once(function()
@@ -102,15 +109,10 @@ local function intro_finished_animation()
 end
 
 local function intro_bypass()
-    if gui and loading then
-        loading = false
-        isPlayingIntro = false
-
-        task.spawn(intro_finished_animation)
-        enable_hud(true)
-        intro:Stop()
-        coroutine.yield(thread)
-    end
+    loading = false
+    isPlayingIntro = false
+    forceStop = true
+    FINISH(true)
 end
 
 local function intro_verify_bypass_input(input)
@@ -121,9 +123,11 @@ local function intro_verify_bypass_input(input)
 end
 
 function INIT()
+
     --prepare loading screen
     gui.MainFrame.LoadingText.Text = "Loading Map..."
     gui.Parent = Players.LocalPlayer.PlayerGui -- give player gui
+
     -- preare intro screen
     intro:Play() -- play intro music
     gui.IntroFrame.Visible = true
@@ -131,6 +135,7 @@ function INIT()
     gui.MainFrame.Visible = true
     gui.BlackFrame.BackgroundTransparency = 0
     gui.TeamFrame.Visible = false
+
     -- preload Loading GUI
     print("loading loading screen")
     for _, v in pairs(gui:GetDescendants()) do
@@ -138,38 +143,6 @@ function INIT()
             ContentProvider:PreloadAsync({v})
         end
     end
-    --preload game assets
-    task.spawn(function()
-        local preassets = {}
-        local assets = {}
-        for _, v in pairs(ReplicatedStorage:WaitForChild("Services"):GetDescendants()) do
-            if string.match(v.Name, "Assets") then
-                table.insert(preassets, v)
-            end
-        end
-        for _, assetFolder in pairs(preassets) do
-            for _, catFolder in pairs(assetFolder:GetChildren()) do
-                for _, dec in pairs(catFolder:GetChildren()) do
-                    if dec:IsA("Animation") or dec:IsA("ImageLabel") or dec:IsA("Sound") then
-                        table.insert(assets, dec)
-                    elseif dec:IsA("Model") then
-                        for _, mdec in pairs(dec:GetDescendants()) do
-                            if mdec:IsA("Part") or mdec:IsA("BasePart") or mdec:IsA("MeshPart") or mdec:IsA("Texture") or mdec:IsA("SurfaceAppearance") then
-                                table.insert(assets, mdec)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        for _, v in pairs(MaterialService:GetDescendants()) do
-            if v:IsA("MaterialVariant") then
-                table.insert(assets, v)
-            end
-        end
-        preloads.assets = assets
-        preloadsVar.assets = true
-    end)
 end
 
 function CONNECT()
@@ -183,36 +156,34 @@ function START()
     task.spawn(intro_animation)
 
     -- load map
-    if not loading then return end
-    print('loading map assets')
-    local count = #preloads.map
-    gui.MainFrame.LoadingText.Text = "Loading Map: 0" .. "/" .. tostring(count)
-    for i = 1, count do
-        if not loading then break end
-        gui.MainFrame.LoadingText.Text = "Loading Map: " .. tostring(i) .. "/" .. tostring(count)
-        ContentProvider:PreloadAsync({preloads.map[i]})
-    end
-   
-    -- load game assets
-    if not loading then return end
-    print('loading game assets')
-    if not preloadsVar.assets then
-        repeat task.wait() until preloadsVar.assets
-    end
-
-    count = #preloads.assets
-    for i = 1, count do
-        if not loading then break end
-        gui.MainFrame.LoadingText.Text = "Loading Game Assets... " .. tostring(i) .. "/" .. tostring(count)
-        ContentProvider:PreloadAsync({preloads.assets[i]})
-    end
+    while loading do
+        print('loading map assets')
+        local count = #preloads.map
+        gui.MainFrame.LoadingText.Text = "Loading Map: 0" .. "/" .. tostring(count)
+        for i = 1, count do
+            gui.MainFrame.LoadingText.Text = "Loading Map: " .. tostring(i) .. "/" .. tostring(count)
+            ContentProvider:PreloadAsync({preloads.map[i]})
+        end
     
-    loading = false
+        -- load game assets
+        print('loading game assets')
+        gui.MainFrame.LoadingText.Text = "Loading Game Assets... "
+        for _, parent in pairs(decToLoad) do
+            ContentProvider:PreloadAsync(parent:GetDescendants())
+        end
+        
+        loading = false
+    end
 end
 
-function FINISH()
-    if isPlayingIntro or loading then
-        repeat task.wait() until not isPlayingIntro and not loading
+function FINISH(bypass)
+    if not bypass then
+        if forceStop then
+            return
+        end
+        if isPlayingIntro or loading then
+            repeat task.wait() until not isPlayingIntro and not loading
+        end
     end
     
     PlayerLoadedEvent:FireServer()
@@ -225,7 +196,7 @@ function FINISH()
         end
     end)
     
-    Debris:AddItem(script, SCRIPT_DESTRUCTION_DELAY) 
+    Debris:AddItem(script, SCRIPT_DESTRUCTION_DELAY)
 end
 
 --@run

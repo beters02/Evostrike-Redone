@@ -132,7 +132,7 @@ end
 -- Toggle All Pages On/Off
 function Shop:TogglePages(toggle)
     if toggle then
-        self.openItemList = self.openItemList or "Collections"
+        self.openItemList = self.openItemList or "Cases"
         if self.openItemList == "Collections" then
             self:OpenCollectionsPage(true)
         elseif self.openItemList == "Skins" then

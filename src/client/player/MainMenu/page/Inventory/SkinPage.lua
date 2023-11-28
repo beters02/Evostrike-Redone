@@ -307,7 +307,9 @@ function SkinPage:CloseItemDisplay()
         v:Disconnect()
     end
     self.itemDisplayFrame.Visible = false
-    self.LastOpenPage.Visible = true
+    if self.LastOpenPage then
+        self.LastOpenPage.Visible = true
+    end
     self.Location.CasesButton.Visible = true
     self.Location.SkinsButton.Visible = true
     self.Location.KeysButton.Visible = true
