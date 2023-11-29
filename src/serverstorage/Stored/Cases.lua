@@ -1,3 +1,4 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 type Array<T> = {[number]: T}
 export type VCaseLootTable = { common: Array<string>, rare: Array<string>, epic: Array<string>, legendary: Array<string> }
 export type OCase = { name: string, loot: VCaseLootTable, price_pc: number?, price_sc: number?, sell_sc: number? }
@@ -47,7 +48,7 @@ end}
 
 -- [[ CASE DEFS ]]
 local Cases = {}
-local Skins = require(script.Parent:WaitForChild("Skins"))
+local Skins = require(ReplicatedStorage.Assets.Shop.Skins)
 
 Cases.weaponcase1 = OCase.new({name = "Weapon Case 1"}):: OCase
 Cases.weaponcase1.loot.common = {"vityaz_olReliable", "acr_jade"}

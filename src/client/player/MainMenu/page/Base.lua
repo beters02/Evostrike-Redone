@@ -22,7 +22,9 @@ function pageClass.new(main, basePageTable, pageName, isPlayerAdmin)
     self._isPlayerAdmin = isPlayerAdmin
 
     local soundsFolder = main.gui:WaitForChild("Sounds")
-    self._sounds = {Open = soundsFolder:WaitForChild("selectSound"), Hover = soundsFolder:WaitForChild("hoverSound")}
+    self._sounds = {Open = soundsFolder:WaitForChild("selectSound"), Hover = soundsFolder:WaitForChild("hoverSound"), Purchase1 = soundsFolder:WaitForChild("purchaseSound1"), ItemDisplay = soundsFolder:WaitForChild("itemDisplaySound"),
+                    Error1 = soundsFolder:WaitForChild("errorSound1"), ItemReceived = soundsFolder:WaitForChild("itemReceivedSound")}
+    self._soundsFolder = soundsFolder
 
     pageClass.initTweens(self)
 
@@ -102,8 +104,11 @@ function pageClass:CloseAnimations()
     end
 end
 
-function pageClass:PlaySound(sound: "Open" | "Hover")
-    self._sounds[sound]:Play()
+function pageClass:PlaySound(sound)
+    local fsound = self._sounds[sound] or self._soundsFolder:FindFirstChild(sound)
+    if fsound then
+        fsound:Play()
+    end
 end
 
 function pageClass:FindPage(pageName)

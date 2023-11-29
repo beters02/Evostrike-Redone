@@ -7,11 +7,17 @@ local WeaponService = ReplicatedStorage:WaitForChild("Services"):WaitForChild("W
 local WeaponModules = WeaponService:WaitForChild("Weapon")
 local PlayerData = require(Framework.Module.PlayerData)
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
+local ShopSkins = require(ReplicatedStorage.Assets.Shop.Skins)
+local ShopRarity = require(ReplicatedStorage.Assets.Shop.Rarity)
 
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
 local AttemptItemSellGui = ShopAssets:WaitForChild("AttemptItemSell")
 
-local SkinPage = {}
+local SkinPage = {
+    config = {
+        MaxFramesPerPage = 40
+    }
+}
 
 SkinPage.CustomWeaponPositions = {
     Get = function(invSkin)
@@ -37,6 +43,11 @@ SkinPage.CustomWeaponPositions = {
 function SkinPage:init(frame)
     self.SkinPageFrames = {}
     self.EquippedSkinPageFrames = {}
+    self.SkinPageNumberVar = {
+        Connections = {},
+        PageAmount = 1,
+        CurrentPage = 1,
+    }
     for i, _ in pairs(PlayerData:Get().ownedItems.equipped) do
         self.EquippedSkinPageFrames[i] = false
     end
@@ -54,78 +65,157 @@ function SkinPage:Open()
 end
 
 function SkinPage:Clear()
-    for _, v in pairs(self.SkinPageFrames) do
-        v:Destroy()
+    for _, page in pairs(self.SkinPageFrames) do
+        for _, obj in pairs(page) do
+            obj[2]:Destroy()
+        end
     end
+    for _, content in pairs(self.Location.Skin:GetChildren()) do
+        if content:IsA("Frame") and content.Name ~= "Content1" then
+            content:Destroy()
+        end
+    end
+    self.Location.Skin.Content1.Visible = true
     self.SkinPageFrames = {}
 end
 
 function SkinPage:Update(playerInventory)
+    SkinPage.DisconnectButtons(self)
     SkinPage.Clear(self)
-    
-    local frames = {}
 
+    local frames = {[1] = {}} -- index per page number (pagesAmount)
+    local skinsToCreate = {}
+    local pagesAmount = 1
+    local pageIndex = 1
+
+    -- first we get all the skins in an array so we can count
     if self._isPlayerAdmin then
-        SkinPage.CreateSkinFramesForAllWeapons(self, frames)
+        skinsToCreate = SkinPage.GetAllSkins(self)
     else
-        SkinPage.CreateSkinFramesForAllDefaultWeapons(self, frames)
+        skinsToCreate = SkinPage.GetAllDefaultSkins(self)
     end
-
     for _, unsplit in pairs(playerInventory.skin) do
-        local invSkin = InventoryInterface2.ParseSkinString(unsplit)
-        if frames[unsplit] then
-            continue
-        end
-        
-        local frame = SkinPage.CreateSkinFrame(self, unsplit)
-        for i, v in pairs(invSkin) do
-            frame:SetAttribute(i, v)
-        end
-        
-        if playerInventory.equipped[invSkin.weapon] == unsplit then
-            SkinPage.SetSkinFrameEquipped(self, frame, invSkin, true)
-        end
-
-        frames[unsplit] = frame
+        table.insert(skinsToCreate, unsplit)
     end
 
-    for _, unsplit in pairs(playerInventory.equipped) do
-        local invSkin = InventoryInterface2.ParseSkinString(unsplit)
-        if frames[unsplit] then
-            SkinPage.SetSkinFrameEquipped(self, frames[unsplit], invSkin, true)
-            continue
+    -- count for number of pages
+    pagesAmount = math.ceil(#skinsToCreate/SkinPage.config.MaxFramesPerPage)
+    self.SkinPageNumberVar.PageAmount = pagesAmount
+    if pagesAmount > 1 then
+        SkinPage.ConnectPageNumberButtons(self)
+        for i = 2, pagesAmount+1 do
+            local c = self.Location.Skin.Content1:Clone()
+            c.Name = "Content" .. tostring(i)
+            c.Parent = self.Location.Skin
+            c.Visible = false
+            frames[i] = {}
         end
-        
-        local frame = SkinPage.CreateSkinFrame(self, unsplit)
+    end
+
+    -- add equipped skins
+    for _, unsplit in pairs(playerInventory.equipped) do
+        if #frames[pageIndex] >= SkinPage.config.MaxFramesPerPage then
+            pageIndex += 1
+        end
+
+        local invSkin = InventoryInterface2.ParseSkinString(unsplit)
+        local frame = SkinPage.CreateSkinFrame(self, unsplit, pageIndex)
         for i, v in pairs(invSkin) do
             frame:SetAttribute(i, v)
         end
-        
-        frames[unsplit] = frame
+        SkinPage.SetSkinFrameEquipped(self, frame, invSkin, true)
+        table.insert(frames[pageIndex], {unsplit, frame})
+    end
+
+    -- add all other skins
+    for _, unsplit in pairs(skinsToCreate) do
+        if table.find(playerInventory.equipped, unsplit) then
+            continue
+        end
+        if #frames[pageIndex] >= SkinPage.config.MaxFramesPerPage then
+            pageIndex += 1
+        end
+
+        local invSkin = InventoryInterface2.ParseSkinString(unsplit)
+        local frame = SkinPage.CreateSkinFrame(self, unsplit, pageIndex)
+        for i, v in pairs(invSkin) do
+            frame:SetAttribute(i, v)
+        end
+        table.insert(frames[pageIndex], {unsplit, frame})
     end
 
     self.SkinPageFrames = frames
+    SkinPage.ConnectButtons(self)
 end
 
 function SkinPage:ConnectButtons()
-    for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
-        if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
-        table.insert(self.currentPageButtonConnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
-            if not self.Location.Skin.Visible then return end
-            SkinPage.SkinFrameButtonClicked(self, v)
-        end))
+    for _, content in pairs(self.Location.Skin:GetChildren()) do
+        if content:IsA("Frame") and string.match(content.Name, "Content") then
+            for _, v in pairs(content:GetChildren()) do
+                if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
+                table.insert(self.currentPageButtonConnections, v:WaitForChild("Button").MouseButton1Click:Connect(function()
+                    if not self.Location.Skin.Visible or not v.Parent.Visible then return end
+                    SkinPage.SkinFrameButtonClicked(self, v)
+                end))
+            end
+        end
     end
 end
 
-function SkinPage:CreateSkinFrame(skinStr)
+function SkinPage:DisconnectButtons()
+    for _, v in pairs(self.currentPageButtonConnections) do
+        v:Disconnect()
+    end
+    self.currentPageButtonConnections = {}
+end
+
+function SkinPage:ConnectPageNumberButtons()
+    table.insert(self.SkinPageNumberVar.Connections, self.Location.NextPageNumberButton.MouseButton1Click:Connect(function()
+        local curr = self.SkinPageNumberVar.CurrentPage
+        if curr == self.SkinPageNumberVar.PageAmount then
+            return
+        end
+        self.Location.Skin["Content" .. tostring(curr)].Visible = false
+
+        curr += 1
+        self.Location.Skin["Content" .. tostring(curr)].Visible = true
+        self.Location.CurrentPageNumberLabel.Text = tostring(curr)
+        self.SkinPageNumberVar.CurrentPage = curr
+    end))
+    table.insert(self.SkinPageNumberVar.Connections, self.Location.PreviousPageNumberButton.MouseButton1Click:Connect(function()
+        local curr = self.SkinPageNumberVar.CurrentPage
+        if curr == 1 then
+            return
+        end
+        self.Location.Skin["Content" .. tostring(curr)].Visible = false
+
+        curr -= 1
+        self.Location.Skin["Content" .. tostring(curr)].Visible = true
+        self.Location.CurrentPageNumberLabel.Text = tostring(curr)
+        self.SkinPageNumberVar.CurrentPage = curr
+    end))
+end
+
+function SkinPage:DisconnectPageNumberButtons()
+    for _, v in pairs(self.SkinPageNumberVar.Connections) do
+        v:Disconnect()
+    end
+    self.SkinPageNumberVar.Connections = {}
+end
+
+function SkinPage:CreateSkinFrame(skinStr, pageIndex)
     local invSkin = InventoryInterface2.ParseSkinString(skinStr):: InventoryInterface2.InventorySkinObject
     local displayName = Strings.firstToUpper(invSkin.model) .. " | " .. Strings.firstToUpper(invSkin.skin)
 
-    local frame = self.Location.Skin.Content.ItemFrame:Clone()
+    local frame = self.Location.Skin.Content1.ItemFrame:Clone()
     frame:WaitForChild("NameLabel").Text = displayName
     frame.Name = "SkinFrame_" .. displayName
-    frame.Parent = self.Location.Skin.Content
+    frame.Parent = self.Location.Skin["Content" .. tostring(pageIndex)]
     frame.BackgroundColor3 = frame:GetAttribute("unequippedColor")
+
+    if (invSkin.weapon == "knife" and invSkin.model ~= "default") or (invSkin.weapon ~= "knife" and invSkin.skin ~= "default") then
+        frame:SetAttribute("rarity", ShopSkins.GetSkinFromInvString(skinStr).rarity)
+    end
 
     frame:SetAttribute("weapon", invSkin.weapon)
     frame:SetAttribute("model", invSkin.model)
@@ -173,6 +263,16 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
     self.itemDisplayFrame.ItemName.Text = Strings.firstToUpper(invSkin.model) .. " | " .. Strings.firstToUpper(invSkin.skin)
     self.itemDisplayFrame.IDLabel.Visible = true
     self.itemDisplayFrame.IDLabel.Text = "ID: " .. tostring(invSkin.uuid)
+
+    local rarity = skinFrame:GetAttribute("rarity")
+    local rarityColor = rarity and ShopRarity[rarity].color
+    rarity = rarity or "Default"
+
+    self.itemDisplayFrame.RarityLabel.Visible = true
+    self.itemDisplayFrame.RarityLabel.Text = rarity
+    if rarityColor then
+        self.itemDisplayFrame.RarityLabel.TextColor3 = rarityColor
+    end
     
     -- Model Display
     self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
@@ -261,6 +361,7 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
             conns[2]:Disconnect()
             local succ = ShopInterface:SellItem(shopItemStr, invSkin.unsplit)
             if succ then
+                self:PlaySound("Purchase1")
                 Popup.burst("Successfully sold item for " .. tostring(shopItem.sell_sc) .. " SC!", 3)
                 SkinPage.CloseItemDisplay(self)
                 SkinPage.ConnectButtons(self)
@@ -270,6 +371,7 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
                     SkinPage.SetSkinFrameEquipped(self, defFrame, InventoryInterface2.ParseSkinString(defStr), true)
                 end
             else
+                self:PlaySound("Error1")
                 Popup.burst("Could not sell item.", 3)
             end
             self.itemDisplayVar.isSelling = false
@@ -298,7 +400,11 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
     self.Location.CasesButton.Visible = false
     self.Location.SkinsButton.Visible = false
     self.Location.KeysButton.Visible = false
+    self.Location.NextPageNumberButton.Visible = false
+    self.Location.PreviousPageNumberButton.Visible = false
+    self.Location.CurrentPageNumberLabel.Visible = false
     self.itemDisplayFrame.Visible = true
+    self:PlaySound("ItemDisplay")
 end
 
 function SkinPage:CloseItemDisplay()
@@ -313,6 +419,9 @@ function SkinPage:CloseItemDisplay()
     self.Location.CasesButton.Visible = true
     self.Location.SkinsButton.Visible = true
     self.Location.KeysButton.Visible = true
+    self.Location.NextPageNumberButton.Visible = true
+    self.Location.PreviousPageNumberButton.Visible = true
+    self.Location.CurrentPageNumberLabel.Visible = true
 end
 
 function SkinPage:SetSkinFrameEquipped(frame, skin: InventoryInterface2.InventorySkinObject, ignoreUnequip: boolean)
@@ -414,6 +523,53 @@ function SkinPage:CreateSkinFramesForAllDefaultWeapons(frames)
 
         frames[inventoryKey] = SkinPage.CreateSkinFrame(self, inventoryKey)
     end
+end
+
+function SkinPage:GetAllSkins()
+    local skins = {}
+    for _, weaponFolder in pairs(WeaponModules:GetChildren()) do
+        local weaponName = weaponFolder.Name
+
+        if weaponName == "knife" then
+            for _, model in pairs(weaponFolder.Assets:GetChildren()) do
+                for _, skin in pairs(model.Models:GetChildren()) do
+                    if not skin:IsA("Model") or skin:GetAttribute("Ignore") then
+                        continue
+                    end
+                    local id = "knife_" .. model.Name .. "_" .. skin.Name .. "_0"
+                    table.insert(skins, id)
+                end
+            end
+        else
+            for _, skin in pairs(weaponFolder.Assets.Models:GetChildren()) do
+                if not skin:IsA("Model") or skin:GetAttribute("Ignore") then
+                    continue
+                end
+                local id = weaponName .. "_" .. weaponName .. "_" .. skin.Name .. "_0"
+                table.insert(skins, id)
+            end
+        end
+    end
+    return skins
+end
+
+function SkinPage:GetAllDefaultSkins()
+    local skins = {}
+    for _, weaponFolder in pairs(WeaponModules:GetChildren()) do
+        if not weaponFolder:FindFirstChild("Assets") then
+            continue
+        end
+
+        local weaponName = weaponFolder.Name
+        local inventoryKey = weaponName .. "_" .. weaponName .. "_default_0"
+
+        if weaponName == "knife" then
+            inventoryKey = "knife_default_default_0"
+        end
+
+        table.insert(skins, inventoryKey)
+    end
+    return skins
 end
 
 return SkinPage

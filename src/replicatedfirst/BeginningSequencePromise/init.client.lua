@@ -7,38 +7,33 @@ local SCRIPT_DESTRUCTION_DELAY = 3
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
 local UserInputService = game:GetService("UserInputService")
-local MaterialService = game:GetService("MaterialService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
 local TweenService = game:GetService("TweenService")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
-ReplicatedFirst:RemoveDefaultLoadingScreen()
 local PlayerLoadedEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("playerLoadedEvent")
 local Services = ReplicatedStorage:WaitForChild("Services")
+local Promise = require(script:WaitForChild("c_promise"))
+
+ReplicatedFirst:RemoveDefaultLoadingScreen()
 
 local gui = script:WaitForChild("LoadingGUI")
 local player = Players.LocalPlayer
 local hud: ScreenGui = player.PlayerGui:FindFirstChild("HUD")
 if hud then hud.Enabled = false end
 
+local map = workspace:WaitForChild("Map")
+local intro = script:WaitForChild("Intro")
+
+local loading = true
+local isPlayingIntro = false
+local forceStop = false
+local hudconn = false
+
 local tweens = {}
 tweens._in = TweenService:Create(gui:WaitForChild("BlackFrame"), TweenInfo.new(2), {BackgroundTransparency = 1})
 tweens._out1 = TweenService:Create(gui.BlackFrame, TweenInfo.new(1.5), {BackgroundTransparency = 0})
 tweens._out2 = TweenService:Create(gui.BlackFrame, TweenInfo.new(2.5), {BackgroundTransparency = 1})
-
-local map = workspace:WaitForChild("Map")
-local isPlayingIntro = false
-local intro = script:WaitForChild("Intro")
-
-local loading = true
-local hudconn = false
-local forceStop = false
-
-local preloads = {
-    loading = {},
-    map = map:GetChildren(),
-    assets = {}
-}
 
 local decToLoad = {
     Services:WaitForChild("WeaponService"):WaitForChild("Weapon"),
@@ -46,9 +41,19 @@ local decToLoad = {
     game:GetService("MaterialService")
 }
 
-local preloadsVar = {
-    assets = false
-}
+function init()
+    -- connect
+end
+
+function start()
+    
+end
+
+function main()
+    task.wait(INITIAL_BLACK_SCREEN_LENGTH)
+	tweens._in:Play()
+    Promise.fromEvent(tweens._in.Completed):andThen()
+end
 
 local function get_hud()
     return player.PlayerGui:FindFirstChild("HUD") or false
@@ -161,13 +166,14 @@ function START()
     task.spawn(intro_animation)
 
     -- load map
+    local mapChildren = map:GetChildren()
     while loading do
         print('loading map assets')
-        local count = #preloads.map
+        local count = #mapChildren
         gui.MainFrame.LoadingText.Text = "Loading Map: 0" .. "/" .. tostring(count)
         for i = 1, count do
             gui.MainFrame.LoadingText.Text = "Loading Map: " .. tostring(i) .. "/" .. tostring(count)
-            ContentProvider:PreloadAsync({preloads.map[i]})
+            ContentProvider:PreloadAsync({mapChildren[i]})
         end
     
         -- load game assets

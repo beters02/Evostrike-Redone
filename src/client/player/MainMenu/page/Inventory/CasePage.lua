@@ -12,8 +12,8 @@ local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainM
 local Cases = game.ReplicatedStorage.Assets.Cases
 local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
 local AttemptItemSellGui = ShopAssets:WaitForChild("AttemptItemSell")
-
-local spr = require(Framework.Module.lib.c_spr)
+local Rarity = require(ShopAssets.Rarity)
+local ShopSkins = require(ShopAssets.Skins)
 
 local CasePage = {
     config = {
@@ -90,6 +90,7 @@ function CasePage:CaseButtonClicked(caseFrame)
 end
 
 function CasePage:OpenCaseButtonClicked(caseFrame)
+    self:PlaySound("Open")
     local caseName = caseFrame:GetAttribute("CaseName")
 
     -- Confirm Case Open/Key Purchase
@@ -97,6 +98,7 @@ function CasePage:OpenCaseButtonClicked(caseFrame)
     local hasConfirmed = false
     local confirmGui = AttemptOpenCaseGui:Clone()
     local keyAcceptButton = confirmGui:WaitForChild("Frame"):WaitForChild("KeyAcceptButton")
+    local declineButton = confirmGui.Frame:WaitForChild("DeclineButton")
     CollectionService:AddTag(confirmGui, "CloseItemDisplay")
     
     if hasKey then
@@ -116,17 +118,27 @@ function CasePage:OpenCaseButtonClicked(caseFrame)
                 openedSkin, potentialSkins = ShopInterface:OpenCase(caseName)
             end)
             if success then
+                self:PlaySound("Purchase1")
                 task.spawn(function()
                     CasePage.OpenCase(self, openedSkin, potentialSkins)
                 end)
             else
+                self:PlaySound("Error1")
                 Popup.burst(tostring(result), 3)
             end
         else
             self._mainPageModule:OpenPage("Shop")
         end
         confirmGui:Destroy()
+        self.itemDisplayConns.DeclineButton:Disconnect()
         self.itemDisplayConns.CaseConfirmation:Disconnect()
+    end)
+
+    self.itemDisplayConns.DeclineButton = declineButton.MouseButton1Click:Connect(function()
+        if hasConfirmed then return end
+        confirmGui:Destroy()
+        self.itemDisplayConns.CaseConfirmation:Disconnect()
+        self.itemDisplayConns.DeclineButton:Disconnect()
     end)
 
     confirmGui.Parent = game.Players.LocalPlayer.PlayerGui
@@ -158,8 +170,12 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
 
     -- Fill Wheel CaseFrames with Model
     local gotParsed = InventoryInterface.ParseSkinString(gotSkin)
-    CasePage.FillCaseFrame(self, #potentialSkins, gotParsed) -- fill second to last frame with got skin
+    local gotFrame = CasePage.FillCaseFrame(self, #potentialSkins, gotParsed) -- fill second to last frame with got skin
     CasePage.FillCaseFrame(self, #potentialSkins + 1, InventoryInterface.ParseSkinString(potentialSkins[#potentialSkins])) -- fill last frame with last potential skin
+
+    -- Get default item frame sizes for tick sound
+    local gridPad = 0.05
+    local xSizeOffset = workspace.CurrentCamera.ViewportSize.X * (0.061 + gridPad)
 
     for i = 1, #potentialSkins - 1 do
         CasePage.FillCaseFrame(self, i, InventoryInterface.ParseSkinString(potentialSkins[i]))
@@ -170,8 +186,15 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
     local itemDisplayModel = InventoryInterface.GetSkinModelFromSkinObject(gotParsed):Clone()
     itemDisplayModel.PrimaryPart = itemDisplayModel:WaitForChild("GunComponents"):WaitForChild("WeaponHandle")
     seqItem.Display.ViewportFrame:ClearAllChildren()
+    --itemDisplayModel:PivotTo(CFrame.new(Vector3.zero)) --* CFrame.Angles(0,0,0))
     itemDisplayModel:SetPrimaryPartCFrame(CFrame.new(Vector3.zero))
     itemDisplayModel.Parent = seqItem.Display.ViewportFrame
+
+    -- Set rarity color/text
+    local rarity = ShopSkins.GetSkinFromInvString(gotParsed.unsplit).rarity
+    local rarityColor = Rarity[rarity].color
+    seqItem.RarityLabel.Text = rarity
+    seqItem.RarityLabel.TextColor3 = rarityColor
 
     -- Case Opening Sequence
     self.Location.Case.Visible = false
@@ -180,6 +203,9 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
     self.Location.CasesButton.Visible = false
     self.Location.KeysButton.Visible = false
     self.Location.SkinsButton.Visible = false
+    self.Location.NextPageNumberButton.Visible = false
+    self.Location.PreviousPageNumberButton.Visible = false
+    self.Location.CurrentPageNumberLabel.Visible = false
     seq.Visible = true
 
     -- Play Grow Tween
@@ -188,14 +214,28 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
     seqItem.Visible = false
     GrowTween:Play()
     GrowTween.Completed:Wait()
+    self:PlaySound("woodImpact")
     
     -- Play Wheel Tween
+    local lastTickPos = 0
+    task.spawn(function() -- ticking sound
+        self:PlaySound("wheelTick")
+        while lastTickPos do
+            if seqWheel.Wheel.CanvasPosition.X - lastTickPos >= xSizeOffset then
+                lastTickPos = seqWheel.Wheel.CanvasPosition.X
+                self:PlaySound("wheelTick")
+            end
+            task.wait()
+        end
+    end)
     seqCase.Visible = false
     seqWheel.Visible = true
     WheelTween:Play()
     WheelTween.Completed:Wait()
+    lastTickPos = false
 
     -- play Received Item Screen
+    self:PlaySound("ItemReceived")
     seqWheel.Visible = false
     seqItem.Visible = true
 
@@ -218,6 +258,7 @@ function CasePage:FillCaseFrame(index, skin)
     local model = self.skinPage.CreateSkinFrameModel(self, skin)
     itemFrame:WaitForChild("ViewportFrame"):ClearAllChildren()
     model.Parent = itemFrame:WaitForChild("ViewportFrame")
+    return itemFrame
 end
 
 function CasePage:OpenItemDisplay(caseFrame) -- Currently this is set up for cases only.
@@ -230,6 +271,7 @@ function CasePage:OpenItemDisplay(caseFrame) -- Currently this is set up for cas
     self.itemDisplayFrame.SecondaryButton.Text = "SELL"
     self.itemDisplayFrame.SecondaryButton.Visible = true
     self.itemDisplayFrame.IDLabel.Visible = false
+    self.itemDisplayFrame.RarityLabel.Visible = false
 
     self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
     self.itemDisplayFrame.CaseDisplay.Visible = true
@@ -307,7 +349,11 @@ function CasePage:OpenItemDisplay(caseFrame) -- Currently this is set up for cas
     self.Location.CasesButton.Visible = false
     self.Location.SkinsButton.Visible = false
     self.Location.KeysButton.Visible = false
+    self.Location.NextPageNumberButton.Visible = false
+    self.Location.PreviousPageNumberButton.Visible = false
+    self.Location.CurrentPageNumberLabel.Visible = false
     self.itemDisplayFrame.Visible = true
+    self:PlaySound("ItemDisplay")
 end
 
 function CasePage:CloseItemDisplay()
@@ -322,6 +368,9 @@ function CasePage:CloseItemDisplay()
     self.Location.CasesButton.Visible = true
     self.Location.SkinsButton.Visible = true
     self.Location.KeysButton.Visible = true
+    self.Location.NextPageNumberButton.Visible = true
+    self.Location.PreviousPageNumberButton.Visible = true
+    self.Location.CurrentPageNumberLabel.Visible = true
 end
 
 return CasePage

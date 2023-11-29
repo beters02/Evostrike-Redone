@@ -3,12 +3,11 @@ local ServerStorage = game:GetService("ServerStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local ClientInterface = ReplicatedStorage.Modules.ShopInterface
 local Events = ClientInterface.Events
-local Strings = require(Framework.Module.lib.fc_strings)
 local Tables = require(Framework.Module.lib.fc_tables)
 local PlayerData = require(Framework.Module.PlayerData)
 local Admins = require(ServerStorage.Stored.AdminIDs)
 local Cases = require(ServerStorage.Stored.Cases)
-local Skins = require(ServerStorage.Stored.Skins)
+local Skins = require(ReplicatedStorage.Assets.Shop.Skins)
 local Keys = require(ServerStorage.Stored.Keys)
 local HTTPService = game:GetService("HttpService")
 
@@ -79,7 +78,7 @@ function Shop.parseItemString(item: string)
     return returnObject
 end
 
-function Shop.canAffordItem(player, purchaseType: "StrafeCoins" | "PremiumCredits", item)
+function Shop.canAffordItem(player, purchaseType: "StrafeCoins" | "PremiumCredits", item, amount)
     if purchaseType ~= "StrafeCoins" and purchaseType ~= "PremiumCredits" then
         error("Invalid PurchaseType!")
     end
@@ -89,22 +88,27 @@ function Shop.canAffordItem(player, purchaseType: "StrafeCoins" | "PremiumCredit
 
     local shopSkin = Shop.parseItemString(item)
     local price = purchaseType == "StrafeCoins" and shopSkin.price_sc or shopSkin.price_pc
+    price *= amount
+
     return currAmnt >= price, price, shopSkin
 end
 
 -- [[ SHOP PUBLIC ]]
-function Shop.PurchaseItem(player, item, purchaseType)
+function Shop.PurchaseItem(player, item, amount, purchaseType)
     local ptkey = purchaseType == "StrafeCoins" and "strafeCoins" or "premiumCredits"
-    local canPurchase, price, shopItem = Shop.canAffordItem(player, purchaseType, item)
+    local canPurchase, price, shopItem = Shop.canAffordItem(player, purchaseType, item, amount)
     if canPurchase then
-        local insertKey = shopItem.inventory_key
-        if shopItem.item_type == "skin" then
-            insertKey = insertKey .. "_" .. HTTPService:GenerateGUID(false)
-            if shopItem.weapon ~= "knife" then
-                insertKey = shopItem.weapon .. "_" .. insertKey
+        for _ = 1, amount do
+            local insertKey = shopItem.inventory_key
+            if shopItem.item_type == "skin" then
+                insertKey = insertKey .. "_" .. HTTPService:GenerateGUID(false)
+                if shopItem.weapon ~= "knife" then
+                    insertKey = shopItem.weapon .. "_" .. insertKey
+                end
             end
+            PlayerData:TableInsert(player, "ownedItems." .. shopItem.item_type, insertKey)
         end
-        PlayerData:TableInsert(player, "ownedItems." .. shopItem.item_type, insertKey)
+
         PlayerData:DecrementPath(player, "economy." .. ptkey, price)
         PlayerData:Save(player)
         return true

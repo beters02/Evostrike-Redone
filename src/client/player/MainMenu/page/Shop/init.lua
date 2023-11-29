@@ -3,12 +3,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
 local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
-local Tables = require(Framework.Module.lib.fc_tables)
 
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
 local AttemptItemPurchaseGui = ShopAssets:WaitForChild("AttemptItemPurchase")
 local ItemList = require(script.Parent.Parent.components.ItemList)
+local ShopRarity = require(ReplicatedStorage.Assets.Shop.Rarity)
 
 local Shop = {}
 --TODO: change all Shop-Personal functions to be a script function rather than a module function.
@@ -68,12 +68,15 @@ end
 function Shop:ConnectButtons()
     self.button_connections.skins = self.Location.SkinsButton.MouseButton1Click:Connect(function()
         self:OpenSkinsPage()
+        self:PlaySound("Open")
     end)
     self.button_connections.collections = self.Location.CollectionsButton.MouseButton1Click:Connect(function()
         self:OpenCollectionsPage()
+        self:PlaySound("Open")
     end)
     self.button_connections.cases = self.Location.CasesButton.MouseButton1Click:Connect(function()
         self:OpenCasesPage()
+        self:PlaySound("Open")
     end)
 end
 
@@ -195,6 +198,7 @@ function Shop:OpenItemDisplay(item, itemDisplayName)
         self:CloseItemDisplay()
     end)
 
+    self:PlaySound("ItemDisplay")
     self:TogglePages()
     self.itemDisplayFrame.Visible = true
 end
@@ -216,6 +220,7 @@ end
 function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
     local confirmGui = AttemptItemPurchaseGui:Clone()
     local confirmFrame = confirmGui:WaitForChild("Frame")
+    local amountFrame = confirmFrame:WaitForChild("AmountFrame")
     CollectionService:AddTag(confirmGui, "CloseItemDisplay")
 
     local pcAcceptButton = confirmFrame:WaitForChild("PCAcceptButton")
@@ -224,7 +229,12 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
     local skinLabel = confirmFrame:WaitForChild("SkinLabel")
     local weaponLabel = confirmFrame:WaitForChild("WeaponLabel")
     local caseLabel = confirmFrame:WaitForChild("CaseLabel")
+    local plusButton = amountFrame:WaitForChild("PlusButtonFrame"):WaitForChild("Button")
+    local minusButton = amountFrame:WaitForChild("MinusButtonFrame"):WaitForChild("Button")
+    local amountLabel = amountFrame:WaitForChild("AmountTextFrame"):WaitForChild("TextLabel")
+    local amountPurchased = 1
 
+    amountLabel.Text = tostring(amountPurchased)
     pcAcceptButton.Text = tostring(shopItem.price_pc) .. " PC"
     scAcceptButton.Text = tostring(shopItem.price_sc) .. " SC"
     if itemType == "case" or itemType == "key" then
@@ -258,8 +268,9 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
             return
         end
         self.itemDisplayVar.purchaseProcessing = true
+        self:PlaySound("Open")
         otherDisconnect(1)
-        itemDisplayPurchaseItem(self, item, "PremiumCredits", shopItem)
+        itemDisplayPurchaseItem(self, item, "PremiumCredits", shopItem, amountPurchased)
         confirmGui:Destroy()
         selfDisconnect(1)
         self:CloseItemDisplay()
@@ -273,8 +284,9 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
             return
         end
         self.itemDisplayVar.purchaseProcessing = true
+        self:PlaySound("Open")
         otherDisconnect(2)
-        itemDisplayPurchaseItem(self, item, "StrafeCoins", shopItem)
+        itemDisplayPurchaseItem(self, item, "StrafeCoins", shopItem, amountPurchased)
         confirmGui:Destroy()
         selfDisconnect(2)
         self:CloseItemDisplay()
@@ -291,20 +303,36 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
         conns = nil
     end)
 
+    conns[4] = plusButton.MouseButton1Click:Connect(function()
+        amountPurchased += 1
+        amountLabel.Text = tostring(amountPurchased)
+        pcAcceptButton.Text = tostring(shopItem.price_pc*amountPurchased) .. " PC"
+        scAcceptButton.Text = tostring(shopItem.price_sc*amountPurchased) .. " SC"
+    end)
+
+    conns[5] = minusButton.MouseButton1Click:Connect(function()
+        if amountPurchased - 1 > 0 then
+            amountPurchased -= 1
+            amountLabel.Text = tostring(amountPurchased)
+            pcAcceptButton.Text = tostring(shopItem.price_pc*amountPurchased) .. " PC"
+            scAcceptButton.Text = tostring(shopItem.price_sc*amountPurchased) .. " SC"
+        end
+    end)
+
     confirmGui.Enabled = true
     confirmGui.Parent = game.Players.LocalPlayer.PlayerGui
-    print('Aded!')
 end
 
-function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem)
-    if ShopInterface:PurchaseItem(item, purchaseType) then
-        print('yuh')
+function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem, amount)
+    if ShopInterface:PurchaseItem(item, amount, purchaseType) then
         task.delay(0.5, function()
             self:FindPage("Inventory"):Update(true)
         end)
+        self:PlaySound("Purchase1")
         Popup.burst("Successfully bought item! " .. tostring(parsedItem.name), 3)
         return true
     else
+        self:PlaySound("Error1")
         Popup.burst("Could not buy item " .. tostring(parsedItem.name), 3)
         return false
     end

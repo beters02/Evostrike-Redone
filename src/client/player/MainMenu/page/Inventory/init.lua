@@ -61,6 +61,7 @@ function inventory:OpenItemPage(page, button)
     if (button and not button.Visible) then
         return
     end
+    self:PlaySound("Open")
     self:CloseCurrentItemPage()
     page.Open(self)
     self.currentOpenPage = page
