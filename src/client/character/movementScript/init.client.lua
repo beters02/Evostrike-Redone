@@ -19,6 +19,7 @@ local SoundModule = require(Framework.Module.Sound)
 local Strings = require(Framework.Module.lib.fc_strings)
 local PlayerData2 = require(Framework.Module.PlayerData)
 local MovementState = States.State("Movement")
+local Promise = require(Framework.Module.lib.c_promise)
 local instanceLib = require(Framework.Module.lib.fc_instance)
 
 -- [[ Define Local Variables ]]
@@ -298,24 +299,23 @@ end
 	@return			- {void}
 ]]
 
-local cnumval
 local ctween
 local cconn
+local landProcessing = false
+local cnumval = Instance.new("NumberValue", RepTemp)
 
-local function landFinish()
-	landing = false
-	MovementState:set(player, "landing", false)
-	ctween[3]:Disconnect()
-	ctween[4]:Disconnect()
+function landFinish()
 	ctween[1]:Destroy()
 	ctween[2]:Destroy()
-	cnumval:Destroy()
 	cconn:Disconnect()
-	cconn = nil
-	return nil
+	landProcessing = false
+	landing = false
+	MovementState:set(player, "landing", false)
 end
 
 function Movement.Land(fric: number, waitTime: number, hitMaterial)
+
+	MovementState:set(player, "landing", true)
 
 	fric = fric or (Movement.dashing and dashModule.Options.landingMovementDecreaseFriction) or Movement.landingMovementDecreaseFriction
 	waitTime = waitTime or (Movement.dashing and dashModule.Options.landingMovementDecreaseLength) or Movement.landingMovementDecreaseLength
@@ -325,52 +325,52 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 
 	Movement.RegisterGroundMaterialSounds(hitMaterial)
 
-	--TODO: play land sound
 	local landsnd = Movement.Sounds.landDefault
 	local runsnd = Movement.Sounds.runDefault
-
 	runsnd.Volume = 0
 	if not landsnd.IsPlaying then
-		--SoundModule.StopReplicated(landsnd)
 		SoundModule.PlayReplicated(landsnd)
 		task.delay(0.1, function()
 			SoundModule.StopReplicated(landsnd)
 			runsnd.Volume = runv
 		end)
 	end
-	
-	-- STATES
-	MovementState:set(player, "landing", true)
 
-	-- friction tween
-	if cconn then cconn:Disconnect() end
-	if ctween then landFinish() end
-	if cnumval then cnumval:Destroy() end
+	if landProcessing then
+		ctween[1]:Destroy()
+		ctween[2]:Destroy()
+		cconn:Disconnect()
+	end
 
-	cnumval = Instance.new("NumberValue", RepTemp)
+	landProcessing = true
 	cnumval.Value = 0
 
-	ctween = {}
-	ctween[1] = TweenService:Create(cnumval, TweenInfo.new(waitTime/2), {Value = fric})
-	ctween[2] = TweenService:Create(cnumval, TweenInfo.new(waitTime), {Value = 0})
-	ctween[3] = ctween[1].Completed:Connect(function()
-		ctween[2]:Play()
-		ctween[3]:Disconnect()
-	end)
-	ctween[4] = ctween[2].Completed:Connect(function()
-		ctween = landFinish(ctween)
-	end)
+	ctween = {
+		TweenService:Create(cnumval, TweenInfo.new(waitTime/2), {Value = fric}),
+		TweenService:Create(cnumval, TweenInfo.new(waitTime), {Value = 0})
+	}
 
-	ctween[1]:Play()
+	ctween[1].Completed:Once(function()
+		ctween[2]:Play()
+		ctween[2].Completed:Once(function()
+			landFinish()
+		end)
+	end)
 
 	cconn = RunService.RenderStepped:Connect(function(dt)
+		if not landProcessing then
+			return
+		end
 		if jumping or inAir then
-			ctween = landFinish(ctween)
+			landFinish()
+			return
 		end
 		Movement:ApplyFriction(cnumval.Value * dt * 60)
-		task.wait(1/60)
+		task.wait()
 	end)
 
+	-- play friction tween
+	ctween[1]:Play()
 end
 
 --[[
@@ -838,7 +838,7 @@ function Inputs.OnInput(input) -- began and end
 		inputState = false
 	else
 		return
-	end 
+	end
 
 	if input.UserInputType == Enum.UserInputType.Keyboard then
 		--direct key name

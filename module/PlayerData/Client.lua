@@ -128,7 +128,6 @@ end
 --@summary Listen for a change on a path value
 function Client:PathValueChanged(path: string, callback: PathChangedCallback)
     local connection = Client:Changed(function(changedLocation, new, key)
-        print(changedLocation)
         if changedLocation == "Path" and key == path then
             callback(new, path)
         end

@@ -43,7 +43,7 @@ local module = {
 	landingMovementDecreaseFriction = 0.77,
 
 	--[[ Bhop Settings ]]
-	missedBhopDecrease = 0.6,
+	--missedBhopDecrease = 0.6,
 	autoBunnyHop = false,
 
 	--[[ Character Settings ]]
