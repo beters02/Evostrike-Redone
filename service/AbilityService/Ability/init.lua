@@ -50,7 +50,10 @@ function Ability.new(player, module, base) -- base = Replicated Caster
     return req
 end
 
-function Ability:Use()
+--@summary Called before Use
+function Ability:UseCore()
+    game.Players.LocalPlayer.PlayerScripts.HUD.UseAbility:Fire(self.Options.inventorySlot)
+    self:Use()
 end
 
 --@summary The preferred way to play an ability sound
@@ -93,4 +96,5 @@ end
 function PlayReplicatedSoundFromSound(sound: Sound, whereFrom)
     Sound.PlayReplicatedClone(sound, whereFrom, true)
 end
+
 return Ability

@@ -1,7 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local Tables = require(Framework.shfc_tables.Location)
+local Tables = require(Framework.Module.lib.fc_tables)
+local Strings = require(Framework.Module.lib.fc_strings)
 local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local DiedEvent = Framework.Module.EvoPlayer.Events.PlayerDiedRemote
 
@@ -13,7 +15,7 @@ function hud.initialize(player: Player)
     hud.infocv = hud.gui:WaitForChild("InfoCanvas")
     hud.infomainfr = hud.infocv:WaitForChild("MainFrame")
     hud.healthfr = hud.infomainfr:WaitForChild("HealthFrame")
-    hud.weaponfr = hud.infomainfr:WaitForChild("WeaponFrame")
+    hud.weaponfr = hud.gui:WaitForChild("WeaponFrame")
     hud.charfr = hud.infomainfr:WaitForChild("CharacterFrame")
     hud.killfr = hud.gui:WaitForChild("KillfeedFrame")
 
@@ -32,9 +34,45 @@ function hud.initialize(player: Player)
     hud.var = Tables.clone(var)
     hud._resetVar = function() hud.var = var end
 
+    
+    -- init object animations
+    local weaponBar = hud.gui:WaitForChild("WeaponBar")
+    hud._weaponLabelSizes = {}
+    hud._magLabelSize = hud.weaponfr.CurrentMagLabel.Size :: UDim2
+
+    local abilityBar = hud.gui:WaitForChild("AbilityBar")
+    hud._abilityLabelSizes = {}
+
+    for _, str in pairs({"Primary", "Secondary", "Ternary"}) do
+        hud._weaponLabelSizes[str] = weaponBar:WaitForChild(str):WaitForChild("EquippedIconLabel").Size
+
+        if str == "Ternary" then
+            continue
+        end
+
+        hud._abilityLabelSizes[str] = abilityBar:WaitForChild(str):WaitForChild("IconImage").Size
+    end
+
+    hud.playerConnections.FireBullet = script:WaitForChild("FireBullet").Event:Connect(function()
+        bulletFireTween()
+    end)
+
+    hud.playerConnections.EquipGun = script:WaitForChild("EquipGun").Event:Connect(function(slot)
+        equipGunTween(slot)
+    end)
+
+    hud.playerConnections.ReloadGun = script:WaitForChild("ReloadGun").Event:Connect(function(newMag, newTotal)
+        reloadGunTween(newMag, newTotal)
+    end)
+
+    hud.playerConnections.UseAbility = script:WaitForChild("UseAbility").Event:Connect(function(slot)
+        useAbilityTween(slot)
+    end)
+
+
     -- wait for children
     for _, v in pairs({hud.healthfr, hud.weaponfr}) do
-        for i, ch in pairs(v:GetChildren()) do repeat task.wait() until ch end
+        for _, ch in pairs(v:GetChildren()) do repeat task.wait() until ch end
     end
 
     return hud
@@ -60,6 +98,127 @@ function hud.initKillfeeds(self)
     end)
 
     return self
+end
+
+
+function bulletFireTween()
+    local goalmod = 1.1
+    local goalrot = math.random(5, 8)
+    goalrot *= (math.random(1,2) == 1) and 1 or -1
+    
+    local ft1 = TweenService:Create(
+        hud.weaponfr.CurrentMagLabel,
+        TweenInfo.new(0.3, Enum.EasingStyle.Bounce),
+        {Size = UDim2.fromScale(hud._magLabelSize.X.Scale * goalmod, hud._magLabelSize.Y.Scale * goalmod), Rotation = goalrot}
+    )
+
+    local ft2 = TweenService:Create(
+        hud.weaponfr.CurrentMagLabel,
+        TweenInfo.new(0.3),
+        {Size = hud._magLabelSize, Rotation = 0}
+    )
+
+    ft1:Play()
+    ft1.Completed:Wait()
+    ft2:Play()
+    ft1:Destroy()
+    ft2:Destroy()
+end
+
+function equipGunTween(slot)
+    slot = Strings.firstToUpper(slot)
+    local label = hud.gui.WeaponBar[slot].EquippedIconLabel
+
+    local goalmod = math.random(11, 13) / 10
+    local startSize: UDim2 = hud._weaponLabelSizes[slot]
+    local goalSize = UDim2.fromScale(startSize.X.Scale * goalmod, startSize.Y.Scale * goalmod)
+
+    local ft1 = TweenService:Create(
+        label,
+        TweenInfo.new(0.06),
+        {Size = goalSize}
+    )
+
+    local ft2 = TweenService:Create(
+        label,
+        TweenInfo.new(0.09),
+        {Size = startSize}
+    )
+
+    ft1:Play()
+    ft1.Completed:Wait()
+    ft2:Play()
+    ft1:Destroy()
+    ft2:Destroy()
+end
+
+function reloadGunTween(newMag, newTotal)
+    local oldMagValue = Instance.new("IntValue")
+    oldMagValue.Value = tonumber(hud.weaponfr.CurrentMagLabel.Text)
+
+    local oldTotalValue = Instance.new("IntValue")
+    oldTotalValue.Value = tonumber(hud.weaponfr.CurrentTotalAmmoLabel.Text)
+    
+    local ft1 = TweenService:Create(
+        oldMagValue,
+        TweenInfo.new(0.3, Enum.EasingStyle.Cubic),
+        {Value = newMag}
+    )
+
+    local ft2 = TweenService:Create(
+        oldTotalValue,
+        TweenInfo.new(0.35, Enum.EasingStyle.Cubic),
+        {Value = newTotal}
+    )
+
+    local conn = RunService.RenderStepped:Connect(function()
+        hud.weaponfr.CurrentMagLabel.Text = tostring(oldMagValue.Value)
+        hud.weaponfr.CurrentTotalAmmoLabel.Text = tostring(oldTotalValue.Value)
+    end)
+
+    print(newMag)
+    print(newTotal)
+
+    ft1:Play()
+    ft2:Play()
+    ft2.Completed:Wait()
+
+    hud.weaponfr.CurrentMagLabel.Text = tostring(newMag)
+    hud.weaponfr.CurrentTotalAmmoLabel.Text = tostring(newTotal)
+
+    conn:Disconnect()
+    ft1:Destroy()
+    ft2:Destroy()
+    oldMagValue:Destroy()
+    oldTotalValue:Destroy()
+end
+
+function useAbilityTween(slot)
+    slot = Strings.firstToUpper(slot)
+    local label = hud.gui.AbilityBar[slot].IconImage
+
+    local goalmod = 1.1
+    local goalrot = math.random(7, 10)
+    local startSize: UDim2 = hud._abilityLabelSizes[slot]
+    local goalSize = UDim2.fromScale(startSize.X.Scale * goalmod, startSize.Y.Scale * goalmod)
+
+    local ft1 = TweenService:Create(
+        label,
+        TweenInfo.new(0.32, Enum.EasingStyle.Circular),
+        {Size = goalSize, Rotation = goalrot * (math.random(1,2) == 1 and 1 or -1)}
+    )
+
+    local ft2 = TweenService:Create(
+        label,
+        TweenInfo.new(0.48, Enum.EasingStyle.Circular),
+        {Size = startSize, Rotation = 0}
+    )
+
+    ft1:Play()
+    ft1.Completed:Wait()
+    ft2:Play()
+    ft1:Destroy()
+    ft2:Destroy()
 end
 
 --

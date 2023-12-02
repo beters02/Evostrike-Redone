@@ -84,7 +84,7 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     -- init hud
 	self.Variables.weaponBar = self.Player.PlayerGui:WaitForChild("HUD").WeaponBar
 	self.Variables.weaponFrame = self.Variables.weaponBar:WaitForChild(Strings.firstToUpper(self.Options.inventorySlot))
-	self.Variables.infoFrame = self.Player.PlayerGui.HUD.InfoCanvas.MainFrame.WeaponFrame
+	self.Variables.infoFrame = self.Player.PlayerGui.HUD.WeaponFrame
 
     if self.Options.scope then
         Weapon.ScopeInit(self)

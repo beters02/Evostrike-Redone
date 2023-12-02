@@ -83,8 +83,8 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     -- init hud
 	self.Variables.weaponBar = self.Player.PlayerGui:WaitForChild("HUD").WeaponBar
 	self.Variables.weaponFrame = self.Variables.weaponBar:WaitForChild(Strings.firstToUpper(self.Options.inventorySlot))
-	self.Variables.infoFrame = self.Player.PlayerGui.HUD.InfoCanvas.MainFrame.WeaponFrame
-
+	self.Variables.infoFrame = self.Player.PlayerGui.HUD.WeaponFrame
+    
     if self.Options.scope then
         Weapon.ScopeInit(self)
     end
@@ -137,6 +137,7 @@ function Weapon:Equip()
 
 	-- enable weapon icon
     self:SetIconEquipped(true)
+    self.Player.PlayerScripts.HUD:WaitForChild("EquipGun"):Fire(self.Slot)
 
     task.spawn(function()
         if string.lower(self.Name) == "knife" then
@@ -280,6 +281,7 @@ function Weapon:PrimaryFire(moveSpeed)
 
 	-- update hud
 	self.Variables.infoFrame.CurrentMagLabel.Text = tostring(self.Variables.ammo.magazine)
+    self.Player.PlayerScripts.HUD.FireBullet:Fire()
 
 	-- send uto reload
 	if self.Variables.ammo.magazine <= 0 then
@@ -335,8 +337,7 @@ function Weapon:Reload()
 	self.Variables.ammo.total = total
 
 	-- update hud
-	self.Variables.infoFrame.CurrentMagLabel.Text = tostring(mag)
-	self.Variables.infoFrame.CurrentTotalAmmoLabel.Text = tostring(total)
+    self.Player.PlayerScripts.HUD:WaitForChild("ReloadGun"):Fire(mag, total)
 
 	self.Variables.reloading = false
 	PlayerActionsState:set(self.Player, "reloading", false)

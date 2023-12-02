@@ -39,7 +39,7 @@ local function Use()
         return
     end
     Cooldown()
-    Ability:Use()
+    Ability:UseCore()
 end
 
 function InputBegan(input, gp)
