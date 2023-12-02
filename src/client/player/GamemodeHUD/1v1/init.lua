@@ -9,12 +9,32 @@ local ChangeTopBarHUDEvent = GamemodeHUDEvents.ChangeTopBar
 local GM1v1 = {connections = {}, objects = {}}
 local PlayerDied = require(script:WaitForChild("PlayerDied"))
 local TopBar = require(script:WaitForChild("TopBar"))
+local WaitingForPlayers = require(script:WaitForChild("WaitingForPlayers"))
 
-function GM1v1.Enable(enemy, timeLeft)
+-- Init function called before game is started.
+function GM1v1.Init()
+    print('Yuh!')
+    GM1v1.objects.WaitingForPlayers = WaitingForPlayers.init()
+end
+
+-- Called after game is started.
+function GM1v1.Enable(enemy)
+    print('Yuh yuh!')
+    GM1v1.objects.WaitingForPlayers:Disable()
     GM1v1.objects.TopBar = TopBar.init(game.Players.LocalPlayer, enemy)
-    if timeLeft then
-        GM1v1.objects.TopBar:StartTimer(timeLeft)
-    end
+    print('Top Bar Init!')
+end
+
+function GM1v1.StartTimer(length)
+    GM1v1.objects.TopBar:StartTimer(length)
+end
+
+function GM1v1.ChangeScore(data)
+    GM1v1.objects.TopBar:ChangeScore(data)
+end
+
+function GM1v1.ChangeRound(round)
+    GM1v1.objects.TopBar:ChangeRound(round)
 end
 
 function GM1v1.Disable()

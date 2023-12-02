@@ -62,8 +62,15 @@ function module:ApplyGroundVelocity(groundNormal: Vector3)
 
 	-- friction
 	if self.currentAirFriction > 0 then
-		self:ApplyFriction((math.max(self.airMaxSpeedFrictionDecrease-self.currentAirFriction, self.currentAirFriction) * .75/self.friction) * self.currentDT * 60)
-		self.currentAirFriction -= (self.airMaxSpeedFrictionDecrease * self.currentDT * 60)
+		local sub = self.airMaxSpeedFrictionDecrease * self.currentDT * 60
+		local curr = self.currentAirFriction
+		local fric = curr - sub
+		if fric < 0 then
+			fric = curr + fric
+		end
+
+		self:ApplyFriction(math.max(1, fric/self.friction))
+		self.currentAirFriction = math.max(0, curr - sub)
 	else
 		self:ApplyFriction(1)
 	end
@@ -150,7 +157,7 @@ function module:ApplyAirVelocity()
 
 	-- continue air friction friction
 	if self.currentAirFriction > 0 then
-		self:ApplyFriction(0.01 * self.currentAirFriction * self.currentDT * 60)
+		self:ApplyFriction(0.01 * self.currentAirFriction)
 	end
 	
 	-- apply acceleration
@@ -164,7 +171,7 @@ function module:ApplyAirVelocity()
 		local yVel = forwardVelocity.Unit.Y * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z).Magnitude
 
 		-- apply slope movement
-		self.movementVelocity.Velocity = Vector3.new(self.movementVelocity.Velocity.X, yVel * (accelDir.Y < 0 and 1.2 or 1), self.movementVelocity.Velocity.Z)
+		self.movementVelocity.Velocity = Vector3.new(self.movementVelocity.Velocity.X, yVel * (accelDir.Y < 0 and 1.2 or 1) * self.currentDT * 60, self.movementVelocity.Velocity.Z)
 	end
 end
 

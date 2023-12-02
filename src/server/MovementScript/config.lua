@@ -39,8 +39,9 @@ local module = {
 
 	--[[ Land Settings ]]
 	minInAirTimeRegisterLand = 0.1,
+	landingMovementJumpGrace = 0.06,
 	landingMovementDecreaseLength = 0.27,
-	landingMovementDecreaseFriction = 0.77,
+	landingMovementDecreaseFriction = 0.70,
 
 	--[[ Bhop Settings ]]
 	--missedBhopDecrease = 0.6,

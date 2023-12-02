@@ -269,10 +269,13 @@ function Home:SetMenuType(menuType: string)
 
     if menuType == "Lobby" then
         main.disconectOpenInput()
+
         if not main.var.opened and not main.var.loading then
             main.open()
         end
+
         self.Location.Card_Bottom.InfoLabel.Text = LOBBY_BOTTOM_DEFAULT_TEXT
+
         self.var.bottomButtonClickedFunc = function()
             if self.Location.Card_Bottom:GetAttribute("Joined") then
                 self:BottomClickedLobby_LeaveDM()
@@ -282,7 +285,9 @@ function Home:SetMenuType(menuType: string)
         end
     elseif menuType == "Game" then
         main.conectOpenInput()
+
         self.Location.Card_Bottom.InfoLabel.Text = GAME_BOTTOM_DEFAULT_TEXT
+        
         self.var.bottomButtonClickedFunc = function()
             self._closeMain()
             RequestQueueEvent:InvokeServer("TeleportPublicSolo", "Lobby")

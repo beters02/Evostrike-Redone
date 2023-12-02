@@ -89,7 +89,8 @@ Shared.def.pstats = {
 
 Shared.def.economy = {
     strafeCoins = 0,
-    premiumCredits = 0
+    premiumCredits = 0,
+    xp = 0
 }
 
 return Shared

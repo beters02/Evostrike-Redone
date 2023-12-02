@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 --[[
     This Service acts less like a Service and more like an Interface,
     as it directly links to GameScript and relies on that script to process any functionality outside of the Gamemode Script.
@@ -16,6 +17,9 @@ local Bridge = script:WaitForChild("Bridge")
 local Bindable = script:WaitForChild("Bindable")
 
 function GamemodeService:GetGamemodeScript(gamemode: string)
+    if gamemode == "1v1" and RunService:IsServer() then
+        return ServerStorage.GamemodeScripts["1v1"]
+    end
     return GamemodeService.Location.GamemodeScripts:FindFirstChild(gamemode)
 end
 

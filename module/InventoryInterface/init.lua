@@ -5,7 +5,6 @@ end
 
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
-local WeaponService = require(Framework.Service.WeaponService)
 
 local InventoryInterface = {}
 

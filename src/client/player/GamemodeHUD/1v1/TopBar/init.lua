@@ -1,10 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Framework = require(ReplicatedStorage.Framework)
---local Events = Framework.Service.GamemodeService2.Events["1v1"]
-
-local GamemodeHUDEvents = Framework.Service.GamemodeService2.Events.HUD
 
 function getPlayerAvatar(player: Player)
     return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
@@ -19,46 +15,47 @@ function convertSecToMin(sec: number)
 end
 
 local TopBar = {}
+TopBar.__index = TopBar
 local Gui = script:WaitForChild("Gui")
 
 function TopBar.init(player, enemy)
-    local self = setmetatable({}, {__index = TopBar})
+    local self = setmetatable({}, TopBar)
     self.Player = player
     self.Connections = {}
 
     local gui = Gui:Clone()
     local mainFr = gui:WaitForChild("MainFrame")
     local playerInfoFr, enemyInfoFr = mainFr:WaitForChild("PlayerInfoFrame"), mainFr:WaitForChild("EnemyInfoFrame")
-    local scoreFr, timerFr = mainFr:WaitForChild("ScoreFrame"), mainFr:WaitForChild("TimerFrame")
+    local scoreFr, timerFr, roundFr = mainFr:WaitForChild("ScoreFrame"), mainFr:WaitForChild("TimerFrame"), mainFr:WaitForChild("RoundFrame")
 
     playerInfoFr:WaitForChild("TextLabel").Text = player.Name
     playerInfoFr:WaitForChild("ImageLabel").Image = getPlayerAvatar(player)
     enemyInfoFr:WaitForChild("TextLabel").Text = enemy.Name
-    enemyInfoFr:WaitForChild("ImageLabel").Text = getPlayerAvatar(enemy)
+    enemyInfoFr:WaitForChild("ImageLabel").Image = getPlayerAvatar(enemy)
 
     gui.Parent = player.PlayerGui
     self.Gui = gui
     self.PlayerInfoFrame, self.EnemyInfoFrame = playerInfoFr, enemyInfoFr
-    self.ScoreFrame, self.TimerFrame = scoreFr, timerFr
-
-    self.Connections.TimerStart = GamemodeHUDEvents.StartTimer.OnClientEvent:Connect(function(length)
-        self:StartTimer(length)
-    end)
-
-    self.Connections.ChangeScore = GamemodeHUDEvents.ChangeTopBar.OnClientEvent:Connect(function(data)
-        for plrName, newScore in pairs(data) do
-            local label = plrName == self.Player.Name and scoreFr.PlayerKills or scoreFr.EnemyKills
-            label.Text = tostring(newScore)
-        end
-    end)
-
+    self.ScoreFrame, self.TimerFrame, self.RoundFrame = scoreFr, timerFr, roundFr
     return self
+end
+
+function TopBar:ChangeScore(data)
+    for plrName, newScore in pairs(data) do
+        local label = plrName == self.Player.Name and self.ScoreFrame.PlayerKills or self.ScoreFrame.EnemyKills
+        label.Text = tostring(newScore)
+    end
+end
+
+function TopBar:ChangeRound(round)
+    self.RoundFrame.TextLabel.Text = "Round " .. tostring(round)
 end
 
 function TopBar:StartTimer(length)
     if self.Connections.Timer then
         self.Connections.Timer:Disconnect()
         self.Connections.Timer = nil
+        task.wait()
     end
     if not length then
         return

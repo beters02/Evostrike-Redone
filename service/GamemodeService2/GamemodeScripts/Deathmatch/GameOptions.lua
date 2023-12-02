@@ -44,7 +44,7 @@ function GameOptions.new(overrideOptions: table?)
         buy_menu_enabled = true,
         buy_menu_add_instant = false,
         end_screen_length = 15,
-        base_sc_earned = 80,
+        base_sc_earned = 500,
         base_xp_earned = 100,
         spawn_invincibility = 3,
         starting_shield = 50,

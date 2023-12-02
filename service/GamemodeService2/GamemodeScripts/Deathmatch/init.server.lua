@@ -80,6 +80,7 @@ function Start()
         if pdata then PlayerData[player.Name] = pdata end
         GuiTopBar(player)
         GuiBuyMenu(player)
+        ReplicatedStorage:WaitForChild("Remotes").SetMainMenuType:FireClient(player, "Lobby")
     end)
 
     GameData.Connections.PlayerRemoving = false
@@ -95,7 +96,6 @@ function Start()
     end)
 
     GameData.Connections.BuyMenu = ReplicatedStorage.Remotes.BuyMenuSelected.OnServerEvent:Connect(function(_bmplayer, action, item, slot)
-        print(PlayerData)
         if action == "AbilitySelected" then
             PlayerData[_bmplayer.Name].Inventory.Abilities[slot] = item
             if GameData.Options.buy_menu_add_instant then
@@ -107,7 +107,6 @@ function Start()
                 WeaponService:AddWeapon(_bmplayer, item)
             end
         end
-        print(PlayerData)
     end)
 
     RequestSpawnEvent.OnServerInvoke = function(player)

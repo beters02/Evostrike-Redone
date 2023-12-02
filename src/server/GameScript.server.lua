@@ -8,6 +8,7 @@ local GamemodeService2Bindable = GamemodeService2Loc:WaitForChild("Bindable") ::
 local ConnectionsLib = require(Framework.Module.lib.fc_rbxsignals)
 local EvoMM = require(Framework.Module.EvoMMWrapper)
 local Maps = require(Framework.Module.EvoMaps)
+local TagsLib = require(Framework.Module.lib.fc_tags)
 
 local DefaultMap = workspace:GetAttribute("CurrentMap")
 local Connections = {Ended = false}
@@ -52,6 +53,7 @@ function Stop(restart: boolean?, delayLength: number?, map: string?, newGamemode
     delayLength = delayLength or 15
 
     if newGamemode then
+        TagsLib.DestroyTagged("DestroyOnClose")
         CurrentGamemodeScript:Destroy()
         CurrentGamemodeBaseScript = GamemodeService2:GetGamemodeScript(newGamemode)
     end

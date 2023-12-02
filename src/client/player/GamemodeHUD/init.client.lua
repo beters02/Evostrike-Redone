@@ -1,17 +1,35 @@
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage.Framework)
+local GamemodeHUDEvents = ReplicatedStorage.GamemodeEvents.HUD
 
-local GamemodeHUDEvents = Framework.Service.GamemodeService2.Events.HUD
-local SetGamemodeHUDEvent = GamemodeHUDEvents.SetGamemodeHUD
+-- Current Gamemode HUD Module
+local gamemodeModule = false
 
-local player = Players.LocalPlayer
-local current = false
-
-SetGamemodeHUDEvent.OnClientEvent:Connect(function(gamemode, ...)
-    if current then
-        current.Disable()
+GamemodeHUDEvents:WaitForChild("INIT").OnClientEvent:Connect(function(gamemode)
+    print('INit received')
+    if gamemodeModule then
+        gamemodeModule.Disable()
     end
-    current = require(script[gamemode])
-    current.Enable(...)
+
+    gamemodeModule = require(script[gamemode])
+    gamemodeModule.Init()
+end)
+
+
+GamemodeHUDEvents:WaitForChild("START").OnClientEvent:Connect(function(enemy)
+    gamemodeModule.Enable(enemy)
+end)
+
+
+GamemodeHUDEvents:WaitForChild("StartTimer").OnClientEvent:Connect(function(length)
+    gamemodeModule.StartTimer(length)
+end)
+
+
+GamemodeHUDEvents:WaitForChild("ChangeScore").OnClientEvent:Connect(function(data)
+    gamemodeModule.ChangeScore(data)
+end)
+
+
+GamemodeHUDEvents:WaitForChild("ChangeRound").OnClientEvent:Connect(function(round)
+    gamemodeModule.ChangeRound(round)
 end)

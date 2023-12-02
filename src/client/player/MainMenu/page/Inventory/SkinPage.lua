@@ -256,6 +256,14 @@ function SkinPage:SkinFrameButtonClicked(skinFrame)
     SkinPage.OpenItemDisplay(self, invSkin, skinFrame)
 end
 
+local function weld(model, doWeld)
+    for _, v in pairs(model.GunComponents.WeaponHandle:GetChildren()) do
+        if v:IsA("Weld") then
+            v.Enabled = doWeld or false
+        end
+    end
+end
+
 function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObject, skinFrame)
     if self.itemDisplayVar.active then return end
     self.itemDisplayVar.active = true -- turned off in CloseItemDisplay()
@@ -284,9 +292,15 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
         clientModel = model
         model = model.Server
     end
+    model = model::Model
     model.Parent = self.itemDisplayFrame.CaseDisplay.ViewportFrame
     model.PrimaryPart = model:WaitForChild("GunComponents"):WaitForChild("WeaponHandle")
-    model:SetPrimaryPartCFrame(CFrame.new(Vector3.new(0,0,7)))
+
+    weld(model, false)
+    model.PrimaryPart.CFrame = CFrame.new(model.PrimaryPart.CFrame.Position, Vector3.zero)
+    weld(model, true)
+
+    model:SetPrimaryPartCFrame(CFrame.new(Vector3.new(0,0,0)) * CFrame.Angles(90,0,0))
     if clientModel then
         clientModel:Destroy()
     end
@@ -407,6 +421,20 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
     self:PlaySound("ItemDisplay")
 end
 
+type skinObject = InventoryInterface2.InventorySkinObject
+function SkinPage:OpenItemDisplayNew(invSkin: skinObject, skinFrame)
+    self.ItemDisplay.Open(
+        self,
+        {
+            ItemName = Strings.firstToUpper(invSkin.model) .. " | " .. Strings.firstToUpper(invSkin.skin),
+            Rarity = skinFrame:GetAttribute("rarity") or "Default",
+            UUID = tostring(invSkin.uuid)
+        },
+        function(ItemDisplay)
+
+        end)
+end
+
 function SkinPage:CloseItemDisplay()
     self.itemDisplayVar.active = false
     for _, v in pairs(self.itemDisplayConns) do
@@ -447,10 +475,14 @@ function SkinPage:ParseSkinString(str)
 end
 
 function SkinPage:GetSkinFrame(weapon: string, skin: string, uuid)
-    for _, v in pairs(self.Location.Skin.Content:GetChildren()) do
-        if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
-        if v:GetAttribute("weapon") == weapon and v:GetAttribute("skin") == skin and tostring(v:GetAttribute("uuid")) == tostring(uuid) then
-            return v
+    for _, content in pairs(self.Location.Skin:GetChildren()) do
+        if content:IsA("Frame") and string.match(content.Name, "Content") then
+            for _, v in pairs(content:GetChildren()) do
+                if not v:IsA("Frame") or v.Name == "ItemFrame" then continue end
+                if v:GetAttribute("weapon") == weapon and v:GetAttribute("skin") == skin and tostring(v:GetAttribute("uuid")) == tostring(uuid) then
+                    return v
+                end
+            end
         end
     end
     return false

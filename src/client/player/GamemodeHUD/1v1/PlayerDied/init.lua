@@ -1,9 +1,10 @@
 local gui = script:WaitForChild("Gui")
 
 local PlayerDied = {}
+PlayerDied.__index = PlayerDied
 
 function PlayerDied.init()
-    local self = setmetatable({}, {__index = PlayerDied})
+    local self = setmetatable({}, PlayerDied)
     local player = game.Players.LocalPlayer
     local guiClone = gui:Clone()
 

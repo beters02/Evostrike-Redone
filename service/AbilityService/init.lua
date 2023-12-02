@@ -151,6 +151,13 @@ function AbilityService:RemoveAbilityByName(player: Player, ability: string)
     return false
 end
 
+function AbilityService:ClearAllPlayerInventories()
+    for _, plr in pairs(Players:GetPlayers()) do
+        AbilityService:RemoveAbility(plr, "primary")
+        AbilityService:RemoveAbility(plr, "secondary")
+    end
+end
+
 --
 
 function AbilityService:GetAbilityModule(ability: string)

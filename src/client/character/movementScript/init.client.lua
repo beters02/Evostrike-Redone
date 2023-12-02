@@ -344,6 +344,7 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 
 	landProcessing = true
 	cnumval.Value = 0
+	local startLand = tick() + Movement.landingMovementJumpGrace
 
 	ctween = {
 		TweenService:Create(cnumval, TweenInfo.new(waitTime/2), {Value = fric}),
@@ -358,15 +359,14 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 	end)
 
 	cconn = RunService.RenderStepped:Connect(function(dt)
-		if not landProcessing then
+		if tick() < startLand or not landProcessing then
 			return
 		end
 		if jumping or inAir then
 			landFinish()
 			return
 		end
-		Movement:ApplyFriction(cnumval.Value * dt * 60)
-		task.wait()
+		Movement:ApplyFriction(cnumval.Value)
 	end)
 
 	-- play friction tween
