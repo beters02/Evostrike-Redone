@@ -42,6 +42,10 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 		clientModel = serverModel:Clone()
 	end
 
+	if model:FindFirstChild("Inventory") then
+		model.Inventory:Destroy()
+	end
+
 	serverModel.Name = "ServerModel"
 	serverModel.Parent = tool
 	clientModel.Name = "ClientModel"

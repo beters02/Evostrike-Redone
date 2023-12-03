@@ -187,11 +187,13 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
 
     -- Fill ItemDisplay with Got Item
     seqItem.ItemName.Text =  Strings.firstToUpper(gotParsed.model) .. " | " .. Strings.firstToUpper(gotParsed.skin)
-    local itemDisplayModel = InventoryInterface.GetSkinModelFromSkinObject(gotParsed):Clone()
+
+    local itemDisplayModel = self.skinPage.CreateSkinFrameModel(self, gotParsed)
+    --[[local itemDisplayModel = InventoryInterface.GetSkinModelFromSkinObject(gotParsed):Clone()
     itemDisplayModel.PrimaryPart = itemDisplayModel:WaitForChild("GunComponents"):WaitForChild("WeaponHandle")
     seqItem.Display.ViewportFrame:ClearAllChildren()
     --itemDisplayModel:PivotTo(CFrame.new(Vector3.zero)) --* CFrame.Angles(0,0,0))
-    itemDisplayModel:SetPrimaryPartCFrame(CFrame.new(Vector3.zero))
+    itemDisplayModel:SetPrimaryPartCFrame(CFrame.new(Vector3.zero))]]
     itemDisplayModel.Parent = seqItem.Display.ViewportFrame
 
     -- Set rarity color/text

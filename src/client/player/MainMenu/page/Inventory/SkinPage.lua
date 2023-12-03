@@ -21,23 +21,25 @@ local SkinPage = {
 
 SkinPage.CustomWeaponPositions = {
     Get = function(invSkin)
+        local par = false
         if invSkin.weapon == "knife" then
             par = SkinPage.CustomWeaponPositions.knife[invSkin.model]
         else
-            par = SkinPage.CustomWeaponPositions[invSkin.model]
+            par = SkinPage.CustomWeaponPositions[invSkin.weapon]
         end
-        return par and par[invSkin.skin]
+        return par
     end,
 
     knife = {
-        wepcf = CFrame.new(Vector3.new(1, 0, -3)),
-        karambit = {wepcf = CFrame.new(Vector3.new(-0.026, -0.189, -1.399))},
-        default = {wepcf = CFrame.new(Vector3.new(0.143, -0.5, -2.1)), wepor = Vector3.new(0, 180, 180)},
-        m9bayonet = {wepcf = CFrame.new(Vector3.new(-0.029, -0, -1.674))},
+        vec = Vector3.new(1, 0, -3),
+        karambit = {vec = Vector3.new(-0.026, -0.189, -1.399)},
+        default = {vec = Vector3.new(0.143, -0.5, -2.1)},
+        m9bayonet = {vec = Vector3.new(-0.029, -0, -1.674)},
     },
-    ak103 = {wepor = Vector3.new(90, 170, 0)},
-    glock17 = {wepcf = CFrame.new(Vector3.new(-0.4, 0.2, -1.4)), wepor = Vector3.new(0, 90, -180)},
-    deagle = {wepcf = CFrame.new(Vector3.new(-0.1, 0, -1.5)), wepor = Vector3.new(0, -180, -180)}
+    glock17 = {vec = Vector3.new(0.15, 0.15, -1.4)},
+    deagle = {vec = Vector3.new(0, 0, -1.5)},
+    intervention = {vec = Vector3.new(0.5, 0, -7)},
+    vityaz = {vec = Vector3.new(0.5,0,-2.3)}
 }
 
 function SkinPage:init(frame)
@@ -241,23 +243,29 @@ end
 
 function SkinPage:CreateSkinFrameModel(invSkin: InventoryInterface2.InventorySkinObject)
     local weaponModelObj = InventoryInterface2.GetSkinModelFromSkinObject(invSkin):Clone()
-    if weaponModelObj:FindFirstChild("Server") then -- Prioritize Server Model in Inventory.
-        local server = weaponModelObj.Server
-        server.Parent = weaponModelObj.Parent
+
+    -- get model Inventory or Server
+    local function move(target)
+        target.Parent = weaponModelObj.Parent
         weaponModelObj:Destroy()
-        weaponModelObj = server
+        weaponModelObj = target
     end
-    weaponModelObj.PrimaryPart = weaponModelObj.GunComponents.WeaponHandle
+
+    if weaponModelObj:FindFirstChild("Inventory") then
+        move(weaponModelObj.Inventory)
+    elseif weaponModelObj:FindFirstChild("Server") then
+        move(weaponModelObj.Server)
+    end
+
+    weaponModelObj.PrimaryPart = weaponModelObj.PrimaryPart or weaponModelObj.GunComponents.WeaponHandle
 
     -- get custom weapon positions
-    local wepcf = CFrame.new(Vector3.new(1,0,-4))
-    wepcf = SkinPage.CustomWeaponPositions.Get(invSkin) or wepcf
+    local cf: CFrame = weaponModelObj.PrimaryPart.CFrame
+    local pos = SkinPage.CustomWeaponPositions.Get(invSkin)
+    print(pos)
+    pos = pos and pos.vec or Vector3.new(0.5,0,-3)
+    weaponModelObj:SetPrimaryPartCFrame(CFrame.new(pos) * cf.Rotation)
 
-    local wepor = Vector3.new(90, 0, 0)
-    wepor = SkinPage.CustomWeaponPositions.Get(invSkin) or wepor
-
-    weaponModelObj:SetPrimaryPartCFrame(wepcf)
-    weaponModelObj.PrimaryPart.Orientation = wepor
     return weaponModelObj
 end
 
@@ -296,7 +304,12 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
     self.itemDisplayFrame.ItemDisplayImageLabel.Visible = false
     self.itemDisplayFrame.CaseDisplay.Visible = true
     self.itemDisplayFrame.CaseDisplay.ViewportFrame:ClearAllChildren()
-    local model = InventoryInterface2.GetSkinModelFromSkinObject(invSkin):Clone()
+
+    local model = SkinPage:CreateSkinFrameModel(invSkin)
+    model.Parent = self.itemDisplayFrame.CaseDisplay.ViewportFrame
+    model:SetPrimaryPartCFrame(model.PrimaryPart.CFrame + Vector3.new(0,0,7.8))
+
+    --[[local model = InventoryInterface2.GetSkinModelFromSkinObject(invSkin):Clone()
     local clientModel = false
     if model:FindFirstChild("Server") then
         clientModel = model
@@ -313,7 +326,7 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
     model:SetPrimaryPartCFrame(CFrame.new(Vector3.new(0,0,0)) * CFrame.Angles(90,0,0))
     if clientModel then
         clientModel:Destroy()
-    end
+    end]]
 
     -- Init Equip Button
     self.itemDisplayFrame.MainButton.Text = "EQUIP"
