@@ -81,3 +81,26 @@ SoundsReplicate.OnClientEvent:Connect(function(action, sound, whereFrom)
         sound:Stop()
     end
 end)
+
+-- Weapon Service
+local SharedWeaponFunc = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
+local WeaponServiceShared = require(Framework.Service.WeaponService.Shared)
+
+-- Connect Replicate Event
+-- TEMP: Will Prefer WeaponService.Shared over sharedWeaponFunctions
+ReplicatedStorage.Services.WeaponService.Events.Replicate.OnClientEvent:Connect(function(functionName, ...)
+	-- TEMP: While converting sharedWeaponFunctions to WeaponService.Shared
+	local func = WeaponServiceShared[functionName] or SharedWeaponFunc[functionName]
+	if not func then warn(tostring(functionName) .. " is not a SharedWeaponFunction.") return end
+	return func(...)
+end)
+--
+
+-- Gamemode Service
+local Bridge = Framework.Service.GamemodeService2.Bridge
+
+Bridge.OnClientEvent:Connect(function(action, var)
+    if action == "ChangeMenuType" then
+        require(game.Players.LocalPlayer.PlayerScripts.MainMenu).setMenuType(var)
+    end
+end)

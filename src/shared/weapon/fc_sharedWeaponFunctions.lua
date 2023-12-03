@@ -243,7 +243,7 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
         local distance = (pos - origin).Magnitude
         local damage = weaponOptions.damage.base
 
-		local calculateFalloff = true
+		local calculateFalloff = 1
 		local min = weaponOptions.damage.damageFalloffMinimumDamage
 		local particleFolderName = "Hit"
 		local soundFolderName = "Bodyshot"
@@ -254,14 +254,16 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 
 			-- apply head mult to base damage
 			damage *= weaponOptions.damage.headMultiplier
+
 			-- apply head mult to min damage
 			min *= weaponOptions.damage.headMultiplier
 
 			-- apply head falloff multiplier if necessary
-			calculateFalloff = weaponOptions.damage.enableHeadFalloff and (weaponOptions.damage.headFalloffMultiplier or true) or false
+			calculateFalloff = weaponOptions.damage.enableHeadFalloff and (weaponOptions.damage.headFalloffMultiplier or 1) or false
 			
 			particleFolderName = "Headshot"
 			soundFolderName = "Headshot"
+
 		elseif string.match(instance.Name, "Leg") or string.match(instance.Name, "Foot") then
 			damage *= weaponOptions.damage.legMultiplier
 		end
@@ -269,11 +271,12 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		-- calculate damage falloff
 		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
 			local diff = distance - weaponOptions.damage.damageFalloffDistance
-			damage = math.max(damage - diff * (weaponOptions.damage.damageFalloffPerMeter * (type(calculateFalloff) == "number" and calculateFalloff or 1)), min)
+			damage = math.max(damage - diff * (weaponOptions.damage.damageFalloffPerMeter * calculateFalloff), min)
+			damage = math.min(damage, weaponOptions.damage.base)
 		end
 
 		-- wallbang multiplier
-		if wallbangDamageMultiplier then damage *= wallbangDamageMultiplier end
+		if wallbangDamageMultiplier then print(wallbangDamageMultiplier) damage *= wallbangDamageMultiplier end
 
 		-- round damage to remove decimals
 		damage = math.round(damage)

@@ -18,7 +18,7 @@ local Molly = {
         isGrenade = true,
         
         -- general
-        cooldownLength = 10,
+        cooldownLength = 8,
         uses = 100,
         usingDelay = 1, -- Time that player will be "using" their ability, won't be able to interact with weapons during this time
 
@@ -39,7 +39,8 @@ local Molly = {
         mollyLength = 4,
         mollyFadeLength = 1,
         damageInterval = 0.4,
-        damagePerInterval = 15,
+        damagePerInterval = 30,
+        mollyFireSize = Vector3.new(0.2, 19, 19),
 
         -- absr = Absolute Value Random
         -- rtabsr = Random to Absolute Value Random
@@ -71,7 +72,7 @@ function Molly:FireGrenade(hit, origin, direction, thrower)
 
     local mos = Players.LocalPlayer:GetMouse()
     local mray = workspace.CurrentCamera:ScreenPointToRay(mos.X, mos.Y)
-    local initresult = workspace:Raycast(mray.Origin, mray.Direction * 3, params)
+    local initresult = workspace:Raycast(mray.Origin, mray.Direction * 8, params)
     if initresult then
         local grenade = AbilityObjects.Models.Grenade:Clone()
         grenade.CollisionGroup = "Default"
@@ -112,6 +113,7 @@ function Molly:RayHit(_, result, velocity, grenade)
 
         -- listen for bouncing
         touchedConn = grenade.Touched:Connect(function(part)
+            print("touched")
             -- play hit sound
             Sound.PlayClone(AbilityObjects.Sounds.GlassImpact, grenade, {TimePosition = 0.3})
             Sound.PlayClone(AbilityObjects.Sounds.GlassHit, grenade)
@@ -120,7 +122,7 @@ function Molly:RayHit(_, result, velocity, grenade)
             local p = RaycastParams.new()
             p.FilterDescendantsInstances = {grenade}
             p.FilterType = Enum.RaycastFilterType.Exclude
-            local g = workspace:Raycast(grenade.Position, Vector3.new(0,-1,0) * 2, p)
+            local g = workspace:Raycast(grenade.Position, Vector3.new(0,-1,0) * 4, p)
             if not g then return end
 
             position = g.Position
@@ -165,7 +167,7 @@ end
 --@summary Create the Molotov Fire Visuals
 function Molly.CreateCirclePart(position)
     local vispart = AbilityObjects.Models.MollyPreset:Clone()
-    vispart.Size = Vector3.new(0.1, 15, 15)
+    vispart.Size = Molly.Options.mollyFireSize
     vispart.CFrame = CFrame.new(position) * CFrame.Angles(0,0,math.pi*-.5)
     vispart.CollisionGroup = "Bullets"
     vispart.Attachment.Glow.Size = NumberSequence.new(vispart.Size.Z)

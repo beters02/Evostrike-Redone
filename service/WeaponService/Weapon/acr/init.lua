@@ -14,7 +14,7 @@ local ACR = {
 		recoilResetMax = 0.41, -- Based on cameraRecoilReset in sprayPattern
 		
 		fireVectorCameraOffset = Vector2.new(2, 20), -- Side, Up
-		fireAccuracyCameraOffset = Vector2.new(3.8, 3.8), -- Side, Up
+		fireAccuracyCameraOffset = Vector2.new(3, 3), -- Side, Up
 		fireVectorCameraMax = Vector3.new(0.03, 0.07, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
 		
 		ammo = {
@@ -24,16 +24,16 @@ local ACR = {
 		
 		accuracy = {
 			firstBullet = 2,
-			base = 4,
-			crouch = 3.5,
+			base = 4.5,
+			crouch = 3.8,
 			walk = 190,
 			run = 190,
 			jump = 150
 		},
 		
 		damage = {
-			base = 36,
-			min = 33,
+			base = 33,
+			min = 28,
 
 			headMultiplier = 4,
 			legMultiplier = 0.9,

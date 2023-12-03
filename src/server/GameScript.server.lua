@@ -17,9 +17,13 @@ local CurrentGamemodeScript
 
 --@summary Ran when the first player joins
 function Init(player)
+
     local gmScript = CurrentGamemodeBaseScript
     local teleportData = player:GetJoinData().teleportData
-    if teleportData and teleportData.RequestedGamemode then
+    local mmServiceGameData = EvoMM.MatchmakingService:GetUserData(player)
+    local requestedGamemode = (teleportData and teleportData.RequestedGamemode) or (mmServiceGameData and mmServiceGameData.RequestedGamemode) or false
+
+    if requestedGamemode then
         gmScript = GamemodeService2:GetGamemodeScript(teleportData.RequestedGamemode) or gmScript
         print("Player joined with requested gamemode.")
     end
@@ -41,7 +45,7 @@ function Start(gmScript)
     end)
 
     if CurrentGamemodeBaseScript.Name ~= "1v1" then
-        EvoMM:StartQueueService({"1v1"})
+        EvoMM:StartQueueService()
     end
 
     CurrentGamemodeScript = newScript

@@ -15,7 +15,7 @@ local LongFlash = {
         inventorySlot = "secondary",
 
         -- general
-        cooldownLength = 7,
+        cooldownLength = 6,
         uses = 100,
         usingDelay = 1, -- Time that player will be "using" their ability, won't be able to interact with weapons during this time
 
@@ -35,8 +35,8 @@ local LongFlash = {
         -- flash specific
         anchorTime = 0.2,
         anchorDistance = 7,
-        popTime = 0.3,
-        blindLength = 1.5,
+        popTime = 0.18,
+        blindLength = 1.01,
         canSeeAngle = 1.07,
 
         -- absr = Absolute Value Random

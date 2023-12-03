@@ -37,14 +37,14 @@ local HEGrenade = {
         throwFinishSpringShove = Vector3.new(-0.4, -0.5, 0.2),
 
         -- he grenade specific
-        popLength = 2,
-        maxDamage = 130,
+        popLength = 1.8,
+        maxDamage = 150,
         minDamage = 10,
-        damageRadius = 35,
+        damageRadius = 45,
         radiusHeight = 3,
         damageSlow = -2.6,
         damageSlowLength = 1,
-        velocitySlowMultPerInterval = 0.9, -- grenade velocity slow
+        velocitySlowMultPerInterval = 0.93, -- grenade velocity slow
         velocitySlowIntervalSec = 0.1,
         velocityMinimum = 0.5,
         glowFadeIn = 0.1,

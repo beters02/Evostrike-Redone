@@ -93,11 +93,6 @@ function Home:ConnectCasualButtons()
         self:DisconnectCasualButtons()
     end))
 
-    -- connect queue buttons
-    table.insert(self.connections.modes, casPage.Card_Deathmatch.MouseButton1Click:Connect(function()
-        self:QueueButtonClicked(casPage.Card_Deathmatch, "Deathmatch")
-    end))
-
     table.insert(self.connections.modes, casPage.Card_1v1.MouseButton1Click:Connect(function()
         self:QueueButtonClicked(casPage.Card_1v1, "1v1")
     end))
@@ -172,16 +167,6 @@ function Home:SoloButtonClicked()
             connections[2]:Disconnect()
             connections[1]:Disconnect()
         end),
-        --[[self.Location.Parent.SoloPopupRequest.Card_Unstable.MouseButton1Click:Once(function()
-            connections[1]:Disconnect()
-            connections[3]:Disconnect()
-            Popup.burst("Teleporting!", 3)
-            self.Location.Parent.SoloPopupRequest.Visible = false
-            self.Location.Visible = true
-
-            RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Unstable")
-            connections[2]:Disconnect()
-        end),]]
         self.Location.Parent.SoloPopupRequest.Card_Cancel.MouseButton1Click:Once(function()
             if processing then
                 return

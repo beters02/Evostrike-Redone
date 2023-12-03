@@ -37,7 +37,7 @@ local SmokeGrenade = {
         throwFinishSpringShove = Vector3.new(-0.4, -0.5, 0.2),
 
         -- smoke grenade specific
-        smokeLength = 2.9, -- 4
+        smokeLength = 3.8, -- 4
         smokeFadeInLength = 0.4, -- 0.8
         smokeFadeOutLength = 0.8, -- 1
         smokeBubbleStartSizeModifier = 0.3,

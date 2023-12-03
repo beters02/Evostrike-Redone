@@ -15,7 +15,7 @@ local AttemptItemSellGui = ShopAssets:WaitForChild("AttemptItemSell")
 
 local SkinPage = {
     config = {
-        MaxFramesPerPage = 40
+        MaxFramesPerPage = 21
     }
 }
 
@@ -107,6 +107,7 @@ function SkinPage:Update(playerInventory)
             local c = self.Location.Skin.Content1:Clone()
             c.Name = "Content" .. tostring(i)
             c.Parent = self.Location.Skin
+            c.BackgroundTransparency = 0.944
             c.Visible = false
             frames[i] = {}
         end
@@ -167,10 +168,18 @@ function SkinPage:DisconnectButtons()
         v:Disconnect()
     end
     self.currentPageButtonConnections = {}
+    SkinPage.DisconnectPageNumberButtons(self)
 end
 
 function SkinPage:ConnectPageNumberButtons()
-    table.insert(self.SkinPageNumberVar.Connections, self.Location.NextPageNumberButton.MouseButton1Click:Connect(function()
+    if self.SkinPageNumberVar.Connections.NextPageNum then
+        self.SkinPageNumberVar.Connections.NextPageNum:Disconnect()
+    end
+    if self.SkinPageNumberVar.Connections.PrevPageNum then
+        self.SkinPageNumberVar.Connections.PrevPageNum:Disconnect()
+    end
+
+    self.SkinPageNumberVar.Connections.NextPageNum = self.Location.NextPageNumberButton.MouseButton1Click:Connect(function()
         local curr = self.SkinPageNumberVar.CurrentPage
         if curr == self.SkinPageNumberVar.PageAmount then
             return
@@ -181,8 +190,9 @@ function SkinPage:ConnectPageNumberButtons()
         self.Location.Skin["Content" .. tostring(curr)].Visible = true
         self.Location.CurrentPageNumberLabel.Text = tostring(curr)
         self.SkinPageNumberVar.CurrentPage = curr
-    end))
-    table.insert(self.SkinPageNumberVar.Connections, self.Location.PreviousPageNumberButton.MouseButton1Click:Connect(function()
+    end)
+
+    self.SkinPageNumberVar.Connections.PrevPageNum = self.Location.PreviousPageNumberButton.MouseButton1Click:Connect(function()
         local curr = self.SkinPageNumberVar.CurrentPage
         if curr == 1 then
             return
@@ -193,7 +203,7 @@ function SkinPage:ConnectPageNumberButtons()
         self.Location.Skin["Content" .. tostring(curr)].Visible = true
         self.Location.CurrentPageNumberLabel.Text = tostring(curr)
         self.SkinPageNumberVar.CurrentPage = curr
-    end))
+    end)
 end
 
 function SkinPage:DisconnectPageNumberButtons()

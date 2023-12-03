@@ -11,12 +11,12 @@ module.Bridge = Bridge
 module.Remote = RemoteEvent
 module.Running = false
 
-function module:StartQueueService(queueableGamemodes)
+function module:StartQueueService()
     if RunService:IsClient() then return end
 
     -- custom tele data
     MatchmakingService.ApplyCustomTeleportData = function(_, gameData)
-        return {RequestedGamemode = string.split(gameData.map, "_")[2]}
+        return {RequestedGamemode = gameData.map}
     end
 
     -- game found
@@ -24,30 +24,20 @@ function module:StartQueueService(queueableGamemodes)
         GameFoundGui:Clone().Parent = player
     end)
 
-    -- init gamemodes
-    for _, gamemode in pairs(queueableGamemodes) do
-        --[[local req = game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService2").GamemodeScripts:FindFirstChild(gamemode)
-        if not req then continue end
-        req = require(req)
-
-        -- init gamemode's maps
-        for map, mapid in pairs(StoredMapIDs.GetMapInfoInGamemode(gamemode)) do
-            MatchmakingService:SetPlayerRange(map .. "_" .. gamemode, NumberRange.new(req.minimumPlayers or 1, req.maximumPlayers or 8))
-            MatchmakingService:AddGamePlace(map .. "_" .. gamemode, mapid)
-        end]]
-    end
-
     -- update queue count
     self._Stop = false
     self._UpdateQueueCount = task.spawn(function()
         while not self._Stop do
             task.wait(2)
-            self:PushGamemodeQueueCount("Deathmatch")
+            --self:PushGamemodeQueueCount("Deathmatch")
             self:PushGamemodeQueueCount("1v1")
         end
     end)
 
     module.Running = true
+
+    MatchmakingService:AddGamePlace("1v1", 11287185880)
+    MatchmakingService:SetPlayerRange("1v1", NumberRange.new(2, 2))
 
     print('MatchmakingService Started!')
 end
@@ -67,13 +57,10 @@ function module:AddPlayerToQueue(player, queue)
     end
 
     local succ, err = pcall(function()
-        for map, _ in pairs(StoredMapIDs.GetMapInfoInGamemode(queue)) do
-            MatchmakingService:QueuePlayer(player, "main", map .. "_" .. queue)
-        end
+        MatchmakingService:QueuePlayer(player, "main", queue)
     end)
 
     if err then warn(tostring(err)) end
-
     return succ
 end
 
@@ -118,7 +105,6 @@ end
 if RunService:IsServer() then
     MatchmakingService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("MatchmakingService")).GetSingleton()
     module.MatchmakingService = MatchmakingService
-    StoredMapIDs = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("MapIDs"))
     Bridge.OnServerInvoke = function(player, action, queue)
         return module[action](module, player, queue)
     end
