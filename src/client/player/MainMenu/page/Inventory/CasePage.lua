@@ -166,7 +166,11 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
 
     local endCF = crates.PrimaryPart.CFrame - Vector3.new(0, 0, 1)
     local GrowTween = TweenService:Create(crates.PrimaryPart, TweenInfo.new(1), {CFrame = endCF})
-    local WheelTween = TweenService:Create(seqWheel.Wheel, TweenInfo.new(3, Enum.EasingStyle.Quad), {CanvasPosition = CasePage.config.FinalItemCanvasPosition})
+
+    local WheelAbsolute = seqWheel.Wheel.AbsoluteCanvasSize
+    local WheelFinalPos = WheelAbsolute.X / 1.583-- Arbiturary value found via testing
+    WheelFinalPos = Vector2.new(WheelFinalPos, 0)
+    local WheelTween = TweenService:Create(seqWheel.Wheel, TweenInfo.new(3, Enum.EasingStyle.Quad), {CanvasPosition = WheelFinalPos})
 
     -- Fill Wheel CaseFrames with Model
     local gotParsed = InventoryInterface.ParseSkinString(gotSkin)

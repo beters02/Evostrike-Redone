@@ -243,14 +243,11 @@ function module:GetAccelerationDirection(groundNormal)
 
 	if not self.dashing and self.currentInputSum.Forward == 0 and self.currentInputSum.Side == 0 then
 		accelDir = Vector3.zero
-	elseif groundNormal then
+	else
+		groundNormal = groundNormal or Vector3.new(0,1,0)
 		forward = groundNormal:Cross(self.collider.CFrame.RightVector)
 		right = groundNormal:Cross(forward)
 		accelDir = (forwardMove * forward + rightMove * right).Unit
-	else
-		forward = workspace.CurrentCamera.CFrame.LookVector * self.currentInputSum.Forward
-		right = (getYaw() * CFrame.Angles(0,math.rad(90),0)).LookVector * self.currentInputSum.Side
-		accelDir = (forward+right).Unit
 	end
 
 	return accelDir

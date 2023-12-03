@@ -18,6 +18,7 @@ local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWe
 local PlayerData2 = require(Framework.Module.PlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
 local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
+local WeaponPartCache = require(script.Parent:WaitForChild("WeaponPartCache"))
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
 function Weapon.new(weapon: string, tool: Tool, recoilScript)
@@ -47,6 +48,12 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     self.CameraObject = require(ReplicatedStorage.Services.WeaponService.WeaponCamera).new(weapon)
     self.Variables.CrosshairModule = require(self.Character:WaitForChild("CrosshairScript"):WaitForChild("m_crosshair"))
     self.Variables.cameraFireThread = false
+
+    if self.Options.ammo then
+        local cacheBullets = self.Options.ammo.magazine + self.Options.ammo.total
+        self.Variables.MainWeaponPartCache = WeaponPartCache.new(cacheBullets, cacheBullets)
+    end
+    
 
     if self.init then
         self:init()
@@ -241,6 +248,10 @@ function Weapon:PrimaryFire(moveSpeed)
 	self.Variables.lastFireTime = fireTick
 	self.CameraObject.weaponVar.currentBullet = self.Variables.currentBullet
 
+    -- play animations
+	self:PlayAnimation("client", "Fire")
+    self:PlayAnimation("server", "Fire")
+
 	-- Play Emitters and Sounds
 	task.spawn(function()
         self:PlayReplicatedSound("Fire", true)
@@ -266,10 +277,6 @@ function Weapon:PrimaryFire(moveSpeed)
 
 	-- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
 	self:RegisterRecoils(moveSpeed)
-
-	-- play animations
-	self:PlayAnimation("client", "Fire")
-    self:PlayAnimation("server", "Fire")
 	
 	-- handle client fire rate & auto reload
 	local nextFire = fireTick + self.Options.fireRate
@@ -377,11 +384,11 @@ function Weapon:ScopeInit()
     self.Variables.scopeGui.Parent = self.Player.PlayerGui
 
     -- Player Died ScopeOut function
-    DiedBind.Event:Once(function()
+    table.insert(self.Connections, DiedBind.Event:Connect(function()
         if self.Variables.scoping then
             self:ScopeOut()
         end
-    end)
+    end))
 
     -- Scope Tween Scope
     self.Variables.ScopeTweens = {
@@ -796,36 +803,32 @@ end
 -- Final Recoil Functions
 
 function Weapon:RegisterRecoils(moveSpeed)
+
     local vecRecoil = self.Recoil.Fire(self, self.Variables.currentBullet)
     local bullet = self.Variables.currentBullet
 
     -- Vector Recoil
-	task.spawn(function()
+    local m = self.Player:GetMouse()
+    local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
+    self.Variables.currentVectorModifier = self._vecModifier
+    self.Variables.recoilReset = self._camReset
 
-		-- grab vector recoil from pattern using the camera object
-		local m = self.Player:GetMouse()
-        local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
-		self.Variables.currentVectorModifier = self._vecModifier
-        self.Variables.recoilReset = self._camReset
+    -- get total accuracy and recoil vec direction
+    local direction = self:CalculateRecoils(mray, vecRecoil, bullet, moveSpeed)
 
-		-- get total accuracy and recoil vec direction
-        local direction = self:CalculateRecoils(mray, vecRecoil, bullet, moveSpeed)
+    -- check to see if we're wallbanging
+    local wallDmgMult, hitchar, result
+    local normParams = SharedWeaponFunctions.getFireCastParams(self.Player, workspace.CurrentCamera)
+    wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
 
-		-- check to see if we're wallbanging
-		local wallDmgMult, hitchar, result
-		local normParams = SharedWeaponFunctions.getFireCastParams(self.Player, workspace.CurrentCamera)
-		wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
+    if result then
+        self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
+        -- register client shot for bullet/blood/sound effects
+        SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
+        return true
+    end
 
-		if result then
-			self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
-
-			-- register client shot for bullet/blood/sound effects
-			SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel)
-			return true
-		end
-
-		return false
-	end)
+    return false
 end
 
 function Weapon:CalculateRecoils(mray, recoilVector3, bullet, moveSpeed)
@@ -957,12 +960,12 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
 	local result = workspace:Raycast(origin, direction, _p)
 	if not result then warn("No wallbang result but player result") return false end
 
-	local hitchar = result.Instance:FindFirstAncestorWhichIsA("Model")
+	local hitchar = result.Instance.Parent
 	if hitchar and hitchar:FindFirstChild("Humanoid") then
 		return damageMultiplier, result, hitchar
 	end
 
-	local bangableMaterial = result.Instance:GetAttribute("Bangable") or hitchar:GetAttribute("Bangable")
+	local bangableMaterial = hitchar:GetAttribute("Bangable")
 	if not bangableMaterial then return false, result end
 
 	for _, v in pairs(filter) do
@@ -971,7 +974,7 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
 
 	-- create bullethole at wall
     task.spawn(function()
-        SharedWeaponFunctions.CreateBulletHole(result)
+        SharedWeaponFunctions.CreateBulletHole(result, self.Variables.MainWeaponPartCache)
     end)
 
 	--SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, nil, nil, true, self.Tool, self.ClientModel)
