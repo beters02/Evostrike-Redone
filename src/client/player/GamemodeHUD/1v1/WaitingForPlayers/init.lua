@@ -15,4 +15,8 @@ function WFP:Disable()
     self = nil
 end
 
+function WFP:Destroy()
+    self:Disable()
+end
+
 return WFP

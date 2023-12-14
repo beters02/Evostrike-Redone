@@ -10,19 +10,18 @@ local GM1v1 = {connections = {}, objects = {}}
 local PlayerDied = require(script:WaitForChild("PlayerDied"))
 local TopBar = require(script:WaitForChild("TopBar"))
 local WaitingForPlayers = require(script:WaitForChild("WaitingForPlayers"))
+local RoundOver = require(script:WaitForChild("RoundOver"))
+local RoundStart = require(script:WaitForChild("RoundStart"))
 
 -- Init function called before game is started.
 function GM1v1.Init()
-    print('Yuh!')
     GM1v1.objects.WaitingForPlayers = WaitingForPlayers.init()
 end
 
 -- Called after game is started.
 function GM1v1.Enable(enemy)
-    print('Yuh yuh!')
     GM1v1.objects.WaitingForPlayers:Disable()
     GM1v1.objects.TopBar = TopBar.init(game.Players.LocalPlayer, enemy)
-    print('Top Bar Init!')
 end
 
 function GM1v1.StartTimer(length)
@@ -53,6 +52,14 @@ function GM1v1.ClearObjects()
     for _, v in pairs(GM1v1.objects) do
         v:Destroy()
     end
+end
+
+function GM1v1.RoundOver(winner, loser)
+    GM1v1.objects.RoundOver = RoundOver.init(winner, loser)
+end
+
+function GM1v1.RoundStart()
+    RoundStart.init()
 end
 
 return GM1v1

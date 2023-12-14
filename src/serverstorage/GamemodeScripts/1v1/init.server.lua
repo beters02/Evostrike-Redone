@@ -3,6 +3,7 @@ local ReplicatedStorage	= game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local WeaponService = require(Framework.Service.WeaponService)
 local AbilityService = require(Framework.Service.AbilityService)
+local CollectionService = game:GetService("CollectionService")
 
 local Lib = Framework.Module.lib
 local Promise = require(Lib.c_promise)
@@ -20,6 +21,13 @@ local PlayerData = {Players = {_count = 0}}
 local Options = require(script:WaitForChild("Options"))
 Options.primary_weapons_combined = Tables.combine(Tables.clone(Options.primary), Tables.clone(Options.light_primary))
 Options.secondary_weapons_combined = Tables.combine(Tables.clone(Options.secondary), Tables.clone(Options.light_secondary))
+
+function clearTagged(tag)
+    for i, v in pairs(CollectionService:GetTagged(tag)) do
+        print(v)
+        v:Destroy()
+    end
+end
 
 -- | Player Data |
 
@@ -139,6 +147,8 @@ function round()
     print('Round Starting')
 
     GameData.isActive = true
+    GamemodeEvents.HUD.StartRound:FireAllClients()
+    clearTagged("DestroyOnRoundStart")
 
     -- spawn barriers
     local barriers = Barriers:Clone()
@@ -204,6 +214,7 @@ function round()
         GameData.Round += 1
 
         if result == "PlayerDied" then
+            GamemodeEvents.HUD.RoundOver:FireAllClients(winner, loser)
             GamemodeEvents.HUD.StartTimer:FireAllClients(false) -- stop timer
             PlayerData.IncrementVar(winner, "Score", 1)
             PlayerData.IncrementVar(winner, "Kills", 1)
@@ -217,7 +228,8 @@ function round()
             end
         end
 
-        task.wait(1)
+        GamemodeEvents.HUD.StartTimer:FireAllClients(2)
+        task.wait(2)
         return round()
     end)
 end

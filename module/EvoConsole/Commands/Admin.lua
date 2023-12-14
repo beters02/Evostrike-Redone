@@ -196,7 +196,7 @@ Commands.addinvitem = {
 	Description = "Add Strafe Coins to a player",
 	Public = false,
 
-	Function = function(self, _, player, item)
+	Function = function(self, _, player, item) -- player is sent player via text
 		player = player == "self" and game.Players.LocalPlayer or Players:FindFirstChild(player)
 		if not player then
 			self:Error("Cannot find player " .. tostring(player) .. ". If you want to add to yourself, put 'self' for {player}")
@@ -208,6 +208,21 @@ Commands.addinvitem = {
 			return
 		end
 		self:Print("Added " .. tostring(item) .. " to " .. player.Name .. "'s inventory.")
+	end
+}
+
+Commands.gmhud_test = {
+	Description = "Test a Gamemode HUD event. Will test RoundOver",
+	public = false,
+
+	Function = function(self, player, length)
+		local m1 = require(player.PlayerScripts.GamemodeHUD["1v1"])
+		m1.Init()
+		m1.Enable(player)
+		m1.RoundOver(player)
+		task.wait(tonumber(length) or 3)
+		m1.RoundStart()
+		m1.Disable()
 	end
 }
 

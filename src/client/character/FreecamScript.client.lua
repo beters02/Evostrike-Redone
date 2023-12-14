@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local inputs = {LeftShift = false, P = false}
 local debounce = false
 
@@ -22,6 +23,6 @@ game:GetService("RunService").RenderStepped:Connect(function(dt)
                 v.Transparency = 1
             end
         end
-        game:GetService("Players").LocalPlayer.PlayerGui.HUD.Crosshair.Enabled = false
+        Players.LocalPlayer.PlayerGui.HUD.Crosshair.Enabled = false
     end
 end)

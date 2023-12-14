@@ -176,9 +176,6 @@ function reloadGunTween(newMag, newTotal)
         hud.weaponfr.CurrentTotalAmmoLabel.Text = tostring(oldTotalValue.Value)
     end)
 
-    print(newMag)
-    print(newTotal)
-
     ft1:Play()
     ft2:Play()
     ft2.Completed:Wait()
