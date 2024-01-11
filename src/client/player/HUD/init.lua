@@ -10,6 +10,8 @@ local DiedEvent = Framework.Module.EvoPlayer.Events.PlayerDiedRemote
 local hud = {}
 
 function hud.initialize(player: Player)
+    hud.enabled = true
+
     hud.player = player
     hud.gui = player.PlayerGui:WaitForChild("HUD")
     hud.infocv = hud.gui:WaitForChild("InfoCanvas")
@@ -99,7 +101,6 @@ function hud.initKillfeeds(self)
 
     return self
 end
-
 
 function bulletFireTween()
     local goalmod = 1.1
@@ -254,6 +255,34 @@ function hud:DisconnectPlayer()
 
     self.gui.WeaponBar.Ternary.Visible = false
 
+end
+
+function hud:Enable()
+    for _, component in pairs(hud.gui:GetChildren()) do
+        local _, err = pcall(function()
+            if component:IsA("ScreenGui") then
+                component.Enabled = true
+            else
+                component.Visible = true
+            end
+        end)
+        if err then warn(err) end
+    end
+    hud.enabled = true
+end
+
+function hud:Disable()
+    for _, component in pairs(hud.gui:GetChildren()) do
+        local _, err = pcall(function()
+            if component:IsA("ScreenGui") then
+                component.Enabled = false
+            else
+                component.Visible = false
+            end
+        end)
+        if err then warn(err) end
+    end
+    hud.enabled = false
 end
 
 return hud

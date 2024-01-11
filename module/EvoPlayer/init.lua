@@ -27,15 +27,15 @@ function EvoPlayer:TakeDamage(character, damage, damager)
             end
             damage *= helmetMultiplier
         end
-    else
-        if shield > 0 then
-            if shield >= damage then -- no damage taken, only apply to shield
-                character:SetAttribute("Shield", shield - damage)
-                return 0
-            else
-                damage -= shield
-                character:SetAttribute("Shield", 0)
-            end
+    end
+
+    if shield > 0 then
+        if shield >= damage then -- no damage taken, only apply to shield
+            character:SetAttribute("Shield", shield - damage)
+            return 0
+        else
+            damage -= shield
+            character:SetAttribute("Shield", 0)
         end
     end
 

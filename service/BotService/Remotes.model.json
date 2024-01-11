@@ -8,6 +8,10 @@
       {
         "Name": "BotAdded",
         "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "BotDiedBindable",
+        "ClassName": "BindableEvent"
       }
     ]
   }

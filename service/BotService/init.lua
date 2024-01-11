@@ -9,6 +9,7 @@ local Types = require(script:WaitForChild("Types"))
 local ServerStorage = game:GetService("ServerStorage")
 local StarterCharacterTemplate = game:GetService("StarterPlayer").StarterCharacter
 local EvoPlayer = require(Framework.Module.EvoPlayer)
+local BotDiedBind = script.Remotes.BotDiedBindable
 
 local Bots = {}
 Bots.Bots = {}
@@ -19,6 +20,7 @@ function Bots:AddBot(properties)
     local character = StarterCharacterTemplate:Clone()
     character.Parent = ServerStorage
 
+    properties = properties or {}
     if not properties.SpawnCFrame then properties.SpawnCFrame = game.ReplicatedStorage.Services.GamemodeService2.GamemodeScripts.Deathmatch.Spawns.Default.CFrame end
     local botProperties = Types.BotProperties.new(properties)
 
@@ -86,10 +88,10 @@ function Bots:AddBot(properties)
     character.Parent = workspace
 
     -- fire botadded event to all clients
-    BotAddedEvent:FireAllClients(character)
+    BotAddedEvent:FireAllClients(character, new_bot)
 
     -- create ragdolls
-    RagdollRE:FireAllClients("NonPlayerInitRagdoll", character)
+    --RagdollRE:FireAllClients("NonPlayerInitRagdoll", character)
 
     new_bot.Properties.Loaded = true
     return new_bot
@@ -121,7 +123,7 @@ function Bots:RespawnBot(_bot)
     -- tag bot
     CollectionService:AddTag(char, "Bot")
     -- fire botadded event to all clients
-    BotAddedEvent:FireAllClients(char)
+    BotAddedEvent:FireAllClients(char, _bot)
     -- create ragdolls
     RagdollRE:FireAllClients("NonPlayerInitRagdoll", char)
 end
@@ -177,6 +179,7 @@ function _connectBotDiedEvent(new_bot)
         if new_bot.Properties.Destroyed then return end
 
         -- death event
+        BotDiedBind:Fire(new_bot, character)
         PlayerDiedEvent:FireAllClients(character)
         
         if not hum:GetAttribute("Removing") then

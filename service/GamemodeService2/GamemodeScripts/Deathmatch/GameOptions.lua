@@ -34,7 +34,7 @@ function GameOptions.new(overrideOptions: table?)
     local self: GameOptions = {
         min_players = 1,
         max_players = 8,
-        round_length = 5 * 60,
+        round_length = 10 * 60,
         score_to_win_round = 1,
         score_to_win_game = 100,
         can_damage = true,
@@ -44,7 +44,7 @@ function GameOptions.new(overrideOptions: table?)
         buy_menu_enabled = true,
         buy_menu_add_instant = false,
         end_screen_length = 15,
-        base_sc_earned = 250,
+        base_sc_earned = 450,
         base_xp_earned = 100,
         spawn_invincibility = 3,
         starting_shield = 50,

@@ -6,9 +6,8 @@
 
 -- vec current = {[1] = Side, [2] = Up, [3] = Shake, [4] = vectorModifier, [5] = camModifier, [6] = cameraRecoilReset}
 local sprayPattern = {
-
 	vec =
-		{{"0.3absr", 1.33, 0.1, "range_6_0-1", 0.36, "range_8_0.25-0.41"}, -- Bullet #1
+		{{"0.3absr", 1.33, 0.1, "range_6_0-1", 0.6 --[[0.385]], "range_8_0.25-0.41"}, -- Bullet #1
 		{"range_5_0.12-1.55", "range_8_1.05-1.31", 0.3},
 		{0, 0, 0.66},
 		{0, 0, 0},

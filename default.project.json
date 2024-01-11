@@ -11,7 +11,7 @@
         "$ignoreUnknownInstances": true
       },
       "Services": {
-        "$path": "service",
+      "$path": "service",
         "$ignoreUnknownInstances": true
       },
       "Modules": {

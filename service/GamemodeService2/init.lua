@@ -13,7 +13,8 @@ GamemodeService.Location = script
 GamemodeService.DefaultGamemode = "Deathmatch"
 GamemodeService.MenuType = "Lobby"
 
-local Bridge = script:WaitForChild("Bridge")
+local RemoteFunction = script:WaitForChild("RemoteFunction")
+local RemoteEvent = script:WaitForChild("RemoteEvent")
 local Bindable = script:WaitForChild("Bindable")
 
 function GamemodeService:GetGamemodeScript(gamemode: string)
@@ -25,7 +26,7 @@ end
 
 function GamemodeService:RestartGamemode(map)
     if RunService:IsClient() then
-        Bridge:FireServer("RestartGamemode", map)
+        RemoteEvent:FireServer("RestartGamemode", map)
     else
         Bindable:Fire("Restart", map)
     end
@@ -33,7 +34,7 @@ end
 
 function GamemodeService:SetGamemode(gamemode)
     if RunService:IsClient() then
-        Bridge:FireServer("SetGamemode", gamemode)
+        RemoteEvent:FireServer("SetGamemode", gamemode)
     else
         Bindable:Fire("Set", gamemode)
     end
@@ -49,12 +50,30 @@ function GamemodeService:SetMenuType(menuType: "Lobby" | "Game")
         if mm then
             mm:SetAttribute("MenuType", menuType)
         end
-        Bridge:FireClient(v, "ChangeMenuType", menuType)
+        RemoteEvent:FireClient(v, "ChangeMenuType", menuType)
     end
 end
 
+function GamemodeService:GetMenuType()
+    if RunService:IsServer() then
+        return GamemodeService.MenuType
+    end
+    return RemoteFunction:InvokeServer("GetMenuType")
+end
+
+function GamemodeService:MenuTypeChanged(callback)
+    if RunService:IsServer() then
+        return
+    end
+    return RemoteEvent.OnClientEvent:Connect(function(action, newMenuType)
+        if action == "ChangeMenuType" then
+            callback(newMenuType)
+        end
+    end)
+end
+
 if RunService:IsServer() then
-    Bridge.OnServerEvent:Connect(function(player, action, ...)
+    RemoteEvent.OnServerEvent:Connect(function(player, action, ...)
         if action == "RestartGamemode" then
             if not require(game:GetService("ServerStorage").Stored.AdminIDs):IsAdmin(player) then return end
             GamemodeService:RestartGamemode(...)
@@ -63,6 +82,11 @@ if RunService:IsServer() then
             GamemodeService:SetGamemode(...)
         end
     end)
+    RemoteFunction.OnServerInvoke = function(_, action)
+        if action == "GetMenuType" then
+            return GamemodeService:GetMenuType()
+        end
+    end
 end
 
 return GamemodeService

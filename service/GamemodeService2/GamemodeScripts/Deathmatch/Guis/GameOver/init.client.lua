@@ -35,6 +35,8 @@ local newMapStr = script:GetAttribute("NewMapStr") or "Kicking players..."
 
 local leaderboardStart = 3
 
+local hudModule = require(localPlayer.PlayerScripts.HUD)
+
 --[[ Utility ]]
 local function convertSecToMin(sec: number)
     local _sec = sec % 60
@@ -113,8 +115,8 @@ function connect()
         timer = RunService.RenderStepped:Connect(function()
             timerLabel.Text = convertSecToMin(math.floor(endt - tick()))
             if tick() >= endt then
+                hudModule:Enable()
                 Debris:AddItem(gui, 3)
-                --gui:Destroy()
                 timer:Disconnect()
             end
         end)
@@ -124,6 +126,7 @@ function connect()
 end
 
 function start()
+    hudModule:Disable()
     gui.Parent = localPlayer.PlayerGui
     UIState:addOpenUI("DeathmatchRoundOver", gui, true)
     task.delay(timerLength - 1, function()

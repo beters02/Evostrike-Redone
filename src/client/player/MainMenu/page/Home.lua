@@ -25,6 +25,12 @@ function Home:init()
     self.connections = {}
     self.coreconnections = {}
     self.var = {nextClickAllow = tick(), currentMenuType = "Lobby", bottomButtonClickedFunc = false, processing = false}
+    self.mainButtons = {}
+    for _, button in pairs(self.Location:GetChildren()) do
+        if string.match(button.Name, "MainButton") then
+            self.mainButtons[string.gsub(button.Name, "MainButton_", "")] = button
+        end
+    end
     return self
 end
 
@@ -51,6 +57,11 @@ function Home:ConnectButtons()
     table.insert(self.connections, self.Location.Card_Solo.MouseButton1Click:Connect(function()
         self:SoloButtonClicked()
     end))
+    for pageName, button in pairs(self.mainButtons) do
+        table.insert(self.connections, button.MouseButton1Click:Connect(function()
+            self._main.page:OpenPage(pageName)
+        end))
+    end
 end
 
 function Home:DisconnectButtons(connTab: table?)

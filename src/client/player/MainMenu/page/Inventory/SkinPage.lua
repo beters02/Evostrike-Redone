@@ -262,7 +262,6 @@ function SkinPage:CreateSkinFrameModel(invSkin: InventoryInterface2.InventorySki
     -- get custom weapon positions
     local cf: CFrame = weaponModelObj.PrimaryPart.CFrame
     local pos = SkinPage.CustomWeaponPositions.Get(invSkin)
-    print(pos)
     pos = pos and pos.vec or Vector3.new(0.5,0,-3)
     weaponModelObj:SetPrimaryPartCFrame(CFrame.new(pos) * cf.Rotation)
 
@@ -272,14 +271,6 @@ end
 function SkinPage:SkinFrameButtonClicked(skinFrame)
     local invSkin = SkinPage.GetSkinFromFrame(self, skinFrame)
     SkinPage.OpenItemDisplay(self, invSkin, skinFrame)
-end
-
-local function weld(model, doWeld)
-    for _, v in pairs(model.GunComponents.WeaponHandle:GetChildren()) do
-        if v:IsA("Weld") then
-            v.Enabled = doWeld or false
-        end
-    end
 end
 
 function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObject, skinFrame)
@@ -442,20 +433,6 @@ function SkinPage:OpenItemDisplay(invSkin: InventoryInterface2.InventorySkinObje
     self.Location.CurrentPageNumberLabel.Visible = false
     self.itemDisplayFrame.Visible = true
     self:PlaySound("ItemDisplay")
-end
-
-type skinObject = InventoryInterface2.InventorySkinObject
-function SkinPage:OpenItemDisplayNew(invSkin: skinObject, skinFrame)
-    self.ItemDisplay.Open(
-        self,
-        {
-            ItemName = Strings.firstToUpper(invSkin.model) .. " | " .. Strings.firstToUpper(invSkin.skin),
-            Rarity = skinFrame:GetAttribute("rarity") or "Default",
-            UUID = tostring(invSkin.uuid)
-        },
-        function(ItemDisplay)
-
-        end)
 end
 
 function SkinPage:CloseItemDisplay()

@@ -18,7 +18,6 @@ local ItemDisplay = {
 -- Initialize the ItemPage for MainMenu where MainMenu is self
 function ItemDisplay.init(self, frame)
     ItemDisplay.Frame = frame
-
     self.ItemDisplay = ItemDisplay
 end
 

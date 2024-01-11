@@ -2,6 +2,7 @@
 	Open/Close input is registered in cms_mainMenu
 ]]
 
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -22,6 +23,7 @@ function main.initialize(gui)
     main.var = {opened = false, menuType = main.gui:GetAttribute("MenuType"), loading = false}
 	main.page = require(Players.LocalPlayer.PlayerScripts.MainMenu.page).init(main, main.gui:GetAttribute("IsAdmin"))
 	main.isInit = true
+	main.initTime = tick()
 
 	if player:GetAttribute("Loaded") then
 		main.open()
@@ -168,9 +170,39 @@ function main.topBar.initTweens(frame: TopBarButtonFrame)
 	}
 end
 
+local function ScaleToOffset(x)
+	local cam = workspace.Camera
+	local viewportSize = cam.ViewportSize
+	x *= viewportSize.X
+	return math.round(x)
+end
+
+local function scaleTopBarFrames(titleFrame)
+	local size = ScaleToOffset(titleFrame.Size.Y.Scale) / 50
+	print(size)
+	for _, buttonFrame in pairs(main.topBar.gui:GetChildren()) do
+		pcall(function()
+			buttonFrame.TextButton.TextScaled = false
+			buttonFrame.TextButton.TextSize = size
+		end)
+	end
+end
+
 function main.topBar.connect()
 	main.topBar.disconnect()
 	main.topBar.connections = {}
+
+	local lastTextSize = 0
+	local longestTopBarTitle = main.topBar.gui.InventoryButtonFrame.TextButton
+	main.topBar.Update = RunService.RenderStepped:Connect(function()
+		if tick() - main.initTime < 3 then
+			return
+		end
+		if longestTopBarTitle.TextSize ~= lastTextSize then
+			lastTextSize = longestTopBarTitle.TextSize
+			scaleTopBarFrames(longestTopBarTitle)
+		end
+	end)
 
 	for _, frame: TopBarButtonFrame in pairs(main.topBar.buttonFrames) do
 		main.topBar.connections[frame.PageName .. "Began"] = frame.Frame.InputBegan:Connect(function(input)

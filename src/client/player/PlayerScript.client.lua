@@ -3,9 +3,11 @@ game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local EvoPlayerEvents = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("EvoPlayer"):WaitForChild("Events")
+local Framework = require(ReplicatedStorage.Framework)
+local EvoPlayerEvents = Framework.Module.EvoPlayer.Events
 local SelfDiedEvent = EvoPlayerEvents:WaitForChild("PlayerDiedBindable")
 local PlayerDiedEvent = EvoPlayerEvents:WaitForChild("PlayerDiedRemote")
+local BotAddedEvent = Framework.Service.BotService.Remotes.BotAdded
 
 local Ragdolls = {
     Stored = {},
@@ -26,6 +28,9 @@ function main()
     end
     Players.PlayerAdded:Connect(playerAdded)
     Players.PlayerRemoving:Connect(playerRemoving)
+    BotAddedEvent.OnClientEvent:Connect(function(botChar, bot)
+        Ragdolls.initBot(bot)
+    end)
 end
 
 function update(dt)
@@ -58,6 +63,15 @@ function Ragdolls.initPlayer(player)
     end
 end
 
+function Ragdolls.initBot(bot)
+    if not Ragdolls.Stored[bot.Name] then
+        local ragdollData = {Player = bot, Connections = {}, CharacterAlive = false}
+        Ragdolls.Stored[bot.Name] = ragdollData
+    end
+
+    Ragdolls.botCharacterAdded(bot)
+end
+
 function Ragdolls.getPlayer(player)
     return Ragdolls.Stored[player.Name]
 end
@@ -82,13 +96,11 @@ function Ragdolls.characterAdded(player, char)
 
     if player == game.Players.LocalPlayer then
         ragdollData.Connections.Died = SelfDiedEvent.Event:Once(function()
-            print('died!')
             Ragdolls.characterDied(player, char, clone)
         end)
     else
         ragdollData.Connections.Died = PlayerDiedEvent.OnClientEvent:Connect(function(diedPlr)
             if diedPlr == player then
-                print('died!')
                 Ragdolls.characterDied(player, char, clone)
                 ragdollData.Connections.Died:Disconnect()
             end
@@ -97,6 +109,20 @@ function Ragdolls.characterAdded(player, char)
 
     ragdollData.CharacterAlive = true
     Ragdolls.Stored[player.Name] = ragdollData
+end
+
+function Ragdolls.botCharacterAdded(bot)
+    Ragdolls.initCharacterSpawn(bot.Character)
+
+    local clone = Ragdolls.createRagdoll(bot.Character)
+    local ragdollData = Ragdolls.getPlayer(bot)
+
+    ragdollData.Connections.Died = PlayerDiedEvent.OnClientEvent:Connect(function(diedChar)
+        if diedChar == bot.Character then
+            Ragdolls.characterDied(bot, bot.Character, clone)
+            ragdollData.Connections.Died:Disconnect()
+        end
+    end)
 end
 
 function Ragdolls.characterDied(player, character, ragdollClone)
@@ -249,7 +275,6 @@ end
 
 -- | Abilities |
 
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local AbilityService = Framework.Service.AbilityService
 local Ability = require(AbilityService:WaitForChild("Ability"))
 local FastCast = require(Framework.Module.lib.c_fastcast)
@@ -334,7 +359,8 @@ end)
 
 Framework.Module.EvoPlayer.Events.PlayerDiedRemote.OnClientEvent:Connect(function(died)
     if died == player then return end
-    RemoveCharacter(died.Character or died)
+    local char = died:FindFirstChild("Character") or died
+    RemoveCharacter(char)
 end)
 
 AbilityService.Events.RemoteFunction.OnClientInvoke = function(action, ...)

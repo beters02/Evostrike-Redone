@@ -151,17 +151,19 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
 
     -- Prepare Var & Tween
     local seq = self.Location.CaseOpeningSequence
+
     local seqItem = seq.ItemDisplay
+    seqItem.Display.ViewportFrame:ClearAllChildren()
+
     local seqCase = seq.CaseDisplay
+    local caseViewportFrame = seqCase.ViewportFrame
+    caseViewportFrame:ClearAllChildren()
 
     local seqWheel = seq.ItemWheelDisplay
     seqWheel.Wheel.CanvasPosition = Vector2.new(0,0)
 
-    local viewportFr = seq.CaseDisplay.ViewportFrame
-    viewportFr:ClearAllChildren()
-
     local crates: Model = Cases.weaponcase1.Model:Clone()
-    crates.Parent = viewportFr
+    crates.Parent = caseViewportFrame
     crates:PivotTo(CasePage.config.DefaultOpeningCaseCFrame)
 
     local endCF = crates.PrimaryPart.CFrame - Vector3.new(0, 0, 1)
@@ -189,11 +191,6 @@ function CasePage:OpenCase(gotSkin, potentialSkins)
     seqItem.ItemName.Text =  Strings.firstToUpper(gotParsed.model) .. " | " .. Strings.firstToUpper(gotParsed.skin)
 
     local itemDisplayModel = self.skinPage.CreateSkinFrameModel(self, gotParsed)
-    --[[local itemDisplayModel = InventoryInterface.GetSkinModelFromSkinObject(gotParsed):Clone()
-    itemDisplayModel.PrimaryPart = itemDisplayModel:WaitForChild("GunComponents"):WaitForChild("WeaponHandle")
-    seqItem.Display.ViewportFrame:ClearAllChildren()
-    --itemDisplayModel:PivotTo(CFrame.new(Vector3.zero)) --* CFrame.Angles(0,0,0))
-    itemDisplayModel:SetPrimaryPartCFrame(CFrame.new(Vector3.zero))]]
     itemDisplayModel.Parent = seqItem.Display.ViewportFrame
 
     -- Set rarity color/text

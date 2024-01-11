@@ -17,7 +17,6 @@ function Server.GetEquippedSkin(player: Player, weapon: string)
 
     if weapon == "knife" then
         skinData = SkinsDatabase:GetSkin(skin)
-        print(skinData)
     end
 
     return skin, skinData

@@ -276,7 +276,7 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		end
 
 		-- wallbang multiplier
-		if wallbangDamageMultiplier then print(wallbangDamageMultiplier) damage *= wallbangDamageMultiplier end
+		if wallbangDamageMultiplier then damage *= wallbangDamageMultiplier end
 
 		-- round damage to remove decimals
 		damage = math.round(damage)

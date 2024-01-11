@@ -5,7 +5,7 @@ local ACR = {
 		automatic = true,
 		
 		equipLength = 0.85,
-		fireRate = 0.086, -- 700 rpm
+		fireRate = 0.093, -- 645 RPM
 		reloadLength = 0.85,
 		recoilReset = 0.22,
 		camRecoilReset = 0.5,
@@ -13,7 +13,7 @@ local ACR = {
 		recoilResetMin = 0.25, -- 1st bullet reset
 		recoilResetMax = 0.41, -- Based on cameraRecoilReset in sprayPattern
 		
-		fireVectorCameraOffset = Vector2.new(2, 20), -- Side, Up
+		fireVectorCameraOffset = Vector2.new(3, 20), -- Side, Up
 		fireAccuracyCameraOffset = Vector2.new(3, 3), -- Side, Up
 		fireVectorCameraMax = Vector3.new(0.03, 0.07, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
 		
@@ -35,13 +35,13 @@ local ACR = {
 			base = 33,
 			min = 28,
 
-			headMultiplier = 4,
+			headMultiplier = 4.6,
 			legMultiplier = 0.9,
 			damageFalloffPerMeter = 0.7,
 			damageFalloffDistance = 35,
 			damageFalloffMinimumDamage = 19,
 			enableHeadFalloff = false,
-			helmetMultiplier = 0.78,
+			helmetMultiplier = 0.88,
 			destroysHelmet = true,
 		},
 		

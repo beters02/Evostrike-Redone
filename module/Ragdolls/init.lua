@@ -25,10 +25,8 @@ local config = {
 --
 
 local Debris = game:GetService("Debris")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local RagdollRE = script:WaitForChild("Remotes").RemoteEvent
 local PlayerDied = Framework.Module.EvoPlayer.Events.PlayerDiedRemote
 local PlayerDiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 

@@ -35,12 +35,13 @@ local EvoPlayer = require(Framework.Module.EvoPlayer)
 local EvoMaps = require(Framework.Module.EvoMaps)
 local GamemodeSpawns = game.ServerStorage.Maps[EvoMaps:GetCurrentMap()].Spawns
 local Maps = require(Framework.Module.EvoMaps)
+local BotService = require(Framework.Service.BotService)
 
 local PlayerData = {}
 local GameData = {
     Status = "Waiting" :: GameStatus,
     Connections = {PlayerAdded = false, PlayerRemoving = false, PlayerDied = false, TimerFinished = false, BuyMenu = false},
-    Variables = {PlayersCanSpawn = false},
+    Variables = {PlayersCanSpawn = false, BotSpawned = false},
     Options = GameOptionsModule.new(),
     CurrentRound = 1,
     RoundStatus = "Stopped" :: GameStatus,
@@ -130,6 +131,11 @@ function Start()
     GuiAll(GuiBuyMenu)
     
     GameData.Variables.PlayersCanSpawn = true
+
+    if #Players:GetPlayers() == 1 and not GameData.Variables.BotSpawned then
+        GameData.Variables.BotSpawned = true
+        BotSpawn()
+    end
 
     RoundStart(1)
     print('round started')
@@ -277,27 +283,39 @@ function PlayerSpawn(player)
     if not player:GetAttribute("Loaded") then
         repeat task.wait() until player:GetAttribute("Loaded")
     end
-
     local pd = PlayerData[player.Name] or PlayerDataGet(player)
-    local cf = PlayerGetSpawnPoint()
     TagsLib.DestroyTagged("DestroyOnPlayerSpawning_"..player.Name)
     player:LoadCharacter()
-    print('LOADING CHARACTER')
     task.wait()
-    --local char = player.Character or player.CharacterAdded:Wait()
-
     local char = player.Character or player.CharacterAdded:Wait()
+    InitSpawnedCharacter(player, pd, char)
+end
+
+function BotSpawn()
+    local Bot = BotService:AddBot({Respawn = false})
+    InitSpawnedCharacter(false, false, Bot.Character)
+    Framework.Service.BotService.Remotes.BotDiedBindable.Event:Once(function(bot, botChar)
+        task.delay(3, function()
+            BotSpawn()
+        end)
+    end)
+end
+
+function InitSpawnedCharacter(player, playerData, char)
+    local cf = PlayerGetSpawnPoint()
     char:WaitForChild("HumanoidRootPart").CFrame = cf + Vector3.new(0, 2, 0)
     char:WaitForChild("Humanoid").Health = GameData.Options.starting_health
     EvoPlayer:SetHelmet(char, GameData.Options.starting_helmet)
     EvoPlayer:SetShield(char, GameData.Options.starting_shield or 0)
     EvoPlayer:SetSpawnInvincibility(char, true, GameData.Options.spawn_invincibility)
 
-    for _, item in pairs(pd.Inventory.Weapons) do
-        WeaponService:AddWeapon(player, item)
-    end
-    for _, item in pairs(pd.Inventory.Abilities) do
-        AbilityService:AddAbility(player, item)
+    if player then
+        for _, item in pairs(playerData.Inventory.Weapons) do
+            WeaponService:AddWeapon(player, item)
+        end
+        for _, item in pairs(playerData.Inventory.Abilities) do
+            AbilityService:AddAbility(player, item)
+        end
     end
 end
 
@@ -436,7 +454,6 @@ function Gui(player: Player, gui: string, resets: boolean?, tags: table?, attrib
     Tables.doIn(attributes, function(value, index)
         _guiScript:SetAttribute(index, value)
         _gui:SetAttribute(index, value)
-        print(index, value)
     end)
 
     local pgui = player:WaitForChild("PlayerGui")

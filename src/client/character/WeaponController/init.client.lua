@@ -7,5 +7,3 @@
 local controller = require(game:GetService("ReplicatedStorage").Services.WeaponService.WeaponController).new()
 local interface = require(script:WaitForChild("Interface"))
 interface.init(controller)
-
-print("weaponcontroller init")
