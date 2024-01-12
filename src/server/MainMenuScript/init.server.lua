@@ -11,5 +11,4 @@ Players.PlayerAdded:Connect(function(player)
     clone:SetAttribute("IsAdmin", Admins:IsAdmin(player))
     clone:SetAttribute("MenuType", GamemodeService2.MenuType)
     clone.Parent = player.PlayerGui
-    GamemodeService2:SetMenuType(GamemodeService2.MenuType)
 end)

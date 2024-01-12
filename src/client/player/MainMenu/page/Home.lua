@@ -253,7 +253,6 @@ function Home:QueueButtonClicked(card, queue)
                 tween:Play()
             end)
         end
-
     end
 end
 

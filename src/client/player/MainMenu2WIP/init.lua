@@ -23,35 +23,43 @@ local MainMenu = {
     CurrentMenuType = false
 }
 
-function getPage(pageName)
-    return MainMenu.Pages[pageName]
-end
+function getPage(pageName) return MainMenu.Pages[pageName] end
+function getPages() return MainMenu.Pages end
 
-function getPages()
-    return MainMenu.Pages
+function initButtonSounds(self)
+    local bsounds = self.Gui:WaitForChild("Sounds")
+    for i, v in pairs(Enum_ButtonSoundNames) do
+        self.ButtonSounds[i] = bsounds:FindFirstChild(v)
+    end
 end
 
 function menuTypeChanged(newMenuType)
     local self = MainMenu
-    if self.CurrentMenuType == newMenuType then
-        return
-    end
+    if self.CurrentMenuType == newMenuType then return end
     for _, page in pairs(getPages()) do
         page:MenuTypeChanged(newMenuType)
     end
 end
 
-function MainMenu:Initialize(gui)
-    -- init pages
-    self.Gui = gui
+function initPages(self)
+    -- Frames which names end in "Frame: are initialized as pages and moved to Pages Folder
+    local pagesFolder = Instance.new("Folder", self.Gui)
+    pagesFolder.Name = "Pages"
+    for _, frame in pairs(self.Gui:GetChildren()) do
+        if not string.match(frame.Name, "Frame") then continue end
+        frame.Parent = pagesFolder
+        local pageName = string.gsub(frame.Name, "Frame", "")
 
-    -- init button sounds
-    local bsounds = gui:WaitForChild("Sounds")
-    for i, v in pairs(Enum_ButtonSoundNames) do
-        self.ButtonSounds[i] = bsounds:FindFirstChild(v)
+        -- if we can't find a module for the page, it gets the Base class.
+        local module = script.Page:FindFirstChild(pageName) or script.Page
+        self.Pages[pageName] = require(module).new(self, frame)
     end
+end
 
-    -- init GamemodeService2 MenuType
+function MainMenu:Initialize(gui)
+    self.Gui = gui
+    initPages(self)
+    initButtonSounds(self)
     self.CurrentMenuType = GamemodeService:GetMenuType()
     self.BaseConnections.MenuTypeChanged = GamemodeService:MenuTypeChanged(menuTypeChanged)
 end
@@ -85,6 +93,10 @@ end
 
 function MainMenu:PlayButtonSound(buttonType)
     self.ButtonSounds[buttonType]:Play()
+end
+
+function MainMenu.MenuType()
+    return MainMenu.CurrentMenuType
 end
 
 return MainMenu

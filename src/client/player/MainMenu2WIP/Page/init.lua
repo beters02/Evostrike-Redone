@@ -38,12 +38,15 @@ function Page.new(mainMenu, frame)
             v:Disconnect()
         end
     end
-    self:init()
+    self._init = function()
+        self:MenuTypeChanged(self.Main.MenuType())
+    end
     return self
 end
 
--- Page Initilization, Called in Page.new()
+-- Page Initilization, Called in MainMenuModule when Pages are Initialized
 function Page:init()
+    self._init()
 end
 
 function Page:Open()
@@ -65,6 +68,15 @@ end
 
 -- Change the Page when the MenuType is Changed!
 function Page:MenuTypeChanged(newMenuType)
+end
+
+-- Correctly add a Connection to a page,
+-- Prevents Connections being added to dictionary and overriding the current one, causing a memory leak.
+function Page:AddConnection(name, connection)
+    if self.Connections[name] then
+        self.Connections[name]:Disconnect()
+    end
+    self.Connections[name] = connection
 end
 
 return Page
