@@ -22,7 +22,8 @@ function page.init(self, isPlayerAdmin) -- self = main
         _page[i] = v
     end
     
-    _page._loc = self.player.PlayerScripts.MainMenu.page
+    print(self)
+    _page._loc = game.Players.LocalPlayer.PlayerScripts.MainMenu.page
     _page._baseClass = require(_page._loc:WaitForChild("Base"))
     _page._stored = {}
 

@@ -2,10 +2,12 @@
     Keep engineering the Join/Leave Queue Solution
 ]]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local NetClient = require(Framework.Module.NetClient)
-local EvoMM = require(Framework.Module.EvoMMWrapper)
+-- CONFIG
+local QUEUE_TEXT_FADE_TIME = 0.37
+--
+
+local TweenService = game:GetService("TweenService")
+local Queuer = require(script:WaitForChild("Queuer"))
 
 local Page = require(script.Parent)
 local HomePage = setmetatable({}, Page)
@@ -16,9 +18,9 @@ function HomePage.new(mainMenu, frame)
     self.SoloButton = self.Frame:WaitForChild("Card_Solo")
     self.CasualButton = self.Frame:WaitForChild("Card_Casual")
 
-    self.SoloPopupReqest = self.Frame.Parent:WaitForChild("SoloPopupRequest") --todo: chnge name to SoloFrame
-    self.SoloStableButton = self.SoloPopupReqest:WaitForChild("Card_Stable")
-    self.SoloCancelButton = self.SoloPopupReqest:WaitForChild("Card_Cancel")
+    self.SoloPopupRequest = self.Main.Gui:WaitForChild("SoloPopupRequest") --todo: chnge name to SoloFrame
+    self.SoloStableButton = self.SoloPopupRequest:WaitForChild("Card_Stable")
+    self.SoloCancelButton = self.SoloPopupRequest:WaitForChild("Card_Cancel")
 
     self.CasualFrame = self.Frame.Parent:WaitForChild("CasualFrame")
     self.CasualBackButton = self.CasualFrame:WaitForChild("Button_Back")
@@ -27,13 +29,18 @@ function HomePage.new(mainMenu, frame)
     self.InventoryButton = self.Frame:WaitForChild("MainButton_Inventory")
     self.OptionsButton = self.Frame:WaitForChild("MainButton_Options")
     self.StatsButton = self.Frame:WaitForChild("MainButton_Stats")
-
     self.BottomButton = self.Frame:WaitForChild("Card_Bottom")
+
     -- BottomButtonCallback changes depending on the MenuType.
     self.BottomButtonCallback = joinGameButtonClicked
 
-    self.LastQueueRequest = 0
-    self.IsInQueue = false
+    self.Tweens = {
+        Connections = {},
+        QueueTextFadeOut = TweenService:Create(self.Casual1v1Button.InQueueText.TextLabel, TweenInfo.new(QUEUE_TEXT_FADE_TIME, Enum.EasingStyle.Cubic), {TextTransparency = 1}),
+        QueueTextFadeIn = TweenService:Create(self.Casual1v1Button.InQueueText.TextLabel, TweenInfo.new(QUEUE_TEXT_FADE_TIME, Enum.EasingStyle.Cubic), {TextTransparency = 0})
+    }
+
+    return self
 end
 
 function HomePage:Open()
@@ -77,6 +84,10 @@ function HomePage:MenuTypeChanged(newMenuType)
     end
 end
 
+--
+--
+--
+
 -- Opens "SoloPopupRequest" page, connects more buttons.
 function soloMainButtonClicked(self)
     if self.SoloPopupRequest.Visible then
@@ -84,37 +95,32 @@ function soloMainButtonClicked(self)
     end
     self.Frame.Visible = false
     self.SoloPopupRequest.Visible = true
-
     local processingDebounce = false
+
+    -- Confirm the teleport
     self:AddConnection("SoloStableButton", self.SoloStableButton.MouseButton1Click:Once(function()
         if processingDebounce then return end
         processingDebounce = true
-        soloStableButtonClicked(self)
+        --Popup.burst("Teleporting!", 3)
+        self.Location.Parent.SoloPopupRequest.Visible = false
+        self.Location.Visible = true
+        --RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Stable")
+        self.Connections.SoloCancelButton:Disconnect()
+        self.Connections.SoloStableButton:Disconnect()
         processingDebounce = nil
     end))
+
+    -- Cancel the teleport
     self:AddConnection("SoloCancelButton", self.SoloCancelButton.MouseButton1Click:Connect(function()
         if processingDebounce then return end
         processingDebounce = true
-        soloCancelButtonClicked(self)
+        self.SoloPopupRequest.Visible = false
+        self.Location.Parent.SoloPopupRequest.Visible = false
+        self.Frame.Visible = true
+        self.Connections.SoloStableButton:Disconnect()
+        self.Connections.SoloCancelButton:Disconnect()
         processingDebounce = nil
     end))
-end
-
-function soloStableButtonClicked(self)
-    --Popup.burst("Teleporting!", 3)
-    self.Location.Parent.SoloPopupRequest.Visible = false
-    self.Location.Visible = true
-    --RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Stable")
-    self.Connections.SoloCancelButton:Disconnect()
-    self.Connections.SoloStableButton:Disconnect()
-end
-
-function soloCancelButtonClicked(self)
-    self.SoloPopupRequest.Visible = false
-    self.Location.Parent.SoloPopupRequest.Visible = false
-    self.Frame.Visible = true
-    self.Connections.SoloStableButton:Disconnect()
-    self.Connections.SoloCancelButton:Disconnect()
 end
 
 -- Opens "Casual Page", connects more buttons.
@@ -122,32 +128,26 @@ function casualMainButtonClicked(self)
     self.Frame.Visible = false
     self.CasualFrame.Visible = true
 
+    -- Queue for 1v1
     self:AddConnection("Casual1v1Button", self.CasualBackButton.MouseButton1Click:Connect(function()
         casualQueueButtonClicked(self)
     end))
+
+    -- Go back to Home Page
     self:AddConnection("CasualBackButton", self.CasualBackButton.MouseButton1Click:Connect(function()
-        casualBackButtonClicked(self)
+        self.Frame.Visible = true
+        self.CasualFrame.Visible = false
+        self.Connections.Casual1v1Button:Disconnect()
+        self.Connections.CasualBackButton:Disconnect()
     end))
 end
 
 function casualQueueButtonClicked(self)
-    if tick() - self.LastQueueRequest < 2 then
-        return false
-    end
-    self.LastQueueRequest = tick()
-
-    if self.IsInQueue then
-        removePlayerfromQueue(self)
-    else
+    if not Queuer.IsInQueue then
         addPlayerToQueue(self)
+    else
+        removePlayerfromQueue(self)
     end
-end
-
-function casualBackButtonClicked(self)
-    self.Frame.Visible = true
-    self.CasualFrame.Visible = false
-    self.Connections.Casual1v1Button:Disconnect()
-    self.Connections.CasualBackButton:Disconnect()
 end
 
 -- Opens other MainMenu Page
@@ -164,23 +164,51 @@ function joinGameButtonClicked(self)
 end
 
 function addPlayerToQueue(self)
-    local success = NetClient:MakeRequest(function()
-        return EvoMM:AddPlayerToQueue(game.Players.LocalPlayer, "1v1")
-    end)
+    changeQueueText(self, "JOINING QUEUE...")
+
+    local success = Queuer.Join()
     if success then
-        self.IsInQueue = true
+        changeQueueText(self, "LOOKING FOR GAME")
         --Popup "Added to queue"
+    else
+        changeQueueText(self, "COULD NOT JOIN QUEUE, PLEASE TRY AGAIN", 3)
     end
 end
 
 function removePlayerfromQueue(self)
-    local success = NetClient:MakeRequest(function()
-        return EvoMM:RemovePlayerFromQueue(game.Players.LocalPlayer)
-    end)
-    if success then
-        self.IsInQueue = false
-        --Popup "Removed from queue"
+    changeQueueText(self, "LEAVING QUEUE...")
+    Queuer.Leave()
+    changeQueueText(self, "SUCCESSFULLY LEFT QUEUE", 3)
+end
+
+function changeQueueText(self, new, toggleLength: number?) -- if toggleLength, text will disappear after set time
+    local label = self.Casual1v1Button.InQueueText.TextLabel
+    local outTween = self.Tweens.QueueTextFadeOut
+    local inTween  = self.Tweens.QueueTextFadeIn
+
+    if outTween.PlaybackState == Enum.PlaybackState.Playing then
+        outTween:Pause()
+    elseif inTween.PlaybackState == Enum.PlaybackState.Playing then
+        inTween:Cancel()
     end
+
+    for _, v in pairs(self.Tweens.Connections) do
+        v:Disconnect()
+    end
+
+    table.insert(self.Tweens.Connections, outTween.Completed:Once(function()
+        label.Text = new
+        inTween:Play()
+    end))
+
+    if toggleLength then
+        table.insert(self.Tweens.Connections, inTween.Completed:Once(function()
+            task.wait(toggleLength)
+            outTween:Play()
+        end))
+    end
+
+    outTween:Play()
 end
 
 return HomePage

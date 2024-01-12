@@ -97,9 +97,9 @@ end)
 --
 
 -- Gamemode Service
-local Bridge = Framework.Service.GamemodeService2.Bridge
+local GamemodeServiceRemoteEvent = Framework.Service.GamemodeService2:WaitForChild("RemoteEvent")
 
-Bridge.OnClientEvent:Connect(function(action, var)
+GamemodeServiceRemoteEvent.OnClientEvent:Connect(function(action, var)
     if action == "ChangeMenuType" then
         require(game.Players.LocalPlayer.PlayerScripts.MainMenu).setMenuType(var)
     end

@@ -259,6 +259,8 @@ end
 -- | Gamemodes |
 
 function Home:SetMenuType(menuType: string)
+    print(menuType)
+
     local main = self._main
     self.var.currentMenuType = menuType
 

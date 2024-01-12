@@ -1,5 +1,5 @@
 -- Module to unify Net Requests coming from the Client
--- Kinda WIP i cant think rn
+-- TODO: Add Request Queueing System so Requests arent Overridden
 if game:GetService("RunService"):IsServer() then return end
 
 export type Request = {
