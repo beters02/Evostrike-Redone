@@ -71,7 +71,6 @@ function module:RemovePlayerFromQueue(player)
     return MatchmakingService:RemovePlayerFromQueue(player)
 end
 
-
 function module:GetGamemodeQueueCount(gamemode)
     if RunService:IsClient() then
         return Bridge:InvokeServer("GetGamemodeQueueCount", gamemode)

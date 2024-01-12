@@ -10,6 +10,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Players = game:GetService("Players")
 local States = require(Framework.Module.m_states)
 local UIState = States.State("UI")
+local GamemodeService = require(Framework.Service.GamemodeService2)
 local player = Players.LocalPlayer
 
 local main = {}
@@ -36,25 +37,29 @@ function main.initialize(gui)
 			main.var.loading = false
 		end)
 	end
+
+	main.typeChangedConn = GamemodeService:MenuTypeChanged(function(new)
+		main.setMenuType(new)
+		main.var.menuType = new
+	end)
+	main.setMenuType(main.var.menuType)
 	return main
 end
 
 -- menu type
 type MenuType = "Game" | "Lobby"
 function main.setMenuType(mtype: MenuType)
-	if not main.isInit then
-		if not main.processing then
-			main.processing = task.spawn(function()
-				print("MainMenu accessed before init. Waiting..")
-				repeat task.wait() until main.isInit
-				main.setMenuType(mtype)
-				main.processing = nil
-			end)
-		end
+	-- Dont allow access before init
+	if not main.isInit and not main.processing then
+		main.processing = task.spawn(function()
+			print("MainMenu accessed before init. Waiting..")
+			repeat task.wait() until main.isInit
+			main.setMenuType(mtype)
+			main.processing = nil
+		end)
 		return
 	end
 	main.page._stored.Home:SetMenuType(mtype)
-	print("Set MainMenu Type!")
 end
 
 -- main
