@@ -1,6 +1,6 @@
 local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local States = require(Framework.Module.m_states)
+local States = require(Framework.Module.States)
 local Math = require(Framework.Module.lib.fc_math)
 local RaycastHitbox = require(Framework.Module.lib.c_raycasthitbox)
 
@@ -86,7 +86,7 @@ function Knife:Fire(AttackType: AttackType)
 	if not self.Variables.equipped and self.Variables.equipping then return end
 	if self.Variables.firing then return end
 	self.Variables.firing = true
-	States.SetStateVariable("PlayerActions", "shooting", true)
+	States:Get("PlayerActions"):set("shooting", true)
 
 	-- damage, animations, sounds
 	task.spawn(function() self:Attack(AttackType) end)
@@ -96,7 +96,7 @@ function Knife:Fire(AttackType: AttackType)
 	task.spawn(function()
 		repeat task.wait() until tick() >= nextFire
 		self.Variables.firing = false
-		States.SetStateVariable("PlayerActions", "shooting", false)
+		States:Get("PlayerActions"):set("shooting", false)
 	end)
 end
 

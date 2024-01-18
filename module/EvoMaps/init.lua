@@ -161,6 +161,7 @@ if RunService:IsServer() then
         
         destroy_current_map()
         task.wait()
+        
         tspawn(load_lighting, mobj)
         load_terrain(mobj)
         load_map(mobj)

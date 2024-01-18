@@ -12,7 +12,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local framework = require(game.ReplicatedStorage.Framework)
-local uistate = require(framework.Module.m_states).State("UI")
+local uistate = require(framework.Module.States):Get("UI")
 local gui = script:WaitForChild("Gui")
 local mainFrame = gui:WaitForChild("MainFrame")
 local loadoutButton = mainFrame:WaitForChild("LoadoutButton")

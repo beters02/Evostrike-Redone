@@ -14,11 +14,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService('UserInputService')
 local RunService = game:GetService("RunService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local States = require(Framework.Module.m_states)
+local States = require(Framework.Module.States)
 local SoundModule = require(Framework.Module.Sound)
 local Strings = require(Framework.Module.lib.fc_strings)
 local PlayerData2 = require(Framework.Module.PlayerData)
-local MovementState = States.State("Movement")
+local MovementState = States:Get("Movement")
 local Promise = require(Framework.Module.lib.c_promise)
 local instanceLib = require(Framework.Module.lib.fc_instance)
 
@@ -250,7 +250,7 @@ function Movement.Run(hitPosition, hitNormal, hitMaterial)
 
 	if not onGroundMovementState then
 		onGroundMovementState = true
-		MovementState:set(player, "grounded", true)
+		MovementState:set("grounded", true)
 	end
 
 end
@@ -310,12 +310,12 @@ function landFinish()
 	cconn:Disconnect()
 	landProcessing = false
 	landing = false
-	MovementState:set(player, "landing", false)
+	MovementState:set("landing", false)
 end
 
 function Movement.Land(fric: number, waitTime: number, hitMaterial)
 
-	MovementState:set(player, "landing", true)
+	MovementState:set("landing", true)
 
 	fric = fric or (Movement.dashing and dashModule.Options.landingMovementDecreaseFriction) or Movement.landingMovementDecreaseFriction
 	waitTime = waitTime or (Movement.dashing and dashModule.Options.landingMovementDecreaseLength) or Movement.landingMovementDecreaseLength
@@ -402,7 +402,7 @@ function Movement.Crouch(crouch: boolean)
 		hum.CameraOffset = Vector3.new(0, -Movement.crouchDownAmount, 0)
 
 		-- movement state
-		MovementState:set(player, "crouching", true)
+		MovementState:set("crouching", true)
 		Movement.crouching = true
 
 	else
@@ -418,7 +418,7 @@ function Movement.Crouch(crouch: boolean)
 		hum.CameraOffset = Vector3.new(0, Movement.defaultCameraHeight, 0)
 
 		-- movement state
-		MovementState:set(player, "crouching", false)
+		MovementState:set("crouching", false)
 		Movement.crouching = false
 
 	end
@@ -763,7 +763,7 @@ function Movement.ProcessMovement()
 				-- this is so the function wont overload the server with remotes
 				inAirMovementState = true
 				onGroundMovementState = false
-				MovementState:set(player, "grounded", false)
+				MovementState:set("grounded", false)
 			end
 		end
 

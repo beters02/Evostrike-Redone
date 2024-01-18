@@ -44,7 +44,7 @@ end
 --
 
 --States
-local statesloc = Framework.Module.m_states
+--[[local statesloc = Framework.Module.m_states
 local states = require(statesloc)
 local statesMainRF: RemoteFunction = statesloc.remote.RemoteFunction
 function init_connections()
@@ -67,7 +67,8 @@ function remote_main(player, action, ...)
     elseif action == "setVar" then
         return remote_setStateVar(...)
     end
-end
+end]]
+local States = require(Framework.Module.States)
 --
 
 --Sound

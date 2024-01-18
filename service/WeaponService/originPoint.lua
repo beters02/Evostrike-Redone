@@ -8,11 +8,11 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Tables = require(ReplicatedStorage.lib.fc_tables)
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local States = require(Framework.Module.m_states)
+local States = require(Framework.Module.States)
 local Math = require(Framework.Module.lib.fc_math)
 local InstLib = require(Framework.shfc_instance.Location)
-local UIState = States.State("UI")
-local PlayerActionsState = States.State("PlayerActions")
+local UIState = States:Get("UI")
+local PlayerActionsState = States:Get("PlayerActions")
 --local Types = require(script.Parent.Types)
 local SoundModule = require(Framework.Module.Sound)
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
@@ -222,7 +222,7 @@ function Weapon:Remove()
 end
 
 function Weapon:PrimaryFire()
-    if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get(self.Player, "grenadeThrowing") then return end
+    if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get("grenadeThrowing") then return end
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
     local fireTick = tick()
 
@@ -231,7 +231,7 @@ function Weapon:PrimaryFire()
     end
 
     -- set var
-    PlayerActionsState:set(self.Player, "shooting", true)
+    PlayerActionsState:set("shooting", true)
 
 	self.Variables.firing = true
 	self.Variables.ammo.magazine -= 1
@@ -281,7 +281,7 @@ function Weapon:PrimaryFire()
 	task.spawn(function()
 		repeat task.wait() until tick() >= nextFire
 		self.Variables.firing = false
-        PlayerActionsState:set(self.Player, "shooting", false)
+        PlayerActionsState:set("shooting", false)
 	end)
 
 	-- update hud
@@ -327,7 +327,7 @@ function Weapon:Reload()
         self:ScopeOut()
     end
 
-    PlayerActionsState:set(self.Player, "reloading", true)
+    PlayerActionsState:set("reloading", true)
 	
 	task.spawn(function()
         self:PlayAnimation("client", "Reload", true)
@@ -345,7 +345,7 @@ function Weapon:Reload()
 	self.Variables.infoFrame.CurrentTotalAmmoLabel.Text = tostring(total)
 
 	self.Variables.reloading = false
-	PlayerActionsState:set(self.Player, "reloading", false)
+	PlayerActionsState:set("reloading", false)
 end
 
 function Weapon:Inspect()
@@ -723,7 +723,7 @@ end
 function Weapon:_ProcessEquipAnimation()
     self.Controller:_StopAllVMAnimations()
 	
-    local _throwing = PlayerActionsState:get(self.Player, "grenadeThrowing")
+    local _throwing = PlayerActionsState:get("grenadeThrowing")
 	if _throwing then
         require(Framework.Service.AbilityService):StopAbilityAnimations()
 	end
@@ -987,14 +987,14 @@ function Weapon:CalculateMovementInaccuracy(baseAccuracy)
 	
 	-- movement speed inacc
 	local movementSpeed = player.Character.HumanoidRootPart.Velocity.Magnitude
-	local mstate = States.State("Movement")
+	local mstate = States:Get("Movement")
 	local rspeed = self.MovementCfg.walkMoveSpeed + math.round((self.MovementCfg.groundMaxSpeed - self.MovementCfg.walkMoveSpeed)/2)
 
-	if mstate:get(player, "landing") or (movementSpeed > 14 and movementSpeed < rspeed) then
+	if mstate:get("landing") or (movementSpeed > 14 and movementSpeed < rspeed) then
 		baseAccuracy = weaponOptions.accuracy.walk
 	elseif movementSpeed >= rspeed then
 		baseAccuracy = weaponOptions.accuracy.run
-	elseif mstate:get(player, "crouching") then
+	elseif mstate:get("crouching") then
 		baseAccuracy = weaponOptions.accuracy.crouch
 	end
 	

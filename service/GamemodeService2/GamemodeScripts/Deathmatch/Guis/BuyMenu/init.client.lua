@@ -1,7 +1,7 @@
 local gui = script:WaitForChild("Gui")
 local main = gui:WaitForChild("MainFrame")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local UIState = require(Framework.Module.m_states).State("UI")
+local UIState = require(Framework.Module.States):Get("UI")
 
 --local remoteEvent = script:WaitForChild("Events"):WaitForChild("RemoteEvent")
 local buyMenuEvent = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("BuyMenuSelected")
@@ -53,7 +53,6 @@ end)
 
 local player = game:GetService("Players").LocalPlayer
 local framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local uistate = require(framework.Module.m_states).State("UI")
 
 -- connect open
 game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
@@ -61,11 +60,11 @@ game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
 	if input.KeyCode == Enum.KeyCode.B then
 		if gui.Enabled then
 			gui.Enabled = false
-			uistate:removeOpenUI("BuyMenu")
+			UIState:removeOpenUI("BuyMenu")
 		else
-			if uistate:getOpenUI("MainMenu") then return end
+			if UIState:getOpenUI("MainMenu") then return end
 			gui.Enabled = true
-			uistate:addOpenUI("BuyMenu", gui, true)
+			UIState:addOpenUI("BuyMenu", gui, true)
 		end
 	end
 end)

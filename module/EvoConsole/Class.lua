@@ -5,7 +5,8 @@ local Types = require(EvoConsole.Types)
 local Tables = require(EvoConsole.Tables)
 local Configuration = require(EvoConsole.Configuration)
 
-local States = require(Framework.Module.m_states)
+local States = require(Framework.Module.States)
+local UIState = States:Get("UI")
 
 local class = {}
 class.__index = class
@@ -65,7 +66,7 @@ end
 function class:Open()
     self:ConnectCommandRegister()
 
-    States.State("UI"):addOpenUI("Console", self.console.UI, true)
+    UIState:addOpenUI("Console", self.console.UI, true)
 
     -- start at bottom
     self.console.UI.MainFrame.TextReturnFrame.CanvasPosition = Vector2.new(0, self.console.UI.MainFrame.TextReturnFrame.AbsoluteCanvasSize.Y)
@@ -81,7 +82,7 @@ end
 function class:Close()
     self:DisconnectCommandRegister()
 
-    States.State("UI"):removeOpenUI("Console")
+    UIState:removeOpenUI("Console")
     print('removed')
 
     self.console.UI.Enabled = false

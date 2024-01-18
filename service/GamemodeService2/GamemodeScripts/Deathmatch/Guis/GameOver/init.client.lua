@@ -10,7 +10,7 @@ local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local UIState = require(Framework.Module.m_states).State("UI")
+local UIState = require(Framework.Module.States):Get("UI")
 
 local localPlayer = Players.LocalPlayer
 local gui = script:WaitForChild("Gui")

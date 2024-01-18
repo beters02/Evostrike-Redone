@@ -8,9 +8,8 @@ local player = game:GetService("Players").LocalPlayer
 if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
 
 local Console = require(Framework.Module.EvoConsole)
-local States = require(Framework.Module.m_states)
-local StatesRemoteFunction: RemoteFunction = Framework.Module.m_states.remote.RemoteFunction
-local UIState = States.State("UI")
+local States = require(Framework.Module.States)
+local UIState = States:Get("UI")
 local SoundsReplicate = Framework.Module.Sound:WaitForChild("remote"):WaitForChild("replicate")
 require(Framework.Module.EvoMMWrapper)
 task.delay(2, function() require(Framework.Module.EvoPlayer) end)
@@ -26,7 +25,6 @@ Console:Create(game:GetService("Players").LocalPlayer)
 
 -- States
 function init_connections()
-    StatesRemoteFunction.OnClientInvoke = remote_main
 end
 
 function remote_getStateVar(stateName: string, key: string)

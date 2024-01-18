@@ -23,7 +23,7 @@ local PlayerDiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local UserInputService = game:GetService("UserInputService")
 local PlayerData2 = require(Framework.Module.PlayerData)
 local Remote = ReplicatedStorage.Services.WeaponService.Events.RemoteEvent
-local UIState = require(Framework.Module.m_states).State("UI")
+local UIState = require(Framework.Module.States):Get("UI")
 local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon)
 
 --[[ CONFIGURATION ]]

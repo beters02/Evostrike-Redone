@@ -6,10 +6,10 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage.Framework)
 local Sound = require(Framework.Module.Sound)
-local States = require(Framework.Module.m_states)
+local States = require(Framework.Module.States)
 
 local PlayerActionsState
-if RunService:IsClient() then PlayerActionsState = States.State("PlayerActions") end
+if RunService:IsClient() then PlayerActionsState = States:Get("PlayerActions") end
 
 -- [[ Ability ]]
 

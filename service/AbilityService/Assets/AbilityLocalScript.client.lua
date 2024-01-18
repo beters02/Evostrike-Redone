@@ -3,7 +3,7 @@ local UserInputService = game:GetService("UserInputService")
 local Framework = require(game.ReplicatedStorage.Framework)
 local PlayerData2 = require(Framework.Module.PlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
-local UIState = require(Framework.Module.m_states).State("UI")
+local UIState = require(Framework.Module.States):Get("UI")
 local Bindable = Framework.Service.AbilityService.Events.BindableEvent
 local FastCast = require(Framework.Module.lib.c_fastcast)
 

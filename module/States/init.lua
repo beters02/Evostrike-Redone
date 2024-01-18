@@ -103,6 +103,11 @@ function State:setAsync(key: string, new: any)
     self._variables[key] = new
     return new
 end
+
+function State:changed()
+    
+end
+
 -- ]]
 
 --@module [[
