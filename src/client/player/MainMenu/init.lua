@@ -8,8 +8,8 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Players = game:GetService("Players")
-local States = require(Framework.Module.m_states)
-local UIState = States.State("UI")
+local States = require(Framework.Module.States)
+local UIState = States:Get("UI")
 local GamemodeService = require(Framework.Service.GamemodeService2)
 local player = Players.LocalPlayer
 

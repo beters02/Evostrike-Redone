@@ -6,8 +6,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local GamemodeService = require(Framework.Service.GamemodeService2)
-local States = require(Framework.Module.m_states)
-local UIState = States.State("UI")
+local States = require(Framework.Module.States)
+local UIState = States:Get("UI")
+-- work
 
 -- Button Sound Names (Stored in Gui.Sounds)
 local Enum_ButtonSoundNames = {
