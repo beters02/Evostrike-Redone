@@ -10,7 +10,7 @@ local DiedEvent = script:WaitForChild("Events").PlayerDiedRemote
 local EvoPlayer = {}
 
 --@summary Correctly apply damage to the player, checking for shields
-function EvoPlayer:TakeDamage(character, damage, damager)
+function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
     if damager and damager.Humanoid.Health <= 0 then return 0 end
     if not EvoPlayer:CanDamage(character) then return 0 end
     local shield = character:GetAttribute("Shield") or 0
@@ -51,6 +51,10 @@ function EvoPlayer:TakeDamage(character, damage, damager)
     
 
     if RunService:IsServer() then
+        character:SetAttribute("Killer", damager.Name)
+        if damage - character.Humanoid.Health <= 0 then
+            character:SetAttribute("WeaponUsedToKill", weaponUsed)
+        end
         character.Humanoid:TakeDamage(damage)
     end
 

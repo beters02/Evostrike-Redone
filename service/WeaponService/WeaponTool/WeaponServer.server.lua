@@ -109,13 +109,13 @@ function VerifyKnifeDamage(knifeDamageType: KnifeDamageType, damagedHumanoid)
 		EvoPlayer:SetSpawnInvincibility(character, false)
 	end
 	if knifeDamageType == "PrimaryStab" then
-		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.primaryBackstab)
+		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.primaryBackstab, player.Character, "knife")
 	elseif knifeDamageType == "SecondaryStab" then
-		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.secondaryBackstab)
+		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.secondaryBackstab, player.Character, "knife")
 	elseif knifeDamageType == "Secondary" then
-		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.secondary)
+		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.secondary, player.Character, "knife")
 	else -- "Primary" is default
-		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.base)
+		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.base, player.Character, "knife")
 	end
 end
 

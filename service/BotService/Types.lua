@@ -53,6 +53,11 @@ Types.Bot.new = function(botTable: table)
 
     _Bot.PlayerGui = {}
 
+    function _Bot:Destroy()
+        _Bot.Character:Destroy()
+        _Bot = nil
+    end
+
     return _Bot :: Bot
 end
 

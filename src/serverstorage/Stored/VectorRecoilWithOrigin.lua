@@ -132,7 +132,7 @@ function Weapon:Equip()
 		self.Tool:SetAttribute("IsForceEquip", false)
 	else
 		if self.Player:GetAttribute("Typing") then return end
-		if self.Player.PlayerGui.MainMenu.Enabled then return end
+		if self.Player.PlayerGui.MainMenuGui.Enabled then return end
         if UIState:hasOpenUI() then return end
 	end
 

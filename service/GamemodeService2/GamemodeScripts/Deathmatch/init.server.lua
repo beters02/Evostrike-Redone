@@ -33,7 +33,7 @@ local Tables = require(Framework.Module.lib.fc_tables)
 local EvoEconomy = require(Framework.Module.EvoEconomy)
 local EvoPlayer = require(Framework.Module.EvoPlayer)
 local EvoMaps = require(Framework.Module.EvoMaps)
-local GamemodeSpawns = game.ServerStorage.Maps[EvoMaps:GetCurrentMap()].Spawns
+local GamemodeSpawns = game.ServerStorage.CurrentSpawns
 local Maps = require(Framework.Module.EvoMaps)
 local BotService = require(Framework.Service.BotService)
 
@@ -572,5 +572,4 @@ local Interface = {
 }
 
 --@run
-print('starting')
 Start()

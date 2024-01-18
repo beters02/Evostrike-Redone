@@ -12,6 +12,9 @@ pageClass.__index = pageClass
 
 function pageClass.new(main, basePageTable, pageName, isPlayerAdmin)
     local self = basePageTable._loc:FindFirstChild(pageName) and require(basePageTable._loc[pageName]) or {} -- check if page has it's own class
+    print(self)
+    print('udapte')
+
     self.Name = pageName
     self.Location = main.gui[pageName.."Frame"]
     self._mainPageModule = basePageTable
@@ -29,6 +32,7 @@ function pageClass.new(main, basePageTable, pageName, isPlayerAdmin)
     pageClass.initTweens(self)
 
     if self.init then self = self:init(main) end
+
     return setmetatable(self, pageClass)
 end
 

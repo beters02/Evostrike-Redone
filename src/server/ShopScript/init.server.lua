@@ -10,6 +10,7 @@ local Cases = require(ServerStorage.Stored.Cases)
 local Skins = require(ReplicatedStorage.Assets.Shop.Skins)
 local Keys = require(ServerStorage.Stored.Keys)
 local HTTPService = game:GetService("HttpService")
+local SkinsDB = require(ServerStorage.SkinsDatabase)
 
 local Shop = {}
 local RemoteFunctions = {}
@@ -136,6 +137,7 @@ function Shop.SellItem(player, shopItemStr, inventoryItemStr)
     PlayerData:SetPath(player, "ownedItems." .. shopSkin.item_type, skinInventory)
     PlayerData:IncrementPath(player, "economy.strafeCoins", shopSkin.sell_sc or (shopSkin.price_sc*0.75))
     PlayerData:Save(player)
+    SkinsDB:RemoveSkin(inventoryItemStr)
     return true
 end
 

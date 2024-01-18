@@ -7,7 +7,7 @@
     page:CloseAllPages()
 ]]
 
-local page = {}
+local page = {ISPAGEMODULE = true}
 page.__index = page
 
 --[[ Page Module Private Access Functions ]]
@@ -21,8 +21,7 @@ function page.init(self, isPlayerAdmin) -- self = main
         if i == "init" or i == "new" then continue end
         _page[i] = v
     end
-    
-    print(self)
+
     _page._loc = game.Players.LocalPlayer.PlayerScripts.MainMenu.page
     _page._baseClass = require(_page._loc:WaitForChild("Base"))
     _page._stored = {}

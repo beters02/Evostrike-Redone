@@ -10,6 +10,7 @@ Players.PlayerAdded:Connect(function(player)
     local clone = MainMenuGUI:Clone()
     clone:SetAttribute("IsAdmin", Admins:IsAdmin(player))
     clone:SetAttribute("MenuType", GamemodeService2.MenuType)
+    clone.Name = "MainMenuGui"
     clone.Parent = player.PlayerGui
 
     --DELETE THIS AFTER MAINMENU2

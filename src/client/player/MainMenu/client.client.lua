@@ -2,7 +2,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local player = game:GetService("Players").LocalPlayer
-local gui = player.PlayerGui:WaitForChild("MainMenu")
+local gui = player.PlayerGui:WaitForChild("MainMenuGui")
+
+task.wait()
+
+print("initting main meun!!")
 local module = require(script.Parent).initialize(gui)
 local connectOpenInput = script.Parent.events.connectOpenInput
 

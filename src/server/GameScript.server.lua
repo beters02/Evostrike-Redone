@@ -77,7 +77,8 @@ function Stop(restart: boolean?, delayLength: number?, map: string?, newGamemode
     task.delay(delayLength, function()
         Start(CurrentGamemodeBaseScript)
     end)
-    Maps:SetMap(map) -- change map randomly, ignore current map
+    Maps.LoadMap(map)
+    --Maps:SetMap(map) -- change map randomly, ignore current map
 end
 
 -- [[ SCRIPT RUN ]]

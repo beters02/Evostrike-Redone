@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
@@ -178,9 +179,19 @@ function _connectBotDiedEvent(new_bot)
     new_bot.Properties._humDiedConn = hum.Died:Once(function()
         if new_bot.Properties.Destroyed then return end
 
+        local killer = character:FindFirstChild("DamageTag") and character.DamageTag.Value or false
+        if not killer then
+            killer = character:GetAttribute("Killer")
+            if killer then
+                killer = Players[killer]
+            end
+        end
+
+        local weaponUsed = character:GetAttribute("WeaponUsedToKill")
+
         -- death event
-        BotDiedBind:Fire(new_bot, character)
-        PlayerDiedEvent:FireAllClients(character)
+        BotDiedBind:Fire(new_bot, killer, weaponUsed)
+        PlayerDiedEvent:FireAllClients(character, killer, weaponUsed)
         
         if not hum:GetAttribute("Removing") then
             if new_bot.Properties.Respawn then

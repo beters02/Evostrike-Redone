@@ -17,7 +17,8 @@ local DamagedAnimation = hum.Animator:LoadAnimation(DamagedAnimationObj)
 
 hum.Died:Connect(function()
     local killer = char:FindFirstChild("DamageTag") and char.DamageTag.Value or false
-    DiedEvent:FireServer(killer)
+    local weaponUsed = char:GetAttribute("WeaponUsedToKill")
+    DiedEvent:FireServer(killer, weaponUsed)
     DiedBind:Fire(killer)
 end)
 

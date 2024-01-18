@@ -1,10 +1,11 @@
 local Players = game:GetService("Players")
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local EmitParticles = require(Framework.shfc_emitparticle.Location)
---local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService"))
-local GamemodeService = require(game:GetService("ReplicatedStorage"):WaitForChild("Services"):WaitForChild("GamemodeService2"))
-local EvoMaps = require(game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("EvoMaps"))
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local EmitParticles = require(Framework.Module.lib.fc_emitparticle)
+local GamemodeService = require(Framework.Service.GamemodeService2)
+local EvoMaps = require(Framework.Module.EvoMaps)
 local Globals = require(Framework.Module.lib.fc_global)
+local GamemodeEvents = ReplicatedStorage.GamemodeEvents
 
 local ParticlesTable
 task.spawn(function()
@@ -137,8 +138,11 @@ Commands.Map = {
 	Function = function(self, player, mapName)
 		if not Globals.wassert(mapName, "Could not teleport, Map Name is required!") then return end
 		self:Print("Setting map to " .. mapName)
-		GamemodeService:RestartGamemode()
-		EvoMaps:RequestClientSetMap(player, mapName)
+		local canSetMap = EvoMaps:RequestClientSetMap(player, mapName)
+		print(canSetMap)
+		if canSetMap then
+			GamemodeService:RestartGamemode(mapName)
+		end
 	end
 }
 
@@ -223,6 +227,15 @@ Commands.gmhud_test = {
 		task.wait(tonumber(length) or 3)
 		m1.RoundStart()
 		m1.Disable()
+	end
+}
+
+Commands.gmforcestart = {
+	Description = "Forcestart the 2v2 Gamemode",
+	public = false,
+
+	Function = function()
+		GamemodeEvents.Game.ForceStart:FireServer()
 	end
 }
 

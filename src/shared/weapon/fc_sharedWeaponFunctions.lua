@@ -290,7 +290,7 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		char:SetAttribute("lastUsedWeaponHelmetMultiplier", weaponOptions.damage.helmetMultiplier or 1)
 
 		-- apply damage
-		damage, killed = EvoPlayer:TakeDamage(char, damage, player.Character)
+		damage, killed = EvoPlayer:TakeDamage(char, damage, player.Character, weaponOptions.name)
 
         if RunService:IsServer() then
 			-- apply tag so we can easily access damage information
