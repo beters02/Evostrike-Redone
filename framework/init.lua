@@ -61,6 +61,7 @@ end
 ]]
 
 local FrameworkLocation = game:GetService("ReplicatedStorage"):WaitForChild("Framework")
+local RunService = game:GetService("RunService")
 local Types = require(FrameworkLocation:WaitForChild("Types"))
 
 local Framework = {}
@@ -74,5 +75,10 @@ Framework.Module = setmetatable(require(FrameworkLocation.ExplicitCompiler), Fra
 
 -- Services
 Framework.Service = game:GetService("ReplicatedStorage"):WaitForChild("Services")
+
+-- Init Client States
+if RunService:IsClient() then
+    require(Framework.Module.States).initClientStates()
+end
 
 return Framework

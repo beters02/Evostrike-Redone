@@ -53,6 +53,8 @@ local RF = script.Events.RemoteFunction
 local RE = script.Events.RemoteEvent
 local BE = script.Events.BindableEvent
 
+local ClientStates = script:WaitForChild("Client")
+
 function getListener() return RunService:IsClient() and "Client" or "Server" end
 function getSignalKeyForListener(listener) return listener == "Client" and "OnClientEvent" or "OnServerEvent" end
 function getSignalFireKeyForSender(sender) return sender == "Client" and "FireServer" or "FireAllClients" end
@@ -80,19 +82,19 @@ States.__index = function(tab, key)
     return tab[key]
 end
 
-function States:Create(properties: StateProperties, defaultVar: table)
+function States:Create(properties: StateProperties, defaultVar: table, module: ModuleScript?)
     if properties.replicated then
         if RunService:IsClient() then
             properties.owner = "Client"
-            local success, response = RF:InvokeServer("_stateCreateAsync", properties, defaultVar)
+            local success, response = RF:InvokeServer("_stateCreateAsync", properties, defaultVar, module)
             assert(success, response)
         else
             properties.owner = "Server"
-            RE:FireAllClients("_stateCreateAsync", properties, defaultVar)
+            RE:FireAllClients("_stateCreateAsync", properties, defaultVar, module)
         end
     end
 
-    return States:_stateCreateAsync(properties, defaultVar) :: State
+    return States:_stateCreateAsync(properties, defaultVar, module) :: State
 end
 
 function States:Get(ID: string)
@@ -108,13 +110,22 @@ function States:Get(ID: string)
     return state
 end
 
+function States.initClientStates()
+    if RunService:IsServer() then return end
+    for _, module in pairs(ClientStates:GetChildren()) do
+        local req = require(module)
+        States:Create(req.properties, req.defaultVar, module)
+        print('Init state: ' .. req.properties.id)
+    end
+end
+
 --
 
 --@class State
 State = {}
 State.__index = State
 
-function State.new(properties, defaultVariables)
+function State.new(properties, defaultVariables, module)
     properties.owner = properties.owner or getListener()
     local self = setmetatable({}, State) :: State
     self.new = nil
@@ -122,6 +133,15 @@ function State.new(properties, defaultVariables)
     self._variables = hardCopy(defaultVariables)
     self._localListeners = {} -- { {callback} }
     self._globalListeners = {}
+
+    if module then
+        -- Inherit Module Functions
+        for i, v in pairs(require(module)) do
+            if i == "properties" or i == "defaultVar" then continue end
+            self[i] = v
+        end
+    end
+    
     return self
 end
 
@@ -247,8 +267,8 @@ function createListenerChangedConnection(self, listener, owner, callback)
     return BE.Event:Connect(eventHandler)
 end
 
-function States:_stateCreateAsync(properties, defaultVar)
-    local _state = State.new(properties, defaultVar)
+function States:_stateCreateAsync(properties, defaultVar, module)
+    local _state = State.new(properties, defaultVar, module)
     States._cache.storedStates[properties.id] = _state
     return _state :: State
 end

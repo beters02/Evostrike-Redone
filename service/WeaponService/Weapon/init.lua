@@ -10,8 +10,8 @@ local UserInputService = game:GetService("UserInputService")
 local States = require(Framework.Module.States)
 local Math = require(Framework.Module.lib.fc_math)
 local InstLib = require(Framework.shfc_instance.Location)
-local UIState = States.State("UI")
-local PlayerActionsState = States.State("PlayerActions")
+local UIState = States:Get("UI")
+local PlayerActionsState = States:Get("PlayerActions")
 local Types = require(script.Parent.Types)
 local SoundModule = require(Framework.Module.Sound)
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
@@ -158,9 +158,9 @@ function Weapon:Equip()
 	-- var
     self.Variables.forcestop = false
     self.Variables.equipping = true
-    PlayerActionsState:set(self.Player, "weaponEquipping", true)
-    PlayerActionsState:set(self.Player, "weaponEquipped", self.Name)
-    PlayerActionsState:set(self.Player, "currentEquipPenalty", self.Options.movement.penalty)
+    PlayerActionsState:set("weaponEquipping", true)
+    PlayerActionsState:set("weaponEquipped", self.Name)
+    PlayerActionsState:set("currentEquipPenalty", self.Options.movement.penalty)
 
 	-- process equip animation and sounds next frame ( to let unequip run )
 	task.spawn(function() self:_ProcessEquipAnimation() end)
@@ -176,7 +176,7 @@ function Weapon:Equip()
         if success and self.Variables.equipping then
             self.Variables.equipped = true
             self.Variables.equipping = false
-            PlayerActionsState:set(self.Player, "weaponEquipping", false)
+            PlayerActionsState:set("weaponEquipping", false)
         end
 	end)
 
@@ -204,11 +204,11 @@ function Weapon:Unequip()
     self.Variables.firing = false
     self.Variables.reloading = false
 	self.Variables.inspecting = false
-    PlayerActionsState:set(self.Player, "weaponEquipped", false)
-    PlayerActionsState:set(self.Player, "weaponEquipping", false)
-    PlayerActionsState:set(self.Player, "reloading", false)
-    PlayerActionsState:set(self.Player, "shooting", false)
-    PlayerActionsState:set(self.Player, "currentEquipPenalty", 0)
+    PlayerActionsState:set("weaponEquipped", false)
+    PlayerActionsState:set("weaponEquipping", false)
+    PlayerActionsState:set("reloading", false)
+    PlayerActionsState:set("shooting", false)
+    PlayerActionsState:set("currentEquipPenalty", 0)
 
     self.Variables.equipping = false
 
@@ -232,7 +232,7 @@ function Weapon:PrimaryFire(moveSpeed)
     local fireTick = tick()
     --local moveSpeed = self.Character.HumanoidRootPart.Velocity
 
-    if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get(self.Player, "grenadeThrowing") then return end
+    if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get("grenadeThrowing") then return end
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
     
     if not self.Variables.recoilReset then
@@ -240,7 +240,7 @@ function Weapon:PrimaryFire(moveSpeed)
     end
 
     -- set var
-    PlayerActionsState:set(self.Player, "shooting", true)
+    PlayerActionsState:set("shooting", true)
 
 	self.Variables.firing = true
 	self.Variables.ammo.magazine -= 1
@@ -283,7 +283,7 @@ function Weapon:PrimaryFire(moveSpeed)
 	task.spawn(function()
 		repeat task.wait() until tick() >= nextFire
 		self.Variables.firing = false
-        PlayerActionsState:set(self.Player, "shooting", false)
+        PlayerActionsState:set("shooting", false)
 	end)
 
 	-- update hud
@@ -330,7 +330,7 @@ function Weapon:Reload()
         self:ScopeOut()
     end
 
-    PlayerActionsState:set(self.Player, "reloading", true)
+    PlayerActionsState:set("reloading", true)
 	
 	task.spawn(function()
         self:PlayAnimation("client", "Reload", true)
@@ -347,7 +347,7 @@ function Weapon:Reload()
     self.Player.PlayerScripts.HUD:WaitForChild("ReloadGun"):Fire(mag, total)
 
 	self.Variables.reloading = false
-	PlayerActionsState:set(self.Player, "reloading", false)
+	PlayerActionsState:set("reloading", false)
 end
 
 function Weapon:Inspect()
@@ -728,7 +728,7 @@ end
 function Weapon:_ProcessEquipAnimation()
     self.Controller:_StopAllVMAnimations()
 	
-    local _throwing = PlayerActionsState:get(self.Player, "grenadeThrowing")
+    local _throwing = PlayerActionsState:get("grenadeThrowing")
 	if _throwing then
         require(Framework.Service.AbilityService):StopAbilityAnimations()
 	end
@@ -898,14 +898,14 @@ function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
 	
 	-- movement speed inacc
 	local movementSpeed = moveSpeed.Magnitude
-	local mstate = States.State("Movement")
+	local mstate = States:Get("Movement")
 	local rspeed = self.MovementCfg.walkMoveSpeed + math.round((self.MovementCfg.groundMaxSpeed - self.MovementCfg.walkMoveSpeed)/2)
     --local inaccSpeed = 2.9 -- After some testing, 2.8 is a "poorly done" counter-strafe. A good counter strafe results in 1.2 or lower. We will give them 2.9 for now.
     local inaccSpeed = 7 -- 7 feels better for spraying for the time being.
 
-    if mstate:get(player, "crouching") then
+    if mstate:get("crouching") then
         baseAccuracy = weaponOptions.accuracy.crouch
-    elseif mstate:get(player, "landing") or (movementSpeed > inaccSpeed and movementSpeed < rspeed) then
+    elseif mstate:get("landing") or (movementSpeed > inaccSpeed and movementSpeed < rspeed) then
         baseAccuracy = weaponOptions.accuracy.walk
     elseif movementSpeed >= rspeed then
         baseAccuracy = weaponOptions.accuracy.run

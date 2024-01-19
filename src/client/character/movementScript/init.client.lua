@@ -217,7 +217,7 @@ end
 	@summary
 ]]
 
-local PlayerActionsState = States.State("PlayerActions")
+local PlayerActionsState = States:Get("PlayerActions")
 function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	Movement.movementPosition.position = hitPosition + Vector3.new(0, Movement.playerTorsoToGround, 0)
 	Movement.movementPosition.maxForce = Vector3.new(0, Movement.movementPositionForce, 0)
@@ -235,7 +235,7 @@ function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	end
 
 	-- Running Sounds
-	if Movement.movementVelocity.Velocity.Magnitude > Movement.walkNoiseSpeed + PlayerActionsState:get(player, "currentEquipPenalty") then
+	if Movement.movementVelocity.Velocity.Magnitude > Movement.walkNoiseSpeed + PlayerActionsState:get("currentEquipPenalty") then
 		if not runsnd.IsPlaying then SoundModule.PlayReplicated(runsnd, serverRunVolume) end
 	else
 		if runsnd.IsPlaying then SoundModule.StopReplicated(runsnd) end

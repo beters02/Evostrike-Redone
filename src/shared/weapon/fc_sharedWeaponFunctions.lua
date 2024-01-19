@@ -8,7 +8,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 
 local Strings = require(Framework.Module.lib.fc_strings)
 local Math = require(Framework.Module.lib.fc_math)
-local States = require(Framework.Module.m_states)
+local States = require(Framework.Module.States)
 local EvoPlayer = require(Framework.Module.EvoPlayer)
 local EmitParticle = require(Framework.Module.lib.fc_emitparticle)
 local BulletHitUtil = require(script.Parent:WaitForChild("fc_bulletHitUtil"))
@@ -443,14 +443,14 @@ function module.GetMovementInaccuracyVector2(player, baseAccuracy, weaponOptions
 	
 	-- movement speed inacc
 	local movementSpeed = player.Character.HumanoidRootPart.Velocity.Magnitude
-	local mstate = States.State("Movement")
+	local mstate = States:Get("Movement")
 	local rspeed = movementConfig.walkMoveSpeed + math.round((movementConfig.groundMaxSpeed - movementConfig.walkMoveSpeed)/2)
 
-	if mstate:get(player, "landing") or (movementSpeed > 14 and movementSpeed < rspeed) then
+	if mstate:get("landing") or (movementSpeed > 14 and movementSpeed < rspeed) then
 		baseAccuracy = weaponOptions.accuracy.walk
 	elseif movementSpeed >= rspeed then
 		baseAccuracy = weaponOptions.accuracy.run
-	elseif mstate:get(player, "crouching") then
+	elseif mstate:get("crouching") then
 		baseAccuracy = weaponOptions.accuracy.crouch
 	end
 	
