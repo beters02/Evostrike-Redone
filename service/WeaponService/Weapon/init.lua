@@ -14,12 +14,14 @@ local UIState = States:Get("UI")
 local PlayerActionsState = States:Get("PlayerActions")
 local Types = require(script.Parent.Types)
 local SoundModule = require(Framework.Module.Sound)
-local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
 local PlayerData2 = require(Framework.Module.PlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
 local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local WeaponPartCache = require(script.Parent:WaitForChild("WeaponPartCache"))
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
+
+local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
+local Shared = require(Framework.Service.WeaponService.Shared)
 
 function Weapon.new(weapon: string, tool: Tool, recoilScript)
     local weaponModule = require(ReplicatedStorage.Services.WeaponService):GetWeaponModule(weapon)
@@ -817,14 +819,22 @@ function Weapon:RegisterRecoils(moveSpeed)
     local direction = self:CalculateRecoils(mray, vecRecoil, bullet, moveSpeed)
 
     -- check to see if we're wallbanging
-    local wallDmgMult, hitchar, result
+    local wallDmgMult, hitchar, result, isBangable
     local normParams = SharedWeaponFunctions.getFireCastParams(self.Player, workspace.CurrentCamera)
     wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
+    isBangable = wallDmgMult and true or false
 
     if result then
         self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
+        
         -- register client shot for bullet/blood/sound effects
+        local resultData: Shared.ShotResultData = {
+            shooter = self.Player, tool = self.Tool, model = self.ClientModel, weaponOptions = self.Options, result = result,
+            origin = mray.Origin, hitCharacter = hitchar, isBangable = isBangable, wallbangDmgMult = wallDmgMult or 1
+        }
+
         SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
+        --Shared.RegisterShot(resultData)
         return true
     end
 

@@ -475,7 +475,10 @@ end
 
 function GuiPlayerInitialSpawn(player)
     PlayerDataGet(player)
-    local gui = Gui(player, "PlayerInitialSpawn", false, {"DestroyOnPlayerSpawning_" .. player.Name, "DestroyOnStop"}, {KilledString = "Spawn"})
+    local gui = Gui(player, "PlayerInitialSpawn", false, {"DestroyOnPlayerSpawning_" .. player.Name, "DestroyOnStop"}, {
+        KilledString = "Spawn",
+        StartCF = GameData.Options.starting_camera_cframe_map[GamemodeService2.CurrentMap] or GameData.Options.starting_camera_cframe_map.default
+    })
 
     PlayerData[player.Name].Connections.Respawn = gui:WaitForChild("Events"):WaitForChild("RemoteEvent").OnServerEvent:Connect(function(plr, action)
         if plr ~= player then return end

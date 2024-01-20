@@ -1,3 +1,5 @@
+-- Requires GamemodeService2
+
 -- CONFIG
 local _logpref = "[EVOSTRIKE Maps] "
 
@@ -7,6 +9,10 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local InsertService = game:GetService("InsertService")
 local ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local GamemodeService = require(Framework.Service.GamemodeService2)
 
 local remoteFunction = script:WaitForChild("RemoteFunction")
 
@@ -167,6 +173,7 @@ if RunService:IsServer() then
         load_map(mobj)
 
         print(_logpref .. upper"finished loading map")
+        GamemodeService.CurrentMap = map
     end
 
 end

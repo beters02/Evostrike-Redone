@@ -12,6 +12,7 @@ local GamemodeService = {}
 GamemodeService.Location = script
 GamemodeService.DefaultGamemode = "Deathmatch"
 GamemodeService.MenuType = "Lobby"
+GamemodeService.CurrentMap = "warehouse"
 
 local RemoteFunction = script:WaitForChild("RemoteFunction")
 local RemoteEvent = script:WaitForChild("RemoteEvent")
