@@ -68,6 +68,7 @@ Shared.def.options = {
         primaryWeapon = "One",
         secondaryWeapon = "Two",
         ternaryWeapon = "Three",
+        bombWeapon = "Five",
         primaryAbility = "F",
         secondaryAbility = "V",
         interact = "E",

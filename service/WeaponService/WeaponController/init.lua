@@ -29,12 +29,27 @@ local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponServi
 --[[ CONFIGURATION ]]
 local ForceEquipDelay = 0.9
 local EquipInputDebounce = 0.04
-local NeededKeybindKeys = {"primaryWeapon", "secondaryWeapon", "ternaryWeapon", "inspect", "drop", "equipLastEquippedWeapon", "aimToggle"}
+local NeededKeybindKeys = {"primaryWeapon", "secondaryWeapon", "ternaryWeapon", "bombWeapon", "inspect", "drop", "equipLastEquippedWeapon", "aimToggle"}
 local util_vmParts = {"LeftLowerArm", "LeftUpperArm", "RightUpperArm", "RightLowerArm"}
+
+--[[ EQUIP KEYBIND ACTIONS ]]
+local BaseEquipKeybindActions = {
+    equipLast = function(self)
+        if not self.Inventory.last_equipped then return end
+        self.BaseInputDebounce = tick() + EquipInputDebounce
+        self:EquipWeapon(self.Inventory.last_equipped.Slot)
+        return
+    end,
+    
+    equipNew = function(self, slot)
+        self.BaseInputDebounce = tick() + EquipInputDebounce
+        self:EquipWeapon(slot)
+    end
+}
 
 function WeaponController.new()
     local self = {}
-    self.Inventory = {equipped = false, last_equipped = false, primary = false, secondary = false, ternary = false}
+    self.Inventory = {equipped = false, last_equipped = false, primary = false, secondary = false, ternary = false, bomb = false}
     self.Connections = {}
     self.Owner = Players.LocalPlayer
     self.Humanoid = self.Owner.Character:WaitForChild("Humanoid")
@@ -46,16 +61,7 @@ function WeaponController.new()
     self.MovementCommunicate = require(self.Owner.Character:WaitForChild("MovementScript"):WaitForChild("Communicate"))
     self.GroundMaxSpeed = self.MovementCommunicate.GetVar("groundMaxSpeed")
 
-    -- init keybinds
-    local playerOptions = PlayerData2:GetPath("options.keybinds")
-    self.Keybinds = {}
-    for i, v in pairs(Tables.clone(NeededKeybindKeys)) do
-        self.Keybinds[v] = playerOptions[v]
-        table.remove(self.Keybinds, i)
-        self.Connections["KeybindChanged_" .. v] = PlayerData2:PathValueChanged("options.keybinds." .. v, function(new)
-            self.Keybinds[v] = new
-        end)
-    end
+    util_initKeybinds(self)
 
     self = setmetatable(self, WeaponController)
 
@@ -219,24 +225,7 @@ end
 function WeaponController:WeaponControllerBaseInputBegan(input, gp)
     if UIState:hasOpenUI() or gp then return end
     if tick() < self.BaseInputDebounce then return end
-
-    if input.KeyCode == Enum.KeyCode[self.Keybinds.equipLastEquippedWeapon] then
-        if not self.Inventory.last_equipped then return end
-        self.BaseInputDebounce = tick() + EquipInputDebounce
-        self:EquipWeapon(self.Inventory.last_equipped.Slot)
-        return
-    else
-        for _, slot in pairs({"primary", "secondary", "ternary"}) do
-            local kc = false
-            pcall(function() kc = input.KeyCode == Enum.KeyCode[self.Keybinds[slot .. "Weapon"]] end)
-            if kc then
-                self.BaseInputDebounce = tick() + EquipInputDebounce
-                self:EquipWeapon(slot)
-                return
-            end
-        end
-    end
-
+    self.EquipKeybindActions[input.KeyCode.Name]()
     self.BaseInputDebounce = 0 -- reset debounce if nothing is happening
 end
 
@@ -244,6 +233,14 @@ end
 function WeaponController:HandleHoldMovementPenalty(slot: string)
 	local wep = self.Inventory[slot]
     self.MovementCommunicate.SetVar("equippedWeaponPenalty", wep.Options.movement.penalty)
+end
+
+--@summary Stop all current vm animations
+function WeaponController:_StopAllVMAnimations()
+    for _, v in pairs(workspace.CurrentCamera.viewModel.AnimationController:GetPlayingAnimationTracks()) do
+        v = v :: AnimationTrack
+		v:Stop()
+	end
 end
 
 --@summary Request Equip -> Request Unequip Equipped -> Set Equipped WeaponModel Transparency thru Coro, set VM Transparency normally
@@ -292,12 +289,34 @@ function util_processUnequipTransparency(model)
     vm.LeftHand.LeftGlove.Transparency = 1
 end
 
---@summary Stop all current vm animations
-function WeaponController:_StopAllVMAnimations()
-    for _, v in pairs(workspace.CurrentCamera.viewModel.AnimationController:GetPlayingAnimationTracks()) do
-        v = v :: AnimationTrack
-		v:Stop()
-	end
+--@summary Initialize WeaponController Keybinds and Keybind Changed
+function util_initKeybinds(self)
+    local playerOptions = PlayerData2:GetPath("options.keybinds")
+    self.Keybinds = {}             -- {Action = Key (string)}
+    self.EquipKeybindActions = {}  -- {Key = Action (func)}
+
+    -- convert primaryWeapon -> primary, for all equip keybinds
+    for _, keyAction in pairs(NeededKeybindKeys) do
+        local currKey = util_setKeybind(self, keyAction, false, false, playerOptions)
+        self.Connections["KeybindChanged_" .. keyAction] = PlayerData2:PathValueChanged("options.keybinds." .. keyAction, function(new)
+            currKey = util_setKeybind(self, keyAction, new, currKey, playerOptions)
+        end)
+    end
+end
+
+--@summary Set the keybind as new from old or get from playerOptions
+function util_setKeybind(self, action, newKey, oldKey, playerOptions)
+    local key = newKey or playerOptions[action]
+    if action == "equipLastEquippedWeapon" then
+        if oldKey then self.EquipKeybindActions[oldKey] = nil end
+        self.EquipKeybindActions[key] = function() BaseEquipKeybindActions.equipLast(self) end
+    elseif string.match(action, "Weapon") then
+        if oldKey then self.EquipKeybindActions[oldKey] = nil end
+        self.EquipKeybindActions[key] = function() BaseEquipKeybindActions.equipNew(self, string.gsub(key, "Weapon", "")) end
+    else
+        self.Keybinds[action] = key
+    end
+    return key
 end
 
 return WeaponController
