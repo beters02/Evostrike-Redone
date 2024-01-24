@@ -33,10 +33,6 @@ function ServerEquip()
 
     local weaponHandle = serverModel.GunComponents.WeaponHandle
 
-	-- oh my god....
-	-- when was i destroying this
-	-- i wasnt
-
 	-- 10/08/2023 So yeah just figured out I was creating a new Motor6D every time a weapon was equipped and NEVER DESTROYING IT
 	--[[
 	local grip = Instance.new("Motor6D")
@@ -137,6 +133,10 @@ function ServerReload()
 	local endTime = tick() + Options.reloadLength
 	repeat task.wait() until tick() >= endTime
 	return newMag, Variables.ammo.total
+end
+
+function ServerAttemptBombPlant()
+	
 end
 
 --@start

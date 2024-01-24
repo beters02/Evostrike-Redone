@@ -85,6 +85,12 @@ function WeaponController.new()
         end
     end)
 
+    -- this is where we will do bomb observe update
+    self.Connections.Update = RunService.RenderStepped:Connect(function()
+        -- is player looking at bomb?
+        -- can player defuse bomb?
+    end)
+
     return self
 end
 
