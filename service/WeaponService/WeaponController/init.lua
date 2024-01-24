@@ -18,7 +18,6 @@ WeaponController.CurrentController = false
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Types = require(script.Parent:WaitForChild("Types"))
-local Tables = require(Framework.Module.lib.fc_tables)
 local PlayerDiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local UserInputService = game:GetService("UserInputService")
 local PlayerData2 = require(Framework.Module.PlayerData)
@@ -136,13 +135,13 @@ end
 function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     --if not bruteForce and (not self.CanEquip) then return warn("canequip or processing, equip:", tostring(self.CanEquip), tostring(self.Processing)) end
     --if not bruteForce and self.Inventory.equipped and self.Inventory.equipped.Slot == weaponSlot then return warn(tostring(weaponSlot) .. " is already equipped") end
-	if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
+
+    if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
     if not self:IsWeaponInSlot(weaponSlot) then return end
     if not bruteForce then
         if self:IsWeaponEquipped(weaponSlot) then return end
         if self.InitialWeaponAddDebounce then return end
     end
-
     -- last equipped
     if not self.Inventory.last_equipped then
         self.Inventory.last_equipped = self.Inventory[weaponSlot]
@@ -223,10 +222,13 @@ end
 
 --@summary Listen for Equip input. Always connected.
 function WeaponController:WeaponControllerBaseInputBegan(input, gp)
-    if UIState:hasOpenUI() or gp then return end
-    if tick() < self.BaseInputDebounce then return end
+    if gp or UIState:hasOpenUI()
+    or not self.EquipKeybindActions[input.KeyCode.Name]
+    or tick() < self.BaseInputDebounce then
+        return
+    end
+
     self.EquipKeybindActions[input.KeyCode.Name]()
-    self.BaseInputDebounce = 0 -- reset debounce if nothing is happening
 end
 
 --@summary Handle the movement speed reduction given by a weapon
@@ -312,10 +314,10 @@ function util_setKeybind(self, action, newKey, oldKey, playerOptions)
         self.EquipKeybindActions[key] = function() BaseEquipKeybindActions.equipLast(self) end
     elseif string.match(action, "Weapon") then
         if oldKey then self.EquipKeybindActions[oldKey] = nil end
-        self.EquipKeybindActions[key] = function() BaseEquipKeybindActions.equipNew(self, string.gsub(key, "Weapon", "")) end
-    else
-        self.Keybinds[action] = key
+        self.EquipKeybindActions[key] = function() BaseEquipKeybindActions.equipNew(self, string.gsub(action, "Weapon", "")) end
     end
+
+    self.Keybinds[action] = key
     return key
 end
 
