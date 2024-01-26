@@ -82,7 +82,16 @@ end
 
 --@summary The FireGrenade Middleware function. Not recommended to override
 function Grenade:FireGrenade(hit, origin, direction)
-    local cast = self.Caster:Fire(origin, direction, self.Options.speed, self.CastBehavior)
+
+    -- grenade speed/direction are directly affected by player move speed/direction
+    local speed = self.Options.speed
+    local pvel = self.Player.Character.HumanoidRootPart.Velocity
+    if pvel.Magnitude > 2 then
+        --speed = ((speed * direction.Unit) + pvel).Magnitude
+        direction += pvel.Unit/3
+    end
+
+    local cast = self.Caster:Fire(origin, direction, speed, self.CastBehavior)
     local grenade = cast.RayInfo.CosmeticBulletObject
     CollectionService:AddTag(grenade, "DestroyOnPlayerDied_" .. self.Player.Name)
     task.spawn(function()

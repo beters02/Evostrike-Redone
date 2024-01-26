@@ -22,8 +22,8 @@ local LongFlash = {
         -- grenade
         grenadeThrowDelay = 0.2,
         acceleration = 16,
-        speed = 150,
-        gravityModifier = 0.4,
+        speed = 110,
+        gravityModifier = 0.25, --0.4
         startHeight = 2,
 
         -- animation / holding

@@ -10,7 +10,7 @@ local AbilityObjects = Framework.Service.AbilityService.Ability.SmokeGrenade.Ass
 local SmokeGrenade = {
     Options = {
         -- data
-        name = "SmokeGrenade",
+        name = "Smoke",
         inventorySlot = "secondary",
         isGrenade = true,
         
@@ -22,7 +22,7 @@ local SmokeGrenade = {
         -- grenade
         grenadeThrowDelay = 0.36,
         speed = 150,
-        gravityModifier = 0.5,
+        gravityModifier = 1,
         startHeight = 2,
         velocitySlowMultPerInterval = 0.7,
         velocitySlowIntervalSec = 0.1,
