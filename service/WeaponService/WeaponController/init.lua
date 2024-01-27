@@ -125,8 +125,8 @@ function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: bool
     self.Inventory[wepObject.Slot] = wepObject
 
     local currentEquipSprThread = false
-    local equipSpring = VMSprings:new(9, 50, 5, 5)
-    local shoveVec = Vector3.new(1.4,0,0)
+    local equipSpring = VMSprings:new(9, 40, 4, 4)
+    local shoveVec = Vector3.new(.7,0,0)
     wepObject.EquipSpring = equipSpring
 
     local function shoveEquip()
