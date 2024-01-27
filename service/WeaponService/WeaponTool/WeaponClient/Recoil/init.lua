@@ -1,6 +1,9 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Strings = require(game:GetService("ReplicatedStorage"):WaitForChild("lib"):WaitForChild("fc_strings"))
 local Math = require(game.ReplicatedStorage.lib.fc_math)
 local RunService = game:GetService("RunService")
+local VMSprings = require(Framework.Module.lib.c_vmsprings)
 
 local Recoil = {}
 local GLOBAL_CAM_MULT = 0.027

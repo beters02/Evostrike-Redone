@@ -23,12 +23,10 @@ game:GetService("RunService").Stepped:Connect(function(t, dt)
     Weapon._stepDT = dt
 
     if humanoid.Health <= 0 then
-
         if Weapon.Options.scope and Weapon.Variables.scoping then
             Weapon.Variables.rescope = false
             Weapon:ScopeOut()
         end
-
         Weapon.Variables.MainWeaponPartCache:Destroy()
     end
 end)

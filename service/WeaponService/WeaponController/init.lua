@@ -24,6 +24,7 @@ local PlayerData2 = require(Framework.Module.PlayerData)
 local Remote = ReplicatedStorage.Services.WeaponService.Events.RemoteEvent
 local UIState = require(Framework.Module.States):Get("UI")
 local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon)
+local VMSprings = require(Framework.Module.lib.c_vmsprings)
 
 --[[ CONFIGURATION ]]
 local ForceEquipDelay = 0.9
@@ -86,9 +87,15 @@ function WeaponController.new()
     end)
 
     -- this is where we will do bomb observe update
-    self.Connections.Update = RunService.RenderStepped:Connect(function()
+    self.Connections.Update = RunService.RenderStepped:Connect(function(dt)
         -- is player looking at bomb?
         -- can player defuse bomb?
+        for _, v in pairs(self.Inventory) do
+            if v and v.EquipSpring then
+                local pos = v.EquipSpring:update(dt)
+                workspace.CurrentCamera.CFrame *= CFrame.Angles(math.rad(pos.X), math.rad(pos.Y), math.rad(pos.Z))
+            end
+        end
     end)
 
     return self
@@ -116,6 +123,21 @@ end
 function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: boolean?, recoilScript)
     local wepObject: Types.Weapon = Weapon.new(weapon, tool, recoilScript)
     self.Inventory[wepObject.Slot] = wepObject
+
+    local equipSpring = VMSprings:new(9, 50, 5, 5)
+    wepObject.EquipSpring = equipSpring
+    local shoveVec = Vector3.new(1.4,0,0)
+    local function shoveEquip()
+        local dt = wepObject._stepDT
+        equipSpring:shove(shoveVec*dt*60)
+        task.wait((1/60)*(dt/(1/60))*2)
+        equipSpring:shove(-shoveVec*dt*60)
+    end
+    shoveEquip = wepObject.Options.equipSpringShoveFunction or shoveEquip
+
+    wepObject.Connections.EquipAnim = wepObject.Tool.Equipped:Connect(function()
+        shoveEquip(equipSpring, wepObject._stepDT)
+    end)
 
     if forceEquip then
         self.InitialWeaponAddDebounce = true

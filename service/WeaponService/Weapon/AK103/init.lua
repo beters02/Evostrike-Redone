@@ -81,6 +81,20 @@ AK103.Configuration = {
 		}
 	},
 
+	equipSpringShoveFunction = function(spr, dt)
+		local fshov = Vector3.new(2, 0, 0)*dt*60
+		local nshov = Vector3.new(2, -.5, 0)*dt*60
+		local frame = 1/60 * (dt*60)
+
+		spr:shove(fshov*0.8)
+		task.wait(frame*2)
+		spr:shove(-fshov*0.8)
+		task.wait(frame*10)
+		spr:shove(nshov)
+		task.wait(frame*2)
+		spr:shove(-nshov)
+	end,
+	
 	serverModelSize = 0.75
 }
 

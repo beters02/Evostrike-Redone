@@ -16,6 +16,7 @@ local Types = require(script.Parent.Types)
 local SoundModule = require(Framework.Module.Sound)
 local PlayerData2 = require(Framework.Module.PlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
+local VMSprings = require(Framework.Module.lib.c_vmsprings)
 local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local WeaponPartCache = require(script.Parent:WaitForChild("WeaponPartCache"))
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
@@ -50,12 +51,12 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     self.CameraObject = require(ReplicatedStorage.Services.WeaponService.WeaponCamera).new(weapon)
     self.Variables.CrosshairModule = require(self.Character:WaitForChild("CrosshairScript"):WaitForChild("m_crosshair"))
     self.Variables.cameraFireThread = false
+    self.EquipCameraSpring = VMSprings:new(9, 50, 5, 5)
 
     if self.Options.ammo then
         local cacheBullets = self.Options.ammo.magazine + self.Options.ammo.total
         self.Variables.MainWeaponPartCache = WeaponPartCache.new(cacheBullets, cacheBullets)
     end
-    
 
     if self.init then
         self:init()
@@ -122,7 +123,6 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
         self.Controller:UnequipWeapon(self.Slot)
     end)
     
-
     self = setmetatable(self, Weapon)
     self:_SetServerModelTransparency(1)
     self:SetIconEquipped(false)
