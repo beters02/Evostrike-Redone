@@ -133,8 +133,8 @@ function Start()
     GameData.Variables.PlayersCanSpawn = true
 
     if #Players:GetPlayers() == 1 and not GameData.Variables.BotSpawned then
-        GameData.Variables.BotSpawned = true
-        BotSpawn()
+        --GameData.Variables.BotSpawned = true
+        --BotSpawn()
     end
 
     RoundStart(1)

@@ -124,9 +124,11 @@ function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: bool
     local wepObject: Types.Weapon = Weapon.new(weapon, tool, recoilScript)
     self.Inventory[wepObject.Slot] = wepObject
 
+    local currentEquipSprThread = false
     local equipSpring = VMSprings:new(9, 50, 5, 5)
-    wepObject.EquipSpring = equipSpring
     local shoveVec = Vector3.new(1.4,0,0)
+    wepObject.EquipSpring = equipSpring
+
     local function shoveEquip()
         local dt = wepObject._stepDT
         equipSpring:shove(shoveVec*dt*60)
@@ -136,7 +138,12 @@ function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: bool
     shoveEquip = wepObject.Options.equipSpringShoveFunction or shoveEquip
 
     wepObject.Connections.EquipAnim = wepObject.Tool.Equipped:Connect(function()
-        shoveEquip(equipSpring, wepObject._stepDT)
+        if currentEquipSprThread then
+            task.cancel(currentEquipSprThread)
+        end
+        currentEquipSprThread = task.spawn(function()
+            shoveEquip(equipSpring, wepObject._stepDT)
+        end)
     end)
 
     if forceEquip then

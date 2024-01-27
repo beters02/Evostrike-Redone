@@ -1,3 +1,4 @@
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Types = require(ReplicatedStorage.Services.WeaponService.Types)
@@ -19,7 +20,7 @@ end
 
 local Weapon = WeaponController:AddWeapon(script:GetAttribute("weaponName"), tool, tool:GetAttribute("IsForceEquip"), script:WaitForChild("Recoil")) :: Types.Weapon
 
-game:GetService("RunService").Stepped:Connect(function(t, dt)
+RunService.Stepped:Connect(function(t, dt)
     Weapon._stepDT = dt
 
     if humanoid.Health <= 0 then

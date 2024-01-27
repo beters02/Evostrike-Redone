@@ -139,7 +139,6 @@ function module.CreateBulletHole(result, partCache)
 end
 
 function module.CreateBullet(tool, endPos, client, fromModel, partCache)
-
 	--create bullet part
 	local part
 	local part_cache_object
