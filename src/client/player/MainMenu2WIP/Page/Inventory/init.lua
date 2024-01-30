@@ -8,16 +8,17 @@ local Inventory = setmetatable({}, Page)
 Inventory.__index = Inventory
 
 function Inventory.new(mainMenu, frame)
-    return setmetatable(Page.new(mainMenu, frame), Inventory)
+    local self = setmetatable(Page.new(mainMenu, frame), Inventory)
+    self.Var = {CurrentOpenSubPage = false}
+    self.Connections = {}
+    self.SubPages = {}
+    --self.SubPages.Skin = SubPage.new(Inventory, )
+    --self.SubPages.Skin = SubPage:init(Inventory, "Skin")
+    return self
 end
 
 function Inventory:init(frame)
     self._init()
-    Inventory = setmetatable(Page.new(frame), Inventory)
-    Inventory.Var = {CurrentOpenSubPage = false}
-    Inventory.Connections = {}
-    Inventory.SubPages = {}
-    Inventory.SubPages.Skin = SubPage:init(Inventory, "Skin")
 end
 
 function Inventory:Open()
@@ -35,21 +36,21 @@ function Inventory:Close()
 end
 
 function Inventory:OpenSubPage(name)
-    local subpage = Inventory.SubPages[name]
+    local subpage = self.SubPages[name]
     if not subpage then
         return
     end
 
     if Inventory.Var.CurrentOpenSubPage then
-        self:CloseSubPage(Inventory.Var.CurrentOpenSubPage.Name)
+        self:CloseSubPage(self.Var.CurrentOpenSubPage.Name)
     end
     
-    Inventory.Var.CurrentOpenSubPage = subpage
+    self.Var.CurrentOpenSubPage = subpage
     connectChangeContentFrameButtons(self)
 end
 
 function Inventory:CloseSubPage(name, onPageClose)
-    local subpage = Inventory.SubPages[name]
+    local subpage = self.SubPages[name]
     if not subpage then
         return
     end

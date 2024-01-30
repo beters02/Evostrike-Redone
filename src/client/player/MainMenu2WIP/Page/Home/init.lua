@@ -6,8 +6,10 @@
 local QUEUE_TEXT_FADE_TIME = 0.37
 --
 
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Queuer = require(script:WaitForChild("Queuer"))
+local Popup = require(script.Parent.Parent.Popup)
 
 local Page = require(script.Parent)
 local HomePage = setmetatable({}, Page)
@@ -15,6 +17,7 @@ HomePage.__index = HomePage
 
 function HomePage.new(mainMenu, frame)
     local self = setmetatable(Page.new(mainMenu, frame), HomePage)
+    self.Player = game.Players.LocalPlayer
     self.SoloButton = self.Frame:WaitForChild("Card_Solo")
     self.CasualButton = self.Frame:WaitForChild("Card_Casual")
 
@@ -72,6 +75,7 @@ function HomePage:Connect()
     self:AddConnection("BottomButton", self.BottomButton.MouseButton1Click:Connect(function()
         self.BottomButtonCallback(self)
     end))
+    connEqualizeButtonText(self)
 end
 
 function HomePage:MenuTypeChanged(newMenuType)
@@ -101,7 +105,7 @@ function soloMainButtonClicked(self)
     self:AddConnection("SoloStableButton", self.SoloStableButton.MouseButton1Click:Once(function()
         if processingDebounce then return end
         processingDebounce = true
-        --Popup.burst("Teleporting!", 3)
+        Popup.new("Teleporting!", 3)
         self.Location.Parent.SoloPopupRequest.Visible = false
         self.Location.Visible = true
         --RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Stable")
@@ -209,6 +213,40 @@ function changeQueueText(self, new, toggleLength: number?) -- if toggleLength, t
     end
 
     outTween:Play()
+end
+
+function connEqualizeButtonText(self)
+    local buttons = {self.OptionsButton, self.StatsButton, self.BottomButton, self.InventoryButton}
+    local lastFrameSize = 0
+    self:AddConnection("EqualizeSize", RunService.RenderStepped:Connect(function()
+        local invsize = self.InventoryButton.InfoLabel.Size.Y.Scale
+        invsize = ScaleToOffset(invsize)
+        if lastFrameSize ~= invsize then
+            lastFrameSize = invsize
+            scaleTopBarFrames(self, self.InventoryButton)
+            print(invsize)
+        end
+    end))
+end
+
+function ScaleToOffset(x)
+	local cam = workspace.Camera
+	local viewportSize = cam.ViewportSize
+	x *= viewportSize.X
+	return math.round(x)
+end
+
+function scaleTopBarFrames(self, titleFrame)
+    local scsz = titleFrame.Size.Y.Scale * titleFrame.InfoLabel.Size.Y.Scale
+
+    local buttons = {self.OptionsButton, self.StatsButton, self.BottomButton, self.InventoryButton}
+	local size = ScaleToOffset(scsz) / 2
+    size = math.floor(size - 3)
+
+    for _, v in pairs(buttons) do
+        v.InfoLabel.TextScaled = false
+        v.InfoLabel.TextSize = size
+    end
 end
 
 return HomePage

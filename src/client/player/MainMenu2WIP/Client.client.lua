@@ -1,4 +1,4 @@
---[[local Players = game:GetService("Players")
+local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
@@ -23,4 +23,4 @@ function init()
     end)
 end
 
-init()]]
+init()

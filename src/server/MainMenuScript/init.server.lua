@@ -16,9 +16,9 @@ Players.PlayerAdded:Connect(function(player)
     --DELETE THIS AFTER MAINMENU2
     GamemodeService2:SetMenuType(GamemodeService2.MenuType)
 
-    --[[ test clone for MainMenu2
+    --[[ test clone for MainMenu2 ]]
     local clone2 = MainMenuGUI:Clone()
     clone2.Name = "MainMenu2"
     clone2.Enabled = false
-    clone2.Parent = player.PlayerGui]]
+    clone2.Parent = player.PlayerGui
 end)
