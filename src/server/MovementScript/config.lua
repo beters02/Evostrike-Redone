@@ -3,7 +3,7 @@ local module = {
 	--[[ General Settings ]]
 	mass = 16, -- def 8.85
 	gravity = 0.6, -- 0.3
-	friction = 6,
+	friction = 7,
 	maxVelocity = 50,
 	maxMovementPitch = 0.6,
 	surfSlopeAngle = 0.58,
@@ -14,8 +14,8 @@ local module = {
 	--[[ Ground Settings ]]
 	--groundAccelerate = 10.6,
 	--groundDeccelerate = 17, -- the lower this number is, the longer it takes to decel btw
-	groundAccelerate = 9,
-	groundDeccelerate = 8, -- the lower this number is, the longer it takes to decel btw
+	groundAccelerate = 10,
+	groundDeccelerate = 12.6, -- the lower this number is, the longer it takes to decel btw
 	groundMaxSpeed = 21.5,
 
 	walkMoveSpeed = 14,
