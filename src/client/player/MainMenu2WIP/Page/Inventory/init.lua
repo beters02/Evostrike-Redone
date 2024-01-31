@@ -2,6 +2,7 @@
 
 -- SubPages are the Contanier Frames which have their own Content Frames (SkinPage, CasePage, KeyPage)
 local SubPage = require(script.InventorySubPage)
+local SkinSubPage = require(script.InventorySubPage.Skin)
 
 local Page = require(script.Parent)
 local Inventory = setmetatable({}, Page)
@@ -9,9 +10,12 @@ Inventory.__index = Inventory
 
 function Inventory.new(mainMenu, frame)
     local self = setmetatable(Page.new(mainMenu, frame), Inventory)
+    self.Frame = frame
     self.Var = {CurrentOpenSubPage = false}
     self.Connections = {}
     self.SubPages = {}
+    self.SubPages.Skin = SkinSubPage:init(self, frame.Skin)
+    self.Var.CurrentOpenSubPage = self.SubPages.Skin
     --self.SubPages.Skin = SubPage.new(Inventory, )
     --self.SubPages.Skin = SubPage:init(Inventory, "Skin")
     return self

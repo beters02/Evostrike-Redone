@@ -1,4 +1,8 @@
 local TweenService = game:GetService("TweenService")
+
+local Popup = {}
+
+local font = Font.new(Enum.Font.Gotham.Name, Enum.FontWeight.Regular, Enum.FontStyle.Normal)
 function createPopupGui()
     local gui = Instance.new("ScreenGui")
     gui.IgnoreGuiInset = true
@@ -14,11 +18,9 @@ function createPopupGui()
     lbl.TextStrokeTransparency = 0
     lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     lbl.TextScaled = true
-    lbl.FontFace = Font.new("Gotham SSm", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+    lbl.FontFace = font
     return gui
 end
-
-local Popup = {}
 
 function Popup.new(plr, txt, len)
     local iti = TweenInfo.new(0.8)
@@ -31,11 +33,12 @@ function Popup.new(plr, txt, len)
 
     gui.Parent = plr.PlayerGui
     int:Play()
-    int.Completed:Wait()
-    task.delay(len, function()
-        out:Play()
-        out.Completed:Wait()
-        gui:Destroy()
+    int.Completed:Once(function()
+        task.delay(len, function()
+            out:Play()
+            out.Completed:Wait()
+            gui:Destroy()
+        end)
     end)
     return gui
 end

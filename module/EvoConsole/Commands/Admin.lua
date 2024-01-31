@@ -239,4 +239,13 @@ Commands.gmforcestart = {
 	end
 }
 
+Commands.addbot = {
+	Description = "Add a bot",
+	public = false,
+
+	Function = function()
+		GamemodeEvents.Game.AddBot:FireServer()
+	end
+}
+
 return Commands

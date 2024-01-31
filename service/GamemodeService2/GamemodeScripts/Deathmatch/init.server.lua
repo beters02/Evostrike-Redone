@@ -36,6 +36,7 @@ local EvoMaps = require(Framework.Module.EvoMaps)
 local GamemodeSpawns = game.ServerStorage.CurrentSpawns
 local Maps = require(Framework.Module.EvoMaps)
 local BotService = require(Framework.Service.BotService)
+local GamemodeEvents = ReplicatedStorage.GamemodeEvents
 
 local PlayerData = {}
 local GameData = {
@@ -127,15 +128,19 @@ function Start()
         return true
     end
 
+    GameData.Connections.AddBot = GamemodeEvents.Game.AddBot.OnServerEvent:Connect(function()
+        BotSpawn()
+    end)
+
     GuiAll(GuiTopBar)
     GuiAll(GuiBuyMenu)
     
     GameData.Variables.PlayersCanSpawn = true
 
-    if #Players:GetPlayers() == 1 and not GameData.Variables.BotSpawned then
+    --[[if #Players:GetPlayers() == 1 and not GameData.Variables.BotSpawned then
         --GameData.Variables.BotSpawned = true
         --BotSpawn()
-    end
+    end]]
 
     RoundStart(1)
     print('round started')

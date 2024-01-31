@@ -11,6 +11,7 @@ local Skins = require(ReplicatedStorage.Assets.Shop.Skins)
 local Keys = require(ServerStorage.Stored.Keys)
 local HTTPService = game:GetService("HttpService")
 local SkinsDB = require(ServerStorage.SkinsDatabase)
+local InventoryInterface = require(Framework.Module.InventoryInterface)
 
 local Shop = {}
 local RemoteFunctions = {}
@@ -119,6 +120,7 @@ end
 
 function Shop.SellItem(player, shopItemStr, inventoryItemStr)
     local shopSkin = Shop.parseItemString(shopItemStr)
+    local invSkin = InventoryInterface.ParseSkinString(inventoryItemStr)
     local skinInventory = PlayerData:GetPath(player, "ownedItems." .. shopSkin.item_type)
 
     local hasSkinIndex = false
@@ -137,7 +139,7 @@ function Shop.SellItem(player, shopItemStr, inventoryItemStr)
     PlayerData:SetPath(player, "ownedItems." .. shopSkin.item_type, skinInventory)
     PlayerData:IncrementPath(player, "economy.strafeCoins", shopSkin.sell_sc or (shopSkin.price_sc*0.75))
     PlayerData:Save(player)
-    SkinsDB:RemoveSkin(inventoryItemStr)
+    SkinsDB:RemoveSkin(invSkin)
     return true
 end
 

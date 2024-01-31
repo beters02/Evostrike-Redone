@@ -184,7 +184,6 @@ end
 
 local function scaleTopBarFrames(titleFrame)
 	local size = ScaleToOffset(titleFrame.Size.Y.Scale) / 50
-	print(size)
 	for _, buttonFrame in pairs(main.topBar.gui:GetChildren()) do
 		pcall(function()
 			buttonFrame.TextButton.TextScaled = false

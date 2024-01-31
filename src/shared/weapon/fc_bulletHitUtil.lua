@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local EmitParticle = require(Framework.shfc_emitparticle.Location)
 local GlobalSounds = ReplicatedStorage.Services.WeaponService.ServiceAssets.Sounds
 local Particles = ReplicatedStorage.Services.WeaponService.ServiceAssets.Emitters
@@ -70,8 +71,10 @@ function util.PlayerHitSounds(character, hitPartInstance, wasKilled) -- Player H
         soundFolder = GlobalSounds.PlayerHit.Bodyshot
     end
 
+    local testParent = RunService:IsClient() and game.Players.LocalPlayer.Character or character
     task.spawn(function()
-        _PlayAllSoundsIn(soundFolder, character, ignore)
+        --_PlayAllSoundsIn(soundFolder, character, ignore)
+        _PlayAllSoundsIn(soundFolder, testParent, ignore)
     end)
 end
 

@@ -6,10 +6,17 @@
 local QUEUE_TEXT_FADE_TIME = 0.37
 --
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Queuer = require(script:WaitForChild("Queuer"))
 local Popup = require(script.Parent.Parent.Popup)
+local Math = require(Framework.Module.lib.fc_math)
+
+local RequestQueueEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("requestQueueFunction")
+local RequestSpawnEvent = ReplicatedStorage.Services.GamemodeService2.RequestSpawn
+local RequestDeathEvent = ReplicatedStorage.Services.GamemodeService2.RequestDeath
 
 local Page = require(script.Parent)
 local HomePage = setmetatable({}, Page)
@@ -37,6 +44,13 @@ function HomePage.new(mainMenu, frame)
     -- BottomButtonCallback changes depending on the MenuType.
     self.BottomButtonCallback = joinGameButtonClicked
 
+    self.MainButtons = {}
+    for _, v in pairs(frame:GetChildren()) do
+        if string.match(v.Name, "MainButton") then
+            self.MainButtons[string.gsub(v.Name, "MainButton_", "")] = v
+        end
+    end
+
     self.Tweens = {
         Connections = {},
         QueueTextFadeOut = TweenService:Create(self.Casual1v1Button.InQueueText.TextLabel, TweenInfo.new(QUEUE_TEXT_FADE_TIME, Enum.EasingStyle.Cubic), {TextTransparency = 1}),
@@ -48,6 +62,7 @@ end
 
 function HomePage:Open()
     self._Open()
+    self.Main:CloseTopBar()
     if self.SoloPopupRequest.Visible then
         self.SoloPopupRequest.Visible = false
     end
@@ -56,25 +71,25 @@ function HomePage:Open()
     end
 end
 
+function HomePage:Close()
+    self._Close()
+    self.Main:OpenTopBar()
+end
+
 function HomePage:Connect()
     self:AddConnection("SoloButton", self.SoloButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         soloMainButtonClicked(self)
     end))
     self:AddConnection("CasualButton", self.CasualButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         casualMainButtonClicked(self)
     end))
-    self:AddConnection("InventoryButton", self.InventoryButton.MouseButton1Click:Connect(function()
-        pageMainButtonClicked(self, "Inventory")
-    end))
-    self:AddConnection("OptionsButton", self.OptionsButton.MouseButton1Click:Connect(function()
-        pageMainButtonClicked(self, "Options")
-    end))
-    self:AddConnection("CasualButton", self.CasualButton.MouseButton1Click:Connect(function()
-        pageMainButtonClicked(self, "Casual")
-    end))
     self:AddConnection("BottomButton", self.BottomButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         self.BottomButtonCallback(self)
     end))
+    connPageMainButtons(self)
     connEqualizeButtonText(self)
 end
 
@@ -105,10 +120,10 @@ function soloMainButtonClicked(self)
     self:AddConnection("SoloStableButton", self.SoloStableButton.MouseButton1Click:Once(function()
         if processingDebounce then return end
         processingDebounce = true
-        Popup.new("Teleporting!", 3)
-        self.Location.Parent.SoloPopupRequest.Visible = false
-        self.Location.Visible = true
-        --RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Stable")
+        Popup.new(self.Player, "Teleporting!", 3)
+        self.SoloPopupRequest.Visible = false
+        self.Frame.Visible = true
+        RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Stable")
         self.Connections.SoloCancelButton:Disconnect()
         self.Connections.SoloStableButton:Disconnect()
         processingDebounce = nil
@@ -119,7 +134,7 @@ function soloMainButtonClicked(self)
         if processingDebounce then return end
         processingDebounce = true
         self.SoloPopupRequest.Visible = false
-        self.Location.Parent.SoloPopupRequest.Visible = false
+        self.SoloPopupRequest.Visible = false
         self.Frame.Visible = true
         self.Connections.SoloStableButton:Disconnect()
         self.Connections.SoloCancelButton:Disconnect()
@@ -134,11 +149,13 @@ function casualMainButtonClicked(self)
 
     -- Queue for 1v1
     self:AddConnection("Casual1v1Button", self.CasualBackButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         casualQueueButtonClicked(self)
     end))
 
     -- Go back to Home Page
     self:AddConnection("CasualBackButton", self.CasualBackButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         self.Frame.Visible = true
         self.CasualFrame.Visible = false
         self.Connections.Casual1v1Button:Disconnect()
@@ -151,6 +168,15 @@ function casualQueueButtonClicked(self)
         addPlayerToQueue(self)
     else
         removePlayerfromQueue(self)
+    end
+end
+
+function connPageMainButtons(self)
+    for i, v in pairs(self.MainButtons) do
+        self:AddConnection(i.."Button", v.MouseButton1Click:Connect(function()
+            self.Main:PlayButtonSound("Select1")
+            pageMainButtonClicked(self, i)
+        end))
     end
 end
 
@@ -216,34 +242,23 @@ function changeQueueText(self, new, toggleLength: number?) -- if toggleLength, t
 end
 
 function connEqualizeButtonText(self)
-    local buttons = {self.OptionsButton, self.StatsButton, self.BottomButton, self.InventoryButton}
     local lastFrameSize = 0
     self:AddConnection("EqualizeSize", RunService.RenderStepped:Connect(function()
         local invsize = self.InventoryButton.InfoLabel.Size.Y.Scale
-        invsize = ScaleToOffset(invsize)
+        invsize = Math.scaleToOffsetNumber(false, invsize).Y
         if lastFrameSize ~= invsize then
             lastFrameSize = invsize
             scaleTopBarFrames(self, self.InventoryButton)
-            print(invsize)
         end
     end))
 end
 
-function ScaleToOffset(x)
-	local cam = workspace.Camera
-	local viewportSize = cam.ViewportSize
-	x *= viewportSize.X
-	return math.round(x)
-end
-
 function scaleTopBarFrames(self, titleFrame)
     local scsz = titleFrame.Size.Y.Scale * titleFrame.InfoLabel.Size.Y.Scale
+	local size = Math.scaleToOffsetNumber(false, scsz).Y / 2
+    size = math.floor(size)
 
-    local buttons = {self.OptionsButton, self.StatsButton, self.BottomButton, self.InventoryButton}
-	local size = ScaleToOffset(scsz) / 2
-    size = math.floor(size - 3)
-
-    for _, v in pairs(buttons) do
+    for _, v in pairs(self.MainButtons) do
         v.InfoLabel.TextScaled = false
         v.InfoLabel.TextSize = size
     end

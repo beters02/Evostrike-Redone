@@ -166,6 +166,40 @@ function Math.faceToNormal(part, normalId)
     return part.CFrame:VectorToWorldSpace(Vector3.FromNormalId(normalId))
 end
 
+--@creator ClosetRaccoon
+function Math.isPrime(n)
+	if n%2 == 0 then
+        return n == 2
+    end
+
+    for i = 3,n^.5,2 do
+        if n%i <= 0 then
+            return false
+        end
+    end
+    return true
+end
+
+function Math.scaleToOffsetNumber(x: number?, y: number?): Vector2
+	local viewportSize = workspace.CurrentCamera.ViewportSize
+	x = (x or 0) * viewportSize.X
+	y = (y or 0) * viewportSize.Y
+	return Vector2.new(x,y)
+end
+
+function Math.scaleToOffsetUdim(ud: UDim2)
+	return UDim2.new(
+		Math.scaleToOffsetNumber(ud.X.Scale),
+		Math.scaleToOffsetNumber(ud.X.Offset),
+		Math.scaleToOffsetNumber(ud.Y.Scale),
+		Math.scaleToOffsetNumber(ud.Y.Offset)
+	)
+end
+
+function Math.rotDeg90()
+	return math.pi*-.5
+end
+
 -- Aliases
 Math.absr = Math.absValueRandom
 Math.mmabs = Math.maxOrMinAbs

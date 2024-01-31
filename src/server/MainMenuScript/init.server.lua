@@ -1,9 +1,11 @@
 local Players = game:GetService("Players")
-local MainMenuGUI = script:WaitForChild("MainMenu")
 local Framework = require(game:GetService("ReplicatedStorage").Framework)
 local ServerStorage = game:GetService("ServerStorage")
 local GamemodeService2 = require(Framework.Service.GamemodeService2)
 local Admins = require(ServerStorage.Stored.AdminIDs)
+
+local MainMenuGUI = script:WaitForChild("MainMenu")
+local MainMenu2GUI = script:WaitForChild("MainMenu2")
 
 -- Add MainMenu with set MenuType from GamemodeService2
 Players.PlayerAdded:Connect(function(player)
@@ -17,7 +19,7 @@ Players.PlayerAdded:Connect(function(player)
     GamemodeService2:SetMenuType(GamemodeService2.MenuType)
 
     --[[ test clone for MainMenu2 ]]
-    local clone2 = MainMenuGUI:Clone()
+    local clone2 = MainMenu2GUI:Clone()
     clone2.Name = "MainMenu2"
     clone2.Enabled = false
     clone2.Parent = player.PlayerGui

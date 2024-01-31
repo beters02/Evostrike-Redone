@@ -1,26 +1,32 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local Inputs = require(Framework.Module.lib.fc_inputs)
 
 local player = Players.LocalPlayer
 local gui = player.PlayerGui:WaitForChild("MainMenu2")
 local module = require(script.Parent)
 
-function init()
-    -- todo: display black frame while initting
-    -- wait for player to be loaded
-    if not player:GetAttribute("Loaded") then
-        repeat task.wait(0.5) until player:GetAttribute("Loaded")
+local function toggle()
+    if gui.Enabled then
+        module:Close()
+    else
+        module:Open()
     end
-    module:Initialize(gui)
-    UserInputService.InputBegan:Connect(function(input, gp)
-        if input.KeyCode == Enum.KeyCode.N then
-            if gui.Enabled then
-                module:Close()
-            else
-                module:Open()
-            end
-        end
-    end)
 end
 
-init()
+-- todo: display black frame while initting
+-- wait for player to be loaded
+if not player:GetAttribute("Loaded") then
+    repeat task.wait(0.5) until player:GetAttribute("Loaded")
+end
+
+-- init main menu module
+module:Initialize(gui)
+
+-- connect keybinds
+UserInputService.InputBegan:Connect(function(input, gp)
+    if Inputs.BothKeysDownInput(input, "N", "J") then
+        toggle()
+    end
+end)
