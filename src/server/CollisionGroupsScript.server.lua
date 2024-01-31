@@ -23,7 +23,8 @@ local collisionGroups = { -- Name, CollideAll
     bots = {"Bots", true},
     none = {"None", false},
     Weapons = {"Weapons", false},
-    grenades = {"Grenades", true}
+    grenades = {"Grenades", true},
+    ladders = {"Ladders", false}
 }
 
 -- this is so shit but convert collisionGroups tables back to table<string>
@@ -118,6 +119,8 @@ local function initMain()
     PhysicsService:CollisionGroupSetCollidable("PlayerFeet", "Bots", false)
     PhysicsService:CollisionGroupSetCollidable("Players", "Bots", false)
     PhysicsService:CollisionGroupSetCollidable("Players", "Bullets", true)
+    PhysicsService:CollisionGroupSetCollidable("Players", "Ladders", true)
+    PhysicsService:CollisionGroupSetCollidable("PlayerMovement", "Ladders", true)
 
     -- flash cast
     PhysicsService:CollisionGroupSetCollidable(cg.flashCast, "Players", true)

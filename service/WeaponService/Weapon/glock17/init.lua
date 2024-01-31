@@ -23,8 +23,8 @@ local wepconfig = {
 		
 		accuracy = {
 			firstBullet = 5,
-			base = 40,
-			crouch = 37,
+			base = 28,
+			crouch = 22,
 			spray = 2,
 			walk = 22,
 			run = 25,
@@ -41,8 +41,8 @@ local wepconfig = {
 			damageFalloffPerMeter = 1.5,
 			damageFalloffDistance = 20,
 			enableHeadFalloff = true,
-			headFalloffMultiplier = 0.6, -- Multiplier applied to damage falloff per meter
-			helmetMultiplier = 0.42,
+			headFalloffMultiplier = 1, -- Multiplier applied to damage falloff per meter
+			helmetMultiplier = 0.8,
 			destroysHelmet = false,
 		},
 

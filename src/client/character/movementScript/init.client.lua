@@ -103,8 +103,16 @@ local Movement = {
 	movementVelocityForce = 300000,
 
 	dashing = false,
+	sliding = false,
+	laddering = false,
+
+	ladderClimbDir = Vector3.zero,
+	ladderNormal = Vector3.zero,
+	ladderDirection = Vector3.zero,
+	ladderVelocity = Vector3.zero,
+	ladderCancel = false,
+
 	currentAirFriction = 0,
-	sliding = false
 }
 Movement.__index = Movement
 
@@ -138,6 +146,18 @@ Movement.Sounds.runDefault.Volume = runv
 Movement.GetIgnoreDescendantInstances = function()
 	return {player.Character, workspace.CurrentCamera, workspace.Temp, workspace.MovementIgnore}
 end
+
+Movement.Params = instanceLib.New("RaycastParams", {
+	FilterType = Enum.RaycastFilterType.Exclude,
+	FilterDescendantsInstances = {player.Character, RunService:IsClient() and workspace.CurrentCamera or {}},
+	CollisionGroup = "PlayerMovement"
+})
+
+Movement.LadderParams = instanceLib.New("RaycastParams", {
+	FilterType = Enum.RaycastFilterType.Exclude,
+	FilterDescendantsInstances = {player.Character, RunService:IsClient() and workspace.CurrentCamera or {}},
+	CollisionGroup = "PlayerMovement"
+})
 
 --[[
 	Init Movement Extrensic Module Functions & Configuration
@@ -193,6 +213,8 @@ for i, v in pairs(setmetatable(require(script.Physics), Movement)) do
 	end
 end
 
+local Ladder = require(script:WaitForChild("Ladder"))
+
 --[[ Process Movement Functions ]]
 
 --[[
@@ -220,9 +242,17 @@ end
 local PlayerActionsState = States:Get("PlayerActions")
 function Movement.Run(hitPosition, hitNormal, hitMaterial)
 	Movement.movementPosition.position = hitPosition + Vector3.new(0, Movement.playerTorsoToGround, 0)
-	Movement.movementPosition.maxForce = Vector3.new(0, Movement.movementPositionForce, 0)
+	
+	if Movement.laddering then
+		Movement.movementPosition.maxForce = Vector3.new()
+		Movement.movementVelocity.maxForce = Movement:GetMovementVelocityAirForce()
+	else
+		Movement.movementPosition.maxForce = Vector3.new(0, Movement.movementPositionForce, 0)
+		Movement.movementVelocity.maxForce = Movement:GetMovementVelocityForce()
+	end
+	
 	Movement:ApplyGroundVelocity(hitNormal)
-	Movement.movementVelocity.maxForce = Movement:GetMovementVelocityForce()
+
 	Movement.movementVelocity.P = Movement.movementVelocityP
 
 	-- get current run sound
@@ -266,7 +296,20 @@ local vmScript
 
 function Movement.Jump(velocity)
 	Movement.jumpGrace = tick() + Movement.jumpTimeBeforeGroundRegister -- This is how i saved the glitchy mousewheel jump
-	collider.Velocity = Vector3.new(collider.Velocity.X, velocity, collider.Velocity.Z)
+
+	local vel = Vector3.new(collider.Velocity.X, velocity, collider.Velocity.Z)
+
+	if Movement.laddering then
+		local lad = Movement.ladderNormal * vel.Magnitude
+		vel = Vector3.new(
+			vel.X + lad.X,
+			vel.Y + lad.Y,
+			vel.Z + lad.Z
+		)
+	end
+
+	collider.Velocity = vel
+
 	Movement.Air()
 
 	--if hudCharClass.animations.running.isPlaying then hudCharClass.animations.running:Stop(0.2) end
@@ -322,6 +365,7 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 	hitMaterial = hitMaterial or Enum.Material.Concrete
 	landing = true
 	Movement.sliding = false
+	Movement.ladderCancel = false
 
 	Movement.RegisterGroundMaterialSounds(hitMaterial)
 
@@ -595,17 +639,12 @@ function Movement.ProcessMovement()
 	local hitPart, hitPosition, hitNormal, yRatio, zRatio, ladderTable = Movement:FindCollisionRay()
 	playerGrounded = hitPart and true or false
 	if not playerGrounded or not hitPosition or not hitPart then
-		local params = instanceLib.New("RaycastParams", {
-			FilterType = Enum.RaycastFilterType.Exclude,
-			FilterDescendantsInstances = {player.Character, RunService:IsClient() and workspace.CurrentCamera or {}},
-			CollisionGroup = "PlayerMovement"
-		})
-	
+
 		local result = workspace:Blockcast(
 			CFrame.new(player.Character.HumanoidRootPart.CFrame.Position + Vector3.new(0, -3.25 + (Movement.crouching and Movement.crouchDownAmount or 0), 0)),
 			Vector3.new(1.5,1.5,1),
 			Vector3.new(0, -1, 0),
-			params
+			Movement.Params
 		)
 	
 		if result then
@@ -645,6 +684,17 @@ function Movement.ProcessMovement()
 	else
 		lastSavedHitPos = hitPosition
 	end
+
+	Movement.inAir = inAir
+	Movement.playerGrounded = playerGrounded
+	Movement.groundNormal = hitNormal
+	Movement.jumping = jumping
+
+	Ladder.Check(Movement)
+	if Movement.laddering then
+		print('laddering')
+		Ladder.Physics(Movement)
+	end
 	
 	-- [[ LANDING REGISTRATION ]]
 	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then
@@ -656,7 +706,7 @@ function Movement.ProcessMovement()
 		if tick() >= a + Movement.minInAirTimeRegisterLand and not landing then
 			Movement.Land(false, false, hitPart.Material)
 			landed:Fire()
-		else
+		elseif not Movement.laddering then
 			Movement.Run(hitPosition, hitNormal, hitPart.Material)
 			return
 		end
@@ -664,6 +714,7 @@ function Movement.ProcessMovement()
 	end
 	
 	-- [[ JUMP & CROUCH INPUT REGISTRATION ]]
+	-- LADDERS WILL GO HERE
 
 	if Inputs.FormattedKeys[Inputs.Keys.Jump[1]] > 0 then
 		jumping = true
@@ -731,7 +782,10 @@ function Movement.ProcessMovement()
 		Movement.Dash()
 		return
 	end
-	
+
+	-- LADDER CHECK
+	Movement.jumping = jumping
+
 	-- [[ GROUND MOVEMENT ]]
 	if playerGrounded then
 		if jumping then
@@ -770,6 +824,7 @@ function Movement.ProcessMovement()
 		-- get velocity
 		Movement.Air()
 
+		Movement.jumping = jumping
 	end
 end
 

@@ -268,10 +268,9 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		end
 
 		-- calculate damage falloff
-		if distance > weaponOptions.damage.damageFalloffDistance and calculateFalloff then
+		if distance >= weaponOptions.damage.damageFalloffDistance and calculateFalloff then
 			local diff = distance - weaponOptions.damage.damageFalloffDistance
-			damage = math.max(damage - diff * (weaponOptions.damage.damageFalloffPerMeter * calculateFalloff), min)
-			damage = math.min(damage, weaponOptions.damage.base)
+			damage = math.max(damage - (diff * (weaponOptions.damage.damageFalloffPerMeter * calculateFalloff)), min)
 		end
 
 		-- wallbang multiplier

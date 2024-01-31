@@ -18,6 +18,7 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
     local hitPart = character:GetAttribute("lastHitPart") or "Head"
     local destroysHelmet = character:GetAttribute("lastUsedWeaponDestroysHelmet") or false
     local helmetMultiplier = character:GetAttribute("lastUsedWeaponHelmetMultiplier") or 1
+    local absoluteDamage
 
     if string.match(string.lower(hitPart), "head") then
         if helmet then
@@ -29,6 +30,7 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
         end
     end
 
+    absoluteDamage = damage
     if shield > 0 then
         if shield >= damage then -- no damage taken, only apply to shield
             character:SetAttribute("Shield", shield - damage)
@@ -58,6 +60,7 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
         character.Humanoid:TakeDamage(damage)
     end
 
+    --print(absoluteDamage)
     return damage, killed
 end
 

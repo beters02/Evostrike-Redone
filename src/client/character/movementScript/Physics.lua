@@ -86,7 +86,14 @@ function module:ApplyGroundVelocity(groundNormal: Vector3)
 
 	-- calculate slope movement
 	local forwardVelocity: Vector3 = groundNormal:Cross(CFrame.Angles(0,math.rad(90),0).LookVector * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z))
-	local yVel = forwardVelocity.Unit.Y * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z).Magnitude
+	
+	local yVel
+	if self.laddering then
+		yVel = self.ladderLerpVelocity.Y
+		self.collider.Velocity = Vector3.new(self.collider.Velocity.X, yVel, self.collider.Velocity.Z)
+	else
+		yVel = forwardVelocity.Unit.Y * Vector3.new(self.movementVelocity.Velocity.X, 0, self.movementVelocity.Velocity.Z).Magnitude
+	end
 
 	-- apply slope movement
 	self.movementVelocity.Velocity = Vector3.new(self.movementVelocity.Velocity.X, yVel * (accelDir.Y < 0 and 1.2 or 1), self.movementVelocity.Velocity.Z)
