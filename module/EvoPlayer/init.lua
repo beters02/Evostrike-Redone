@@ -5,7 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local DiedEvent = script:WaitForChild("Events").PlayerDiedRemote
---local GamemodeServiceModule = ReplicatedStorage.Services:WaitForChild("GamemodeService")
+local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
+local BotServiceModule = ReplicatedStorage.Services.BotService
 
 local EvoPlayer = {}
 
@@ -58,6 +59,20 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
             character:SetAttribute("WeaponUsedToKill", weaponUsed)
         end
         character.Humanoid:TakeDamage(damage)
+
+        task.spawn(function()
+            local bots = BotServiceModule.Remotes.GetBotsBindable:Invoke()
+            if not bots or #bots == 0 and killed then
+                character = Players:GetPlayerFromCharacter(character)
+
+                if not damager:IsA("Player") then
+                    damager = Players:GetPlayerFromCharacter(damager)
+                end
+
+                PlayerData:IncrementPath(damager, "pstats.kills", 1)
+                PlayerData:IncrementPath(character, "pstats.deaths", 1)
+            end
+        end)
     end
 
     --print(absoluteDamage)

@@ -46,7 +46,7 @@ function HomePage.new(mainMenu, frame)
 
     self.MainButtons = {}
     for _, v in pairs(frame:GetChildren()) do
-        if string.match(v.Name, "MainButton") then
+        if string.match(v.Name, "MainButton") or v.Name == "Card_Bottom" then
             self.MainButtons[string.gsub(v.Name, "MainButton_", "")] = v
         end
     end
@@ -98,7 +98,7 @@ function HomePage:MenuTypeChanged(newMenuType)
         self.BottomButton.Text = "JOIN DEATHMATCH"
         self.BottomButtonCallback = joinGameButtonClicked
     else
-        self.BottomButton.Text = "BACK TO LOBBY"
+        self.BottomButton.Text = "LOBBY"
         self.BottomButtonCallback = teleportBackToLobbyButtonClicked
     end
 end
@@ -173,6 +173,9 @@ end
 
 function connPageMainButtons(self)
     for i, v in pairs(self.MainButtons) do
+        if v.Name == "Card_Bottom" then
+            continue
+        end
         self:AddConnection(i.."Button", v.MouseButton1Click:Connect(function()
             self.Main:PlayButtonSound("Select1")
             pageMainButtonClicked(self, i)

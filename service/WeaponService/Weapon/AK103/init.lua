@@ -15,7 +15,7 @@ AK103.Configuration = {
 	
 	fireVectorCameraOffset = Vector2.new(3.5, 29), -- Side, Up
 	fireAccuracyCameraOffset = Vector2.new(3, 3), -- Side, Up
-	fireVectorCameraMax = Vector3.new(0.03, 0.03, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
+	fireVectorCameraMax = Vector3.new(0.03, 0.05, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
 	--fireVectorCameraMax = Vector3.new(1, 1, 3), -- Up, Side
 	
 	ammo = {

@@ -23,7 +23,7 @@ local wepconfig = {
 		
 		accuracy = {
 			firstBullet = 4,
-			base = 36,
+			base = 35,
 			crouch = 32,
 			spray = 2,
 			walk = 25,

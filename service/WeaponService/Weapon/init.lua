@@ -913,7 +913,8 @@ function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
     --local inaccSpeed = 2.9 -- After some testing, 2.8 is a "poorly done" counter-strafe. A good counter strafe results in 1.2 or lower. We will give them 2.9 for now.
     local inaccSpeed = 7 -- 7 feels better for spraying for the time being.
 
-    if mstate:get("crouching") then
+    if self.Variables.currentBullet == 1 then
+    elseif mstate:get("crouching") then
         baseAccuracy = weaponOptions.accuracy.crouch
     elseif mstate:get("landing") or (movementSpeed > inaccSpeed and movementSpeed < rspeed) then
         baseAccuracy = weaponOptions.accuracy.walk

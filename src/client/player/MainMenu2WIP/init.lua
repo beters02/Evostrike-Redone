@@ -17,7 +17,9 @@ local TOPBAR_BUTTON_HOVER_FADEIN_LENGTH = 1
 local TOPBAR_BUTTON_HOVER_FADEOUT_LENGTH = 1
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local AssetService = game:GetService("AssetService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local GamemodeService = require(Framework.Service.GamemodeService2)
 local States = require(Framework.Module.States)
@@ -34,6 +36,8 @@ local Enum_ButtonSoundNames = {
     WheelTick1 = "wheelTick",
     WoodImpact1 = "woodImpact"
 }
+Enum_ButtonSoundNames.Open = Enum_ButtonSoundNames.Select1
+Enum_ButtonSoundNames.ItemDisplay = Enum_ButtonSoundNames.ItemDisplay1
 
 -- Main Menu Module
 local MainMenu = {
@@ -90,6 +94,10 @@ function MainMenu:ClosePage()
     if self.CurrentOpenPage then
         self.CurrentOpenPage:Close()
     end
+end
+
+function MainMenu:GetPage(page: string)
+    return self.Pages[page]
 end
 
 -- Play a Button Sound

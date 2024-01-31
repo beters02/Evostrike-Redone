@@ -6,6 +6,7 @@
 ]]
 
 local MOVEMENT_INIT_ANCHOR_LENGTH = 0
+local DEBUG_ATTRIBUTES_ENABLED = true
 
 -- [[ Services ]]
 local Players = game:GetService("Players")
@@ -942,6 +943,11 @@ local function listenForPropertyChanged()
 	return
 end
 
+local function listenForAttributeChanges()
+	script.AttributeChanged:Connect(function(attribute)
+		Movement[attribute] = script:GetAttribute(attribute)
+	end)
+end
 
 --[[
 	Main Scope
@@ -1016,6 +1022,10 @@ function Main()
 		end)
 	else
 		_init()
+	end
+
+	if DEBUG_ATTRIBUTES_ENABLED then
+		listenForAttributeChanges()
 	end
 end
 

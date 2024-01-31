@@ -85,7 +85,10 @@ Shared.def.options = {
 
 Shared.def.pstats = {
     kills = 0,
-    deaths = 0
+    deaths = 0,
+    wins = 0,
+    losses = 0,
+    mapWins = {},
 }
 
 Shared.def.economy = {

@@ -11,6 +11,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local StarterCharacterTemplate = game:GetService("StarterPlayer").StarterCharacter
 local EvoPlayer = require(Framework.Module.EvoPlayer)
 local BotDiedBind = script.Remotes.BotDiedBindable
+local RunService = game:GetService("RunService")
 
 local Bots = {}
 Bots.Bots = {}
@@ -213,6 +214,12 @@ function _connectBotDiedEvent(new_bot)
             end
         end
     end)
+end
+
+if RunService:IsServer() then
+    script.Remotes.GetBotsBindable.OnInvoke = function()
+        return Bots.Bots
+    end
 end
 
 return Bots

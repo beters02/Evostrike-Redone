@@ -12,6 +12,10 @@
       {
         "Name": "BotDiedBindable",
         "ClassName": "BindableEvent"
+      },
+      {
+        "Name": "GetBotsBindable",
+        "ClassName": "BindableFunction"
       }
     ]
   }

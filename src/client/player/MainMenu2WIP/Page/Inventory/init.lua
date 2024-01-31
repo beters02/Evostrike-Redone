@@ -39,6 +39,10 @@ function Inventory:Close()
     end
 end
 
+function Inventory:Update()
+    self.SubPages.Skin:Update()
+end
+
 function Inventory:OpenSubPage(name)
     local subpage = self.SubPages[name]
     if not subpage then
