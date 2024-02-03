@@ -334,11 +334,11 @@ function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem, amount)
             self.Main:GetPage("Inventory"):Update()
         end)
         self.Main:PlayButtonSound("Purchase1")
-        Popup.burst("Successfully bought item! " .. tostring(parsedItem.name), 3)
+        Popup.new(game.Players.LocalPlayer, "Successfully bought item! " .. tostring(parsedItem.name), 3)
         return true
     else
         self.Main:PlayButtonSound("Error1")
-        Popup.burst("Could not buy item " .. tostring(parsedItem.name), 3)
+        Popup.new(game.Players.LocalPlayer, "Could not buy item " .. tostring(parsedItem.name), 3)
         return false
     end
 end

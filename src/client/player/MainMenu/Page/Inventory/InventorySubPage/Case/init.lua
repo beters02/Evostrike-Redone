@@ -2,20 +2,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local CaseAssets = ReplicatedStorage.Assets.Cases
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local InventoryInterface2 = require(Framework.Module.InventoryInterface)
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
-local Strings = require(Framework.Module.lib.fc_strings)
 local PlayerData = require(Framework.Module.PlayerData)
 
-local Popup = require(script.Parent.Parent.Parent.Parent.Popup) -- Main SendMessageGui Popup
-local Cases = game.ReplicatedStorage.Assets.Cases
+local Popup = require(script.Parent.Parent.Parent.Parent.Popup)
 local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
-local AttemptItemSellGui = ShopAssets:WaitForChild("AttemptItemSell")
-local Rarity = require(ShopAssets.Rarity)
-local ShopSkins = require(ShopAssets.Skins)
 
 local Config = require(script:WaitForChild("Config"))
+local OpenSequence = require(script:WaitForChild("OpenSequence"))
 local InventorySubPage = require(script.Parent)
 local Case = setmetatable({}, InventorySubPage)
 Case.__index = Case
@@ -76,7 +71,7 @@ function Case:Update()
     updateCaseFrames(self)
 end
 
-function createCaseModel(case)
+function Case._createCaseModel(case)
     local caseFolder = getCaseFolder(case)
     local itemModel = caseFolder.DisplayFrame.Model:Clone()
     itemModel:SetPrimaryPartCFrame(CFrame.new(Vector3.new(0, 0, -5)))
@@ -100,7 +95,7 @@ function changeDisplayItem(itd, case)
     Case.ItemDisplay.Frame.CaseDisplay.Visible = true
     Case.ItemDisplay.Frame.CaseDisplay.ViewportFrame:ClearAllChildren()
 
-    local model = createCaseModel(case)
+    local model = Case._createCaseModel(case)
     model.Parent = Case.ItemDisplay.Frame.CaseDisplay.ViewportFrame
     model:SetPrimaryPartCFrame(model.PrimaryPart.CFrame + Vector3.new(0,0,7.8))
 
@@ -119,7 +114,7 @@ function createCaseFrame(self, case: string, pageIndex: number)
     local caseFolder = getCaseFolder(case)
 
     local itemFrame = self.Frame.Content1.ItemFrame:Clone()
-    local itemModel = createCaseModel(case)
+    local itemModel = Case._createCaseModel(case)
     itemModel.Parent = itemFrame:WaitForChild("ViewportFrame")
     
     itemFrame.Name = "SkinFrame_" .. string.lower(case)
@@ -216,7 +211,7 @@ function caseOpenButtonClicked(self)
     local caseName = self.CurrentCaseName
 
     -- Confirm Case Open/Key Purchase
-    local hasKey = ShopInterface:HasKey(caseName)
+    local hasKey = ShopInterface:HasKey(convertCaseStr(caseName))
     local hasConfirmed = false
     local confirmGui = AttemptOpenCaseGui:Clone()
     local keyAcceptButton = confirmGui:WaitForChild("Frame"):WaitForChild("KeyAcceptButton")
@@ -237,7 +232,7 @@ function caseOpenButtonClicked(self)
         if hasKey then
             attemptOpenCase(self, caseName)
         else
-            self.Main:OpenPage("Shop")
+            self.Inventory.Main:OpenPage("Shop")
         end
         confirmGui:Destroy()
         self.Connections.DeclineButton:Disconnect()
@@ -256,24 +251,30 @@ function caseOpenButtonClicked(self)
 end
 
 function attemptOpenCase(self, caseName)
+    caseName = convertCaseStr(caseName)
+
     local openedSkin, potentialSkins
     local success, result = pcall(function()
         openedSkin, potentialSkins = ShopInterface:OpenCase(caseName)
     end)
 
     if success then
-        self.Main:PlayButtonSound("Purchase1")
+        self.Inventory.Main:PlayButtonSound("Purchase1")
         task.spawn(function()
             openCase(self, openedSkin, potentialSkins)
         end)
     else
-        self.Main:PlayButtonSound("Error1")
+        self.Inventory.Main:PlayButtonSound("Error1")
         Popup.new(tostring(result), 3)
     end
 end
 
 function openCase(self, openedSkin, potentialSkins)
-    
+    OpenSequence(self, openedSkin, potentialSkins)
+end
+
+function convertCaseStr(str: string)
+    return str:gsub(" ", ""):lower()
 end
 
 return Case

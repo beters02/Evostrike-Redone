@@ -26,7 +26,10 @@ module:Initialize(gui)
 
 -- connect keybinds
 UserInputService.InputBegan:Connect(function(input, gp)
-    if Inputs.BothKeysDownInput(input, "N", "J") then
+    --[[if Inputs.BothKeysDownInput(input, "N", "J") then
+        toggle()
+    end]]
+    if input.KeyCode == Enum.KeyCode.M then
         toggle()
     end
 end)

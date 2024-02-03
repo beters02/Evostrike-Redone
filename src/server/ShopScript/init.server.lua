@@ -146,6 +146,8 @@ end
 function Shop.HasKey(player, caseName)
     local keyInventory = PlayerData:GetPath(player, "ownedItems.key")
     for i, v in pairs(keyInventory) do
+        print(v)
+        print(caseName)
         if string.match(v, caseName) then
             return i, keyInventory
         end
