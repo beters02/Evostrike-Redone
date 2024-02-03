@@ -4,6 +4,9 @@
 
 -- CONFIG
 local QUEUE_TEXT_FADE_TIME = 0.37
+local LOBBY_BOTTOM_DEFAULT_TEXT = "JOIN DEATHMATCH"
+local LOBBY_BOTTOM_CLICKED_TEXT = "LEAVE DEATHMATCH"
+local GAME_BOTTOM_DEFAULT_TEXT = "GO TO LOBBY"
 --
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -43,6 +46,7 @@ function HomePage.new(mainMenu, frame)
 
     -- BottomButtonCallback changes depending on the MenuType.
     self.BottomButtonCallback = joinGameButtonClicked
+    self.ActionProcessing = false
 
     self.MainButtons = {}
     for _, v in pairs(frame:GetChildren()) do
@@ -95,10 +99,10 @@ end
 
 function HomePage:MenuTypeChanged(newMenuType)
     if newMenuType == "Lobby" then
-        self.BottomButton.Text = "JOIN DEATHMATCH"
+        self.BottomButton.InfoLabel.Text = LOBBY_BOTTOM_DEFAULT_TEXT
         self.BottomButtonCallback = joinGameButtonClicked
     else
-        self.BottomButton.Text = "LOBBY"
+        self.BottomButton.InfoLabel.Text = GAME_BOTTOM_DEFAULT_TEXT
         self.BottomButtonCallback = teleportBackToLobbyButtonClicked
     end
 end
@@ -189,11 +193,48 @@ function pageMainButtonClicked(self, name)
 end
 
 function teleportBackToLobbyButtonClicked(self)
-    
+    if self.ActionProcessing then return end
+    self.ActionProcessing = true
+    self.Main:Close()
+    RequestQueueEvent:InvokeServer("TeleportPublicSolo", "Lobby")
+    self.ActionProcessing = false
 end
 
 function joinGameButtonClicked(self)
-    
+    print('CLICKED!')
+
+    if self.ActionProcessing then return end
+    self.ActionProcessing  = true
+
+    local card = self.Frame.Card_Bottom
+    if card:GetAttribute("Joined") then
+        leaveGame(card)
+    else
+        joinGame(self, card)
+    end
+
+    self.ActionProcessing = false
+end
+
+function joinGame(self, button)
+    local success = RequestSpawnEvent:InvokeServer()
+    if success then
+        self.Main:Close()
+        button.InfoLabel.Text = LOBBY_BOTTOM_CLICKED_TEXT
+        --TODO: make it so you can open menu
+    end
+end
+
+function leaveGame(button)
+    local success = RequestDeathEvent:InvokeServer()
+    if success then
+        button.InfoLabel.Text = LOBBY_BOTTOM_DEFAULT_TEXT
+        button:SetAttribute("Joiend", false)
+        task.delay(0.2, function()
+            game:GetService("UserInputService").MouseIconEnabled = true
+        end)
+        --TODO: make it so you cannot open the menu
+    end
 end
 
 function addPlayerToQueue(self)

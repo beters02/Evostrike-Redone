@@ -117,6 +117,8 @@ local Movement = {
 }
 Movement.__index = Movement
 
+local TEMP_CROUCH_PLAYER_TORSO_TO_GROUND = 4
+
 -- init sounds
 --[[local humSounds = Movement.collider:WaitForChild("Sounds")
 local runsndsF = humSounds:WaitForChild("Run")
@@ -184,7 +186,7 @@ for i, v in pairs(config) do
 end
 
 --create YLength after config variables are added
-Movement.rayYLength = Movement.playerTorsoToGround + Movement.movementStickDistance
+
 
 -- Total max speed add modifier (for weapon slowing)
 Movement.maxSpeedAdd = 0
@@ -215,6 +217,10 @@ for i, v in pairs(setmetatable(require(script.Physics), Movement)) do
 end
 
 local Ladder = require(script:WaitForChild("Ladder"))
+
+local defaultYLength = Movement.playerTorsoToGround + Movement.movementStickDistance
+local crouchYLength = TEMP_CROUCH_PLAYER_TORSO_TO_GROUND + Movement.movementStickDistance
+Movement.rayYLength = defaultYLength
 
 --[[ Process Movement Functions ]]
 
@@ -507,17 +513,20 @@ function Movement.SetFrictionVars(frictionVarKey: string)
 		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.crouchMoveSpeed)
 		Movement.groundAccelerate = Movement.crouchAccelerate
 		Movement.friction = Movement.crouchFriction
+		Movement.rayYLength = crouchYLength
 	elseif frictionVarKey == "walk" then
 		Movement.LastFrictionVar = "walk"
 		Movement.maxSpeedAdd -= (Movement.groundMaxSpeed - Movement.walkMoveSpeed)
 		Movement.groundAccelerate = Movement.walkAccelerate
 		Movement.friction = Movement.crouchFriction
+		Movement.rayYLength = defaultYLength
 	elseif frictionVarKey == "run" then
 		local sub = (Movement.LastFrictionVar == "crouch" and Movement.crouchMoveSpeed) or (Movement.LastFrictionVar == "walk" and Movement.walkMoveSpeed) or 0
 		Movement.LastFrictionVar = "run"
 		Movement.maxSpeedAdd += (Movement.groundMaxSpeed - sub)
 		Movement.groundAccelerate = Movement.defGroundAccelerate
 		Movement.friction = Movement.defFriction
+		Movement.rayYLength = defaultYLength
 	end
 end
 

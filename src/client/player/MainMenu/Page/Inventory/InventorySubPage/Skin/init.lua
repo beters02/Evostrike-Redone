@@ -49,7 +49,8 @@ function Skin:init(Inventory, Frame)
     Skin.ItemDisplay.ClickedBackButton = function(itd)
         Skin.Inventory.Main:PlayButtonSound("Select1")
         Skin.Frame.Visible = true
-        Skin.ItemDisplay:Close()
+        Skin:CloseItemDisplay()
+        Skin.Inventory:EnableSubPageButtons()
     end
 
     Skin.ItemDisplay.ChangeDisplayedItem = changeDisplayItem

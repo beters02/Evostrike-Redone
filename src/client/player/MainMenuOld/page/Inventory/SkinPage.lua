@@ -558,6 +558,8 @@ function SkinPage:CreateSkinFramesForAllDefaultWeapons(frames)
 end
 
 function SkinPage:GetAllSkins()
+    
+
     local skins = {}
     for _, weaponFolder in pairs(WeaponModules:GetChildren()) do
         local weaponName = weaponFolder.Name

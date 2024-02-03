@@ -1,40 +1,40 @@
-local LocalizationService = game:GetService("LocalizationService")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData.Client)
 local Strings = require(Framework.Module.lib.fc_strings)
 
-local Stats = {}
+local Page = require(script.Parent)
+local Stats = setmetatable({}, Page)
+Stats.__index = Stats
 
 function Stats:Open()
+    self._Open()
 	self:Connect()
-	self:OpenAnimations()
 end
 
 function Stats:Close()
+    self._Close()
 	self:Disconnect()
-	self.Location.Visible = false
 end
 
 --
 
-function Stats:init(main)
-    self = setmetatable(self, Stats)
+function Stats.new(mainMenu, frame)
+    local self = setmetatable(Page.new(mainMenu, frame), Stats)
+    self.connections = {}
+	self.player = game.Players.LocalPlayer
+    self.Frame.PlayerName.Text = self.player.Name
 
-	self.connections = {}
-	self.player = main.player
-    self.Location.PlayerName.Text = self.player.Name
-
-	self.statsObjs = {}
-	--[[_statObjs._pc = {path = "economy.premiumCredits", label = self.Location.PCAmountLabel}
-	_statObjs._sc = {path = "economy.strafeCoins", label = self.Location.SCAmountLabel}
-	_statObjs._xp = {path = "economy.xp", label = self.Location:WaitForChild("AccountLevelFrame"):WaitForChild("PlayerXP"), suffix = " XP"}
-	_statObjs._wins = {path = "pstats.wins", label = self.Location.StatsFrame.Wins.Amount}
-	_statObjs._losses = {path = "pstats.losses", label = self.Location.StatsFrame.Losses.Amount}
-	_statObjs._kills = {path = "pstats.kills", label = self.Location.StatsFrame.Kills.Amount}
-	_statObjs._deaths = {path = "pstats.deaths", label = self.Location.StatsFrame.Deaths.Amount}
-	self.statObjs = _statObjs]]
-
-	--_updateAll(self)
+	self.statObjs = {
+        pc = {path = "economy.premiumCredits", label = self.Frame.PCAmountLabel},
+        sc = {path = "economy.strafeCoins", label = self.Frame.SCAmountLabel},
+        xp = {path = "economy.xp", label = self.Frame.AccountLevelFrame:WaitForChild("PlayerXP"), suffix = " XP"},
+        wins = {path = "pstats.wins", label = self.Frame.StatsFrame.Wins.Amount},
+        losses = {path = "pstats.losses", label = self.Frame.StatsFrame.Losses.Amount},
+        kills = {path = "pstats.kills", label = self.Frame.StatsFrame.Kills.Amount},
+        deaths = {path = "pstats.deaths", label = self.Frame.StatsFrame.Deaths.Amount}
+    }
+	
+	updateAll(self)
     return self
 end
 
@@ -42,25 +42,24 @@ end
 
 function Stats:Connect()
 	for i, obj in pairs(self.statObjs) do
-		self.connections[i.."Changed"] = PlayerData:PathValueChanged(obj.path, function(new)
-			obj.label.Text = tostring(new)
-			if obj.suffix then
-				obj.label.Text = obj.label.Text .. obj.suffix
-			end
-		end)
+		self.connections[i.."Changed"] = statObjectChanged(obj)
 	end
 end
 
 function Stats:Disconnect()
-	for i, v in pairs(self.connections) do
+	for _, v in pairs(self.connections) do
 		v:Disconnect()
 	end
 	self.connections = {}
 end
 
+function Stats:Update()
+    updateAll(self)
+end
+
 --
 
-function _updateAll(self)
+function updateAll(self)
 	local playerdata = PlayerData:Get()
 	for _, obj in pairs(self.statObjs) do
 		local newStr = tostring(Strings.convertPathToInstance(obj.path, playerdata))
@@ -69,6 +68,15 @@ function _updateAll(self)
 		end
 		obj.label.Text = newStr
 	end
+end
+
+function statObjectChanged(obj)
+    return PlayerData:PathValueChanged(obj.path, function(new)
+        obj.label.Text = tostring(new)
+        if obj.suffix then
+            obj.label.Text = obj.label.Text .. obj.suffix
+        end
+    end)
 end
 
 return Stats

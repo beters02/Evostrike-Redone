@@ -1,77 +1,94 @@
---[[
-    page.init() -- initialize all page frames
+-- Page Base Class
 
-    page:FindPage(pageName)
-    page:OpenPage(pageName, dontCloseOtherPages)
-    page:ClosePage(pageName)
-    page:CloseAllPages()
+-- Some Page Functions can be overridden, call self._[Function] for base function.
+-- init, Open, Close, Connect, Disconnect can all be overridden.
+-- EX:
+--[[
+
+    local HomePage = {}
+
+    function HomePage.new()
+        return setmetatable(Page.new(m, f), HomePage)
+    end
+
+    -- Custom Open Function while still calling it's base function
+    function HomePage:Open()
+        self._Open()
+        -- do custom functionality here
+    end
 ]]
 
-local page = {ISPAGEMODULE = true}
-page.__index = page
+local Page = {}
+Page.__index = Page
 
---[[ Page Module Private Access Functions ]]
+-- Create a Page Object
+function Page.new(mainMenu, frame)
+    local self = setmetatable({}, Page)
+    self.Frame = frame
+    self.Main = mainMenu
+    self.Connections = {}
 
-function page.init(self, isPlayerAdmin) -- self = main
-    -- create page table as main table in cm_mainMenu
-    local _page = {}
-    _page = {}
-    _page._opened = {} -- currently opened pages
-    for i, v in pairs(page) do
-        if i == "init" or i == "new" then continue end
-        _page[i] = v
+    self._init = function()
+        self:MenuTypeChanged(self.Main.MenuType())
     end
 
-    _page._loc = game.Players.LocalPlayer.PlayerScripts.MainMenu.page
-    _page._baseClass = require(_page._loc:WaitForChild("Base"))
-    _page._stored = {}
-
-    -- init frames as pages
-    for _, v in pairs(self.gui:GetChildren()) do
-        if not v:IsA("Frame") or not string.match(v.Name, "Frame") then continue end
-        -- remove "Frame" from string,
-        -- create class with modified string as name
-        _page._stored[string.gsub(v.Name, "Frame", "")] = _page._baseClass.new(self, _page, string.gsub(v.Name, "Frame", ""), isPlayerAdmin)
+    self._Open = function()
+        self.Frame.Visible = true
+        self:Connect()
     end
 
-    return setmetatable(_page, page)
-end
-
---[[
-    Page Module Public Access Functions
-]]
-
--- Dont include "Frame" in pageName
-function page:OpenPage(pageName: string, dontCloseOtherPages: boolean)
-    local class = self:FindPage(pageName)
-    if class then
-        if not dontCloseOtherPages then self:CloseAllPages() end
-        class:Open()
-        self._opened[pageName] = class
+    self._Close = function()
+        self.Frame.Visible = false
+        self:Disconnect()
     end
-end
 
-function page:ClosePage(pageName: string)
-    local class = self:FindPage(pageName)
-    if class then
-        class:Close()
+    -- Just so you don't get errors when using self._Connect
+    self._Connect = function() end
+
+    self._Disconnect = function()
+        for _, v in pairs(self.Connections) do
+            v:Disconnect()
+        end
     end
-    self._opened[pageName] = nil
+    return self
 end
 
-function page:CloseAllPages()
-    for _, v in pairs(self._opened) do
-        v:Close()
+-- Page Initilization, Called in MainMenuModule when Pages are Initialized
+function Page:init()
+    self._init()
+end
+
+-- Open the Page
+function Page:Open()
+    self._Open()
+end
+
+-- Close the Page
+function Page:Close()
+    self._Close()
+end
+
+-- Called in Page:Open(), Base function does nothing.
+function Page:Connect()
+    self._Connect()
+end
+
+-- Called in Page:Close(), Disconnects all connections in self.Connections
+function Page:Disconnect()
+    self._Disconnect()
+end
+
+-- Change parts of the Page when the MenuType is Changed!
+function Page:MenuTypeChanged(newMenuType)
+end
+
+-- Correctly add a Connection to a page,
+-- Prevents Connections being added to dictionary and overriding the current one, causing a memory leak.
+function Page:AddConnection(name, connection)
+    if self.Connections[name] then
+        self.Connections[name]:Disconnect()
     end
-    self._opened = {}
+    self.Connections[name] = connection
 end
 
-function page:FindPage(pageName: string) -- Do not add "Frame" when calling pageName
-    return self._stored[pageName] or false
-end
-
-function page:GetOpenPages()
-    return self._opened
-end
-
-return page
+return Page

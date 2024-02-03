@@ -2,30 +2,34 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
-local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
+local Popup = require(script.Parent.Parent.Popup)
+--local Popup = require(game:GetService("Players").LocalPlayer.PlayerScripts.MainMenu.popup) -- Main SendMessageGui Popup
 
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
 local AttemptItemPurchaseGui = ShopAssets:WaitForChild("AttemptItemPurchase")
-local ItemList = require(script.Parent.Parent.components.ItemList)
+local ItemList = require(script:WaitForChild("ItemList"))
 local ShopRarity = require(ReplicatedStorage.Assets.Shop.Rarity)
 
-local Shop = {}
+local Page = require(script.Parent)
+local Shop = setmetatable({}, Page)
+Shop.__index = Shop
 --TODO: change all Shop-Personal functions to be a script function rather than a module function.
 
 -- [[ PAGE CLASS FUNCTIONS ]]
-function Shop:init()
-    self = setmetatable(Shop, self)
+function Shop.new(mainMenu, frame)
+    local self = setmetatable(Page.new(mainMenu, frame), Shop)
+
     self.Player = game.Players.LocalPlayer
     self.button_connections = {}
 
-    self.itemDisplayFrame = self.Location:WaitForChild("ItemDisplayFrame")
+    self.itemDisplayFrame = self.Frame:WaitForChild("ItemDisplayFrame")
     self.itemDisplayVar = {active = false, purchaseActive = false, purchaseProcessing = false}
     self.itemDisplayConns = {}
 
     -- ItemLists
     self.itemLists = {}
-    for _, itemListFrame in pairs(self.Location:GetChildren()) do
+    for _, itemListFrame in pairs(self.Frame:GetChildren()) do
         if itemListFrame:IsA("Frame") and string.match(itemListFrame.Name, "ItemList_") then
             local OItemList = ItemList.init(self, itemListFrame)
             self.itemLists[itemListFrame.Name] = OItemList
@@ -41,42 +45,43 @@ function Shop:init()
         end)
     }
 
-    local owned = self.Location:WaitForChild("OwnedFrame")
+    local owned = self.Frame:WaitForChild("OwnedFrame")
     self.pcLabel = owned:WaitForChild("PremiumCreditAmountLabel")
     self.scLabel = owned:WaitForChild("StrafeCoinAmountLabel")
     
     local pd = PlayerData:GetKey("economy")
     self:UpdateEconomy(pd.strafeCoins, pd.premiumCredits)
+
     return self
 end
 
 function Shop:Open()
+    self._Open()
     self:ConnectButtons()
-    self:OpenAnimations()
     self:TogglePages(true)
 end
 
 function Shop:Close()
+    self._Close()
     self:DisconnectButtons()
     self:CloseItemDisplay()
-    self.Location.Visible = false
     self:TogglePages()
 end
 
 --
 
 function Shop:ConnectButtons()
-    self.button_connections.skins = self.Location.SkinsButton.MouseButton1Click:Connect(function()
+    self.button_connections.skins = self.Frame.SkinsButton.MouseButton1Click:Connect(function()
         self:OpenSkinsPage()
-        self:PlaySound("Open")
+        self.Main:PlayButtonSound("Open")
     end)
-    self.button_connections.collections = self.Location.CollectionsButton.MouseButton1Click:Connect(function()
+    self.button_connections.collections = self.Frame.CollectionsButton.MouseButton1Click:Connect(function()
         self:OpenCollectionsPage()
-        self:PlaySound("Open")
+        self.Main:PlayButtonSound("Open")
     end)
-    self.button_connections.cases = self.Location.CasesButton.MouseButton1Click:Connect(function()
+    self.button_connections.cases = self.Frame.CasesButton.MouseButton1Click:Connect(function()
         self:OpenCasesPage()
-        self:PlaySound("Open")
+        self.Main:PlayButtonSound("Open")
     end)
 end
 
@@ -93,9 +98,9 @@ function Shop:OpenSkinsPage(async)
     end
     self.openItemList = "Skins"
 
-    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
-    self.Location.CollectionsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Frame.SkinsButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
+    self.Frame.CollectionsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Frame.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
     self.itemLists.ItemList_Skins:Enable()
     self.itemLists.ItemList_Cases:Disable()
     self.itemLists.ItemList_Keys:Disable()
@@ -108,9 +113,9 @@ function Shop:OpenCollectionsPage(async)
     end
     self.openItemList = "Collections"
 
-    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Location.CollectionsButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
-    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Frame.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Frame.CollectionsButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
+    self.Frame.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
     self.itemLists.ItemList_Skins:Disable()
     self.itemLists.ItemList_Cases:Disable()
     self.itemLists.ItemList_Keys:Disable()
@@ -123,9 +128,9 @@ function Shop:OpenCasesPage(async)
     end
     self.openItemList = "Cases"
 
-    self.Location.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Location.CollectionsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Location.CasesButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
+    self.Frame.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Frame.CollectionsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.Frame.CasesButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
     self.itemLists.ItemList_Cases:Enable()
     self.itemLists.ItemList_Keys:Enable()
     self.itemLists.ItemList_Skins:Disable()
@@ -143,17 +148,17 @@ function Shop:TogglePages(toggle)
         else
             self:OpenCasesPage(true)
         end
-        self.Location.SkinsButton.Visible = true
-        self.Location.CollectionsButton.Visible = true
-        self.Location.CasesButton.Visible = true
+        self.Frame.SkinsButton.Visible = true
+        self.Frame.CollectionsButton.Visible = true
+        self.Frame.CasesButton.Visible = true
     else
         self.itemLists.ItemList_Skins:Disable()
         self.itemLists.ItemList_Cases:Disable()
         self.itemLists.ItemList_Keys:Disable()
         self.itemLists.ItemList_Collections:Disable()
-        self.Location.SkinsButton.Visible = false
-        self.Location.CollectionsButton.Visible = false
-        self.Location.CasesButton.Visible = false
+        self.Frame.SkinsButton.Visible = false
+        self.Frame.CollectionsButton.Visible = false
+        self.Frame.CasesButton.Visible = false
     end
 end
 
@@ -198,7 +203,7 @@ function Shop:OpenItemDisplay(item, itemDisplayName)
         self:CloseItemDisplay()
     end)
 
-    self:PlaySound("ItemDisplay")
+    self.Main:PlayButtonSound("ItemDisplay")
     self:TogglePages()
     self.itemDisplayFrame.Visible = true
 end
@@ -268,7 +273,7 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
             return
         end
         self.itemDisplayVar.purchaseProcessing = true
-        self:PlaySound("Open")
+        self.Main:PlayButtonSound("Open")
         otherDisconnect(1)
         itemDisplayPurchaseItem(self, item, "PremiumCredits", shopItem, amountPurchased)
         confirmGui:Destroy()
@@ -284,7 +289,7 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
             return
         end
         self.itemDisplayVar.purchaseProcessing = true
-        self:PlaySound("Open")
+        self.Main:PlayButtonSound("Open")
         otherDisconnect(2)
         itemDisplayPurchaseItem(self, item, "StrafeCoins", shopItem, amountPurchased)
         confirmGui:Destroy()
@@ -326,13 +331,13 @@ end
 function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem, amount)
     if ShopInterface:PurchaseItem(item, amount, purchaseType) then
         task.delay(0.5, function()
-            self:FindPage("Inventory"):Update(true)
+            self.Main:GetPage("Inventory"):Update()
         end)
-        self:PlaySound("Purchase1")
+        self.Main:PlayButtonSound("Purchase1")
         Popup.burst("Successfully bought item! " .. tostring(parsedItem.name), 3)
         return true
     else
-        self:PlaySound("Error1")
+        self.Main:PlayButtonSound("Error1")
         Popup.burst("Could not buy item " .. tostring(parsedItem.name), 3)
         return false
     end

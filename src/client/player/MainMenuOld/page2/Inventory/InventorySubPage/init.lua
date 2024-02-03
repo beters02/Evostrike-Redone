@@ -1,5 +1,3 @@
--- [[ InventorySubPage Class ]]
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 
@@ -9,11 +7,10 @@ ItemDisplay.__index = ItemDisplay
 function ItemDisplay.new(SubPage)
     local self = setmetatable({}, ItemDisplay)
     self.SubPage = SubPage
-
-    self.Frame = SubPage.Inventory.Frame.ItemDisplayFrame:Clone()
-    self.Frame.Name = SubPage.Name .. "_ItemDisplayFrame"
+    
+    self.Frame = self.SubPage.Inventory.Frame.ItemDisplayFrame:Clone()
+    self.Frame.Name = self.SubPage.Inventory.Name .. "_ItemDisplayFrame"
     self.Frame.Visible = false
-    self.Frame.Parent = SubPage.Inventory.Frame
 
     self.Connections = {}
     self.Var = {CurrentSkinfo = false}
@@ -52,17 +49,24 @@ function ItemDisplay:Disconnect()
 end
 
 -- Override Main Button Clicked
-function ItemDisplay:ClickedMainButton() end
+function ItemDisplay:ClickedMainButton()
+    
+end
 
 -- Override Sec Button Clicked
-function ItemDisplay:ClickedSecondaryButton() end
+function ItemDisplay:ClickedSecondaryButton()
+    
+end
 
 -- Override Back Button Clicked
-function ItemDisplay:ClickedBackButton() end
+function ItemDisplay:ClickedBackButton()
+    
+end
 
 -- Override Change Item Display Item
--- @var skinfo = {model = "", skin = "", uuid = "", rarity = "", frame = Frame}
-function ItemDisplay:ChangeDisplayedItem(skinfo) end
+function ItemDisplay:ChangeDisplayedItem(skinfo) -- skinfo = {model = "", skin = "", uuid = "", rarity = "", frame = Frame}
+    
+end
 
 -- Inventory SubPage will be a Container Frame with 1 or more Content Frames as children.
 local InventorySubPage = {}
@@ -105,6 +109,9 @@ function InventorySubPage:Close()
     self.Visible = false
 end
 
+function InventorySubPage:Update()
+end
+
 function InventorySubPage:OpenItemDisplay()
     self.Var.ItemDisplayOpened = true
     self.ItemDisplay:Open()
@@ -118,26 +125,8 @@ function InventorySubPage:CloseItemDisplay(onPageClose)
 end
 
 function InventorySubPage:Connect()
-    if self.ItemPageNumberVar.PageAmount > 1 then
+    if self.ItemDisplayNumberVar.PageAmount > 1 then
         self:ConnectPageChangeButtons()
-    end
-end
-
-function InventorySubPage:ConnectPageChangeButtons()
-    self.ItemPageNumberVar.Connections.NextPage = self.Frame.NextPageNumberButton.MouseButton1Click:Connect(function()
-        self:NextContentFrame()
-    end)
-    self.ItemPageNumberVar.Connections.PreviousPage = self.Frame.PreviousPageNumberButton.MouseButton1Click:Connect(function()
-        self:PreviousContentFrame()
-    end)
-end
-
-function InventorySubPage:DisconnectPageChangeButtons()
-    for _, v in pairs({"NextPage", "PreviousPage"}) do
-        local conn = self.ItemPageNumberVar.Connections[v]
-        if conn then
-            conn:Disconnect()
-        end
     end
 end
 
@@ -145,7 +134,7 @@ function InventorySubPage:Disconnect()
     for _, v in pairs(self.Connections) do
         v:Disconnect()
     end
-    if self.ItemPageNumberVar.PageAmount > 1 then
+    if self.ItemDisplayNumberVar.PageAmount > 1 then
         self:DisconnectPageChangeButtons()
     end
 end
@@ -160,8 +149,8 @@ function InventorySubPage:AddContentFrame(num) -- Num will never be 1 since firs
 end
 
 function InventorySubPage:NextContentFrame()
-    local curr = self.ItemPageNumberVar.CurrentPage
-    if curr == self.ItemPageNumberVar.PageAmount then
+    local curr = self.ItemDisplayNumberVar.CurrentPage
+    if curr == self.ItemDisplayNumberVar.PageAmount then
         return
     end
 
@@ -169,23 +158,21 @@ function InventorySubPage:NextContentFrame()
     curr += 1
     self.Frame["Content" .. tostring(curr)].Visible = true
     
-    self.Frame.CurrentPageNumberLabel.Text = tostring(curr)
-    self.ItemPageNumberVar.CurrentPage = curr
+    self.Inventory.Frame.CurrentPageNumberLabel.Text = tostring(curr)
+    self.ItemDisplayNumberVar.CurrentPage = curr
 end
 
 function InventorySubPage:PreviousContentFrame()
-    local curr = self.ItemPageNumberVar.CurrentPage
-    if curr == 1 then
-        return
-    end
-    self.Frame["Content" .. tostring(curr)].Visible = false
+    local curr = self.ItemDisplayNumberVar.CurrentPage
+        if curr == 1 then
+            return
+        end
+        self.Frame["Content" .. tostring(curr)].Visible = false
 
-    curr -= 1
-    self.Frame["Content" .. tostring(curr)].Visible = true
-    self.Frame.CurrentPageNumberLabel.Text = tostring(curr)
-    self.ItemPageNumberVar.CurrentPage = curr
+        curr -= 1
+        self.Frame["Content" .. tostring(curr)].Visible = true
+        self.Inventory.Frame.CurrentPageNumberLabel.Text = tostring(curr)
+        self.ItemDisplayNumberVar.CurrentPage = curr
 end
-
-function InventorySubPage:Update() end
 
 return InventorySubPage

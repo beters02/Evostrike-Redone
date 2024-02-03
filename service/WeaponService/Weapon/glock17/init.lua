@@ -15,6 +15,16 @@ local wepconfig = {
 		fireVectorCameraOffset = Vector2.new(5, 5), -- Side, Up
 		fireAccuracyCameraOffset = Vector2.new(5, 5), -- Side, Up
 		fireVectorCameraMax = Vector3.new(0.008, 0.007, 0.1), -- Up, Side
+
+		-- Recoil Reset
+		-- firstBulletReset 	 : Recoil Reset for First Bullet
+		-- targetBulletReset  	 : Weapon's Base Recoil Reset
+		-- bulletsTillFinalReset : How many bullets will it take for Weapon to reach Target Reset
+		recoilResetCfg = {
+			firstBulletReset = 0.1,
+			targetBulletReset = 0.35,
+			bulletsTillFinalReset = 3,
+		},
 		
 		ammo = {
 			magazine = 15,

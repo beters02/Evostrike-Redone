@@ -1,6 +1,7 @@
 local UserInputService = game:GetService("UserInputService")
 local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
+local Popup = require(script.Parent.Parent.Parent.Popup)
 
 local keybinds = {}
 
@@ -32,7 +33,7 @@ function keybinds:_connectKeybindsFrame()
 
                         -- verify string (type check, min/max)
                         local success, err = self:_verifyInputString(inputStr, dataKey)
-                        if not success then self._sendMessageGui(self.player, tostring(err), "error") textBox.Text = currValue return end
+                        if not success then Popup.new(self.player, tostring(err), 3) textBox.Text = currValue return end
 
                         -- set
                         self:_setKey(dataKey, inputStr, textBox, currValue)
@@ -49,7 +50,7 @@ function keybinds:_connectKeybindsFrame()
                         local inputStr, dataKey, currValue = self:_textBoxCaptureInput(textBox, input)
                         if inputStr then
                             local success, err = self:_verifyInputString(inputStr, dataKey)
-                            if not success then self._sendMessageGui(self.player, tostring(err), "error") textBox.Text = currValue return end
+                            if not success then Popup.new(self.player, tostring(err), 3) textBox.Text = currValue return end
                             self:_setKey(dataKey, inputStr, textBox, currValue)
                         end
     
@@ -112,7 +113,7 @@ function keybinds:_setKey(dataKey, newKeyStr, textBox, currValue)
     -- check if key is already bound to another action
     for i, v in pairs(PlayerData:GetPath("options.keybinds")) do
         if v == newKeyStr then
-            self._sendMessageGui(self.player, "[" .. string.upper(newKeyStr) .. "] already bound to " .. i, "error")
+            Popup.new(self.player, "[" .. string.upper(newKeyStr) .. "] already bound to " .. i, 3)
             textBox.Text = currValue
             return
         end
@@ -124,12 +125,13 @@ function keybinds:_setKey(dataKey, newKeyStr, textBox, currValue)
     end)
 
     if success then
-        self._sendMessageGui(self.player, "Keybind set!")
+        Popup.new(self.player, "Keybind set!", 3)
         textBox.Text = newKeyStr
         return
     end
 
-    self._sendMessageGui(self.player, "Could not set keybind! " .. tostring(err), "error")
+    Popup.new(self.player, "Could not set keybind! " .. tostring(err), 3)
+
     -- debug
     error(err)
     textBox.Text = currValue

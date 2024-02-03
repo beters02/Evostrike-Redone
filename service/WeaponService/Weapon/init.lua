@@ -277,8 +277,8 @@ function Weapon:PrimaryFire(moveSpeed)
         end
     end
 
-	-- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
-	self:RegisterRecoils(moveSpeed)
+    -- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
+    self:RegisterRecoils(moveSpeed)
 	
 	-- handle client fire rate & auto reload
 	local nextFire = fireTick + self.Options.fireRate
@@ -828,10 +828,10 @@ function Weapon:RegisterRecoils(moveSpeed)
         self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
         
         -- register client shot for bullet/blood/sound effects
-        local resultData: Shared.ShotResultData = {
+        --[[local resultData: Shared.ShotResultData = {
             shooter = self.Player, tool = self.Tool, model = self.ClientModel, weaponOptions = self.Options, result = result,
             origin = mray.Origin, hitCharacter = hitchar, isBangable = isBangable, wallbangDmgMult = wallDmgMult or 1
-        }
+        }]]
 
         SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
         --Shared.RegisterShot(resultData)
@@ -897,7 +897,6 @@ function Weapon:CalculateAccuracy(vecRecoil, moveSpeed)
 end
 
 function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
-    local player = self.Player
     local weaponOptions = self.Options
     local _x
 	local _y
@@ -913,8 +912,7 @@ function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
     --local inaccSpeed = 2.9 -- After some testing, 2.8 is a "poorly done" counter-strafe. A good counter strafe results in 1.2 or lower. We will give them 2.9 for now.
     local inaccSpeed = 7 -- 7 feels better for spraying for the time being.
 
-    if self.Variables.currentBullet == 1 then
-    elseif mstate:get("crouching") then
+    if self.Variables.currentBullet ~= 1 and mstate:get("crouching") then
         baseAccuracy = weaponOptions.accuracy.crouch
     elseif mstate:get("landing") or (movementSpeed > inaccSpeed and movementSpeed < rspeed) then
         baseAccuracy = weaponOptions.accuracy.walk
@@ -928,12 +926,6 @@ function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
 	end
 	
 	return util_vec2AddWithFixedAbsrRR(Vector2.zero, _x and _x * baseAccuracy or baseAccuracy, _y and _y * baseAccuracy or baseAccuracy)
-end
-
-function util_vec2AddWithFixedAbsrRR(vec, addX, addY)
-	addX = Math.frand(addX)
-	addY = Math.frand(addY)
-	return Vector2.new(vec.X + addX, vec.Y + addY)
 end
 
 function Weapon:IsGrounded()
@@ -1022,6 +1014,14 @@ function Weapon:SetInfoFrame(weapon: "gun" | "knife")
         self.Variables.infoFrame.CurrentTotalAmmoLabel.Visible = false
         self.Variables.infoFrame["/"].Visible = false
     end
+end
+
+--
+
+function util_vec2AddWithFixedAbsrRR(vec, addX, addY)
+	addX = Math.frand(addX)
+	addY = Math.frand(addY)
+	return Vector2.new(vec.X + addX, vec.Y + addY)
 end
 
 return Weapon

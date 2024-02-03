@@ -42,7 +42,9 @@ function general:_updateOptionValue(prefix, key, value)
 
 	if prefix == "crosshair" then
 		self:_updateCrosshairFrame()
-		self.crosshairModule:updateCrosshair(key, value)
+		if self.crosshairModule then
+			self.crosshairModule:updateCrosshair(key, value)
+		end
 	elseif prefix == "camera" then
 		-- fire viewmodel script event
 		self:_updateViewmodelFrame()

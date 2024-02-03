@@ -81,6 +81,7 @@ local GamemodeServiceRemoteEvent = Framework.Service.GamemodeService2:WaitForChi
 
 GamemodeServiceRemoteEvent.OnClientEvent:Connect(function(action, var)
     if action == "ChangeMenuType" then
-        require(game.Players.LocalPlayer.PlayerScripts.MainMenu).setMenuType(var)
+        --require(game.Players.LocalPlayer.PlayerScripts.MainMenu):
+        --require(game.Players.LocalPlayer.PlayerScripts.MainMenu).setMenuType(var)
     end
 end)

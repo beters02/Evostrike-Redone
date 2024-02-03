@@ -120,6 +120,7 @@ function Frames.ConnectSkinFrames(self)
                 end
                 Frames.OpenItemDisplayFromSkinFrame(self, itemFr)
                 self.Frame.Visible = false
+                self.Inventory:DisableSubPageButtons()
             end))
         end
     end
@@ -287,6 +288,11 @@ function Frames.GetAllSkins()
     for _, weaponFolder in pairs(WeaponModules:GetChildren()) do
         local weaponName = weaponFolder.Name
 
+        local f = string.sub(weaponName, 1, 1)
+        if f == "_" then
+            continue
+        end
+
         if weaponName == "knife" then
             for _, model in pairs(weaponFolder.Assets:GetChildren()) do
                 for _, skin in pairs(model.Models:GetChildren()) do
@@ -314,6 +320,11 @@ function Frames.GetAllDefaultSkins()
     local skins = {}
     for _, weaponFolder in pairs(WeaponModules:GetChildren()) do
         if not weaponFolder:FindFirstChild("Assets") then
+            continue
+        end
+
+        local f = string.sub(weaponFolder.Name, 1, 1)
+        if f == "_" then
             continue
         end
 

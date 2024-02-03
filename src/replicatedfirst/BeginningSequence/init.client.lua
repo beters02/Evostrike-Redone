@@ -117,6 +117,7 @@ local function intro_bypass()
     loading = false
     isPlayingIntro = false
     forceStop = true
+    intro:Stop()
     FINISH(true)
 end
 
@@ -192,16 +193,20 @@ function FINISH(bypass)
     end
     
     PlayerLoadedEvent:FireServer()
-    intro_finished_animation()
-    intro:Stop()
-    
-    task.delay(HUD_ENABLE_DELAY, function()
-        if player.PlayerGui:FindFirstChild("HUD") then
-            player.PlayerGui.HUD.Enabled = true
-        end
+
+    task.delay(2, function()
+        
+        intro_finished_animation()
+        pcall(function() intro:Stop() end)
+        
+        task.delay(HUD_ENABLE_DELAY, function()
+            if player.PlayerGui:FindFirstChild("HUD") then
+                player.PlayerGui.HUD.Enabled = true
+            end
+        end)
+        
+        Debris:AddItem(script, SCRIPT_DESTRUCTION_DELAY)
     end)
-    
-    Debris:AddItem(script, SCRIPT_DESTRUCTION_DELAY)
 end
 
 --@run
