@@ -23,11 +23,11 @@ local wepconfig = {
 		
 		accuracy = {
 			firstBullet = 4,
-			base = 35,
-			crouch = 32,
+			base = 11.5,
+			crouch = 8.5,
 			spray = 2,
-			walk = 25,
-			run = 30,
+			walk = 16,
+			run = 18,
 			jump = 120,
 			spread = true
 		},

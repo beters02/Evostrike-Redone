@@ -173,14 +173,13 @@ function Weapon:Equip()
     gripParent.RightGrip.Part1 = self.ClientModel.GunComponents.WeaponHandle
     
     -- run server equip timer
-    task.spawn(function()
-        local success = self.ServerEquipEvent.OnClientEvent:Wait()
+    self.ServerEquipEvent.OnClientEvent:Once(function(success)
         if success and self.Variables.equipping then
             self.Variables.equipped = true
             self.Variables.equipping = false
             PlayerActionsState:set("weaponEquipping", false)
         end
-	end)
+    end)
 
 	-- set movement speed
     self.Controller:HandleHoldMovementPenalty(self.Slot, true)
@@ -214,10 +213,8 @@ function Weapon:Unequip()
 
     self.Variables.equipping = false
 
-	task.spawn(function()
-        self:_StopAllActionAnimations()
-        self.CameraObject:StopCurrentRecoilThread()
-	end)
+	self:_StopAllActionAnimations()
+    self.CameraObject:StopCurrentRecoilThread()
 end
 
 function Weapon:Remove()
@@ -250,35 +247,35 @@ function Weapon:PrimaryFire(moveSpeed)
 	self.Variables.lastFireTime = fireTick
 	self.CameraObject.weaponVar.currentBullet = self.Variables.currentBullet
 
+    task.spawn(function()
+         -- Unscope + rescope if necessary
+        if self.Options.scope then
+            if self.Variables.scoping then
+                self.Variables.rescope = true
+                self.Variables.scopedWhenShot = true
+                self:ScopeOut()
+                task.delay(self.Options.fireRate - 0.03, function()
+                    if self.Variables.rescope then
+                        self:ScopeIn()
+                    end
+                end)
+            else
+                self.Variables.rescope = false
+                self.Variables.scopedWhenShot = false
+            end
+        end
+
+        -- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
+        self:RegisterRecoils(moveSpeed)
+    end)
+    
     -- play animations
 	self:PlayAnimation("client", "Fire")
     self:PlayAnimation("server", "Fire")
 
 	-- Play Emitters and Sounds
-	task.spawn(function()
-        self:PlayReplicatedSound("Fire", true)
-		SharedWeaponFunctions.ReplicateFireEmitters(self.Tool.ServerModel, self.ClientModel)
-	end)
-
-    -- Unscope + rescope if necessary
-    if self.Options.scope then
-        if self.Variables.scoping then
-            self.Variables.rescope = true
-            self.Variables.scopedWhenShot = true
-            self:ScopeOut()
-            task.delay(self.Options.fireRate - 0.03, function()
-                if self.Variables.rescope then
-                    self:ScopeIn()
-                end
-            end)
-        else
-            self.Variables.rescope = false
-            self.Variables.scopedWhenShot = false
-        end
-    end
-
-    -- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
-    self:RegisterRecoils(moveSpeed)
+	self:PlayReplicatedSound("Fire", true)
+	SharedWeaponFunctions.ReplicateFireEmitters(self.Tool.ServerModel, self.ClientModel)
 	
 	-- handle client fire rate & auto reload
 	local nextFire = fireTick + self.Options.fireRate
@@ -286,21 +283,14 @@ function Weapon:PrimaryFire(moveSpeed)
 		repeat task.wait() until tick() >= nextFire
 		self.Variables.firing = false
         PlayerActionsState:set("shooting", false)
+        if self.Variables.ammo.magazine <= 0 and self.Variables.equipped then
+            self:Reload()
+        end
 	end)
 
 	-- update hud
 	self.Variables.infoFrame.CurrentMagLabel.Text = tostring(self.Variables.ammo.magazine)
     self.Player.PlayerScripts.HUD.FireBullet:Fire()
-
-	-- send uto reload
-	if self.Variables.ammo.magazine <= 0 then
-        task.spawn(function()
-            repeat task.wait() until not self.Variables.firing
-            if self.Variables.equipped then
-                self:Reload()
-            end
-        end)
-	end
 end
 
 function Weapon:SecondaryFire()
@@ -333,13 +323,9 @@ function Weapon:Reload()
     end
 
     PlayerActionsState:set("reloading", true)
-	
-	task.spawn(function()
-        self:PlayAnimation("client", "Reload", true)
-		--weaponVar.animations.server.Reload:Play() TODO: make server reload animations
-	end)
+    self.Variables.reloading = true
 
-	self.Variables.reloading = true
+    self:PlayAnimation("client", "Reload", true)
 
 	local mag, total = self.RemoteFunction:InvokeServer("Reload")
 	self.Variables.ammo.magazine = mag
@@ -674,13 +660,11 @@ function Weapon:PlaySound(sound: string, dontDestroyOnRecreate: boolean?, isRepl
 
     if _sound:IsA("Folder") then
         for _, v in pairs(_sound:GetChildren()) do
-            task.spawn(function()
-                if isReplicated then
-                    SoundModule.PlayReplicatedClone(v, self.Character.HumanoidRootPart, true)
-                else
-                    SharedWeaponFunctions.PlaySound(self.Character, weaponName, v)
-                end
-            end)
+            if isReplicated then
+                SoundModule.PlayReplicatedClone(v, self.Character.HumanoidRootPart, true)
+            else
+                SharedWeaponFunctions.PlaySound(self.Character, weaponName, v)
+            end
         end
         return
     end
@@ -735,28 +719,24 @@ function Weapon:_ProcessEquipAnimation()
         require(Framework.Service.AbilityService):StopAbilityAnimations()
 	end
 
-    task.spawn(function() -- client
-        -- play pullout
-		local clientPullout = self:PlayAnimation("client", "Pullout")
-		clientPullout.Stopped:Wait()
-		if self.Variables.forcestop then return end
+    local clientPullout = self:PlayAnimation("client", "Pullout")
+    clientPullout.Stopped:Once(function()
+        if self.Variables.forcestop then return end
         if not self.Variables.equipped and not self.Variables.equipping then return end
         self.Animations.client.Hold:Play()
     end)
 
-    task.spawn(function() -- server animation
-        for _, v in pairs(self.Humanoid.Animator:GetPlayingAnimationTracks()) do
-            if not string.match(v.Name, "Run") and not string.match(v.Name, "Jump") then
-                v:Stop()
-            end
+    for _, v in pairs(self.Humanoid.Animator:GetPlayingAnimationTracks()) do
+        if not string.match(v.Name, "Run") and not string.match(v.Name, "Jump") then
+            v:Stop()
         end
-        task.wait()
-        local serverPullout = self:PlayAnimation("server", "Pullout")
-        serverPullout.Stopped:Once(function()
-            if self.Variables.forcestop then return end
-            if not self.Variables.equipped and not self.Variables.equipping then return end
-            self.Animations.server.Hold:Play()
-        end)     
+    end
+
+    local serverPullout = self:PlayAnimation("server", "Pullout")
+    serverPullout.Stopped:Once(function()
+        if self.Variables.forcestop then return end
+        if not self.Variables.equipped and not self.Variables.equipping then return end
+        self.Animations.server.Hold:Play()
     end)
 end
 
@@ -976,9 +956,10 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
 	end
 
 	-- create bullethole at wall
-    task.spawn(function()
-        SharedWeaponFunctions.CreateBulletHole(result, self.Variables.MainWeaponPartCache)
-    end)
+    --[[task.spawn(function()
+        
+    end)]]
+    SharedWeaponFunctions.CreateBulletHole(result, self.Variables.MainWeaponPartCache)
 
 	--SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, nil, nil, true, self.Tool, self.ClientModel)
 
