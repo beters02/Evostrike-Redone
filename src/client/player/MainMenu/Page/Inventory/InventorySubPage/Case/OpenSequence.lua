@@ -21,6 +21,9 @@ function fillCaseSeqFrame(self, skin, index)
     local model = SkinFrames.CreateSkinFrameModel(skin)
     itemFrame:WaitForChild("ViewportFrame"):ClearAllChildren()
     model.Parent = itemFrame:WaitForChild("ViewportFrame")
+
+    local rarity = ShopSkins.GetSkinFromInvString(skin.unsplit).rarity
+    itemFrame:WaitForChild("RarityBar").BackgroundColor3 = Rarity[rarity].color
 end
 
 return function(self, gotSkin, potentialSkins)
