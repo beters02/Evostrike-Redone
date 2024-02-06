@@ -165,7 +165,7 @@ function Weapon:Equip()
     PlayerActionsState:set("currentEquipPenalty", self.Options.movement.penalty)
 
 	-- process equip animation and sounds next frame ( to let unequip run )
-	task.spawn(function() self:_ProcessEquipAnimation() end)
+    self:_ProcessEquipAnimation()
 
     -- move model and set motors
     self.ClientModel.Parent = self.Viewmodel.Equipped
@@ -229,7 +229,6 @@ end
 
 function Weapon:PrimaryFire(moveSpeed)
     local fireTick = tick()
-    --local moveSpeed = self.Character.HumanoidRootPart.Velocity
 
     if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get("grenadeThrowing") then return end
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
@@ -535,7 +534,6 @@ function Weapon:MouseDown(isSecondary: boolean?)
     -- fire input scheduling, it makes semi automatic weapons feel less clunky and more responsive
     if self.Variables.fireScheduleCancelThread then
         self.Variables.fireScheduleCancelThread = nil
-        --coroutine.yield(self.Variables.fireScheduleCancelThread)
     end
 
     -- if a fire is scheduled, no need to do anything.
@@ -622,7 +620,6 @@ function Weapon:MouseUp(forceCancel: boolean?)
 			-- cancel fire scheduled after a full 64 tick of mouse being up
 			self.Variables.fireScheduleCancelThread = task.delay(1/64, function()
 				if self.Variables.fireScheduled then
-					--coroutine.yield(self.Variables.fireScheduled)
 					self.Variables.fireScheduled = nil
                     return
 				end
@@ -638,7 +635,6 @@ function Weapon:MouseUp(forceCancel: boolean?)
 
 	if not self.Options.automatic then
 		self.Variables.fireDebounce = false
-		--util_resetSprayOriginPoint()
 	end
 end
 
@@ -671,9 +667,9 @@ function Weapon:PlaySound(sound: string, dontDestroyOnRecreate: boolean?, isRepl
 
     if isReplicated then
         return SoundModule.PlayReplicatedClone(_sound, self.Character.HumanoidRootPart, true)
-    else
-        return SharedWeaponFunctions.PlaySound(self.Character, weaponName, _sound)
     end
+
+    return SharedWeaponFunctions.PlaySound(self.Character, weaponName, _sound)
 end
 
 function Weapon:PlayReplicatedSound(sound: string, dontDestroyOnRecreate: boolean?)
@@ -806,15 +802,9 @@ function Weapon:RegisterRecoils(moveSpeed)
 
     if result then
         self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
-        
-        -- register client shot for bullet/blood/sound effects
-        --[[local resultData: Shared.ShotResultData = {
-            shooter = self.Player, tool = self.Tool, model = self.ClientModel, weaponOptions = self.Options, result = result,
-            origin = mray.Origin, hitCharacter = hitchar, isBangable = isBangable, wallbangDmgMult = wallDmgMult or 1
-        }]]
 
-        SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
         --Shared.RegisterShot(resultData)
+        SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, isBangable, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
         return true
     end
 
@@ -955,15 +945,9 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
 		if result.Instance == v then warn("Saved you from a life of hell my friend") return false end
 	end
 
-	-- create bullethole at wall
-    --[[task.spawn(function()
-        
-    end)]]
+    table.insert(filter, result.Instance)
+
     SharedWeaponFunctions.CreateBulletHole(result, self.Variables.MainWeaponPartCache)
-
-	--SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, nil, nil, true, self.Tool, self.ClientModel)
-
-	table.insert(filter, result.Instance)
 	return self:_ShootWallRayRecurse(origin, direction, _p, result.Instance, (damageMultiplier + weaponWallbangInformation[bangableMaterial])/2, filter)
 end
 
