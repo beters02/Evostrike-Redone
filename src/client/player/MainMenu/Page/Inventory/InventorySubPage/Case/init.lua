@@ -5,6 +5,7 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local ShopInterface = require(Framework.Module.ShopInterface)
 local ShopAssets = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Shop")
 local PlayerData = require(Framework.Module.PlayerData)
+local AttemptItemSellGui = ShopAssets:WaitForChild("AttemptItemSell")
 
 local Popup = require(script.Parent.Parent.Parent.Parent.Popup)
 local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
@@ -41,6 +42,13 @@ function Case:init(Inventory, frame)
 
     -- "SELL"
     Case.ItemDisplay.ClickedSecondaryButton = function(itd)
+        if Case.ActionProcessing then return end
+        Case.ActionProcessing = true
+
+        Case.Inventory.Main:PlayButtonSound("Select1")
+        sellCase(Case, Case.CurrentCaseName)
+
+        Case.ActionProcessing = false
     end
 
     -- "BACK"
@@ -275,6 +283,53 @@ end
 
 function convertCaseStr(str: string)
     return str:gsub(" ", ""):lower()
+end
+
+function sellCase(self, case)
+    if self.ItemDisplay.Var.IsSelling then
+        return
+    end
+    self.ItemDisplay.Var.IsSelling = true
+
+    local caseName = convertCaseStr(case)
+    local shopItemStr = "case_" .. caseName
+    local shopItem = ShopInterface:GetItemPrice(shopItemStr)
+
+    local confirmgui = AttemptItemSellGui:Clone()
+    local mainframe = confirmgui:WaitForChild("Frame")
+    confirmgui.Parent = game.Players.LocalPlayer.PlayerGui
+
+    mainframe:WaitForChild("CaseLabel").Visible = true
+    mainframe:WaitForChild("WeaponLabel").Visible = false
+    mainframe:WaitForChild("SkinLabel").Visible = false
+
+    mainframe.CaseLabel.Text = string.upper(caseName)
+    mainframe.SCAcceptButton.Text = tostring(shopItem.sell_sc) .. " SC"
+
+    local conns = {}
+    conns[1] = mainframe.SCAcceptButton.MouseButton1Click:Once(function()
+        conns[2]:Disconnect()
+        local succ = ShopInterface:SellItem(shopItemStr, caseName)
+        if succ then
+            Popup.new(game.Players.LocalPlayer, "Successfully sold item for " .. tostring(shopItem.sell_sc) .. " SC!", 3)
+            self:CloseItemDisplay()
+            --CasePage.ConnectButtons(self)
+        else
+            Popup.new(game.Players.LocalPlayer, "Could not sell item.", 3)
+        end
+        self.ItemDisplay.Var.IsSelling = false
+        confirmgui:Destroy()
+        conns[1]:Disconnect()
+    end)
+
+    conns[2] = mainframe.DeclineButton.MouseButton1Click:Once(function()
+        conns[1]:Disconnect()
+        confirmgui:Destroy()
+        self.ItemDisplay.Var.IsSelling = false
+        conns[2]:Disconnect()
+    end)
+
+    confirmgui.Enabled = true
 end
 
 return Case

@@ -7,6 +7,7 @@ local keybinds = script:WaitForChild("Keybinds")
 
 function options.new(mainMenu, frame)
 	local self = setmetatable(Page.new(mainMenu, frame), options)
+	
 	-- compile options page module functions
 	_compile(self)
 
@@ -78,8 +79,7 @@ function options:ConnectMain()
 		self.Frame.KeybindsButton.MouseButton1Click:Connect(function()
 			if self._currentOptionsPage == "keybinds" then return end
 			self:SetCurrentOptionsPageOpen("keybinds")
-		end),
-
+		end)
 	}
 end
 

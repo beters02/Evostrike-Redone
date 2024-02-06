@@ -36,14 +36,14 @@ function Skin:init(Inventory, Frame)
 
     Skin.ItemDisplay.ClickedMainButton = function(itd)
         Skin.Inventory.Main:PlayButtonSound("Select1")
-        if setCurrentSkinEquipped(Skin) then
+        if self:SetSkinEquipped() then
             itd.Frame.MainButton.Text = "EQUIPPED"
         end
     end
 
     Skin.ItemDisplay.ClickedSecondaryButton = function(itd)
         Skin.Inventory.Main:PlayButtonSound("Select1")
-        sellSkin(Skin, Skin.CurrentOpenSkinFrame)
+        self:SellSkin(Skin.CurrentOpenSkinFrame)
     end
 
     Skin.ItemDisplay.ClickedBackButton = function(itd)
@@ -72,13 +72,20 @@ function Skin:Update()
     Frames.UpdateSkinFrames(self)
 end
 
-function setCurrentSkinEquipped(self)
+--@summary Set specific skin frame or CurrentSkinFrame equipped
+function Skin:SetSkinEquipped(skinFrame: Frame?)
     if self.Var.Equipping then
         return false
     end
     self.Var.Equipping = true
 
-    local skinfo = self.ItemDisplay.Var.CurrentSkinfo
+    local skinfo
+    if skinFrame then
+        skinfo = Frames.GetSkinFromFrame(skinFrame)
+    else
+        skinfo = self.ItemDisplay.Var.CurrentSkinfo
+    end
+    skinfo.frame = skinFrame
 
     local succ, err = pcall(function()
         InventoryInterface2.SetEquippedSkinFromSkinObject(skinfo)
@@ -91,12 +98,11 @@ function setCurrentSkinEquipped(self)
     end
 
     Frames.SetSkinFrameEquipped(self, skinfo)
-
     self.Var.Equipping = false
     return true
 end
 
-function sellSkin(self, frame)
+function Skin:SellSkin(frame)
     local invSkin = Frames.GetSkinFromFrame(frame)
 
     if not canSellItem(invSkin) then return end

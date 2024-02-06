@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local InventoryInterface2 = require(Framework.Module.InventoryInterface)
 local Strings = require(Framework.shfc_strings.Location)
@@ -9,6 +10,10 @@ local WeaponService = Framework.Service.WeaponService
 local WeaponModules = WeaponService:WaitForChild("Weapon")
 local PlayerData = require(Framework.Module.PlayerData)
 local Popup = require(script.Parent.Parent.Parent.Parent.Parent.Popup)
+local Math = require(Framework.Module.lib.fc_math)
+local EvoUI = require(Framework.Module.EvoUI)
+
+local RightClickGui = ReplicatedStorage.Assets.UI:WaitForChild("RightClickGui")
 
 local Frames = {}
 local Config = require(script.Parent.Config)
@@ -122,10 +127,20 @@ function Frames.ConnectSkinFrames(self)
                 self.Frame.Visible = false
                 self.Inventory:DisableSubPageButtons()
             end))
+            table.insert(self.SkinFrameConnections, button.MouseButton2Click:Connect(function()
+                if not self.Frame.Visible or not itemFr.Parent.Visible then
+                    return
+                end
+                Frames.SkinFrameSecondaryClick(self, itemFr)
+                --[[Frames.OpenItemDisplayFromSkinFrame(self, itemFr)
+                self.Frame.Visible = false
+                self.Inventory:DisableSubPageButtons()]]
+            end))
         end
     end
 end
 
+--@summary Skin Frame Primary Click
 function Frames.OpenItemDisplayFromSkinFrame(self, frame)
     local invSkin = Frames.GetSkinFromFrame(frame)
     invSkin.frame = frame
@@ -141,6 +156,29 @@ function Frames.OpenItemDisplayFromSkinFrame(self, frame)
     end
 
     self.CurrentOpenSkinFrame = frame
+end
+
+function Frames.SkinFrameSecondaryClick(self, frame)
+    local equipped = frame:GetAttribute("Equipped")
+    local rm = EvoUI.RightClickMenu.new(game.Players.LocalPlayer)
+
+    if equipped then
+        rm.Button1.Text = "EQUIPPED"
+    else
+        rm.Button1.Text = "EQUIP"
+        rm.Button1Clicked = function()
+            self:SetSkinEquipped(frame)
+            rm:Destroy()
+        end
+    end
+
+    rm.Button2.Text = "SELL"
+    rm.Button2Clicked = function()
+        self:SellSkin(frame)
+        rm:Destroy()
+    end
+
+    rm:Enable()
 end
 
 function Frames.DisconnectSkinFrames(self)

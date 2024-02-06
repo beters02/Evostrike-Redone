@@ -187,6 +187,24 @@ function Math.scaleToOffsetNumber(x: number?, y: number?): Vector2
 	return Vector2.new(x,y)
 end
 
+function Math.offsetToScaleNumber(x: number?, y: number?): Vector2
+	local viewportSize = workspace.Camera.ViewportSize
+	
+	if not x then
+		x = 0
+	else
+		x /= viewportSize.X
+	end
+
+	if not y then
+		y = 0
+	else
+		y /= viewportSize.Y
+	end
+
+	return Vector2.new(x, y)
+end
+
 function Math.scaleToOffsetUdim(ud: UDim2)
 	return UDim2.new(
 		Math.scaleToOffsetNumber(ud.X.Scale),
