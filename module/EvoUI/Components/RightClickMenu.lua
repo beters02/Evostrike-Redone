@@ -30,14 +30,15 @@ function RightClickMenu.new(plr)
     self.MainFrame.Position = UDim2.new(mpVec2.X, 8, mpVec2.Y, 0)
     self.Gui.Parent = plr.PlayerGui
     self.Gui.Enabled = false
-
     return self
 end
 
 function RightClickMenu:Enable()
+
     local didClickButton = false
 
     self.Gui.Enabled = true
+
     self.Connections.B1M1 = self.Button1.MouseButton1Click:Connect(function()
         didClickButton = true
         self:Button1Clicked()
@@ -72,10 +73,7 @@ function RightClickMenu:Destroy()
     self.Gui:Destroy()
 end
 
-function RightClickMenu:Button1Clicked()
-end
-
-function RightClickMenu:Button2Clicked()
-end
+function RightClickMenu:Button1Clicked() end
+function RightClickMenu:Button2Clicked() end
 
 return RightClickMenu
