@@ -7,8 +7,10 @@
 local DISABLE_CHAT_RETRIES = 5
 local MENU_OPEN_WITH_HOMEPAGE = true
 
-local TOPBAR_BUTTON_DEFAULT_COLOR = Color3.fromRGB(23, 29, 38)
-local TOPBAR_BUTTON_ACTIVE_COLOR = Color3.fromRGB(95, 120, 157)
+--local TOPBAR_BUTTON_DEFAULT_COLOR = Color3.fromRGB(23, 29, 38)
+--local TOPBAR_BUTTON_ACTIVE_COLOR = Color3.fromRGB(95, 120, 157)
+local TOPBAR_BUTTON_ACTIVE_COLOR = Color3.fromRGB(57, 120, 125)
+local TOPBAR_BUTTON_DEFAULT_COLOR = Color3.fromRGB(235, 241, 255)
 
 local TOPBAR_BUTTON_OPEN_FADEIN_LENGTH = .8
 local TOPBAR_BAR_OPEN_LENGTH = .8
@@ -19,6 +21,7 @@ local TOPBAR_BAR_CLOSE_LENGTH = .7
 local TOPBAR_BUTTON_HOVER_FADEIN_LENGTH = 1
 local TOPBAR_BUTTON_HOVER_FADEOUT_LENGTH = 1
 
+local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -69,6 +72,14 @@ function MainMenu:Initialize(gui)
     self.BaseConnections.MenuTypeChanged = GamemodeService:MenuTypeChanged(menuTypeChanged)
     self.CurrentOpenPage = getPage("Home")
 
+    self.BlurLightingEffect = Lighting:FindFirstChild("MainMenuBlur")
+    if not self.BlurLightingEffect then
+        self.BlurLightingEffect = Instance.new("BlurEffect", Lighting)
+        self.BlurLightingEffect.Enabled = false
+        self.BlurLightingEffect.Size = 54
+        self.BlurLightingEffect.Name = "MainMenuBlur"
+    end
+
     if self.CurrentMenuType == "Lobby" then
         self:Open()
     end
@@ -85,6 +96,8 @@ function MainMenu:Open()
     task.spawn(function()
         disableChat()
     end)
+
+    self.BlurLightingEffect.Enabled = true
 end
 
 -- Close the Menu, Closes current page and sets to last open
@@ -100,6 +113,8 @@ function MainMenu:Close()
     task.spawn(function()
         enableChat()
     end)
+
+    self.BlurLightingEffect.Enabled = false
 end
 
 -- Automatically Closes Current Page and Opens New One
@@ -206,8 +221,10 @@ function initTopBar(self)
         self.Tweens.TopBarOpen[v.Name .. "_Stroke"] = TweenService:Create(v.TextButton.UIStroke, tbbofiti, {Transparency = 0})
         self.Tweens.TopBarClose[v.Name] = TweenService:Create(v.TextButton, tbbofoti, {TextTransparency = 1})
         self.Tweens.TopBarClose[v.Name .. "_Stroke"] = TweenService:Create(v.TextButton.UIStroke, tbbofoti, {Transparency = 1})
-        self.Tweens.TopBarHoverOn[v.Name] = TweenService:Create(v.TextButton.UIStroke, tbbhiti, {Color = TOPBAR_BUTTON_ACTIVE_COLOR})
-		self.Tweens.TopBarHoverOff[v.Name] = TweenService:Create(v.TextButton.UIStroke, tbbhoti, {Color = TOPBAR_BUTTON_DEFAULT_COLOR})
+        --self.Tweens.TopBarHoverOn[v.Name] = TweenService:Create(v.TextButton.UIStroke, tbbhiti, {Color = TOPBAR_BUTTON_ACTIVE_COLOR})
+		--self.Tweens.TopBarHoverOff[v.Name] = TweenService:Create(v.TextButton.UIStroke, tbbhoti, {Color = TOPBAR_BUTTON_DEFAULT_COLOR})
+        self.Tweens.TopBarHoverOn[v.Name] = TweenService:Create(v.TextButton, tbbhiti, {TextColor3 = TOPBAR_BUTTON_ACTIVE_COLOR})
+		self.Tweens.TopBarHoverOff[v.Name] = TweenService:Create(v.TextButton, tbbhoti, {TextColor3 = TOPBAR_BUTTON_DEFAULT_COLOR})
         v.TextButton.UIStroke.Transparency = 1
         v.TextButton.TextTransparency = 1
     end

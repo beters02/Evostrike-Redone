@@ -7,6 +7,15 @@ local QUEUE_TEXT_FADE_TIME = 0.37
 local LOBBY_BOTTOM_DEFAULT_TEXT = "JOIN DEATHMATCH"
 local LOBBY_BOTTOM_CLICKED_TEXT = "LEAVE DEATHMATCH"
 local GAME_BOTTOM_DEFAULT_TEXT = "GO TO LOBBY"
+local BUTTON_HOVER_COLOR = Color3.fromRGB(57, 120, 125) -- 73, 155, 161
+local BUTTON_DEFAULT_COLOR = Color3.fromRGB(57, 62, 66)
+local PAGE_BUTTON_ENUM = {"Card_Solo", "Card_Join"} -- and MainButtons
+local BUTTON_HOVER_FADE_IN_LENGTH = 0.4
+local BUTTON_HOVER_FADE_OUT_LENGTH = 0.3
+local BUTTON_HOVER_EASING_STYLE = Enum.EasingStyle.Cubic
+local BUTTON_HOVER_EASING_DIRECTION = Enum.EasingDirection.Out
+
+local EQUALIZE_BUTTON_TEXT_SIZE = false
 --
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -45,6 +54,7 @@ function HomePage.new(mainMenu, frame)
     self.OptionsButton = self.Frame:WaitForChild("MainButton_Options")
     self.StatsButton = self.Frame:WaitForChild("MainButton_Stats")
     self.BottomButton = self.Frame:WaitForChild("Card_Bottom")
+    self.JoinButton = self.Frame:WaitForChild("Card_Join")
 
     -- BottomButtonCallback changes depending on the MenuType.
     self.BottomButtonCallback = joinGameButtonClicked
@@ -62,6 +72,8 @@ function HomePage.new(mainMenu, frame)
         QueueTextFadeOut = TweenService:Create(self.Casual1v1Button.InQueueText.TextLabel, TweenInfo.new(QUEUE_TEXT_FADE_TIME, Enum.EasingStyle.Cubic), {TextTransparency = 1}),
         QueueTextFadeIn = TweenService:Create(self.Casual1v1Button.InQueueText.TextLabel, TweenInfo.new(QUEUE_TEXT_FADE_TIME, Enum.EasingStyle.Cubic), {TextTransparency = 0})
     }
+
+    initAllButtonHoverTweens(self)
 
     return self
 end
@@ -95,6 +107,11 @@ function HomePage:Connect()
         self.Main:PlayButtonSound("Select1")
         self.BottomButtonCallback(self)
     end))
+    self:AddConnection("JoinButton", self.JoinButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
+        self.BottomButtonCallback(self)
+    end))
+    connectSingleButtonHoverTweens(self)
     connPageMainButtons(self)
     connEqualizeButtonText(self)
 end
@@ -112,6 +129,70 @@ end
 
 --
 --
+--
+
+-- [[ BUTTON HOVER FUNCTIONALITY ]]
+
+function initAllButtonHoverTweens(self)
+    self.HoverButtons = {}
+    self.ButtonHoverTweens = {In = {}, Out = {}}
+    self.ButtonHoverInTweenInfo = TweenInfo.new(BUTTON_HOVER_FADE_IN_LENGTH, BUTTON_HOVER_EASING_STYLE, BUTTON_HOVER_EASING_DIRECTION)
+    self.ButtonHoverOutTweenInfo = TweenInfo.new(BUTTON_HOVER_FADE_OUT_LENGTH, BUTTON_HOVER_EASING_STYLE, BUTTON_HOVER_EASING_DIRECTION)
+    for _, str in pairs(PAGE_BUTTON_ENUM) do
+        initSingleButtonHoverTweens(self, self.Frame[str])
+        table.insert(self.HoverButtons, self.Frame[str])
+    end
+    for _, button in pairs(self.MainButtons) do
+        initSingleButtonHoverTweens(self, button)
+        table.insert(self.HoverButtons, button)
+    end
+end
+
+function initSingleButtonHoverTweens(self, button)
+    self.ButtonHoverTweens.In[button.Name] = TweenService:Create(button, self.ButtonHoverInTweenInfo, {BackgroundColor3 = BUTTON_HOVER_COLOR})
+    self.ButtonHoverTweens.Out[button.Name] = TweenService:Create(button, self.ButtonHoverOutTweenInfo, {BackgroundColor3 = BUTTON_DEFAULT_COLOR})
+end
+
+function playHoverTween(self, button, tween: string)
+    local inTween = self.ButtonHoverTweens.In[button.Name]
+    local outTween = self.ButtonHoverTweens.Out[button.Name]
+    
+    if string.lower(tween) == "in" then
+        if outTween.PlaybackState == Enum.PlaybackState.Playing then
+            outTween:Pause()
+        end
+        inTween:Play()
+    else
+        if inTween.PlaybackState == Enum.PlaybackState.Playing then
+            inTween:Pause()
+        end
+        outTween:Play()
+    end
+end
+
+function connectSingleButtonHoverTweens(self)
+    for _, v in pairs(self.HoverButtons) do
+        self.Connections["HoverIn_" .. v.Name] = v.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                playHoverTween(self, v, "in")
+			end
+        end)
+        self.Connections["HoverOut_" .. v.Name] = v.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                playHoverTween(self, v, "out")
+			end
+        end)
+    end
+end
+
+function stopAllHoverTweens(self)
+    for _, v in pairs(self.HoverButtons) do
+        self.ButtonHoverTweens.In[v.Name]:Cancel()
+        self.ButtonHoverTweens.Out[v.Name]:Cancel()
+        v.BackgroundColor3 = BUTTON_DEFAULT_COLOR
+    end
+end
+
 --
 
 -- Opens "SoloPopupRequest" page, connects more buttons.
@@ -180,12 +261,13 @@ end
 
 function connPageMainButtons(self)
     for i, v in pairs(self.MainButtons) do
-        if v.Name == "Card_Bottom" then
+        if v.Name == "Card_Bottom" or v.Name == "Card_Join" then
             continue
         end
         self:AddConnection(i.."Button", v.MouseButton1Click:Connect(function()
             self.Main:PlayButtonSound("Select1")
             pageMainButtonClicked(self, i)
+            stopAllHoverTweens(self)
         end))
     end
 end
@@ -211,7 +293,7 @@ function joinGameButtonClicked(self)
 
     local card = self.Frame.Card_Bottom
     if card:GetAttribute("Joined") then
-        leaveGame(card)
+        --leaveGame(card)
     else
         joinGame(self, card)
     end
@@ -240,6 +322,7 @@ function joinGame(self, button)
 
     loading:destroy()
     if success then
+        self.Frame.Card_Bottom:SetAttribute("Joined", true)
         self.Main:Close()
         button.InfoLabel.Text = LOBBY_BOTTOM_CLICKED_TEXT
         --TODO: make it so you can open menu
@@ -309,15 +392,19 @@ function changeQueueText(self, new, toggleLength: number?) -- if toggleLength, t
 end
 
 function connEqualizeButtonText(self)
-    local lastFrameSize = 0
-    self:AddConnection("EqualizeSize", RunService.RenderStepped:Connect(function()
-        local invsize = self.InventoryButton.InfoLabel.Size.Y.Scale
-        invsize = Math.scaleToOffsetNumber(false, invsize).Y
-        if lastFrameSize ~= invsize then
-            lastFrameSize = invsize
-            scaleTopBarFrames(self, self.InventoryButton)
-        end
-    end))
+
+    if EQUALIZE_BUTTON_TEXT_SIZE then
+        local lastFrameSize = 0
+        self:AddConnection("EqualizeSize", RunService.RenderStepped:Connect(function()
+            local invsize = self.InventoryButton.InfoLabel.Size.Y.Scale
+            invsize = Math.scaleToOffsetNumber(false, invsize).Y
+            if lastFrameSize ~= invsize then
+                lastFrameSize = invsize
+                scaleTopBarFrames(self, self.InventoryButton)
+            end
+        end))
+    end
+    
 end
 
 function scaleTopBarFrames(self, titleFrame)

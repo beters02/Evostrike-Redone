@@ -24,7 +24,7 @@ function health:update()
 	if currentShield == nil or not currentShield then currentShield = 0 end
 	
 	health = math.floor(hum.Health + currentShield)
-	frame.HealthLabel.Text = tostring(health) .. " HP"
+	frame.HealthLabel.Text = tostring(health) --.. " HP"
 	
 	bar.HealthGrad.Enabled = true
 	bar.LowHealthGrad.Enabled = false
