@@ -1,3 +1,9 @@
+-- [[ CONFIGURATION ]]
+local HIGHLIGHT_OUTLINE_COLOR = Color3.fromRGB(217, 51, 0)
+local HIGHLIGHT_OUTLINE_TRANSPARENCY = 0.65
+local HIGHLIGHT_FILL_COLOR = Color3.fromRGB(254, 62, 62)
+local HIGHLIGHT_FILL_TRANSPARENCY = 0.7
+
 game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
 local Players = game:GetService("Players")
@@ -13,6 +19,8 @@ local StoredDamageInfo = require(Framework.Module.EvoPlayer.StoredDamageInformat
 local plr = Players.LocalPlayer
 local currentStoredDamageInfo = false
 
+local storedPlayers = {}
+
 local Ragdolls = {
     Stored = {},
     config = {
@@ -26,10 +34,10 @@ local Ragdolls = {
 
 -- | Main |
 function main()
-    playerAdded(plr)
     for _, v in pairs(Players:GetPlayers()) do
         playerAdded(v)
     end
+
     Players.PlayerAdded:Connect(playerAdded)
     Players.PlayerRemoving:Connect(playerRemoving)
     BotAddedEvent.OnClientEvent:Connect(function(botChar, bot)
@@ -39,25 +47,40 @@ function main()
     EvoPlayerEvents.PlayerReceivedDamageRemote.OnClientEvent:Connect(receivedDamage)
     EvoPlayerEvents.PlayerGaveDamageBind.Event:Connect(gaveDamage)
     EvoPlayerEvents.GetPlayerDamageInteractionsBind.OnInvoke = getPlayerDamageInteractions
-
-    -- connect death function
-    plr.CharacterAdded:Connect(characterAdded)
-    --DiedBindableEvent.Event:Connect(playerDied)
 end
 
 function playerAdded(player)
+    if storedPlayers[player.Name] then
+        return
+    end
+    storedPlayers[player.Name] = player
     Ragdolls.initPlayer(player)
+    player.CharacterAdded:Connect(characterAdded)
 end
 
 function playerRemoving(player)
     Ragdolls.removePlayer(player)
+    storedPlayers[player.Name] = nil
 end
 
 function characterAdded(char)
-    if currentStoredDamageInfo then
-        currentStoredDamageInfo:Destroy()
+    
+    local deadHighlight = Instance.new("Highlight")
+    deadHighlight.Enabled = true
+    deadHighlight.Parent = char
+    deadHighlight.Name = "EnemyHighlight"
+    deadHighlight.FillColor = HIGHLIGHT_FILL_COLOR
+    deadHighlight.FillTransparency = HIGHLIGHT_FILL_TRANSPARENCY
+    deadHighlight.OutlineColor = HIGHLIGHT_OUTLINE_COLOR
+    deadHighlight.OutlineTransparency = HIGHLIGHT_OUTLINE_TRANSPARENCY
+    deadHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
+
+    if char == plr.Character then
+        if currentStoredDamageInfo then
+            currentStoredDamageInfo:Destroy()
+        end
+        currentStoredDamageInfo = StoredDamageInfo.new(plr)
     end
-    currentStoredDamageInfo = StoredDamageInfo.new(plr)
 end
 
 function receivedDamage(damagerName, damage)
@@ -157,6 +180,9 @@ end
 function Ragdolls.characterDied(player, character, ragdollClone)
     Ragdolls.ragdollCharacter(character, ragdollClone)
     Ragdolls.Stored[player.Name].CharacterAlive = false
+    pcall(function()
+        character.EnemyHighlight.Parent = ragdollClone
+    end)
 end
 
 function Ragdolls.initCharacterSpawn(char)

@@ -177,7 +177,6 @@ function initPages(self)
         local module = script.Page:FindFirstChild(pageName) or script.Page
         self.Pages[pageName] = require(module).new(self, frame)
         self.Pages[pageName]:MenuTypeChanged(self.CurrentMenuType)
-        print('Changed!')
     end
 end
 

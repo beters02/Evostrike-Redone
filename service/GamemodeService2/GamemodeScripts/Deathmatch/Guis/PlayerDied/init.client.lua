@@ -12,6 +12,9 @@ local showDeadPlayerTime = 2
 local cameraFollowPlayerLerpSpeed = 10
 local cameraSwitchLerpSpeed = 6
 local cameraLookAtEnemyLerpSpeed = 10
+local zoomEnemyFOV = 50
+local zoomEnemySpeed = 1.5
+local zoomEnemyTween = false
 
 -- [[ SERVICES ]]
 local Players = game:GetService("Players")
@@ -22,6 +25,7 @@ local UserInputService = game:GetService("UserInputService")
 -- [[ VARIABLES ]]
 local player = game.Players.LocalPlayer
 local framework = require(game.ReplicatedStorage.Framework)
+local playerData = require(framework.Module.PlayerData)
 local evoPlayerEvents = framework.Module.EvoPlayer:WaitForChild("Events")
 local uistate = require(framework.Module.States):Get("UI")
 local hud = require(player.PlayerScripts.HUD)
@@ -36,6 +40,8 @@ local killstr = script:GetAttribute("KilledString") or "You died!"
 local killer = script:WaitForChild("KillerObject", 3)
 local Math = require(framework.Module.lib.fc_math)
 killer = killer and killer.Value or player
+
+local killerChar = false
 local camera = workspace.CurrentCamera
 
 local lastGoodCF = CFrame.new()
@@ -53,6 +59,7 @@ local isSwitchingPlayer = false
 local plrKillerDmgInteractions = false
 local getCurrCameraLerpCF
 local tweens = {}
+local defFov = playerData:GetPath("options.camera.FOV")
 
 --[[ UTILITY FUNC ]]
 
@@ -236,6 +243,7 @@ function initCameraAnimation()
 	isShowingDeadPlayer = true
 	getCurrCameraLerpCF = followDiedPlayerCF
 	currCamLerpSpeed = cameraFollowPlayerLerpSpeed
+	zoomEnemyTween = TweenService:Create(camera, TweenInfo.new(zoomEnemySpeed), {FieldOfView = zoomEnemyFOV})
 end
 
 -- camera follows died player for a set time,
@@ -255,6 +263,9 @@ function processCameraAnimation(dt)
 		-- we change lerp speed while switching for smoother animation
 		switchLength = calculateLerpTimeToSwitch(dt)
 		currCamLerpSpeed = cameraSwitchLerpSpeed
+
+		-- zoom the fov in a bit
+		zoomEnemyTween:Play()
 	end
 
 	-- change lerp speed back
@@ -276,7 +287,7 @@ function followDiedPlayerCF(dt)
 
 	local lerpCf = lastGoodCF
 	if camera and success and player.Character then
-		lerpCf = CFrame.new(currPlrCF.Position + cameraFollowOffset - camera.CFrame.LookVector, camera.CFrame.LookVector - currPlrCF.Position)
+		lerpCf = CFrame.new(currPlrCF.Position + cameraFollowOffset --[[ camera.CFrame.LookVector]], currPlrCF.Position)
 	end
 
 	return camera.CFrame:Lerp(lerpCf, dt * currCamLerpSpeed)
@@ -330,6 +341,21 @@ end
 --[[ CORE FUNC ]]
 
 function init()
+	local succ
+	succ, killerChar = pcall(function()
+		return killer.Character
+	end)
+
+	if succ then
+		if killer == player then
+			local rag = killerChar:WaitForChild("RagdollValue").Value
+			rag:WaitForChild("EnemyHighlight").DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			rag.EnemyHighlight.Adornee = rag
+		else
+			killerChar:WaitForChild("EnemyHighlight").DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		end
+	end
+
 	camera.CameraType = Enum.CameraType.Scriptable
 
 	if Players[killer.Name] then
@@ -377,7 +403,11 @@ function finish()
 	hud:Enable()
 	uistate:removeOpenUI("BuyMenu")
     uistate:removeOpenUI("DeathMenu")
+	camera.FieldOfView = defFov
     gui:Destroy()
+	if player ~= killer and killer.Character then
+		killer.Character.EnemyHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
+	end
 end
 
 init()
