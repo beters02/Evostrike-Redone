@@ -25,6 +25,11 @@ local PlayerData2 = require(Framework.Module.PlayerData)
 local Remote = ReplicatedStorage.Services.WeaponService.Events.RemoteEvent
 local UIState = require(Framework.Module.m_states).State("UI")
 local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon)
+<<<<<<< Updated upstream
+=======
+local VMSprings = require(Framework.Module.lib.c_vmsprings)
+local Tables = require(Framework.Module.lib.fc_tables)
+>>>>>>> Stashed changes
 
 --[[ CONFIGURATION ]]
 local ForceEquipDelay = 0.9
@@ -80,6 +85,23 @@ function WeaponController.new()
         end
     end)
 
+<<<<<<< Updated upstream
+=======
+    -- this is where we will do bomb observe update
+    self.Connections.Update = RunService.RenderStepped:Connect(function(dt)
+        -- is player looking at bomb?
+        -- can player defuse bomb?
+
+        -- update equip spring
+        for _, v in pairs(self.Inventory) do
+            if v and v.EquipSpring then
+                local pos = v.EquipSpring:update(dt)
+                workspace.CurrentCamera.CFrame *= CFrame.Angles(math.rad(pos.X), math.rad(pos.Y), math.rad(pos.Z))
+            end
+        end
+    end)
+
+>>>>>>> Stashed changes
     return self
 end
 
@@ -104,8 +126,37 @@ end
 --@summary Add a Weapon to the Controller (must have been created on the server first)
 function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: boolean?, recoilScript)
     local wepObject: Types.Weapon = Weapon.new(weapon, tool, recoilScript)
+    local defCfg = wepObject.defCfg
     self.Inventory[wepObject.Slot] = wepObject
 
+<<<<<<< Updated upstream
+=======
+    -- Process equip animations here, this is shit
+    local currentEquipSprThread = false
+    local equipSprVal = wepObject.Options.equipSpring or defCfg.EQUIP_SPRING_VALUE
+    local equipSprValArray = util_springTableToArray(equipSprVal)
+    local equipSpring = VMSprings:new(table.unpack(equipSprValArray))
+    local shoveVec = defCfg.EQUIP_SPRING_SHOVE
+    wepObject.EquipSpring = equipSpring
+
+    local function shoveEquip()
+        local dt = wepObject._stepDT
+        equipSpring:shove(shoveVec*dt*60)
+        task.wait((1/60)*(dt/(1/60))*2)
+        equipSpring:shove(-shoveVec*dt*60)
+    end
+    shoveEquip = wepObject.Options.equipSpringShoveFunction or shoveEquip
+
+    wepObject.Connections.EquipAnim = wepObject.Tool.Equipped:Connect(function()
+        if currentEquipSprThread then
+            task.cancel(currentEquipSprThread)
+        end
+        currentEquipSprThread = task.spawn(function()
+            shoveEquip(equipSpring, wepObject._stepDT) -- added parameters for weapon configs, dont remove.
+        end)
+    end)
+
+>>>>>>> Stashed changes
     if forceEquip then
         self.InitialWeaponAddDebounce = true
         task.delay(ForceEquipDelay, function()
@@ -128,30 +179,34 @@ end
 
 --@summary Equip a Weapon via slot. Called when a player presses the corresponding equip key.
 function WeaponController:EquipWeapon(weaponSlot, bruteForce)
+<<<<<<< Updated upstream
     --if not bruteForce and (not self.CanEquip) then return warn("canequip or processing, equip:", tostring(self.CanEquip), tostring(self.Processing)) end
     --if not bruteForce and self.Inventory.equipped and self.Inventory.equipped.Slot == weaponSlot then return warn(tostring(weaponSlot) .. " is already equipped") end
 	if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
+=======
+    if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
+>>>>>>> Stashed changes
     if not self:IsWeaponInSlot(weaponSlot) then return end
     if not bruteForce then
         if self:IsWeaponEquipped(weaponSlot) then return end
         if self.InitialWeaponAddDebounce then return end
     end
 
+<<<<<<< Updated upstream
+=======
+    -- turn the weapon invisible, fix glitchy equip
+    util_processUnequipTransparency(self, self.Inventory[weaponSlot])
+
+>>>>>>> Stashed changes
     -- last equipped
     if not self.Inventory.last_equipped then
         self.Inventory.last_equipped = self.Inventory[weaponSlot]
     end
 
-    -- process unequip transparency early to resolve glitchy VM
-    if self.Inventory.equipped then
-        util_processUnequipTransparency(self.Inventory.equipped.ClientModel)
-        self.Owner.Character.Humanoid:UnequipTools()
-    end
-
     -- stop all vm animations? lets do this in a seperate function when we get a sec
     task.spawn(function()
         local a: Animator = workspace.CurrentCamera.viewModel.AnimationController.Animator
-        for i, v in pairs(a:GetPlayingAnimationTracks()) do
+        for _, v in pairs(a:GetPlayingAnimationTracks()) do
             v:Stop()
         end
     end)
@@ -170,11 +225,13 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     -- equip tool
     self.Owner.Character.Humanoid:EquipTool(self.Inventory.equipped.Tool)
     self.Inventory[weaponSlot]:ConnectActions()
-    task.delay(0.1, function()
-        if self.Inventory.equipped and self.Inventory.equipped.ClientModel then
-            util_processEquipTransparency(self.Inventory.equipped.ClientModel)
-        end
-    end)
+
+    -- turn the weapon visible again!
+    if self.Inventory.equipped and self.Inventory.equipped.ClientModel then
+        task.delay(0.06, function()
+            util_processEquipTransparency(self, self.Inventory[weaponSlot])
+        end)
+    end
 
     self.InitialWeaponAddDebounce = false
 end
@@ -182,6 +239,8 @@ end
 --@summary Unequip a Weapon via slot. Called in tool.Unequipped
 function WeaponController:UnequipWeapon(weaponSlot)
     if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
+
+    --util_processUnequipTransparency(self, self.Inventory[weaponSlot])
     self.Inventory[weaponSlot]:DisconnectActions()
     self.Inventory[weaponSlot]:Unequip()
 
@@ -247,47 +306,36 @@ function WeaponController:HandleHoldMovementPenalty(slot: string)
 end
 
 --@summary Request Equip -> Request Unequip Equipped -> Set Equipped WeaponModel Transparency thru Coro, set VM Transparency normally
-function util_processEquipTransparency(model)
+function util_processEquipTransparency(self, weapon)
     local vm = workspace.CurrentCamera:FindFirstChild("viewModel")
     if not vm then return end
 
-    for i, v in pairs(model:GetDescendants()) do
-        if v.Name == "WeaponHandle" or v.Name == "WeaponTip" then continue end
-
-        if v:IsA("MeshPart") or v:IsA("Part") or v:IsA("Texture") then
-            v.Transparency = v:GetAttribute("Transparency") or 0
-        end
+    -- invis model on fast weapon switch FIX
+    for _, v in pairs(weapon.WeaponParts.Client) do
+        v.Transparency = 0
     end
 
-    for i, v in pairs(util_vmParts) do
-        vm[v].Transparency = 0
-    end
-
+    vm.LeftLowerArm.Transparency = 0
+    vm.LeftUpperArm.Transparency = 0
+    vm.RightUpperArm.Transparency = 0
+    vm.RightLowerArm.Transparency = 0
     vm.RightHand.RightGlove.Transparency = 0
     vm.LeftHand.LeftGlove.Transparency = 0
 end
 
 --@summary Request Unequip -> Set Unequipped WeaponModel Transparency thru Coro, set VM Transparency normally
-function util_processUnequipTransparency(model)
+function util_processUnequipTransparency(self, weapon)
     local vm = workspace.CurrentCamera:FindFirstChild("viewModel")
     if not vm then return end
 
-    task.spawn(function()
-        for i, v in pairs(util_vmParts) do
-            vm[v].Transparency = 1
-        end
-    end)
-
-    for i, v in pairs(model:GetDescendants()) do
-        task.spawn(function()
-            if v.Name == "WeaponHandle" or v.Name == "WeaponTip" then return end
-
-            if v:IsA("MeshPart") or v:IsA("Part") or v:IsA("Texture") then
-                v.Transparency = 1
-            end
-        end)
+    for _, v in pairs(weapon.WeaponParts.Client) do
+        v.Transparency = 1
     end
 
+    vm.LeftLowerArm.Transparency = 1
+    vm.LeftUpperArm.Transparency = 1
+    vm.RightUpperArm.Transparency = 1
+    vm.RightLowerArm.Transparency = 1
     vm.RightHand.RightGlove.Transparency = 1
     vm.LeftHand.LeftGlove.Transparency = 1
 end
@@ -298,6 +346,15 @@ function WeaponController:_StopAllVMAnimations()
         v = v :: AnimationTrack
 		v:Stop()
 	end
+end
+
+function util_springTableToArray(tbl)
+    local def = { mss = 1 , frc = 2, dmp = 3, spd = 4}
+    local n = {}
+    for i, v in pairs(tbl) do
+        table.insert(n, def[i], v)
+    end
+    return n
 end
 
 return WeaponController

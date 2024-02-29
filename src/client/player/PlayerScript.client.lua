@@ -8,6 +8,10 @@ local EvoPlayerEvents = Framework.Module.EvoPlayer.Events
 local SelfDiedEvent = EvoPlayerEvents:WaitForChild("PlayerDiedBindable")
 local PlayerDiedEvent = EvoPlayerEvents:WaitForChild("PlayerDiedRemote")
 local BotAddedEvent = Framework.Service.BotService.Remotes.BotAdded
+local StoredDamageInfo = require(Framework.Module.EvoPlayer.StoredDamageInformation)
+
+local plr = Players.LocalPlayer
+local currentStoredDamageInfo = false
 
 local Ragdolls = {
     Stored = {},
@@ -22,7 +26,7 @@ local Ragdolls = {
 
 -- | Main |
 function main()
-    playerAdded(game.Players.LocalPlayer)
+    playerAdded(plr)
     for _, v in pairs(Players:GetPlayers()) do
         playerAdded(v)
     end
@@ -31,10 +35,14 @@ function main()
     BotAddedEvent.OnClientEvent:Connect(function(botChar, bot)
         Ragdolls.initBot(bot)
     end)
-end
 
-function update(dt)
+    EvoPlayerEvents.PlayerReceivedDamageRemote.OnClientEvent:Connect(receivedDamage)
+    EvoPlayerEvents.PlayerGaveDamageBind.Event:Connect(gaveDamage)
+    EvoPlayerEvents.GetPlayerDamageInteractionsBind.OnInvoke = getPlayerDamageInteractions
 
+    -- connect death function
+    plr.CharacterAdded:Connect(characterAdded)
+    --DiedBindableEvent.Event:Connect(playerDied)
 end
 
 function playerAdded(player)
@@ -43,6 +51,27 @@ end
 
 function playerRemoving(player)
     Ragdolls.removePlayer(player)
+end
+
+function characterAdded(char)
+    if currentStoredDamageInfo then
+        currentStoredDamageInfo:Destroy()
+    end
+    currentStoredDamageInfo = StoredDamageInfo.new(plr)
+end
+
+function receivedDamage(damagerName, damage)
+    local damager = Players[damagerName]
+    currentStoredDamageInfo:PlayerReceivedDamage(damager, damage)
+end
+
+function gaveDamage(damagedName, damage)
+    local damaged = Players[damagedName]
+    currentStoredDamageInfo:PlayerGaveDamage(damaged, damage)
+end
+
+function getPlayerDamageInteractions(player)
+    return currentStoredDamageInfo:GetPlayerInteractions(player)
 end
 
 -- | Ragdolls |

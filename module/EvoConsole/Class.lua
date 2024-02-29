@@ -74,6 +74,7 @@ function class:Open()
     self.console.UI.Enabled = true
 
     self.player:SetAttribute("Typing", true)
+    UIState:setIsTyping(true)
     self.enterBox:CaptureFocus()
 end
 
@@ -86,6 +87,7 @@ function class:Close()
 
     self.console.UI.Enabled = false
     self.player:SetAttribute("Typing", false)
+    UIState:setIsTyping(false)
 end
 
 -- Enter the current text box text as a command

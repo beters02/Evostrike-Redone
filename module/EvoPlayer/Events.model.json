@@ -8,6 +8,18 @@
       {
         "Name": "PlayerDiedRemote",
         "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "PlayerGaveDamageBind",
+        "ClassName": "BindableEvent"
+      },
+      {
+        "Name": "PlayerReceivedDamageRemote",
+        "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "GetPlayerDamageInteractionsBind",
+        "ClassName": "BindableFunction"
       }
     ]
   }

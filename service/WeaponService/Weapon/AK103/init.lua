@@ -81,6 +81,30 @@ AK103.Configuration = {
 		}
 	},
 
+<<<<<<< Updated upstream
+=======
+	equipSpring = {
+		mss = 9,
+		frc = 40,
+		dmp = 4,
+		spd = 3
+	},
+
+	equipSpringShoveFunction = function(spr, dt)
+		local fshov = Vector3.new(.4, 0, 0)*dt*60
+		local nshov = Vector3.new(.3, -.23, 0)*dt*60
+		local frame = 1/60 * (dt*60)
+
+		spr:shove(fshov*0.8)
+		task.wait(frame*2)
+		spr:shove(-fshov*0.8)
+		task.wait(frame*11)
+		spr:shove(nshov)
+		task.wait(frame*4)
+		spr:shove(-nshov)
+	end,
+	
+>>>>>>> Stashed changes
 	serverModelSize = 0.75
 }
 

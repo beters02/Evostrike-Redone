@@ -65,4 +65,13 @@ function Tables.random(tab)
     return tab[math.random(1,#tab)]
 end
 
+--@summary Converts dictionary into an array
+function Tables.toArray(tbl)
+    local n = {}
+    for i, v in pairs(tbl) do
+        table.insert(n, v)
+    end
+    return n
+end
+
 return Tables

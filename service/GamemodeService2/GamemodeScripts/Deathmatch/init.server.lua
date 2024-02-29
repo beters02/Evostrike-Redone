@@ -54,6 +54,7 @@ local GameData = {
 local GamemodeService2 = require(Framework.Service.GamemodeService2)
 local RequestSpawnEvent = Framework.Service.GamemodeService2.RequestSpawn
 local RequestDeathEvent = Framework.Service.GamemodeService2.RequestDeath
+local GamemodeServiceBindable = Framework.Service.GamemodeService2.Bindable
 GamemodeService2:SetMenuType("Lobby")
 GamemodeService2.CurrentGamemode = "Deathmatch"
 
@@ -107,6 +108,12 @@ function Start()
             if GameData.Options.buy_menu_add_instant then
                 WeaponService:AddWeapon(_bmplayer, item)
             end
+        end
+    end)
+
+    GameData.Connections.GamemodeServiceBindable = GamemodeServiceBindable.Event:Connect(function(action)
+        if action == "Restart" or action == "Set" then
+            Stop()
         end
     end)
 

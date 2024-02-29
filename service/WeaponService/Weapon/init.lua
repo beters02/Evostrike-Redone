@@ -1,3 +1,10 @@
+--  CONFIGURATION
+    local cfg = {
+        EQUIP_SPRING_SHOVE = Vector3.new(.35,0,0),
+        EQUIP_SPRING_VALUE = { mss = 9, frc = 45, dmp = 4, spd = 2.5 }
+    }
+--
+
 local Weapon = {}
 Weapon.__index = Weapon
 
@@ -21,9 +28,15 @@ local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local WeaponPartCache = require(script.Parent:WaitForChild("WeaponPartCache"))
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
+<<<<<<< Updated upstream
+=======
+local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
+
+>>>>>>> Stashed changes
 function Weapon.new(weapon: string, tool: Tool, recoilScript)
     local weaponModule = require(ReplicatedStorage.Services.WeaponService):GetWeaponModule(weapon)
     local self = Tables.clone(require(weaponModule))
+    self.defCfg = cfg
     self.Name = weapon
     self.Tool = tool
     self.Options = self.Configuration
@@ -100,6 +113,25 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
 	self.Variables.weaponIconEquipped = self.Variables.weaponFrame:WaitForChild("EquippedIconLabel")
 	self.Variables.weaponIconEquipped.Image = self.Assets.Images.iconEquipped.Image
 
+    -- init weapon parts as table (equip optimization)
+    self.WeaponParts = {Client = {}, Server = {}}
+    for _, part in pairs(self.ClientModel:GetDescendants()) do
+        if part.Name == "WeaponHandle" or part.Name == "WeaponTip" then
+            continue
+        end
+        if part:IsA("MeshPart") or part:IsA("Part") or part:IsA("Texture") then
+            table.insert(self.WeaponParts.Client, part)
+        end
+    end
+    for _, part in pairs(self.ServerModel:GetDescendants()) do
+        if part.Name == "WeaponHandle" or part.Name == "WeaponTip" then
+            continue
+        end
+        if part:IsA("MeshPart") or part:IsA("Part") or part:IsA("Texture") then
+            table.insert(self.WeaponParts.Server, part)
+        end
+    end
+
 	-- key
 	self.Variables.weaponBar.SideBar[self.Options.inventorySlot .. "Key"].Text = Strings.convertFullNumberStringToNumberString(self.Controller.Keybinds[self.Slot .. "Weapon"])
 
@@ -134,6 +166,7 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
 end
 
 function Weapon:Equip()
+    
     if self.Tool:GetAttribute("IsForceEquip") then
 		self.Tool:SetAttribute("IsForceEquip", false)
 	else
@@ -142,9 +175,7 @@ function Weapon:Equip()
         if UIState:hasOpenUI() then return end
 	end
 
-	-- enable weapon icon
     self:SetIconEquipped(true)
-    self.Player.PlayerScripts.HUD:WaitForChild("EquipGun"):Fire(self.Slot)
 
     task.spawn(function()
         if string.lower(self.Name) == "knife" then
@@ -572,7 +603,6 @@ function Weapon:MouseDown(isSecondary: boolean?)
 
             self.Variables.fireDebounce = false
             self.Variables.fireScheduled = nil
-            --coroutine.yield(self.Variables.fireScheduled)
         end)
 
         return
@@ -628,7 +658,6 @@ function Weapon:MouseUp(forceCancel: boolean?)
 
 	if self.Variables.fireScheduled then
 		if forceCancel then
-			--coroutine.yield(self.Variables.fireScheduled)
 			self.Variables.fireScheduled = nil
 		else
 			-- cancel fire scheduled after a full 64 tick of mouse being up
@@ -726,6 +755,12 @@ function Weapon:PlayAnimation(location: "client" | "server", animation: string, 
 end
 
 function Weapon:_ProcessEquipAnimation()
+    -- [[!!!! Weapon Camera Equip Functionality is in WeaponController !!!!]]
+
+    task.spawn(function()
+        self.Player.PlayerScripts.HUD.EquipGun:Fire(self.Slot)
+    end)
+    
     self.Controller:_StopAllVMAnimations()
 	
     local _throwing = PlayerActionsState:get(self.Player, "grenadeThrowing")
@@ -755,6 +790,12 @@ function Weapon:_ProcessEquipAnimation()
             if not self.Variables.equipped and not self.Variables.equipping then return end
             self.Animations.server.Hold:Play()
         end)     
+    end)
+
+    task.delay(clientPullout.Length + self._stepDT, function()
+        if self.equipped and not self.Animations.client.Hold.IsPlaying then
+            self.Animations.client.Hold:Play()
+        end
     end)
 end
 
