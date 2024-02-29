@@ -1,146 +1,226 @@
---[[
-    When creating a new knife, make sure to init in the init function
-]]
+local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
+local EvoConsole = Framework.Module.EvoConsole
+local UserInputService = game:GetService("UserInputService")
+local Types = require(EvoConsole.Types)
+local Tables = require(EvoConsole.Tables)
+local Configuration = require(EvoConsole.Configuration)
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local PlayerData = require(Framework.Module.PlayerData)
+local States = require(Framework.Module.States)
+local UIState = States:Get("UI")
 
-local inventory = {}
-local skinPage = require(script:WaitForChild("SkinPage"))
-local casePage = require(script:WaitForChild("CasePage"))
-local keyPage = require(script:WaitForChild("KeyPage"))
-inventory.skinPage = skinPage
-inventory.casePage = casePage
-inventory.keyPage = keyPage
--- SubPages are the Contanier Frames which have their own Content Frames (SkinPage, CasePage, KeyPage)
-local SubPage = require(script.InventorySubPage)
-local SkinSubPage = require(script.InventorySubPage.Skin)
-local CaseSubPage = require(script.InventorySubPage.Case)
-local KeySubPage = require(script.InventorySubPage.Key)
+local class = {}
+class.__index = class
 
-function inventory:init()
-    self.mainButtonConnections = {}
-    self.currentPageButtonConnections = {}
-    self.currentOpenPage = skinPage
-end
+-- Create
+function class.new(Console, player)
+    local self = setmetatable({}, class)
 
-function inventory.new(mainMenu, frame)
-    local self = setmetatable(Page.new(mainMenu, frame), Inventory)
-    self.Frame = frame
-    self.Var = {CurrentOpenSubPage = false}
-    self.Connections = {}
-    self.SubPages = {}
-    self.SubPages.Skin = SkinSubPage:init(self, frame.Skin)
-    self.SubPages.Case = CaseSubPage:init(self, frame.Case)
-    self.SubPages.Key = KeySubPage:init(self, frame.Key)
-    self.Var.CurrentOpenSubPage = self.SubPages.Skin
+    -- get all command modules w/ access & create GUI via server
+    local gui, commandModules = Console:ClientToServer(player, "instantiateConsole")
 
-    self.SubPageButtons = {
-        Skin = frame.SkinsButton,
-        Key = frame.KeysButton,
-        Case = frame.CasesButton
-    }
-    return self
-end
-
-function inventory:Open()
-    self.Location.Visible = true
-    self:ConnectMainButtons()
-    self:OpenAnimations()
-    self:Update()
-    self:OpenItemPage(self.currentOpenPage)
-end
-
-function inventory:Close()
-    self.Location.Visible = false
-    self:DisconnectMainButtons()
-    self:CloseCurrentItemPage()
-    skinPage.CloseItemDisplay(self)
-    casePage.CloseItemDisplay(self)
-end
-
-function inventory:Update()
-    self:Clear()
-
-    local playerInventory = PlayerData:UpdateFromServer(true).ownedItems
-    skinPage.Update(self, playerInventory)
-    casePage.Update(self, playerInventory)
-    keyPage.Update(self, playerInventory)
-end
-
-function inventory:Clear()
-    skinPage.Clear(self)
-    casePage.Clear(self)
-    keyPage.Clear(self)
-end
-
-function inventory:OpenItemPage(page, button)
-    if (button and not button.Visible) then
-        return
-    end
-    self:PlaySound("Open")
-    self:CloseCurrentItemPage()
-    page.Open(self)
-    self.currentOpenPage = page
-end
-
-function inventory:CloseCurrentItemPage()
-    for _, v in pairs(self.currentPageButtonConnections) do
-        v:Disconnect()
-    end
-    self.currentPageButtonConnections = {}
-    self.currentOpenPage.MainFrame.Visible = false
-end
-
-function inventory:ConnectMainButtons()
-    local conn = {}
-    local bSkin = self.Location.SkinsButton
-    local bCase = self.Location.CasesButton
-    local bKey = self.Location.KeysButton
-    conn.openskin = bSkin.MouseButton1Click:Connect(function()
-        self:OpenItemPage(skinPage, bSkin)
-    end)
-    conn.opencase = bCase.MouseButton1Click:Connect(function()
-        self:OpenItemPage(casePage, bCase)
-    end)
-    conn.openkey = bKey.MouseButton1Click:Connect(function()
-        self:OpenItemPage(keyPage, bKey)
-    end)
-    conn.changed = PlayerData:PathValueChanged("ownedItems.skin", function()
-        self:Update()
-    end)
-    self.mainButtonConnections = conn
-end
-
-function inventory:DisconnectMainButtons()
-    for _, v in pairs(self.mainButtonConnections) do
-        v:Disconnect()
-    end
-    self.mainButtonConnections = {}
-end
-
-<<<<<<< Updated upstream
-return inventory
-=======
-function connectSubPageButtons(self)
-    for _, v in pairs({"Skin", "Case", "Key"}) do
-        self.Connections["Open"..v.."SubPage"] = self.Frame[v.."sButton"].MouseButton1Click:Connect(function()
-            if self.Var.CurrentOpenSubPage == self.SubPages[v] then
-                return
-            end
-            self:OpenSubPage(v)
-        end)
-    end
-end
-
-function disconnectSubPageButtons(self)
-    for _, v in pairs({"Skin", "Case", "Key"}) do
-        if self.Connections["Open"..v.."SubPage"] then
-            self.Connections["Open"..v.."SubPage"]:Disconnect()
+    -- compile command modules
+    -- todo: compile in order of lowest permission to highest
+    -- for now we just do admin perms last
+    self.Commands = {}
+    for i, v in pairs(commandModules) do
+        if v.Name == "Admin" then
+            self.Commands._ADMINLAST = v
+        else
+            self.Commands = Tables.merge(self.Commands, require(v))
         end
     end
+    if self.Commands._ADMINLAST then
+        self.Commands = Tables.merge(self.Commands, require(self.Commands._ADMINLAST))
+        self.Commands._ADMINLAST = nil
+    end
+
+    -- convert objects into object of Console type
+    local console: Types.Console = {
+        UI = gui,
+        MainFrame = gui.MainFrame,
+
+        Open = self.Open,
+        Close = self.Close,
+
+        Toggle = function()
+            if gui.Enabled then self:Close() else self:Open() end
+        end,
+
+        IsOpen = function()
+            return gui.Enabled
+        end
+    }
+
+    self.player = player
+    self.console = console
+    self.returnLines = {} -- store all currently visible return lines for later access
+
+    self.enterBox = self.console.UI.MainFrame.TextEnterFrame.TextEnterLine
+
+    self:Connect()
+
+    return console
 end
 
-return Inventory
->>>>>>> Stashed changes
+-- Open the console
+function class:Open()
+    self:ConnectCommandRegister()
+
+    UIState:addOpenUI("Console", self.console.UI, true)
+
+    -- start at bottom
+    self.console.UI.MainFrame.TextReturnFrame.CanvasPosition = Vector2.new(0, self.console.UI.MainFrame.TextReturnFrame.AbsoluteCanvasSize.Y)
+
+    -- vissi
+    self.console.UI.Enabled = true
+
+    self.player:SetAttribute("Typing", true)
+    UIState:setIsTyping(true)
+    self.enterBox:CaptureFocus()
+end
+
+-- Close the console
+function class:Close()
+    self:DisconnectCommandRegister()
+
+    UIState:removeOpenUI("Console")
+    print('removed')
+
+    self.console.UI.Enabled = false
+    self.player:SetAttribute("Typing", false)
+    UIState:setIsTyping(false)
+end
+
+-- Enter the current text box text as a command
+function class:Enter()
+    local stringToEnter = self.enterBox.Text
+	
+	-- get command/args from string
+	local split = {}
+	for word in string.gmatch(stringToEnter, "%S+") do
+		table.insert(split, word)
+	end
+	
+	-- clear text
+    self.enterBox.Text = ""
+    self.enterBox:CaptureFocus()
+
+    -- attempt do command
+	return _doCommand(self, split)
+end
+
+function class:Print(msg: string) return _printMsg(self, msg, "message") end
+function class:Warn(msg: string) return _printMsg(self, msg, "warn") end
+function class:Error(msg: string) return _printMsg(self, msg, "error") end
+
+--
+
+function class:Connect()
+    self.connections = {}
+    self.connections.input = UserInputService.InputBegan:Connect(function(input, gp)
+        --if gp then return end
+        if input.KeyCode == Enum.KeyCode.F10 then
+            self.console.Toggle()
+        end
+    end)
+end
+
+function class:Disconnect()
+    self.connections.input:Disconnect()
+end
+
+function class:ConnectCommandRegister()
+    self.connections.command = UserInputService.InputBegan:Connect(function(input, gp)
+        --if gp then return end
+        if input.KeyCode == Enum.KeyCode.Return then
+            self:Enter()
+        end
+    end)
+end
+
+function class:DisconnectCommandRegister()
+    self.connections.command:Disconnect()
+end
+
+--
+
+local colors = {
+    message = Configuration.msgColor,
+    ["error"] = Configuration.errorColor,
+    ["warn"] = Configuration.warnColor
+}
+
+function _printMsg(self, msg: string, msgType: Types.ReturnMessageType|nil)
+    if not msgType then msgType = "message" :: Types.ReturnMessageType end
+
+    local lineTemplate = self.console.UI.MainFrame.TextReturnFrame.Line
+
+    -- check if max lines have been reached
+    if lineTemplate.Position.Y.Scale - lineTemplate.Size.Y.Scale < 0 then
+        self.returnLines[#self.returnLines]:Destroy() -- destroy last line
+        table.remove(self.returnLines, #self.returnLines)
+    end
+
+    -- remove default text if necessary
+    if #self.returnLines == 0 then
+        lineTemplate.Visible = false
+    else
+    
+        -- shift the text index number up
+        for i, v in pairs(self.returnLines) do
+
+            -- is this nice and fun to look at?
+            local pref = tonumber(v.Text:sub(1, 2)) + 1 > 9 and "" or "0"
+            v.Text = pref .. tostring(tonumber(v.Text:sub(1, 2)) + 1) .. ": " .. v.Text:sub(5, v.Text:len())
+        end
+    end
+
+    local line = lineTemplate:Clone() :: TextLabel -- create line ui
+    line.Name = tostring(#self.returnLines + 1 .. ": " .. line.Name)
+
+    -- set color
+    line.TextColor3 = colors[msgType]
+
+    -- get line count and set message
+    line.Text = "01: " .. msg
+
+    -- set line position
+    if #self.returnLines ~= 0 then
+        line.Position = UDim2.fromScale(line.Position.X.Scale, line.Position.Y.Scale - line.Size.Y.Scale)
+    end
+
+    line.Parent = lineTemplate.Parent
+    line.Visible = true
+
+    table.insert(self.returnLines, line)
+    return true
+end
+
+function _doCommand(self, commandSplit: table)
+    -- verify command string was found
+    if not commandSplit or not commandSplit[1] then -- split[1] == command
+        return self:Error("Could not get command from string")
+	end
+	
+	-- locate command from Commands
+	local commandTable = false
+	for i, v in pairs(self.Commands) do
+		if string.lower(i) == string.lower(commandSplit[1]) and v.Function then
+			commandTable = v
+			break
+		end
+	end
+
+	-- cant find command
+	if not commandTable then
+        return self:Error("Could not find command " .. commandSplit[1])
+	end
+
+	-- remove action string to single out and send arguments
+    table.remove(commandSplit, 1)
+	
+    -- function
+	return commandTable.Function(self, self.player, table.unpack(commandSplit))
+end
+
+return class

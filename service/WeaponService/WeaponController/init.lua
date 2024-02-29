@@ -25,11 +25,6 @@ local PlayerData2 = require(Framework.Module.PlayerData)
 local Remote = ReplicatedStorage.Services.WeaponService.Events.RemoteEvent
 local UIState = require(Framework.Module.m_states).State("UI")
 local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon)
-<<<<<<< Updated upstream
-=======
-local VMSprings = require(Framework.Module.lib.c_vmsprings)
-local Tables = require(Framework.Module.lib.fc_tables)
->>>>>>> Stashed changes
 
 --[[ CONFIGURATION ]]
 local ForceEquipDelay = 0.9

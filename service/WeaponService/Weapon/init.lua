@@ -28,11 +28,6 @@ local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local WeaponPartCache = require(script.Parent:WaitForChild("WeaponPartCache"))
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
-<<<<<<< Updated upstream
-=======
-local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
-
->>>>>>> Stashed changes
 function Weapon.new(weapon: string, tool: Tool, recoilScript)
     local weaponModule = require(ReplicatedStorage.Services.WeaponService):GetWeaponModule(weapon)
     local self = Tables.clone(require(weaponModule))
