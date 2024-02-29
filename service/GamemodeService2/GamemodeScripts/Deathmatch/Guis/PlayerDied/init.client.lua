@@ -22,7 +22,6 @@ local UserInputService = game:GetService("UserInputService")
 -- [[ VARIABLES ]]
 local player = game.Players.LocalPlayer
 local framework = require(game.ReplicatedStorage.Framework)
-local uistate = require(framework.Module.m_states).State("UI")
 local evoPlayerEvents = framework.Module.EvoPlayer:WaitForChild("Events")
 local uistate = require(framework.Module.States):Get("UI")
 local hud = require(player.PlayerScripts.HUD)

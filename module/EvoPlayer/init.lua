@@ -4,8 +4,6 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local DiedEvent = script:WaitForChild("Events").PlayerDiedRemote
---local GamemodeServiceModule = ReplicatedStorage.Services:WaitForChild("GamemodeService")
 local Events = script:WaitForChild("Events")
 local DiedEvent = Events.PlayerDiedRemote
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
@@ -23,6 +21,8 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
     local hitPart = character:GetAttribute("lastHitPart") or "Head"
     local destroysHelmet = character:GetAttribute("lastUsedWeaponDestroysHelmet") or false
     local helmetMultiplier = character:GetAttribute("lastUsedWeaponHelmetMultiplier") or 1
+    local damageAppliedToCharacter = true
+    local killed = false
 
     if string.find(string.lower(hitPart), "head") then
         if helmet then
@@ -34,7 +34,6 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
         end
     end
 
-    absoluteDamage = damage
     if shield > 0 then
         if shield >= damage then -- no damage taken, only apply to shield
             character:SetAttribute("Shield", shield - damage)
@@ -50,23 +49,38 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
         character:SetAttribute("LastRegisteredHealth", lastHealth)
         killed = lastHealth <= 0
 
-<<<<<<< Updated upstream
-    if RunService:IsServer() then
-        character.Humanoid:TakeDamage(damage)
-=======
         local charPlr = Players:GetPlayerFromCharacter(character)
         Events.PlayerGaveDamageBind:Fire(charPlr.Name, damage)
     else
         Events.PlayerReceivedDamageRemote:FireClient(Players:GetPlayerFromCharacter(character), Players:GetPlayerFromCharacter(damager).Name, damage)
 
         killed = character.Humanoid.Health - damage <= 0
-    end
-    
 
-    if RunService:IsServer() then
-        character.Humanoid:TakeDamage(damage)
+        character:SetAttribute("Killer", damager.Name)
+        if damage - character.Humanoid.Health <= 0 then
+            character:SetAttribute("WeaponUsedToKill", weaponUsed)
+        end
+
+        if damageAppliedToCharacter then
+            character.Humanoid:TakeDamage(damage)
+        end
+
+        task.spawn(function()
+            local bots = BotServiceModule.Remotes.GetBotsBindable:Invoke()
+            if killed and (not bots or #bots == 0) then
+                character = Players:GetPlayerFromCharacter(character)
+
+                if not damager:IsA("Player") then
+                    damager = Players:GetPlayerFromCharacter(damager)
+                end
+
+                PlayerData:IncrementPath(damager, "pstats.kills", 1)
+                PlayerData:IncrementPath(character, "pstats.deaths", 1)
+            end
+        end)
     end
 
+    --print(absoluteDamage)
     return damage, killed
 end
 

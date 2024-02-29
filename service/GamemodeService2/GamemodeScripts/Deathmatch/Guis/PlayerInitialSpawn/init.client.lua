@@ -22,7 +22,7 @@ local UserInputService = game:GetService("UserInputService")
 -- [[ VARIABLES ]]
 local player = game.Players.LocalPlayer
 local framework = require(game.ReplicatedStorage.Framework)
-local uistate = require(framework.Module.m_states).State("UI")
+local uistate = require(framework.Module.States):Get("UI")
 --local hud = require(player.PlayerScripts.HUD)
 local gui = script:WaitForChild("Gui")
 local loadoutButton = gui:WaitForChild("LoadoutButton")
@@ -171,6 +171,8 @@ function start()
 	camera.CFrame = gui:GetAttribute("StartCF")
     gui.Parent = Players.LocalPlayer.PlayerGui
     uistate:addOpenUI("SpawnMenu", gui, true)
+	camera.CameraType = Enum.CameraType.Fixed
+	camera.Focus = CFrame.new(544.745, 299.886, -32.138)
 end
 
 init()

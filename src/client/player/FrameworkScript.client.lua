@@ -8,9 +8,7 @@ local player = game:GetService("Players").LocalPlayer
 if not player:GetAttribute("Loaded") then repeat task.wait() until player:GetAttribute("Loaded") end
 
 local Console = require(Framework.Module.EvoConsole)
-local States = require(Framework.Module.m_states)
-local StatesRemoteFunction: RemoteFunction = Framework.Module.m_states.remote.RemoteFunction
-local UIState = States.State("UI")
+
 local SoundsReplicate = Framework.Module.Sound:WaitForChild("remote"):WaitForChild("replicate")
 require(Framework.Module.EvoMMWrapper)
 task.delay(2, function() require(Framework.Module.EvoPlayer) end)
@@ -25,26 +23,8 @@ Console:Create(game:GetService("Players").LocalPlayer)
 --
 
 -- States
-function init_connections()
-    StatesRemoteFunction.OnClientInvoke = remote_main
-end
-
-function remote_getStateVar(stateName: string, key: string)
-    return States._clientClassStore[stateName].var[key]
-end
-
-function remote_setStateVar(stateName: string, key: string, value: any)
-    States._clientClassStore[stateName].var[key] = value
-    return States[stateName].var[key]
-end
-
-function remote_main(action, ...)
-    if action == "getVar" then
-        return remote_getStateVar(...)
-    elseif action == "setVar" then
-        return remote_setStateVar(...)
-    end
-end
+local States = require(Framework.Module.States)
+local UIState = States:Get("UI")
 
 --@summary responsible for handling UI state properties (mouseIconEnabled)
 UIState:changed(function()
@@ -101,6 +81,7 @@ local GamemodeServiceRemoteEvent = Framework.Service.GamemodeService2:WaitForChi
 
 GamemodeServiceRemoteEvent.OnClientEvent:Connect(function(action, var)
     if action == "ChangeMenuType" then
-        require(game.Players.LocalPlayer.PlayerScripts.MainMenu).setMenuType(var)
+        --require(game.Players.LocalPlayer.PlayerScripts.MainMenu):
+        --require(game.Players.LocalPlayer.PlayerScripts.MainMenu).setMenuType(var)
     end
 end)

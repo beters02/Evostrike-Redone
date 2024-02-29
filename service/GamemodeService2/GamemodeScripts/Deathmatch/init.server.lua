@@ -33,9 +33,10 @@ local Tables = require(Framework.Module.lib.fc_tables)
 local EvoEconomy = require(Framework.Module.EvoEconomy)
 local EvoPlayer = require(Framework.Module.EvoPlayer)
 local EvoMaps = require(Framework.Module.EvoMaps)
-local GamemodeSpawns = game.ServerStorage.Maps[EvoMaps:GetCurrentMap()].Spawns
+local GamemodeSpawns = game.ServerStorage.CurrentSpawns
 local Maps = require(Framework.Module.EvoMaps)
 local BotService = require(Framework.Service.BotService)
+local GamemodeEvents = ReplicatedStorage.GamemodeEvents
 
 local PlayerData = {}
 local GameData = {
@@ -134,15 +135,19 @@ function Start()
         return true
     end
 
+    GameData.Connections.AddBot = GamemodeEvents.Game.AddBot.OnServerEvent:Connect(function()
+        BotSpawn()
+    end)
+
     GuiAll(GuiTopBar)
     GuiAll(GuiBuyMenu)
     
     GameData.Variables.PlayersCanSpawn = true
 
-    if #Players:GetPlayers() == 1 and not GameData.Variables.BotSpawned then
-        GameData.Variables.BotSpawned = true
-        BotSpawn()
-    end
+    --[[if #Players:GetPlayers() == 1 and not GameData.Variables.BotSpawned then
+        --GameData.Variables.BotSpawned = true
+        --BotSpawn()
+    end]]
 
     RoundStart(1)
     print('round started')
@@ -482,7 +487,10 @@ end
 
 function GuiPlayerInitialSpawn(player)
     PlayerDataGet(player)
-    local gui = Gui(player, "PlayerInitialSpawn", false, {"DestroyOnPlayerSpawning_" .. player.Name, "DestroyOnStop"}, {KilledString = "Spawn"})
+    local gui = Gui(player, "PlayerInitialSpawn", false, {"DestroyOnPlayerSpawning_" .. player.Name, "DestroyOnStop"}, {
+        KilledString = "Spawn",
+        StartCF = GameData.Options.starting_camera_cframe_map[GamemodeService2.CurrentMap] or GameData.Options.starting_camera_cframe_map.default
+    })
 
     PlayerData[player.Name].Connections.Respawn = gui:WaitForChild("Events"):WaitForChild("RemoteEvent").OnServerEvent:Connect(function(plr, action)
         if plr ~= player then return end
@@ -579,5 +587,4 @@ local Interface = {
 }
 
 --@run
-print('starting')
 Start()

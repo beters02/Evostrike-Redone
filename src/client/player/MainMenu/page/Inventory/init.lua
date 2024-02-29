@@ -1,226 +1,116 @@
-local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Framework"))
-local EvoConsole = Framework.Module.EvoConsole
-local UserInputService = game:GetService("UserInputService")
-local Types = require(EvoConsole.Types)
-local Tables = require(EvoConsole.Tables)
-local Configuration = require(EvoConsole.Configuration)
 
-local States = require(Framework.Module.States)
-local UIState = States:Get("UI")
 
-local class = {}
-class.__index = class
+-- SubPages are the Contanier Frames which have their own Content Frames (SkinPage, CasePage, KeyPage)
+local SubPage = require(script.InventorySubPage)
+local SkinSubPage = require(script.InventorySubPage.Skin)
+local CaseSubPage = require(script.InventorySubPage.Case)
+local KeySubPage = require(script.InventorySubPage.Key)
 
--- Create
-function class.new(Console, player)
-    local self = setmetatable({}, class)
+local Page = require(script.Parent)
+local Inventory = setmetatable({}, Page)
+Inventory.__index = Inventory
 
-    -- get all command modules w/ access & create GUI via server
-    local gui, commandModules = Console:ClientToServer(player, "instantiateConsole")
+function Inventory.new(mainMenu, frame)
+    local self = setmetatable(Page.new(mainMenu, frame), Inventory)
+    self.Frame = frame
+    self.Var = {CurrentOpenSubPage = false}
+    self.Connections = {}
+    self.SubPages = {}
+    self.SubPages.Skin = SkinSubPage:init(self, frame.Skin)
+    self.SubPages.Case = CaseSubPage:init(self, frame.Case)
+    self.SubPages.Key = KeySubPage:init(self, frame.Key)
+    self.Var.CurrentOpenSubPage = self.SubPages.Skin
 
-    -- compile command modules
-    -- todo: compile in order of lowest permission to highest
-    -- for now we just do admin perms last
-    self.Commands = {}
-    for i, v in pairs(commandModules) do
-        if v.Name == "Admin" then
-            self.Commands._ADMINLAST = v
-        else
-            self.Commands = Tables.merge(self.Commands, require(v))
-        end
-    end
-    if self.Commands._ADMINLAST then
-        self.Commands = Tables.merge(self.Commands, require(self.Commands._ADMINLAST))
-        self.Commands._ADMINLAST = nil
-    end
-
-    -- convert objects into object of Console type
-    local console: Types.Console = {
-        UI = gui,
-        MainFrame = gui.MainFrame,
-
-        Open = self.Open,
-        Close = self.Close,
-
-        Toggle = function()
-            if gui.Enabled then self:Close() else self:Open() end
-        end,
-
-        IsOpen = function()
-            return gui.Enabled
-        end
+    self.SubPageButtons = {
+        Skin = frame.SkinsButton,
+        Key = frame.KeysButton,
+        Case = frame.CasesButton
     }
-
-    self.player = player
-    self.console = console
-    self.returnLines = {} -- store all currently visible return lines for later access
-
-    self.enterBox = self.console.UI.MainFrame.TextEnterFrame.TextEnterLine
-
-    self:Connect()
-
-    return console
+    return self
 end
 
--- Open the console
-function class:Open()
-    self:ConnectCommandRegister()
-
-    UIState:addOpenUI("Console", self.console.UI, true)
-
-    -- start at bottom
-    self.console.UI.MainFrame.TextReturnFrame.CanvasPosition = Vector2.new(0, self.console.UI.MainFrame.TextReturnFrame.AbsoluteCanvasSize.Y)
-
-    -- vissi
-    self.console.UI.Enabled = true
-
-    self.player:SetAttribute("Typing", true)
-    UIState:setIsTyping(true)
-    self.enterBox:CaptureFocus()
+function Inventory:init(frame)
+    self._init()
 end
 
--- Close the console
-function class:Close()
-    self:DisconnectCommandRegister()
-
-    UIState:removeOpenUI("Console")
-    print('removed')
-
-    self.console.UI.Enabled = false
-    self.player:SetAttribute("Typing", false)
-    UIState:setIsTyping(false)
+function Inventory:Open()
+    self._Open()
+    connectSubPageButtons(self)
+    if self.Var.CurrentOpenSubPage then
+        self.Var.CurrentOpenSubPage:Open()
+    end
 end
 
--- Enter the current text box text as a command
-function class:Enter()
-    local stringToEnter = self.enterBox.Text
-	
-	-- get command/args from string
-	local split = {}
-	for word in string.gmatch(stringToEnter, "%S+") do
-		table.insert(split, word)
-	end
-	
-	-- clear text
-    self.enterBox.Text = ""
-    self.enterBox:CaptureFocus()
-
-    -- attempt do command
-	return _doCommand(self, split)
+function Inventory:Close()
+    self._Close()
+    disconnectSubPageButtons(self)
+    if self.Var.CurrentOpenSubPage then
+        self.Var.CurrentOpenSubPage:Close()
+    end
 end
 
-function class:Print(msg: string) return _printMsg(self, msg, "message") end
-function class:Warn(msg: string) return _printMsg(self, msg, "warn") end
-function class:Error(msg: string) return _printMsg(self, msg, "error") end
-
---
-
-function class:Connect()
-    self.connections = {}
-    self.connections.input = UserInputService.InputBegan:Connect(function(input, gp)
-        --if gp then return end
-        if input.KeyCode == Enum.KeyCode.F10 then
-            self.console.Toggle()
-        end
-    end)
+function Inventory:Update()
+    self.SubPages.Skin:Update()
+    self.SubPages.Case:Update()
 end
 
-function class:Disconnect()
-    self.connections.input:Disconnect()
-end
-
-function class:ConnectCommandRegister()
-    self.connections.command = UserInputService.InputBegan:Connect(function(input, gp)
-        --if gp then return end
-        if input.KeyCode == Enum.KeyCode.Return then
-            self:Enter()
-        end
-    end)
-end
-
-function class:DisconnectCommandRegister()
-    self.connections.command:Disconnect()
-end
-
---
-
-local colors = {
-    message = Configuration.msgColor,
-    ["error"] = Configuration.errorColor,
-    ["warn"] = Configuration.warnColor
-}
-
-function _printMsg(self, msg: string, msgType: Types.ReturnMessageType|nil)
-    if not msgType then msgType = "message" :: Types.ReturnMessageType end
-
-    local lineTemplate = self.console.UI.MainFrame.TextReturnFrame.Line
-
-    -- check if max lines have been reached
-    if lineTemplate.Position.Y.Scale - lineTemplate.Size.Y.Scale < 0 then
-        self.returnLines[#self.returnLines]:Destroy() -- destroy last line
-        table.remove(self.returnLines, #self.returnLines)
+function Inventory:OpenSubPage(name)
+    local subpage = self.SubPages[name]
+    if not subpage then
+        return
     end
 
-    -- remove default text if necessary
-    if #self.returnLines == 0 then
-        lineTemplate.Visible = false
-    else
-    
-        -- shift the text index number up
-        for i, v in pairs(self.returnLines) do
+    if self.Var.CurrentOpenSubPage then
+        self:CloseSubPage(self.Var.CurrentOpenSubPage.Name)
+    end
 
-            -- is this nice and fun to look at?
-            local pref = tonumber(v.Text:sub(1, 2)) + 1 > 9 and "" or "0"
-            v.Text = pref .. tostring(tonumber(v.Text:sub(1, 2)) + 1) .. ": " .. v.Text:sub(5, v.Text:len())
+    subpage:Open()
+    self.Var.CurrentOpenSubPage = subpage
+    self.SubPageButtons[name].BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+end
+
+function Inventory:CloseSubPage(name)
+    local subpage = self.SubPages[name]
+    if not subpage then
+        return
+    end
+
+    subpage:Close()
+    self.SubPageButtons[name].BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+end
+
+function Inventory:EnableSubPageButtons()
+    disconnectSubPageButtons(self)
+    connectSubPageButtons(self)
+    for _, v in pairs({"Skin", "Case", "Key"}) do
+        self.Frame[v.."sButton"].Visible = true
+    end
+end
+
+function Inventory:DisableSubPageButtons()
+    disconnectSubPageButtons(self)
+    for _, v in pairs({"Skin", "Case", "Key"}) do
+        self.Frame[v.."sButton"].Visible = false
+    end
+end
+
+function connectSubPageButtons(self)
+    for _, v in pairs({"Skin", "Case", "Key"}) do
+        self.Connections["Open"..v.."SubPage"] = self.Frame[v.."sButton"].MouseButton1Click:Connect(function()
+            if self.Var.CurrentOpenSubPage == self.SubPages[v] then
+                return
+            end
+            self:OpenSubPage(v)
+        end)
+    end
+end
+
+function disconnectSubPageButtons(self)
+    for _, v in pairs({"Skin", "Case", "Key"}) do
+        if self.Connections["Open"..v.."SubPage"] then
+            self.Connections["Open"..v.."SubPage"]:Disconnect()
         end
     end
-
-    local line = lineTemplate:Clone() :: TextLabel -- create line ui
-    line.Name = tostring(#self.returnLines + 1 .. ": " .. line.Name)
-
-    -- set color
-    line.TextColor3 = colors[msgType]
-
-    -- get line count and set message
-    line.Text = "01: " .. msg
-
-    -- set line position
-    if #self.returnLines ~= 0 then
-        line.Position = UDim2.fromScale(line.Position.X.Scale, line.Position.Y.Scale - line.Size.Y.Scale)
-    end
-
-    line.Parent = lineTemplate.Parent
-    line.Visible = true
-
-    table.insert(self.returnLines, line)
-    return true
 end
 
-function _doCommand(self, commandSplit: table)
-    -- verify command string was found
-    if not commandSplit or not commandSplit[1] then -- split[1] == command
-        return self:Error("Could not get command from string")
-	end
-	
-	-- locate command from Commands
-	local commandTable = false
-	for i, v in pairs(self.Commands) do
-		if string.lower(i) == string.lower(commandSplit[1]) and v.Function then
-			commandTable = v
-			break
-		end
-	end
-
-	-- cant find command
-	if not commandTable then
-        return self:Error("Could not find command " .. commandSplit[1])
-	end
-
-	-- remove action string to single out and send arguments
-    table.remove(commandSplit, 1)
-	
-    -- function
-	return commandTable.Function(self, self.player, table.unpack(commandSplit))
-end
-
-return class
+return Inventory

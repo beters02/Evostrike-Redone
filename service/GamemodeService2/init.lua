@@ -1,12 +1,12 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ServerStorage = game:GetService("ServerStorage")
 --[[
     This Service acts less like a Service and more like an Interface,
     as it directly links to GameScript and relies on that script to process any functionality outside of the Gamemode Script.
 ]]
 
 type GamemodeObject = {Name: string, Script: Script, Interface: any}
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local GamemodeService = {}
 GamemodeService.Location = script
@@ -20,13 +20,12 @@ local RemoteFunction = script:WaitForChild("RemoteFunction")
 local RemoteEvent = script:WaitForChild("RemoteEvent")
 local Bindable = script:WaitForChild("Bindable")
 
+--@summary Get a GamemodeScript from GamemodeService
 function GamemodeService:GetGamemodeScript(gamemode: string)
-    if gamemode == "1v1" and RunService:IsServer() then
-        return ServerStorage.GamemodeScripts["1v1"]
-    end
     return GamemodeService.Location.GamemodeScripts:FindFirstChild(gamemode)
 end
 
+--@summary Fire the RestartGamemode Events for GameScript
 function GamemodeService:RestartGamemode(map)
     if RunService:IsClient() then
         RemoteEvent:FireServer("RestartGamemode", map)
@@ -35,6 +34,7 @@ function GamemodeService:RestartGamemode(map)
     end
 end
 
+--@summary Fire the SetGamemode Events for GameScript
 function GamemodeService:SetGamemode(gamemode)
     if RunService:IsClient() then
         RemoteEvent:FireServer("SetGamemode", gamemode)
@@ -43,11 +43,11 @@ function GamemodeService:SetGamemode(gamemode)
     end
 end
 
+--@summary Set MenuType for the MainMenu
 function GamemodeService:SetMenuType(menuType: "Lobby" | "Game")
-    if RunService:IsClient() then
-        return
-    end
+    if RunService:IsClient() then return end
     GamemodeService.MenuType = menuType
+
     for _, v in pairs(Players:GetPlayers()) do
         local mm = v.PlayerGui and v.PlayerGui:FindFirstChild("MainMenu")
         if mm then
@@ -57,6 +57,7 @@ function GamemodeService:SetMenuType(menuType: "Lobby" | "Game")
     end
 end
 
+--@summary Get the Current MenuType
 function GamemodeService:GetMenuType()
     if RunService:IsServer() then
         return GamemodeService.MenuType
@@ -64,10 +65,9 @@ function GamemodeService:GetMenuType()
     return RemoteFunction:InvokeServer("GetMenuType")
 end
 
+--@summary Get a connection for when the MenuType is changed. Client only.
 function GamemodeService:MenuTypeChanged(callback)
-    if RunService:IsServer() then
-        return
-    end
+    if RunService:IsServer() then return end
     return RemoteEvent.OnClientEvent:Connect(function(action, newMenuType)
         if action == "ChangeMenuType" then
             callback(newMenuType)
