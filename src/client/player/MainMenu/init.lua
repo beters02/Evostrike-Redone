@@ -1,9 +1,8 @@
 --[[
-	Open/Close input is registered in cms_mainMenu
+    Init MainMenu Module when player joins the game
+    Get MainMenuType and Distribute to all pages on initialization
 ]]
 
-<<<<<<< Updated upstream
-=======
 --[[ CONFIG ]]
 local DISABLE_CHAT_RETRIES = 5
 local MENU_OPEN_WITH_HOMEPAGE = true
@@ -21,42 +20,43 @@ local TOPBAR_BUTTON_HOVER_FADEIN_LENGTH = 1
 local TOPBAR_BUTTON_HOVER_FADEOUT_LENGTH = 1
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
->>>>>>> Stashed changes
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AssetService = game:GetService("AssetService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local Players = game:GetService("Players")
-local States = require(Framework.Module.m_states)
-local UIState = States.State("UI")
 local GamemodeService = require(Framework.Service.GamemodeService2)
-local player = Players.LocalPlayer
+local States = require(Framework.Module.States)
+local UIState = States:Get("UI")
+local StarterGui = game:GetService("StarterGui")
 
-local main = {}
+-- Button Sound Names (Stored in Gui.Sounds)
+local Enum_ButtonSoundNames = {
+    Purchase1 = "purchaseSound1",
+    Error1 = "errorSound1",
+    Hover1 = "hoverSound",
+    ItemDisplay1 = "itemDisplaySound",
+    ItemReceive1 = "itemReceivedSound",
+    Select1 = "selectSound",
+    WheelTick1 = "wheelTick",
+    WoodImpact1 = "woodImpact"
+}
+Enum_ButtonSoundNames.Open = Enum_ButtonSoundNames.Select1
+Enum_ButtonSoundNames.ItemDisplay = Enum_ButtonSoundNames.ItemDisplay1
 
--- init
-function main.initialize(gui)
-    main.player = Players.LocalPlayer
-    main.gui = gui
-    main.bgframe = main.gui:WaitForChild("BG")
-	main.topBar.init()
-    main.var = {opened = false, menuType = main.gui:GetAttribute("MenuType"), loading = false}
-	main.page = require(Players.LocalPlayer.PlayerScripts.MainMenu.page).init(main, main.gui:GetAttribute("IsAdmin"))
-	main.isInit = true
-	main.initTime = tick()
+-- Main Menu Module
+local MainMenu = {
+    Connections = {},
+    BaseConnections = {}, -- Dont disconnect these
+    TopBarConnections = {},
+    Pages = {},
+    ButtonSounds = {},
+    Tweens = {},
+    Var = {},
+    CurrentOpenPage = false,
+    Gui = false,
+    CurrentMenuType = false
+}
 
-<<<<<<< Updated upstream
-	if player:GetAttribute("Loaded") then
-		main.open()
-	else
-		main.close()
-		main.var.loading = true
-		task.spawn(function()
-			repeat task.wait() until player:GetAttribute("Loaded")
-			main.open()
-			main.var.loading = false
-=======
 -- Initialize Pages, Sounds and GamemodeService
 function MainMenu:Initialize(gui)
     self.Gui = gui
@@ -177,6 +177,7 @@ function initPages(self)
         local module = script.Page:FindFirstChild(pageName) or script.Page
         self.Pages[pageName] = require(module).new(self, frame)
         self.Pages[pageName]:MenuTypeChanged(self.CurrentMenuType)
+        print('Changed!')
     end
 end
 
@@ -299,224 +300,32 @@ function disableChat()
 	repeat
 		success,message = pcall(function()
 			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
->>>>>>> Stashed changes
 		end)
-	end
-
-	main.typeChangedConn = GamemodeService:MenuTypeChanged(function(new)
-		main.setMenuType(new)
-		main.var.menuType = new
-	end)
-	main.setMenuType(main.var.menuType)
-	return main
-end
-
--- menu type
-type MenuType = "Game" | "Lobby"
-function main.setMenuType(mtype: MenuType)
-	-- Dont allow access before init
-	if not main.isInit and not main.processing then
-		main.processing = task.spawn(function()
-			print("MainMenu accessed before init. Waiting..")
-			repeat task.wait() until main.isInit
-			main.setMenuType(mtype)
-			main.processing = nil
-		end)
-		return
-	end
-	main.page._stored.Home:SetMenuType(mtype)
-end
-
--- main
-function main.open()
-	main.var.opened = true
-	main.page:CloseAllPages()
-	main.topBar.connect()
-	main.topBar.activated(main.topBar.buttonFrames.Home)
-	main.gui.Enabled = true
-	UIState:removeOpenUI("MainMenu")
-	UIState:addOpenUI("MainMenu", main.gui, true)
-end
-
-function main.close()
-	main.var.opened = false
-	main.topBar.disconnect()
-	main.page:CloseAllPages()
-	main.gui.Enabled = false
-	UIState:removeOpenUI("MainMenu")
-end
-
-function main.toggle()
-	if main.var.opened then
-		main.close()
-		task.wait()
-	else
-		main.open()
-		task.wait()
-	end
-end
-
-function main.conectOpenInput()
-	main.disconectOpenInput()
-	main.inputConn = UserInputService.InputBegan:Connect(function(input, gp)
-		if input.KeyCode == Enum.KeyCode.M then
-			if player:GetAttribute("Typing") then return end
-			if player:GetAttribute("loading") then return end -- if player is loading then dont open menu
-			main.toggle()
+		if not success then
+			retries += 1
+			task.wait(1)
 		end
-	end)
-end
-
-function main.disconectOpenInput()
-	if main.inputConn then
-		main.inputConn:Disconnect()
-		main.inputConn = nil
+	until success == true or retries == DISABLE_CHAT_RETRIES
+	if not success then
+		error(message)
 	end
 end
 
--- main util
-function main.closeAllFrames(button)
-	for i, v in pairs(main.gui:GetChildren()) do -- close all frames except mainButtonFr
-		if v:IsA("Frame") and (not button and string.match(v.Name, "Frame")) then
-			v.Visible = false
+function enableChat()
+    local retries = 0
+	local success,message
+	repeat
+		success,message = pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+		end)
+		if not success then
+			retries += 1
+			task.wait(1)
 		end
+	until success == true or retries == DISABLE_CHAT_RETRIES
+	if not success then
+		error(message)
 	end
 end
 
-function main.playMenuTween(tween)
-	tween:Play()
-	table.insert(main.playingtweens, tween)
-	tween.Completed:Once(function()
-		table.remove(main.playingtweens, table.find(main.playingtweens, tween))
-	end)
-end
-
-function main.stopMenuTween(tween)
-	tween:Pause()
-	table.remove(main.playingtweens, table.find(main.playingtweens, tween))
-end
-
-function main.stopAllMenuTweens()
-	for i, v in pairs(main.playingtweens) do
-		v:Pause()
-	end
-	main.playingtweens = {}
-end
-
--- top bar
-export type TopBarButtonFrame = {
-	PageName: string,
-	Frame: Frame,
-	Var: table
-}
-
-local TOPBAR_BUTTON_ACTIVE_COLOR = Color3.fromRGB(95, 120, 157)
-
-main.topBar = {
-	gui = false,
-	buttonFrames = {}
-}
-
-function main.topBar.init()
-	main.topBar.gui =  main.gui:WaitForChild("TopBar")
-	for _, frame in pairs(main.topBar.gui:GetChildren()) do
-		local pageName =  frame.Name:gsub("ButtonFrame", "")
-		if not frame:IsA("Frame") or main.topBar.buttonFrames[pageName] then continue end
-		
-		main.topBar.buttonFrames[pageName] = {
-			PageName = pageName,
-			Frame = frame,
-			Button = frame:WaitForChild("TextButton"),
-			Var = {isHovering = false, defaultStrokeColor = frame.TextButton:WaitForChild("UIStroke").Color}
-		}:: TopBarButtonFrame
-		main.topBar.buttonFrames[pageName].Tweens = main.topBar.initTweens(main.topBar.buttonFrames[pageName])
-	end
-end
-
-function main.topBar.initTweens(frame: TopBarButtonFrame)
-	return {
-		hoverOn = TweenService:Create(frame.Button.UIStroke, TweenInfo.new(1), {Color = TOPBAR_BUTTON_ACTIVE_COLOR}),
-		hoverOff = TweenService:Create(frame.Button.UIStroke, TweenInfo.new(1), {Color = frame.Var.defaultStrokeColor})
-	}
-end
-
-local function ScaleToOffset(x)
-	local cam = workspace.Camera
-	local viewportSize = cam.ViewportSize
-	x *= viewportSize.X
-	return math.round(x)
-end
-
-local function scaleTopBarFrames(titleFrame)
-	local size = ScaleToOffset(titleFrame.Size.Y.Scale) / 50
-	print(size)
-	for _, buttonFrame in pairs(main.topBar.gui:GetChildren()) do
-		pcall(function()
-			buttonFrame.TextButton.TextScaled = false
-			buttonFrame.TextButton.TextSize = size
-		end)
-	end
-end
-
-function main.topBar.connect()
-	main.topBar.disconnect()
-	main.topBar.connections = {}
-
-	local lastTextSize = 0
-	local longestTopBarTitle = main.topBar.gui.InventoryButtonFrame.TextButton
-	main.topBar.Update = RunService.RenderStepped:Connect(function()
-		if tick() - main.initTime < 3 then
-			return
-		end
-		if longestTopBarTitle.TextSize ~= lastTextSize then
-			lastTextSize = longestTopBarTitle.TextSize
-			scaleTopBarFrames(longestTopBarTitle)
-		end
-	end)
-
-	for _, frame: TopBarButtonFrame in pairs(main.topBar.buttonFrames) do
-		main.topBar.connections[frame.PageName .. "Began"] = frame.Frame.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseMovement then
-				main.topBar.hoverOn(frame)
-			end
-		end)
-		main.topBar.connections[frame.PageName .. "Ended"] = frame.Frame.InputEnded:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseMovement then
-				main.topBar.hoverOff(frame)
-			end
-		end)
-		main.topBar.connections[frame.PageName .. "Activated"] = frame.Button.MouseButton1Click:Connect(function()
-			main.topBar.activated(frame)
-		end)
-	end
-end
-
-function main.topBar.disconnect()
-	if not main.topBar.connections then return end
-	for _, v in pairs(main.topBar.connections) do
-		v:Disconnect()
-	end
-	main.topBar.connections = false
-end
-
-function main.topBar.activated(frame: TopBarButtonFrame)
-	main.page:OpenPage(frame.PageName)
-end
-
-function main.topBar.hoverOn(frame: TopBarButtonFrame)
-	frame.Var.isHovering = true
-	if frame.Tweens.hoverOff.PlaybackState == Enum.PlaybackState.Playing then
-		frame.Tweens.hoverOff:Pause()
-	end
-	frame.Tweens.hoverOn:Play()
-end
-
-function main.topBar.hoverOff(frame: TopBarButtonFrame)
-	frame.Var.isHovering = false
-	if frame.Tweens.hoverOn.PlaybackState == Enum.PlaybackState.Playing then
-		frame.Tweens.hoverOn:Pause()
-	end
-	frame.Tweens.hoverOff:Play()
-end
-
-return main
+return MainMenu

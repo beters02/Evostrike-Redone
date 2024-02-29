@@ -4,21 +4,16 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-<<<<<<< Updated upstream
-local DiedEvent = script:WaitForChild("Events").PlayerDiedRemote
---local GamemodeServiceModule = ReplicatedStorage.Services:WaitForChild("GamemodeService")
-=======
 local Events = script:WaitForChild("Events")
 local DiedEvent = Events.PlayerDiedRemote
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local BotServiceModule = ReplicatedStorage.Services.BotService
 local StoredDamageInformation = require(script:WaitForChild("StoredDamageInformation"))
->>>>>>> Stashed changes
 
 local EvoPlayer = {}
 
 --@summary Correctly apply damage to the player, checking for shields
-function EvoPlayer:TakeDamage(character, damage, damager)
+function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
     if damager and damager.Humanoid.Health <= 0 then return 0 end
     if not EvoPlayer:CanDamage(character) then return 0 end
     local shield = character:GetAttribute("Shield") or 0
@@ -26,11 +21,8 @@ function EvoPlayer:TakeDamage(character, damage, damager)
     local hitPart = character:GetAttribute("lastHitPart") or "Head"
     local destroysHelmet = character:GetAttribute("lastUsedWeaponDestroysHelmet") or false
     local helmetMultiplier = character:GetAttribute("lastUsedWeaponHelmetMultiplier") or 1
-<<<<<<< Updated upstream
-=======
     local damageAppliedToCharacter = true
     local killed = false
->>>>>>> Stashed changes
 
     if string.find(string.lower(hitPart), "head") then
         if helmet then
@@ -57,10 +49,6 @@ function EvoPlayer:TakeDamage(character, damage, damager)
         character:SetAttribute("LastRegisteredHealth", lastHealth)
         killed = lastHealth <= 0
 
-<<<<<<< Updated upstream
-    if RunService:IsServer() then
-        character.Humanoid:TakeDamage(damage)
-=======
         local charPlr = Players:GetPlayerFromCharacter(character)
         Events.PlayerGaveDamageBind:Fire(charPlr.Name, damage)
     else
@@ -90,7 +78,6 @@ function EvoPlayer:TakeDamage(character, damage, damager)
                 PlayerData:IncrementPath(character, "pstats.deaths", 1)
             end
         end)
->>>>>>> Stashed changes
     end
 
     return damage, killed

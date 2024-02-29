@@ -4,12 +4,16 @@
 
 -- CONFIG
 local QUEUE_TEXT_FADE_TIME = 0.37
+local LOBBY_BOTTOM_DEFAULT_TEXT = "JOIN DEATHMATCH"
+local LOBBY_BOTTOM_CLICKED_TEXT = "LEAVE DEATHMATCH"
+local GAME_BOTTOM_DEFAULT_TEXT = "GO TO LOBBY"
 --
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Queuer = require(script:WaitForChild("Queuer"))
-<<<<<<< Updated upstream:src/client/player/MainMenu2WIP/Page/Home/init.lua
-=======
 local Popup = require(script.Parent.Parent.Popup)
 local Math = require(Framework.Module.lib.fc_math)
 
@@ -18,7 +22,6 @@ local LoadingUI = require(game.Players.LocalPlayer.PlayerScripts:WaitForChild("L
 local RequestQueueEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("requestQueueFunction")
 local RequestSpawnEvent = ReplicatedStorage.Services.GamemodeService2.RequestSpawn
 local RequestDeathEvent = ReplicatedStorage.Services.GamemodeService2.RequestDeath
->>>>>>> Stashed changes:src/client/player/MainMenu/Page/Home/init.lua
 
 local Page = require(script.Parent)
 local HomePage = setmetatable({}, Page)
@@ -26,6 +29,7 @@ HomePage.__index = HomePage
 
 function HomePage.new(mainMenu, frame)
     local self = setmetatable(Page.new(mainMenu, frame), HomePage)
+    self.Player = game.Players.LocalPlayer
     self.SoloButton = self.Frame:WaitForChild("Card_Solo")
     self.CasualButton = self.Frame:WaitForChild("Card_Casual")
 
@@ -44,6 +48,14 @@ function HomePage.new(mainMenu, frame)
 
     -- BottomButtonCallback changes depending on the MenuType.
     self.BottomButtonCallback = joinGameButtonClicked
+    self.ActionProcessing = false
+
+    self.MainButtons = {}
+    for _, v in pairs(frame:GetChildren()) do
+        if string.match(v.Name, "MainButton") or v.Name == "Card_Bottom" then
+            self.MainButtons[string.gsub(v.Name, "MainButton_", "")] = v
+        end
+    end
 
     self.Tweens = {
         Connections = {},
@@ -56,6 +68,7 @@ end
 
 function HomePage:Open()
     self._Open()
+    self.Main:CloseTopBar()
     if self.SoloPopupRequest.Visible then
         self.SoloPopupRequest.Visible = false
     end
@@ -64,33 +77,34 @@ function HomePage:Open()
     end
 end
 
+function HomePage:Close()
+    self._Close()
+    self.Main:OpenTopBar()
+end
+
 function HomePage:Connect()
     self:AddConnection("SoloButton", self.SoloButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         soloMainButtonClicked(self)
     end))
     self:AddConnection("CasualButton", self.CasualButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         casualMainButtonClicked(self)
     end))
-    self:AddConnection("InventoryButton", self.InventoryButton.MouseButton1Click:Connect(function()
-        pageMainButtonClicked(self, "Inventory")
-    end))
-    self:AddConnection("OptionsButton", self.OptionsButton.MouseButton1Click:Connect(function()
-        pageMainButtonClicked(self, "Options")
-    end))
-    self:AddConnection("CasualButton", self.CasualButton.MouseButton1Click:Connect(function()
-        pageMainButtonClicked(self, "Casual")
-    end))
     self:AddConnection("BottomButton", self.BottomButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         self.BottomButtonCallback(self)
     end))
+    connPageMainButtons(self)
+    connEqualizeButtonText(self)
 end
 
 function HomePage:MenuTypeChanged(newMenuType)
     if newMenuType == "Lobby" then
-        self.BottomButton.Text = "JOIN DEATHMATCH"
+        self.BottomButton.InfoLabel.Text = LOBBY_BOTTOM_DEFAULT_TEXT
         self.BottomButtonCallback = joinGameButtonClicked
     else
-        self.BottomButton.Text = "BACK TO LOBBY"
+        self.BottomButton.InfoLabel.Text = GAME_BOTTOM_DEFAULT_TEXT
         self.BottomButtonCallback = teleportBackToLobbyButtonClicked
     end
 end
@@ -112,10 +126,10 @@ function soloMainButtonClicked(self)
     self:AddConnection("SoloStableButton", self.SoloStableButton.MouseButton1Click:Once(function()
         if processingDebounce then return end
         processingDebounce = true
-        --Popup.burst("Teleporting!", 3)
-        self.Location.Parent.SoloPopupRequest.Visible = false
-        self.Location.Visible = true
-        --RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Stable")
+        Popup.new(self.Player, "Teleporting!", 3)
+        self.SoloPopupRequest.Visible = false
+        self.Frame.Visible = true
+        RequestQueueEvent:InvokeServer("TeleportPrivateSolo", "Stable")
         self.Connections.SoloCancelButton:Disconnect()
         self.Connections.SoloStableButton:Disconnect()
         processingDebounce = nil
@@ -126,7 +140,7 @@ function soloMainButtonClicked(self)
         if processingDebounce then return end
         processingDebounce = true
         self.SoloPopupRequest.Visible = false
-        self.Location.Parent.SoloPopupRequest.Visible = false
+        self.SoloPopupRequest.Visible = false
         self.Frame.Visible = true
         self.Connections.SoloStableButton:Disconnect()
         self.Connections.SoloCancelButton:Disconnect()
@@ -141,11 +155,13 @@ function casualMainButtonClicked(self)
 
     -- Queue for 1v1
     self:AddConnection("Casual1v1Button", self.CasualBackButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         casualQueueButtonClicked(self)
     end))
 
     -- Go back to Home Page
     self:AddConnection("CasualBackButton", self.CasualBackButton.MouseButton1Click:Connect(function()
+        self.Main:PlayButtonSound("Select1")
         self.Frame.Visible = true
         self.CasualFrame.Visible = false
         self.Connections.Casual1v1Button:Disconnect()
@@ -161,19 +177,32 @@ function casualQueueButtonClicked(self)
     end
 end
 
+function connPageMainButtons(self)
+    for i, v in pairs(self.MainButtons) do
+        if v.Name == "Card_Bottom" then
+            continue
+        end
+        self:AddConnection(i.."Button", v.MouseButton1Click:Connect(function()
+            self.Main:PlayButtonSound("Select1")
+            pageMainButtonClicked(self, i)
+        end))
+    end
+end
+
 -- Opens other MainMenu Page
 function pageMainButtonClicked(self, name)
     self.Main:OpenPage(name)
 end
 
 function teleportBackToLobbyButtonClicked(self)
-    
+    if self.ActionProcessing then return end
+    self.ActionProcessing = true
+    self.Main:Close()
+    RequestQueueEvent:InvokeServer("TeleportPublicSolo", "Lobby")
+    self.ActionProcessing = false
 end
 
 function joinGameButtonClicked(self)
-<<<<<<< Updated upstream:src/client/player/MainMenu2WIP/Page/Home/init.lua
-    
-=======
     print('CLICKED!')
 
     if self.ActionProcessing then return end
@@ -228,7 +257,6 @@ function leaveGame(button)
         end)
         --TODO: make it so you cannot open the menu
     end
->>>>>>> Stashed changes:src/client/player/MainMenu/Page/Home/init.lua
 end
 
 function addPlayerToQueue(self)
@@ -277,6 +305,29 @@ function changeQueueText(self, new, toggleLength: number?) -- if toggleLength, t
     end
 
     outTween:Play()
+end
+
+function connEqualizeButtonText(self)
+    local lastFrameSize = 0
+    self:AddConnection("EqualizeSize", RunService.RenderStepped:Connect(function()
+        local invsize = self.InventoryButton.InfoLabel.Size.Y.Scale
+        invsize = Math.scaleToOffsetNumber(false, invsize).Y
+        if lastFrameSize ~= invsize then
+            lastFrameSize = invsize
+            scaleTopBarFrames(self, self.InventoryButton)
+        end
+    end))
+end
+
+function scaleTopBarFrames(self, titleFrame)
+    local scsz = titleFrame.Size.Y.Scale * titleFrame.InfoLabel.Size.Y.Scale
+	local size = Math.scaleToOffsetNumber(false, scsz).Y / 2
+    size = math.floor(size)
+
+    for _, v in pairs(self.MainButtons) do
+        v.InfoLabel.TextScaled = false
+        v.InfoLabel.TextSize = size
+    end
 end
 
 return HomePage

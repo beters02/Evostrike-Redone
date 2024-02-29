@@ -17,6 +17,8 @@ local Queuer = require(script:WaitForChild("Queuer"))
 local Popup = require(script.Parent.Parent.Popup)
 local Math = require(Framework.Module.lib.fc_math)
 
+local LoadingUI = require(game.Players.LocalPlayer.PlayerScripts:WaitForChild("LoadingUI"))
+
 local RequestQueueEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("requestQueueFunction")
 local RequestSpawnEvent = ReplicatedStorage.Services.GamemodeService2.RequestSpawn
 local RequestDeathEvent = ReplicatedStorage.Services.GamemodeService2.RequestDeath
@@ -98,6 +100,7 @@ function HomePage:Connect()
 end
 
 function HomePage:MenuTypeChanged(newMenuType)
+    print('ASDJKAHSD:AKLND')
     if newMenuType == "Lobby" then
         self.BottomButton.InfoLabel.Text = LOBBY_BOTTOM_DEFAULT_TEXT
         self.BottomButtonCallback = joinGameButtonClicked
@@ -217,11 +220,31 @@ function joinGameButtonClicked(self)
 end
 
 function joinGame(self, button)
+    local loadingTime = tick()
+    local loading = LoadingUI.new()
+
+    task.wait()
+    self.Main:Close()
+
     local success = RequestSpawnEvent:InvokeServer()
+    --[[local ct = tick()
+    loadingTime = ct - loadingTime
+    print(loadingTime)
+    if loadingTime < 5 then
+        repeat
+            loadingTime = tick() - ct
+            task.wait()
+            print(loadingTime)
+        until loadingTime >= 5
+    end]]
+
+    loading:destroy()
     if success then
         self.Main:Close()
         button.InfoLabel.Text = LOBBY_BOTTOM_CLICKED_TEXT
         --TODO: make it so you can open menu
+    else
+        --self.Main:Open()
     end
 end
 

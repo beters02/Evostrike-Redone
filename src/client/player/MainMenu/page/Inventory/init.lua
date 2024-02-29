@@ -1,38 +1,15 @@
---[[
-    When creating a new knife, make sure to init in the init function
-]]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local PlayerData = require(Framework.Module.PlayerData)
 
-<<<<<<< Updated upstream
-local inventory = {}
-local skinPage = require(script:WaitForChild("SkinPage"))
-local casePage = require(script:WaitForChild("CasePage"))
-local keyPage = require(script:WaitForChild("KeyPage"))
-inventory.skinPage = skinPage
-inventory.casePage = casePage
-inventory.keyPage = keyPage
-=======
 -- SubPages are the Contanier Frames which have their own Content Frames (SkinPage, CasePage, KeyPage)
 local SubPage = require(script.InventorySubPage)
 local SkinSubPage = require(script.InventorySubPage.Skin)
 local CaseSubPage = require(script.InventorySubPage.Case)
 local KeySubPage = require(script.InventorySubPage.Key)
->>>>>>> Stashed changes
 
-function inventory:init()
-    self.mainButtonConnections = {}
-    self.currentPageButtonConnections = {}
-    self.currentOpenPage = skinPage
+local Page = require(script.Parent)
+local Inventory = setmetatable({}, Page)
+Inventory.__index = Inventory
 
-<<<<<<< Updated upstream
-    skinPage.init(self, self.Location.Skin)
-    casePage.init(self, self.Location.Case)
-    keyPage.init(self, self.Location.Key)
-    self:Update()
-=======
 function Inventory.new(mainMenu, frame)
     local self = setmetatable(Page.new(mainMenu, frame), Inventory)
     self.Frame = frame
@@ -49,89 +26,74 @@ function Inventory.new(mainMenu, frame)
         Key = frame.KeysButton,
         Case = frame.CasesButton
     }
->>>>>>> Stashed changes
     return self
 end
 
-function inventory:Open()
-    self.Location.Visible = true
-    self:ConnectMainButtons()
-    self:OpenAnimations()
-    self:Update()
-    self:OpenItemPage(self.currentOpenPage)
+function Inventory:init(frame)
+    self._init()
 end
 
-function inventory:Close()
-    self.Location.Visible = false
-    self:DisconnectMainButtons()
-    self:CloseCurrentItemPage()
-    skinPage.CloseItemDisplay(self)
-    casePage.CloseItemDisplay(self)
+function Inventory:Open()
+    self._Open()
+    connectSubPageButtons(self)
+    if self.Var.CurrentOpenSubPage then
+        self.Var.CurrentOpenSubPage:Open()
+    end
 end
 
-function inventory:Update()
-    self:Clear()
-
-    local playerInventory = PlayerData:UpdateFromServer(true).ownedItems
-    skinPage.Update(self, playerInventory)
-    casePage.Update(self, playerInventory)
-    keyPage.Update(self, playerInventory)
+function Inventory:Close()
+    self._Close()
+    disconnectSubPageButtons(self)
+    if self.Var.CurrentOpenSubPage then
+        self.Var.CurrentOpenSubPage:Close()
+    end
 end
 
-function inventory:Clear()
-    skinPage.Clear(self)
-    casePage.Clear(self)
-    keyPage.Clear(self)
+function Inventory:Update()
+    self.SubPages.Skin:Update()
+    self.SubPages.Case:Update()
 end
 
-function inventory:OpenItemPage(page, button)
-    if (button and not button.Visible) then
+function Inventory:OpenSubPage(name)
+    local subpage = self.SubPages[name]
+    if not subpage then
         return
     end
-    self:PlaySound("Open")
-    self:CloseCurrentItemPage()
-    page.Open(self)
-    self.currentOpenPage = page
-end
 
-function inventory:CloseCurrentItemPage()
-    for _, v in pairs(self.currentPageButtonConnections) do
-        v:Disconnect()
+    if self.Var.CurrentOpenSubPage then
+        self:CloseSubPage(self.Var.CurrentOpenSubPage.Name)
     end
-    self.currentPageButtonConnections = {}
-    self.currentOpenPage.MainFrame.Visible = false
+
+    subpage:Open()
+    self.Var.CurrentOpenSubPage = subpage
+    self.SubPageButtons[name].BackgroundColor3 = Color3.fromRGB(136, 164, 200)
 end
 
-function inventory:ConnectMainButtons()
-    local conn = {}
-    local bSkin = self.Location.SkinsButton
-    local bCase = self.Location.CasesButton
-    local bKey = self.Location.KeysButton
-    conn.openskin = bSkin.MouseButton1Click:Connect(function()
-        self:OpenItemPage(skinPage, bSkin)
-    end)
-    conn.opencase = bCase.MouseButton1Click:Connect(function()
-        self:OpenItemPage(casePage, bCase)
-    end)
-    conn.openkey = bKey.MouseButton1Click:Connect(function()
-        self:OpenItemPage(keyPage, bKey)
-    end)
-    conn.changed = PlayerData:PathValueChanged("ownedItems.skin", function()
-        self:Update()
-    end)
-    self.mainButtonConnections = conn
-end
-
-function inventory:DisconnectMainButtons()
-    for _, v in pairs(self.mainButtonConnections) do
-        v:Disconnect()
+function Inventory:CloseSubPage(name)
+    local subpage = self.SubPages[name]
+    if not subpage then
+        return
     end
-    self.mainButtonConnections = {}
+
+    subpage:Close()
+    self.SubPageButtons[name].BackgroundColor3 = Color3.fromRGB(80, 96, 118)
 end
 
-<<<<<<< Updated upstream
-return inventory
-=======
+function Inventory:EnableSubPageButtons()
+    disconnectSubPageButtons(self)
+    connectSubPageButtons(self)
+    for _, v in pairs({"Skin", "Case", "Key"}) do
+        self.Frame[v.."sButton"].Visible = true
+    end
+end
+
+function Inventory:DisableSubPageButtons()
+    disconnectSubPageButtons(self)
+    for _, v in pairs({"Skin", "Case", "Key"}) do
+        self.Frame[v.."sButton"].Visible = false
+    end
+end
+
 function connectSubPageButtons(self)
     for _, v in pairs({"Skin", "Case", "Key"}) do
         self.Connections["Open"..v.."SubPage"] = self.Frame[v.."sButton"].MouseButton1Click:Connect(function()
@@ -152,4 +114,3 @@ function disconnectSubPageButtons(self)
 end
 
 return Inventory
->>>>>>> Stashed changes
