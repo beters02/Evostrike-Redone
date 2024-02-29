@@ -12,12 +12,9 @@ local GamemodeService = {}
 GamemodeService.Location = script
 GamemodeService.DefaultGamemode = "Deathmatch"
 GamemodeService.MenuType = "Lobby"
-<<<<<<< Updated upstream
-=======
 GamemodeService.CurrentMap = "warehouse"
 GamemodeService.CurrentGamemodeModule = false
 GamemodeService.Gamemode = require(script:WaitForChild("Gamemode"))
->>>>>>> Stashed changes
 
 local RemoteFunction = script:WaitForChild("RemoteFunction")
 local RemoteEvent = script:WaitForChild("RemoteEvent")

@@ -81,8 +81,6 @@ AK103.Configuration = {
 		}
 	},
 
-<<<<<<< Updated upstream
-=======
 	equipSpring = {
 		mss = 9,
 		frc = 40,
@@ -104,7 +102,6 @@ AK103.Configuration = {
 		spr:shove(-nshov)
 	end,
 	
->>>>>>> Stashed changes
 	serverModelSize = 0.75
 }
 

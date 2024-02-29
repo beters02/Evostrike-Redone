@@ -6,7 +6,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
 
-<<<<<<< Updated upstream
 local inventory = {}
 local skinPage = require(script:WaitForChild("SkinPage"))
 local casePage = require(script:WaitForChild("CasePage"))
@@ -14,26 +13,19 @@ local keyPage = require(script:WaitForChild("KeyPage"))
 inventory.skinPage = skinPage
 inventory.casePage = casePage
 inventory.keyPage = keyPage
-=======
 -- SubPages are the Contanier Frames which have their own Content Frames (SkinPage, CasePage, KeyPage)
 local SubPage = require(script.InventorySubPage)
 local SkinSubPage = require(script.InventorySubPage.Skin)
 local CaseSubPage = require(script.InventorySubPage.Case)
 local KeySubPage = require(script.InventorySubPage.Key)
->>>>>>> Stashed changes
 
 function inventory:init()
     self.mainButtonConnections = {}
     self.currentPageButtonConnections = {}
     self.currentOpenPage = skinPage
+end
 
-<<<<<<< Updated upstream
-    skinPage.init(self, self.Location.Skin)
-    casePage.init(self, self.Location.Case)
-    keyPage.init(self, self.Location.Key)
-    self:Update()
-=======
-function Inventory.new(mainMenu, frame)
+function inventory.new(mainMenu, frame)
     local self = setmetatable(Page.new(mainMenu, frame), Inventory)
     self.Frame = frame
     self.Var = {CurrentOpenSubPage = false}
@@ -49,7 +41,6 @@ function Inventory.new(mainMenu, frame)
         Key = frame.KeysButton,
         Case = frame.CasesButton
     }
->>>>>>> Stashed changes
     return self
 end
 

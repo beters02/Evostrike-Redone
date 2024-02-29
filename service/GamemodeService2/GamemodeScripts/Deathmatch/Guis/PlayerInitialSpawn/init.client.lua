@@ -22,12 +22,8 @@ local UserInputService = game:GetService("UserInputService")
 -- [[ VARIABLES ]]
 local player = game.Players.LocalPlayer
 local framework = require(game.ReplicatedStorage.Framework)
-<<<<<<< Updated upstream
 local uistate = require(framework.Module.m_states).State("UI")
-=======
-local uistate = require(framework.Module.States):Get("UI")
 --local hud = require(player.PlayerScripts.HUD)
->>>>>>> Stashed changes
 local gui = script:WaitForChild("Gui")
 local loadoutButton = gui:WaitForChild("LoadoutButton")
 local respawnButton = gui:WaitForChild("RespawnButton")
@@ -171,11 +167,8 @@ function finish()
 end
 
 function start()
-<<<<<<< Updated upstream
-=======
 	playGuiAnimation()
 	camera.CFrame = gui:GetAttribute("StartCF")
->>>>>>> Stashed changes
     gui.Parent = Players.LocalPlayer.PlayerGui
     uistate:addOpenUI("SpawnMenu", gui, true)
 end
