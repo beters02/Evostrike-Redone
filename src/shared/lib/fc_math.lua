@@ -166,6 +166,8 @@ function Math.faceToNormal(part, normalId)
     return part.CFrame:VectorToWorldSpace(Vector3.FromNormalId(normalId))
 end
 
+<<<<<<< Updated upstream
+=======
 --@creator ClosetRaccoon
 function Math.isPrime(n)
 	if n%2 == 0 then
@@ -218,6 +220,20 @@ function Math.rotDeg90()
 	return math.pi*-.5
 end
 
+function Math.secToMin(sec)
+	if sec < 60 then
+		return tostring(sec)
+	elseif sec == 60 then
+		return "1:00"
+	end
+	local _sec = sec % 60
+    if _sec < 10 then
+        _sec = "0"..tostring(_sec)
+    end
+	return tostring(math.floor(sec/60)) .. ": " .. tostring(_sec)
+end
+
+>>>>>>> Stashed changes
 -- Aliases
 Math.absr = Math.absValueRandom
 Math.mmabs = Math.maxOrMinAbs

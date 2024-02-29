@@ -17,11 +17,11 @@ local Case = setmetatable({}, InventorySubPage)
 Case.__index = Case
 
 function Case:init(Inventory, frame)
-    Case = setmetatable(InventorySubPage.new(Inventory, frame, "Case"), Case)
+    Case = setmetatable(InventorySubPage.new(Inventory, frame, "Key"), Case)
     Case.CasePageFrames = {}
     Case.CasePageConnections = {}
 
-    Case.ItemDisplay.Frame.MainButton.Text = "OPEN"
+    Case.ItemDisplay.Frame.MainButton.Visible = false
     Case.ItemDisplay.Frame.SecondaryButton.Text = "SELL"
     Case.ItemDisplay.Frame.SecondaryButton.Visible = true
     Case.ItemDisplay.Frame.IDLabel.Visible = false
@@ -29,13 +29,12 @@ function Case:init(Inventory, frame)
     Case.ItemDisplay.Frame.ItemDisplayImageLabel.Visible = false
     Case.ItemDisplay.Frame.CaseDisplay.Visible = true
 
-    -- "OPEN"
     Case.ItemDisplay.ClickedMainButton = function()
         if Case.ActionProcessing then return end
         Case.ActionProcessing = true
 
-        Case.Inventory.Main:PlayButtonSound("Select1")
-        caseOpenButtonClicked(Case)
+        --Case.Inventory.Main:PlayButtonSound("Select1")
+        --caseOpenButtonClicked(Case)
         
         Case.ActionProcessing = false
     end
@@ -136,7 +135,7 @@ end
 
 function updateCaseFrames(self)
 
-    local playerInventory = PlayerData:Get().ownedItems.case
+    local playerInventory = PlayerData:Get().ownedItems.key
     local frames = {[1] = {}} -- index per page number (pagesAmount)
     local pagesAmount = 0
     local pageIndex = 1
@@ -245,11 +244,6 @@ function caseOpenButtonClicked(self)
         confirmGui:Destroy()
         self.Connections.DeclineButton:Disconnect()
         self.Connections.CaseConfirmation:Disconnect()
-
-        if not hasKey then
-            self:CloseItemDisplay()
-            Case.Inventory:EnableSubPageButtons()
-        end
     end)
 
     self.Connections.DeclineButton = declineButton.MouseButton1Click:Connect(function()
@@ -297,7 +291,7 @@ function sellCase(self, case)
     self.ItemDisplay.Var.IsSelling = true
 
     local caseName = convertCaseStr(case)
-    local shopItemStr = "case_" .. caseName
+    local shopItemStr = "key_" .. caseName
     local shopItem = ShopInterface:GetItemPrice(shopItemStr)
 
     local confirmgui = AttemptItemSellGui:Clone()

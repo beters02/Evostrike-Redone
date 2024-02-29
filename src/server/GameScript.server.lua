@@ -17,7 +17,6 @@ local CurrentGamemodeScript
 
 --@summary Ran when the first player joins
 function Init(player)
-
     local gmScript = CurrentGamemodeBaseScript
     local teleportData = player:GetJoinData().teleportData
     local mmServiceGameData = EvoMM.MatchmakingService:GetUserData(player)

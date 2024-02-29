@@ -4,14 +4,21 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+<<<<<<< Updated upstream
 local DiedEvent = script:WaitForChild("Events").PlayerDiedRemote
+--local GamemodeServiceModule = ReplicatedStorage.Services:WaitForChild("GamemodeService")
+=======
+local Events = script:WaitForChild("Events")
+local DiedEvent = Events.PlayerDiedRemote
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local BotServiceModule = ReplicatedStorage.Services.BotService
+local StoredDamageInformation = require(script:WaitForChild("StoredDamageInformation"))
+>>>>>>> Stashed changes
 
 local EvoPlayer = {}
 
 --@summary Correctly apply damage to the player, checking for shields
-function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
+function EvoPlayer:TakeDamage(character, damage, damager)
     if damager and damager.Humanoid.Health <= 0 then return 0 end
     if not EvoPlayer:CanDamage(character) then return 0 end
     local shield = character:GetAttribute("Shield") or 0
@@ -19,9 +26,13 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
     local hitPart = character:GetAttribute("lastHitPart") or "Head"
     local destroysHelmet = character:GetAttribute("lastUsedWeaponDestroysHelmet") or false
     local helmetMultiplier = character:GetAttribute("lastUsedWeaponHelmetMultiplier") or 1
-    local absoluteDamage
+<<<<<<< Updated upstream
+=======
+    local damageAppliedToCharacter = true
+    local killed = false
+>>>>>>> Stashed changes
 
-    if string.match(string.lower(hitPart), "head") then
+    if string.find(string.lower(hitPart), "head") then
         if helmet then
             if destroysHelmet then
                 character:SetAttribute("Helmet", false)
@@ -31,38 +42,44 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
         end
     end
 
-    absoluteDamage = damage
     if shield > 0 then
         if shield >= damage then -- no damage taken, only apply to shield
             character:SetAttribute("Shield", shield - damage)
-            return 0
+            damageAppliedToCharacter = false
         else
             damage -= shield
             character:SetAttribute("Shield", 0)
         end
     end
 
-    local killed
-
     if RunService:IsClient() then
         local lastHealth = math.max(0, (character:GetAttribute("LastRegisteredHealth") or character.Humanoid.Health) - damage)
         character:SetAttribute("LastRegisteredHealth", lastHealth)
         killed = lastHealth <= 0
-    else
-        killed = character.Humanoid.Health - damage <= 0
-    end
-    
 
+<<<<<<< Updated upstream
     if RunService:IsServer() then
+        character.Humanoid:TakeDamage(damage)
+=======
+        local charPlr = Players:GetPlayerFromCharacter(character)
+        Events.PlayerGaveDamageBind:Fire(charPlr.Name, damage)
+    else
+        Events.PlayerReceivedDamageRemote:FireClient(Players:GetPlayerFromCharacter(character), Players:GetPlayerFromCharacter(damager).Name, damage)
+
+        killed = character.Humanoid.Health - damage <= 0
+
         character:SetAttribute("Killer", damager.Name)
         if damage - character.Humanoid.Health <= 0 then
             character:SetAttribute("WeaponUsedToKill", weaponUsed)
         end
-        character.Humanoid:TakeDamage(damage)
+
+        if damageAppliedToCharacter then
+            character.Humanoid:TakeDamage(damage)
+        end
 
         task.spawn(function()
             local bots = BotServiceModule.Remotes.GetBotsBindable:Invoke()
-            if not bots or #bots == 0 and killed then
+            if killed and (not bots or #bots == 0) then
                 character = Players:GetPlayerFromCharacter(character)
 
                 if not damager:IsA("Player") then
@@ -73,9 +90,9 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
                 PlayerData:IncrementPath(character, "pstats.deaths", 1)
             end
         end)
+>>>>>>> Stashed changes
     end
 
-    --print(absoluteDamage)
     return damage, killed
 end
 
@@ -91,13 +108,10 @@ function EvoPlayer:SetHelmet(character, helmet): boolean
     return helmet :: boolean
 end
 
---@summary Do a function after a player has loaded.
---         This function will connect the callback to a :GetAttributeChanged():Once()
---         which replaces the need for ( if not player:GetAttribute("Loaded") then repeat task.wait() )
---         ..
---         ..
---         ok nevermind yeah fuck that getAttributeChanged is dogshiut
-
+--@summary Check if player is loaded.
+function EvoPlayer:IsLoaded(player)
+    return player:GetAttribute("Loaded") or false
+end
 
 --@summary Do a function after a player has loaded.
 --         If the player is not loaded, This function threads a repeat wait and then calls when loaded.

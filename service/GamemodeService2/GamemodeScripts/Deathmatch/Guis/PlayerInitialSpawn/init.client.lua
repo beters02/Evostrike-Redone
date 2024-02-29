@@ -4,85 +4,157 @@ Copy this script and put it on the Character, Backpack or PlayerGui
 Listen for remotes or whatever, call a Cleanup remote if necessary, destroy the script when ready
 ]]
 
+--[[ CONFIGURATION ]]
+local deathText = "KILLED BY\n_plr"
+local fadeInTime = 2
+local cameraFollowOffset = Vector3.new(5, 10, 0)
+local showDeadPlayerTime = 2
+local cameraFollowPlayerLerpSpeed = 10
+local cameraSwitchLerpSpeed = 6
+local cameraLookAtEnemyLerpSpeed = 10
+
+-- [[ SERVICES ]]
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+-- [[ VARIABLES ]]
+local player = game.Players.LocalPlayer
 local framework = require(game.ReplicatedStorage.Framework)
+<<<<<<< Updated upstream
+local uistate = require(framework.Module.m_states).State("UI")
+=======
 local uistate = require(framework.Module.States):Get("UI")
+--local hud = require(player.PlayerScripts.HUD)
+>>>>>>> Stashed changes
 local gui = script:WaitForChild("Gui")
-local mainFrame = gui:WaitForChild("MainFrame")
-local loadoutButton = mainFrame:WaitForChild("LoadoutButton")
-local respawnButton = mainFrame:WaitForChild("RespawnButton")
+local loadoutButton = gui:WaitForChild("LoadoutButton")
+local respawnButton = gui:WaitForChild("RespawnButton")
+local killedLabel = gui:WaitForChild("KilledLabel")
 local remoteEvent = script:WaitForChild("Events"):WaitForChild("RemoteEvent")
+local finishedEvent = script:WaitForChild("Events"):WaitForChild("Finished")
 local buyMenu = game.Players.LocalPlayer.PlayerGui:WaitForChild("BuyMenu")
-
-local camera = workspace.CurrentCamera
 
 local inLoadout = false
 local connections = {}
 local canpress = true
+local updateConn = false
+local tweens = {}
+local camera = workspace.CurrentCamera
 
---[[UTILITY]]
-local function canPressDebounce()
+--[[ UTILITY FUNC ]]
+
+local function processClickDebounce()
     canpress = false
 	task.delay(0.4, function() canpress = true end)
 end
 
---[[BUTTON CLICK FUNC]]
-local Click = {}
+--[[ BUTTON AND KEY FUNC ]]
 
-function Click.Loadout()
-    canPressDebounce()
+function clickLoadout()
+	if inLoadout or not canpress then
+		return
+	end
+	processClickDebounce()
 	inLoadout = true
 	buyMenu.Enabled = true
     uistate:addOpenUI("BuyMenu", buyMenu, true)
 end
 
-function Click.Respawn()
-    canPressDebounce()
+local function clickRespawn()
+	if not canpress then
+		return
+	end
+	processClickDebounce()
 	disconnect()
 	remoteEvent:FireServer("Respawn")
-    uistate:removeOpenUI("BuyMenu")
-    uistate:removeOpenUI("SpawnMenu")
 	buyMenu.Enabled = false
-    gui:Destroy()
+	camera.CameraType = Enum.CameraType.Fixed
+	finish()
 end
 
-function Click.Back()
-    canPressDebounce()
-    inLoadout = false
+local function clickBack()
+	if not canpress then
+		return
+	end
+	processClickDebounce()
+	inLoadout = false
     buyMenu.Enabled = false
     uistate:removeOpenUI("BuyMenu")
 end
 
-function connect()
-    connections[1] = loadoutButton.MouseButton1Click:Connect(function()
-		if inLoadout or not canpress then return end
-        inLoadout = true
-		canpress = false
-		Click.Loadout()
-	end)
-	connections[2] = respawnButton.MouseButton1Click:Connect(function()
-        if not canpress then return end
-		Click.Respawn()
-	end)
-	connections[3] = UserInputService.InputBegan:Connect(function(input, gp)
-		if gp then return end
-		if not canpress then return end
-		if input.KeyCode == Enum.KeyCode.B then
-			if inLoadout then
-				inLoadout = false
-				canpress = false
-				Click.Back()
-			else
-				inLoadout = true
-				canpress = false
-				Click.Loadout()
-			end
-		elseif input.KeyCode == Enum.KeyCode.Space then
-			Click.Respawn()
+local function backKeyPressed()
+	if inLoadout then
+		clickBack()
+		return
+	end
+
+	clickLoadout()
+end
+
+--[[ GUI FUNC ]]
+
+local function prepareGui()
+	setKilledString()
+
+	-- equalize key text size
+	--gui.RespawnKeyLabel.Size = gui.BuyMenuKeyLabel.Size
+
+	-- animations
+	local ti = TweenInfo.new(fadeInTime)
+	for _, v in pairs(gui:GetChildren()) do
+		local bgt = v.BackgroundTransparency
+		local txt = v.TextTransparency
+		v.BackgroundTransparency = 1
+		v.TextTransparency = 1
+
+		if v:IsA("TextButton") then
+			txt = v.TextLabel.TextTransparency
+			v.TextLabel.TextTransparency = 1
+			table.insert(tweens, TweenService:Create(v.TextLabel, ti, {TextTransparency = txt}))
+			table.insert(tweens, TweenService:Create(v, ti, {BackgroundTransparency = bgt}))
+		else
+			table.insert(tweens, TweenService:Create(v, ti, {BackgroundTransparency = bgt, TextTransparency = txt}))
 		end
-	end)
+	end
+end
+
+local function playGuiAnimation()
+	for i, v in pairs(tweens) do
+		v:Play()
+	end
+end
+
+function setKilledString()
+	killedLabel.Visible = false
+	respawnButton.Text = "Spawn"
+end
+
+-- [[ EVENT FUNC ]]
+
+function inputBegan(input, gp)
+	if gp or not canpress then
+		return
+	end
+
+	if input.KeyCode == Enum.KeyCode.B then
+		backKeyPressed()
+	elseif input.KeyCode == Enum.KeyCode.Space then
+		clickRespawn()
+	end
+end
+
+--[[ CORE FUNC ]]
+
+function init()
+	prepareGui()
+end
+
+function connect()
+    connections[1] = loadoutButton.MouseButton1Click:Connect(clickLoadout)
+	connections[2] = respawnButton.MouseButton1Click:Connect(clickRespawn)
+	connections[3] = UserInputService.InputBegan:Connect(inputBegan)
 end
 
 function disconnect()
@@ -92,13 +164,22 @@ function disconnect()
 	connections = {}
 end
 
-function start()
-	camera.CFrame = gui:GetAttribute("StartCF")
-    gui.Parent = Players.LocalPlayer.PlayerGui
-    uistate:addOpenUI("SpawnMenu", gui, true)
-	camera.CameraType = Enum.CameraType.Fixed
-	camera.Focus = CFrame.new(544.745, 299.886, -32.138)
+function finish()
+	uistate:removeOpenUI("BuyMenu")
+    uistate:removeOpenUI("SpawnMenu")
+    gui:Destroy()
 end
 
+function start()
+<<<<<<< Updated upstream
+=======
+	playGuiAnimation()
+	camera.CFrame = gui:GetAttribute("StartCF")
+>>>>>>> Stashed changes
+    gui.Parent = Players.LocalPlayer.PlayerGui
+    uistate:addOpenUI("SpawnMenu", gui, true)
+end
+
+init()
 connect()
 start()

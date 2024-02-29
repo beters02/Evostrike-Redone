@@ -1,3 +1,10 @@
+--  CONFIGURATION
+    local cfg = {
+        EQUIP_SPRING_SHOVE = Vector3.new(.35,0,0),
+        EQUIP_SPRING_VALUE = { mss = 9, frc = 45, dmp = 4, spd = 2.5 }
+    }
+--
+
 local Weapon = {}
 Weapon.__index = Weapon
 
@@ -7,26 +14,29 @@ local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Tables = require(ReplicatedStorage.lib.fc_tables)
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local States = require(Framework.Module.States)
+local States = require(Framework.Module.m_states)
 local Math = require(Framework.Module.lib.fc_math)
 local InstLib = require(Framework.shfc_instance.Location)
-local UIState = States:Get("UI")
-local PlayerActionsState = States:Get("PlayerActions")
+local UIState = States.State("UI")
+local PlayerActionsState = States.State("PlayerActions")
 local Types = require(script.Parent.Types)
 local SoundModule = require(Framework.Module.Sound)
+local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
 local PlayerData2 = require(Framework.Module.PlayerData)
 local Strings = require(Framework.Module.lib.fc_strings)
-local VMSprings = require(Framework.Module.lib.c_vmsprings)
 local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local WeaponPartCache = require(script.Parent:WaitForChild("WeaponPartCache"))
 local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponService.Shared).WallbangMaterials
 
+<<<<<<< Updated upstream
+=======
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
-local Shared = require(Framework.Service.WeaponService.Shared)
 
+>>>>>>> Stashed changes
 function Weapon.new(weapon: string, tool: Tool, recoilScript)
     local weaponModule = require(ReplicatedStorage.Services.WeaponService):GetWeaponModule(weapon)
     local self = Tables.clone(require(weaponModule))
+    self.defCfg = cfg
     self.Name = weapon
     self.Tool = tool
     self.Options = self.Configuration
@@ -51,12 +61,12 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
     self.CameraObject = require(ReplicatedStorage.Services.WeaponService.WeaponCamera).new(weapon)
     self.Variables.CrosshairModule = require(self.Character:WaitForChild("CrosshairScript"):WaitForChild("m_crosshair"))
     self.Variables.cameraFireThread = false
-    self.EquipCameraSpring = VMSprings:new(9, 50, 5, 5)
 
     if self.Options.ammo then
         local cacheBullets = self.Options.ammo.magazine + self.Options.ammo.total
         self.Variables.MainWeaponPartCache = WeaponPartCache.new(cacheBullets, cacheBullets)
     end
+    
 
     if self.init then
         self:init()
@@ -103,6 +113,25 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
 	self.Variables.weaponIconEquipped = self.Variables.weaponFrame:WaitForChild("EquippedIconLabel")
 	self.Variables.weaponIconEquipped.Image = self.Assets.Images.iconEquipped.Image
 
+    -- init weapon parts as table (equip optimization)
+    self.WeaponParts = {Client = {}, Server = {}}
+    for _, part in pairs(self.ClientModel:GetDescendants()) do
+        if part.Name == "WeaponHandle" or part.Name == "WeaponTip" then
+            continue
+        end
+        if part:IsA("MeshPart") or part:IsA("Part") or part:IsA("Texture") then
+            table.insert(self.WeaponParts.Client, part)
+        end
+    end
+    for _, part in pairs(self.ServerModel:GetDescendants()) do
+        if part.Name == "WeaponHandle" or part.Name == "WeaponTip" then
+            continue
+        end
+        if part:IsA("MeshPart") or part:IsA("Part") or part:IsA("Texture") then
+            table.insert(self.WeaponParts.Server, part)
+        end
+    end
+
 	-- key
 	self.Variables.weaponBar.SideBar[self.Options.inventorySlot .. "Key"].Text = Strings.convertFullNumberStringToNumberString(self.Controller.Keybinds[self.Slot .. "Weapon"])
 
@@ -123,6 +152,7 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
         self.Controller:UnequipWeapon(self.Slot)
     end)
     
+
     self = setmetatable(self, Weapon)
     self:_SetServerModelTransparency(1)
     self:SetIconEquipped(false)
@@ -136,17 +166,16 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
 end
 
 function Weapon:Equip()
+    
     if self.Tool:GetAttribute("IsForceEquip") then
 		self.Tool:SetAttribute("IsForceEquip", false)
 	else
 		if self.Player:GetAttribute("Typing") then return end
-		if self.Player.PlayerGui.MainMenuGui.Enabled then return end
+		if self.Player.PlayerGui.MainMenu.Enabled then return end
         if UIState:hasOpenUI() then return end
 	end
 
-	-- enable weapon icon
     self:SetIconEquipped(true)
-    self.Player.PlayerScripts.HUD:WaitForChild("EquipGun"):Fire(self.Slot)
 
     task.spawn(function()
         if string.lower(self.Name) == "knife" then
@@ -160,12 +189,12 @@ function Weapon:Equip()
 	-- var
     self.Variables.forcestop = false
     self.Variables.equipping = true
-    PlayerActionsState:set("weaponEquipping", true)
-    PlayerActionsState:set("weaponEquipped", self.Name)
-    PlayerActionsState:set("currentEquipPenalty", self.Options.movement.penalty)
+    PlayerActionsState:set(self.Player, "weaponEquipping", true)
+    PlayerActionsState:set(self.Player, "weaponEquipped", self.Name)
+    PlayerActionsState:set(self.Player, "currentEquipPenalty", self.Options.movement.penalty)
 
 	-- process equip animation and sounds next frame ( to let unequip run )
-    self:_ProcessEquipAnimation()
+	task.spawn(function() self:_ProcessEquipAnimation() end)
 
     -- move model and set motors
     self.ClientModel.Parent = self.Viewmodel.Equipped
@@ -173,13 +202,14 @@ function Weapon:Equip()
     gripParent.RightGrip.Part1 = self.ClientModel.GunComponents.WeaponHandle
     
     -- run server equip timer
-    self.ServerEquipEvent.OnClientEvent:Once(function(success)
+    task.spawn(function()
+        local success = self.ServerEquipEvent.OnClientEvent:Wait()
         if success and self.Variables.equipping then
             self.Variables.equipped = true
             self.Variables.equipping = false
-            PlayerActionsState:set("weaponEquipping", false)
+            PlayerActionsState:set(self.Player, "weaponEquipping", false)
         end
-    end)
+	end)
 
 	-- set movement speed
     self.Controller:HandleHoldMovementPenalty(self.Slot, true)
@@ -205,16 +235,18 @@ function Weapon:Unequip()
     self.Variables.firing = false
     self.Variables.reloading = false
 	self.Variables.inspecting = false
-    PlayerActionsState:set("weaponEquipped", false)
-    PlayerActionsState:set("weaponEquipping", false)
-    PlayerActionsState:set("reloading", false)
-    PlayerActionsState:set("shooting", false)
-    PlayerActionsState:set("currentEquipPenalty", 0)
+    PlayerActionsState:set(self.Player, "weaponEquipped", false)
+    PlayerActionsState:set(self.Player, "weaponEquipping", false)
+    PlayerActionsState:set(self.Player, "reloading", false)
+    PlayerActionsState:set(self.Player, "shooting", false)
+    PlayerActionsState:set(self.Player, "currentEquipPenalty", 0)
 
     self.Variables.equipping = false
 
-	self:_StopAllActionAnimations()
-    self.CameraObject:StopCurrentRecoilThread()
+	task.spawn(function()
+        self:_StopAllActionAnimations()
+        self.CameraObject:StopCurrentRecoilThread()
+	end)
 end
 
 function Weapon:Remove()
@@ -229,8 +261,9 @@ end
 
 function Weapon:PrimaryFire(moveSpeed)
     local fireTick = tick()
+    --local moveSpeed = self.Character.HumanoidRootPart.Velocity
 
-    if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get("grenadeThrowing") then return end
+    if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get(self.Player, "grenadeThrowing") then return end
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
     
     if not self.Variables.recoilReset then
@@ -238,7 +271,7 @@ function Weapon:PrimaryFire(moveSpeed)
     end
 
     -- set var
-    PlayerActionsState:set("shooting", true)
+    PlayerActionsState:set(self.Player, "shooting", true)
 
 	self.Variables.firing = true
 	self.Variables.ammo.magazine -= 1
@@ -246,50 +279,57 @@ function Weapon:PrimaryFire(moveSpeed)
 	self.Variables.lastFireTime = fireTick
 	self.CameraObject.weaponVar.currentBullet = self.Variables.currentBullet
 
-    task.spawn(function()
-         -- Unscope + rescope if necessary
-        if self.Options.scope then
-            if self.Variables.scoping then
-                self.Variables.rescope = true
-                self.Variables.scopedWhenShot = true
-                self:ScopeOut()
-                task.delay(self.Options.fireRate - 0.03, function()
-                    if self.Variables.rescope then
-                        self:ScopeIn()
-                    end
-                end)
-            else
-                self.Variables.rescope = false
-                self.Variables.scopedWhenShot = false
-            end
-        end
-
-        -- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
-        self:RegisterRecoils(moveSpeed)
-    end)
-    
     -- play animations
 	self:PlayAnimation("client", "Fire")
     self:PlayAnimation("server", "Fire")
 
 	-- Play Emitters and Sounds
-	self:PlayReplicatedSound("Fire", true)
-	SharedWeaponFunctions.ReplicateFireEmitters(self.Tool.ServerModel, self.ClientModel)
+	task.spawn(function()
+        self:PlayReplicatedSound("Fire", true)
+		SharedWeaponFunctions.ReplicateFireEmitters(self.Tool.ServerModel, self.ClientModel)
+	end)
+
+    -- Unscope + rescope if necessary
+    if self.Options.scope then
+        if self.Variables.scoping then
+            self.Variables.rescope = true
+            self.Variables.scopedWhenShot = true
+            self:ScopeOut()
+            task.delay(self.Options.fireRate - 0.03, function()
+                if self.Variables.rescope then
+                    self:ScopeIn()
+                end
+            end)
+        else
+            self.Variables.rescope = false
+            self.Variables.scopedWhenShot = false
+        end
+    end
+
+	-- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
+	self:RegisterRecoils(moveSpeed)
 	
 	-- handle client fire rate & auto reload
 	local nextFire = fireTick + self.Options.fireRate
 	task.spawn(function()
 		repeat task.wait() until tick() >= nextFire
 		self.Variables.firing = false
-        PlayerActionsState:set("shooting", false)
-        if self.Variables.ammo.magazine <= 0 and self.Variables.equipped then
-            self:Reload()
-        end
+        PlayerActionsState:set(self.Player, "shooting", false)
 	end)
 
 	-- update hud
 	self.Variables.infoFrame.CurrentMagLabel.Text = tostring(self.Variables.ammo.magazine)
     self.Player.PlayerScripts.HUD.FireBullet:Fire()
+
+	-- send uto reload
+	if self.Variables.ammo.magazine <= 0 then
+        task.spawn(function()
+            repeat task.wait() until not self.Variables.firing
+            if self.Variables.equipped then
+                self:Reload()
+            end
+        end)
+	end
 end
 
 function Weapon:SecondaryFire()
@@ -321,10 +361,14 @@ function Weapon:Reload()
         self:ScopeOut()
     end
 
-    PlayerActionsState:set("reloading", true)
-    self.Variables.reloading = true
+    PlayerActionsState:set(self.Player, "reloading", true)
+	
+	task.spawn(function()
+        self:PlayAnimation("client", "Reload", true)
+		--weaponVar.animations.server.Reload:Play() TODO: make server reload animations
+	end)
 
-    self:PlayAnimation("client", "Reload", true)
+	self.Variables.reloading = true
 
 	local mag, total = self.RemoteFunction:InvokeServer("Reload")
 	self.Variables.ammo.magazine = mag
@@ -334,7 +378,7 @@ function Weapon:Reload()
     self.Player.PlayerScripts.HUD:WaitForChild("ReloadGun"):Fire(mag, total)
 
 	self.Variables.reloading = false
-	PlayerActionsState:set("reloading", false)
+	PlayerActionsState:set(self.Player, "reloading", false)
 end
 
 function Weapon:Inspect()
@@ -534,6 +578,7 @@ function Weapon:MouseDown(isSecondary: boolean?)
     -- fire input scheduling, it makes semi automatic weapons feel less clunky and more responsive
     if self.Variables.fireScheduleCancelThread then
         self.Variables.fireScheduleCancelThread = nil
+        --coroutine.yield(self.Variables.fireScheduleCancelThread)
     end
 
     -- if a fire is scheduled, no need to do anything.
@@ -558,7 +603,6 @@ function Weapon:MouseDown(isSecondary: boolean?)
 
             self.Variables.fireDebounce = false
             self.Variables.fireScheduled = nil
-            --coroutine.yield(self.Variables.fireScheduled)
         end)
 
         return
@@ -614,12 +658,12 @@ function Weapon:MouseUp(forceCancel: boolean?)
 
 	if self.Variables.fireScheduled then
 		if forceCancel then
-			--coroutine.yield(self.Variables.fireScheduled)
 			self.Variables.fireScheduled = nil
 		else
 			-- cancel fire scheduled after a full 64 tick of mouse being up
 			self.Variables.fireScheduleCancelThread = task.delay(1/64, function()
 				if self.Variables.fireScheduled then
+					--coroutine.yield(self.Variables.fireScheduled)
 					self.Variables.fireScheduled = nil
                     return
 				end
@@ -635,6 +679,7 @@ function Weapon:MouseUp(forceCancel: boolean?)
 
 	if not self.Options.automatic then
 		self.Variables.fireDebounce = false
+		--util_resetSprayOriginPoint()
 	end
 end
 
@@ -656,20 +701,22 @@ function Weapon:PlaySound(sound: string, dontDestroyOnRecreate: boolean?, isRepl
 
     if _sound:IsA("Folder") then
         for _, v in pairs(_sound:GetChildren()) do
-            if isReplicated then
-                SoundModule.PlayReplicatedClone(v, self.Character.HumanoidRootPart, true)
-            else
-                SharedWeaponFunctions.PlaySound(self.Character, weaponName, v)
-            end
+            task.spawn(function()
+                if isReplicated then
+                    SoundModule.PlayReplicatedClone(v, self.Character.HumanoidRootPart, true)
+                else
+                    SharedWeaponFunctions.PlaySound(self.Character, weaponName, v)
+                end
+            end)
         end
         return
     end
 
     if isReplicated then
         return SoundModule.PlayReplicatedClone(_sound, self.Character.HumanoidRootPart, true)
+    else
+        return SharedWeaponFunctions.PlaySound(self.Character, weaponName, _sound)
     end
-
-    return SharedWeaponFunctions.PlaySound(self.Character, weaponName, _sound)
 end
 
 function Weapon:PlayReplicatedSound(sound: string, dontDestroyOnRecreate: boolean?)
@@ -708,31 +755,47 @@ function Weapon:PlayAnimation(location: "client" | "server", animation: string, 
 end
 
 function Weapon:_ProcessEquipAnimation()
+    -- [[!!!! Weapon Camera Equip Functionality is in WeaponController !!!!]]
+
+    task.spawn(function()
+        self.Player.PlayerScripts.HUD.EquipGun:Fire(self.Slot)
+    end)
+    
     self.Controller:_StopAllVMAnimations()
 	
-    local _throwing = PlayerActionsState:get("grenadeThrowing")
+    local _throwing = PlayerActionsState:get(self.Player, "grenadeThrowing")
 	if _throwing then
         require(Framework.Service.AbilityService):StopAbilityAnimations()
 	end
 
-    local clientPullout = self:PlayAnimation("client", "Pullout")
-    clientPullout.Stopped:Once(function()
-        if self.Variables.forcestop then return end
+    task.spawn(function() -- client
+        -- play pullout
+		local clientPullout = self:PlayAnimation("client", "Pullout")
+		clientPullout.Stopped:Wait()
+		if self.Variables.forcestop then return end
         if not self.Variables.equipped and not self.Variables.equipping then return end
         self.Animations.client.Hold:Play()
     end)
 
-    for _, v in pairs(self.Humanoid.Animator:GetPlayingAnimationTracks()) do
-        if not string.match(v.Name, "Run") and not string.match(v.Name, "Jump") then
-            v:Stop()
+    task.spawn(function() -- server animation
+        for _, v in pairs(self.Humanoid.Animator:GetPlayingAnimationTracks()) do
+            if not string.match(v.Name, "Run") and not string.match(v.Name, "Jump") then
+                v:Stop()
+            end
         end
-    end
+        task.wait()
+        local serverPullout = self:PlayAnimation("server", "Pullout")
+        serverPullout.Stopped:Once(function()
+            if self.Variables.forcestop then return end
+            if not self.Variables.equipped and not self.Variables.equipping then return end
+            self.Animations.server.Hold:Play()
+        end)     
+    end)
 
-    local serverPullout = self:PlayAnimation("server", "Pullout")
-    serverPullout.Stopped:Once(function()
-        if self.Variables.forcestop then return end
-        if not self.Variables.equipped and not self.Variables.equipping then return end
-        self.Animations.server.Hold:Play()
+    task.delay(clientPullout.Length + self._stepDT, function()
+        if self.equipped and not self.Animations.client.Hold.IsPlaying then
+            self.Animations.client.Hold:Play()
+        end
     end)
 end
 
@@ -795,16 +858,14 @@ function Weapon:RegisterRecoils(moveSpeed)
     local direction = self:CalculateRecoils(mray, vecRecoil, bullet, moveSpeed)
 
     -- check to see if we're wallbanging
-    local wallDmgMult, hitchar, result, isBangable
+    local wallDmgMult, hitchar, result
     local normParams = SharedWeaponFunctions.getFireCastParams(self.Player, workspace.CurrentCamera)
     wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
-    isBangable = wallDmgMult and true or false
 
     if result then
         self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
-
-        --Shared.RegisterShot(resultData)
-        SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, isBangable, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
+        -- register client shot for bullet/blood/sound effects
+        SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, wallDmgMult and true or false, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
         return true
     end
 
@@ -867,6 +928,7 @@ function Weapon:CalculateAccuracy(vecRecoil, moveSpeed)
 end
 
 function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
+    local player = self.Player
     local weaponOptions = self.Options
     local _x
 	local _y
@@ -877,14 +939,14 @@ function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
 	
 	-- movement speed inacc
 	local movementSpeed = moveSpeed.Magnitude
-	local mstate = States:Get("Movement")
+	local mstate = States.State("Movement")
 	local rspeed = self.MovementCfg.walkMoveSpeed + math.round((self.MovementCfg.groundMaxSpeed - self.MovementCfg.walkMoveSpeed)/2)
     --local inaccSpeed = 2.9 -- After some testing, 2.8 is a "poorly done" counter-strafe. A good counter strafe results in 1.2 or lower. We will give them 2.9 for now.
     local inaccSpeed = 7 -- 7 feels better for spraying for the time being.
 
-    if self.Variables.currentBullet ~= 1 and mstate:get("crouching") then
+    if mstate:get(player, "crouching") then
         baseAccuracy = weaponOptions.accuracy.crouch
-    elseif mstate:get("landing") or (movementSpeed > inaccSpeed and movementSpeed < rspeed) then
+    elseif mstate:get(player, "landing") or (movementSpeed > inaccSpeed and movementSpeed < rspeed) then
         baseAccuracy = weaponOptions.accuracy.walk
     elseif movementSpeed >= rspeed then
         baseAccuracy = weaponOptions.accuracy.run
@@ -896,6 +958,12 @@ function Weapon:CalculateMovementInaccuracy(baseAccuracy, moveSpeed)
 	end
 	
 	return util_vec2AddWithFixedAbsrRR(Vector2.zero, _x and _x * baseAccuracy or baseAccuracy, _y and _y * baseAccuracy or baseAccuracy)
+end
+
+function util_vec2AddWithFixedAbsrRR(vec, addX, addY)
+	addX = Math.frand(addX)
+	addY = Math.frand(addY)
+	return Vector2.new(vec.X + addX, vec.Y + addY)
 end
 
 function Weapon:IsGrounded()
@@ -945,9 +1013,14 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
 		if result.Instance == v then warn("Saved you from a life of hell my friend") return false end
 	end
 
-    table.insert(filter, result.Instance)
+	-- create bullethole at wall
+    task.spawn(function()
+        SharedWeaponFunctions.CreateBulletHole(result, self.Variables.MainWeaponPartCache)
+    end)
 
-    SharedWeaponFunctions.CreateBulletHole(result, self.Variables.MainWeaponPartCache)
+	--SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, origin, nil, nil, nil, nil, true, self.Tool, self.ClientModel)
+
+	table.insert(filter, result.Instance)
 	return self:_ShootWallRayRecurse(origin, direction, _p, result.Instance, (damageMultiplier + weaponWallbangInformation[bangableMaterial])/2, filter)
 end
 
@@ -979,14 +1052,6 @@ function Weapon:SetInfoFrame(weapon: "gun" | "knife")
         self.Variables.infoFrame.CurrentTotalAmmoLabel.Visible = false
         self.Variables.infoFrame["/"].Visible = false
     end
-end
-
---
-
-function util_vec2AddWithFixedAbsrRR(vec, addX, addY)
-	addX = Math.frand(addX)
-	addY = Math.frand(addY)
-	return Vector2.new(vec.X + addX, vec.Y + addY)
 end
 
 return Weapon

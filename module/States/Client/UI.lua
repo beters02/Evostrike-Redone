@@ -5,7 +5,7 @@ local UI = {
         clientReadOnly = false,
         owner = "Client"
     },
-    defaultVar = { openUIs = {} }
+    defaultVar = { openUIs = {}, typing = false }
 }
 
 -- A ui can be any UI element that has the Enabled or Visible property.
@@ -55,5 +55,13 @@ function UI:shouldMouseBeEnabled() -- to be deprecated name is bad
 	return false
 end
 UI.shouldMouseIconBeEnabled = UI.shouldMouseBeEnabled
+
+function UI:isTyping()
+	return self._variables.typing
+end
+
+function UI:setIsTyping(typing: boolean)
+	self._variables.typing = typing
+end
 
 return UI

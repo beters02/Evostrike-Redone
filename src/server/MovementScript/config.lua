@@ -29,8 +29,9 @@ local module = {
 	--[[ Air Settings ]]
 	airAccelerate = 40,
 	airSpeed = 6,
-	airMaxSpeed = 36, -- 34
-	airMaxSpeedFriction = 6,
+	
+	airMaxSpeed = 36.5, -- 34
+	airMaxSpeedFriction = 3, -- 3
 	airMaxSpeedFrictionDecrease = .5, -- amount of times per 1/60sec to decrease air fric
 
 	--[[ Jump Settings ]]
@@ -40,8 +41,9 @@ local module = {
 	--[[ Land Settings ]]
 	minInAirTimeRegisterLand = 0.1,
 	landingMovementJumpGrace = 0.06,
+
 	landingMovementDecreaseLength = 0.27,
-	landingMovementDecreaseFriction = 0.70,
+	landingMovementDecreaseFriction = 0.80, -- 0.7
 
 	--[[ Bhop Settings ]]
 	--missedBhopDecrease = 0.6,

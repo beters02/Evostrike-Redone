@@ -13,9 +13,9 @@ AK103.Configuration = {
 	recoilResetMin = 0.25, -- 1st bullet reset
 	recoilResetMax = 0.45, -- Based on cameraRecoilReset in sprayPattern
 	
-	fireVectorCameraOffset = Vector2.new(3.5, 29), -- Side, Up
+	fireVectorCameraOffset = Vector2.new(3, 23), -- Side, Up
 	fireAccuracyCameraOffset = Vector2.new(3, 3), -- Side, Up
-	fireVectorCameraMax = Vector3.new(0.03, 0.05, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
+	fireVectorCameraMax = Vector3.new(0.03, 0.03, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
 	--fireVectorCameraMax = Vector3.new(1, 1, 3), -- Up, Side
 	
 	ammo = {
@@ -25,8 +25,8 @@ AK103.Configuration = {
 	
 	accuracy = {
 		firstBullet = 2,
-		base = 3.7,
-		crouch = 3.4,
+		base = 5,
+		crouch = 4,
 		walk = 200,
 		run = 200,
 		jump = 150
@@ -81,9 +81,18 @@ AK103.Configuration = {
 		}
 	},
 
+<<<<<<< Updated upstream
+=======
+	equipSpring = {
+		mss = 9,
+		frc = 40,
+		dmp = 4,
+		spd = 3
+	},
+
 	equipSpringShoveFunction = function(spr, dt)
-		local fshov = Vector3.new(.8, 0, 0)*dt*60
-		local nshov = Vector3.new(.6, -.43, 0)*dt*60
+		local fshov = Vector3.new(.4, 0, 0)*dt*60
+		local nshov = Vector3.new(.3, -.23, 0)*dt*60
 		local frame = 1/60 * (dt*60)
 
 		spr:shove(fshov*0.8)
@@ -95,6 +104,7 @@ AK103.Configuration = {
 		spr:shove(-nshov)
 	end,
 	
+>>>>>>> Stashed changes
 	serverModelSize = 0.75
 }
 
