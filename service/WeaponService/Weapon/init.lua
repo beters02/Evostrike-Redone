@@ -596,39 +596,39 @@ self.Variables.fireDebounce = false
 end
 
 function Weapon:AutomaticMouseDown()
-local moveSpeed = self.Character.HumanoidRootPart.Velocity
-if not self.Variables.fireLoop then
+    local moveSpeed = self.Character.HumanoidRootPart.Velocity
+    if not self.Variables.fireLoop then
 
-    -- register initial fire boolean
-    local startWithInit = false
+        -- register initial fire boolean
+        local startWithInit = false
 
-    if tick() >= self.Variables.nextFireTime then
-        startWithInit = true
-        self.Variables.nextFireTime = tick() + self.Options.fireRate -- set next fire time
-        self.Variables.accumulator = 0
-    else
-        self.Variables.accumulator = self.Variables.nextFireTime - tick()
-    end
-
-    -- start fire loop
-    self.Variables.fireLoop = RunService.RenderStepped:Connect(function(dt)
-        self.Variables.accumulator += dt
-        while self.Variables.accumulator >= self.Options.fireRate and self.Variables.mousedown do
-            moveSpeed = self.Character.HumanoidRootPart.Velocity
-            self.Variables.nextFireTime = tick() + self.Options.fireRate
-            self.Variables.accumulator -= self.Options.fireRate
-            task.spawn(function()
-                self:PrimaryFire(moveSpeed)
-            end)
-            if self.Variables.accumulator >= self.Options.fireRate then task.wait(self.Options.fireRate) end
+        if tick() >= self.Variables.nextFireTime then
+            startWithInit = true
+            self.Variables.nextFireTime = tick() + self.Options.fireRate -- set next fire time
+            self.Variables.accumulator = 0
+        else
+            self.Variables.accumulator = self.Variables.nextFireTime - tick()
         end
-    end)
 
-    -- initial fire if necessary
-    if startWithInit then
-        self:PrimaryFire(moveSpeed)
+        -- start fire loop
+        self.Variables.fireLoop = RunService.RenderStepped:Connect(function(dt)
+            self.Variables.accumulator += dt
+            while self.Variables.accumulator >= self.Options.fireRate and self.Variables.mousedown do
+                moveSpeed = self.Character.HumanoidRootPart.Velocity
+                self.Variables.nextFireTime = tick() + self.Options.fireRate
+                self.Variables.accumulator -= self.Options.fireRate
+                task.spawn(function()
+                    self:PrimaryFire(moveSpeed)
+                end)
+                if self.Variables.accumulator >= self.Options.fireRate then task.wait(self.Options.fireRate) end
+            end
+        end)
+
+        -- initial fire if necessary
+        if startWithInit then
+            self:PrimaryFire(moveSpeed)
+        end
     end
-end
 end
 
 function Weapon:MouseUp(forceCancel: boolean?)
@@ -956,33 +956,33 @@ end
 
 --@return damageMultiplier (total damage reduction added up from recursion)
 function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageMultiplier, filter)
-if not filter then filter = params.FilterDescendantsInstances end
+    if not filter then filter = params.FilterDescendantsInstances end
 
--- filter params
-local _p = RaycastParams.new()
-_p.CollisionGroup = "Bullets"
-_p.FilterDescendantsInstances = filter
-_p.FilterType = Enum.RaycastFilterType.Exclude
+    -- filter params
+    local _p = RaycastParams.new()
+    _p.CollisionGroup = "Bullets"
+    _p.FilterDescendantsInstances = filter
+    _p.FilterType = Enum.RaycastFilterType.Exclude
 
-local result = workspace:Raycast(origin, direction, _p)
-if not result then warn("No wallbang result but player result") return false end
+    local result = workspace:Raycast(origin, direction, _p)
+    if not result then warn("No wallbang result but player result") return false end
 
-local hitchar = result.Instance.Parent
-if hitchar and hitchar:FindFirstChild("Humanoid") then
-    return damageMultiplier, result, hitchar
-end
+    local hitchar = result.Instance.Parent
+    if hitchar and hitchar:FindFirstChild("Humanoid") then
+        return damageMultiplier, result, hitchar
+    end
 
-local bangableMaterial = hitchar:GetAttribute("Bangable")
-if not bangableMaterial then return false, result end
+    local bangableMaterial = hitchar:GetAttribute("Bangable")
+    if not bangableMaterial then return false, result end
 
-for _, v in pairs(filter) do
-    if result.Instance == v then warn("Saved you from a life of hell my friend") return false end
-end
+    for _, v in pairs(filter) do
+        if result.Instance == v then warn("Saved you from a life of hell my friend") return false end
+    end
 
-table.insert(filter, result.Instance)
+    table.insert(filter, result.Instance)
 
-SharedWeaponFunctions.CreateBulletHole(result, self.Variables.MainWeaponPartCache)
-return self:_ShootWallRayRecurse(origin, direction, _p, result.Instance, (damageMultiplier + weaponWallbangInformation[bangableMaterial])/2, filter)
+    SharedWeaponFunctions.CreateBulletHole(result, self.Variables.MainWeaponPartCache)
+    return self:_ShootWallRayRecurse(origin, direction, _p, result.Instance, (damageMultiplier + weaponWallbangInformation[bangableMaterial])/2, filter)
 end
 
 --

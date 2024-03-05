@@ -133,6 +133,8 @@ function module.CreateBulletHole(result, partCache)
 		task.delay(8, function()
 			bullet_hole_cache_obj:Destroy()
 		end)
+	else
+		Debris:AddItem(bullet_hole, 8)
 	end
 
 	return bullet_hole
@@ -214,7 +216,7 @@ end
 	FireBullet
 
 	Replicates CreateBullet to all Clients except caster
-]] 
+]]
 function module.FireBullet(fromChar, result, isHumanoid, isBangable, tool, fromModel, partCache)
 	if game:GetService("RunService"):IsServer() then return end
 	module.CreateBullet(tool, result.Position, true, fromModel, partCache)
