@@ -50,10 +50,17 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
         killed = lastHealth <= 0
 
         local charPlr = Players:GetPlayerFromCharacter(character)
-        Events.PlayerGaveDamageBind:Fire(charPlr.Name, damage)
+        if charPlr then
+            Events.PlayerGaveDamageBind:Fire(charPlr.Name, damage)
+        end
+        
     else
-        Events.PlayerReceivedDamageRemote:FireClient(Players:GetPlayerFromCharacter(character), Players:GetPlayerFromCharacter(damager).Name, damage)
 
+        local damagedPlr = Players:GetPlayerFromCharacter(character)
+        if damagedPlr then
+            Events.PlayerReceivedDamageRemote:FireClient(damagedPlr, Players:GetPlayerFromCharacter(damager).Name, damage)
+        end
+        
         killed = character.Humanoid.Health - damage <= 0
 
         character:SetAttribute("Killer", damager.Name)

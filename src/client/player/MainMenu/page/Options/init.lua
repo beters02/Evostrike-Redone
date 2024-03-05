@@ -5,6 +5,18 @@ options.__index = options
 local general = script:WaitForChild("General")
 local keybinds = script:WaitForChild("Keybinds")
 
+local function _compile(self)
+	for _, child in pairs({general, keybinds}) do
+		for index, moduleElement in pairs(require(child)) do
+			self[index] = moduleElement
+		end
+	end
+end
+
+
+
+--
+
 function options.new(mainMenu, frame)
 	local self = setmetatable(Page.new(mainMenu, frame), options)
 	
@@ -25,13 +37,8 @@ function options.new(mainMenu, frame)
 	return self
 end
 
-function _compile(self)
-	for _, child in pairs({general, keybinds}) do
-		if not child:IsA("ModuleScript") then continue end
-		for index, moduleElement in pairs(require(child)) do
-			self[index] = moduleElement
-		end
-	end
+function options:init()
+	
 end
 
 --
@@ -71,12 +78,12 @@ end
 function options:ConnectMain()
 	self.connections = {
 
-		self.Frame.GeneralButton.MouseButton1Click:Connect(function()
+		self.Frame.GeneralButton.Button.MouseButton1Click:Connect(function()
 			if self._currentOptionsPage == "general" then return end
 			self:SetCurrentOptionsPageOpen("general")
 		end),
 
-		self.Frame.KeybindsButton.MouseButton1Click:Connect(function()
+		self.Frame.KeybindsButton.Button.MouseButton1Click:Connect(function()
 			if self._currentOptionsPage == "keybinds" then return end
 			self:SetCurrentOptionsPageOpen("keybinds")
 		end)

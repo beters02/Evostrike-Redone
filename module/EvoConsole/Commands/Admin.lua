@@ -6,6 +6,7 @@ local GamemodeService = require(Framework.Service.GamemodeService2)
 local EvoMaps = require(Framework.Module.EvoMaps)
 local Globals = require(Framework.Module.lib.fc_global)
 local GamemodeEvents = ReplicatedStorage.GamemodeEvents
+local PlayerData = require(Framework.Module.PlayerData)
 
 local ParticlesTable
 task.spawn(function()
@@ -247,5 +248,7 @@ Commands.addbot = {
 		GamemodeEvents.Game.AddBot:FireServer()
 	end
 }
+
+
 
 return Commands

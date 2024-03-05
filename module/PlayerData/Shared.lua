@@ -18,6 +18,25 @@ Shared.defVar = {
     economy = {clientReadOnly = true}
 }
 
+Shared.defLimits = {
+    options = {
+        crosshair = {
+            red = {min = 0, max = 255},
+            blue = {min = 0, max = 255},
+            green = {min = 0, max = 255},
+            gap = {min = -5, max = 15},
+            size = {min = 0, max = 15},
+            thickness = {min = 0, max = 15},
+        },
+        camera = {
+            vmX = {min = -3, max = 3},
+            vmY = {min = -3, max = 3},
+            vmZ = {min = -3, max = 3},
+            FOV = {min = 55, max = 110}
+        }
+    }
+}
+
 -- [[ PLAYER OWNED ITEMS INFORMATION ]]
 
 -- case & keys: "caseName"
@@ -62,6 +81,7 @@ Shared.def.options = {
         vmY = 0,
         vmZ = 0,
         FOV = 75,
+        vmBob = 1,
     },
 
     keybinds = {

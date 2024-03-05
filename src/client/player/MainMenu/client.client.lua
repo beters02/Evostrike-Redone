@@ -10,6 +10,7 @@ local module = require(script.Parent)
 local uistate = States:Get("UI")
 local hud = require(player.PlayerScripts:WaitForChild("HUD"))
 
+
 local openHudOnOpen = true
 
 local hudsDisabled = {}
@@ -32,6 +33,7 @@ local function disableHud()
     
     for i, v in pairs(player.PlayerGui:GetChildren()) do
         if v.Enabled and v.Name ~= "MainMenuGui" then
+            print(v)
             v.Enabled = false
             table.insert(hudsDisabled, v)
         end
@@ -40,10 +42,10 @@ end
 
 local function toggle()
     if gui.Enabled then
-        enableHud()
+        --enableHud()
         module:Close()
     else
-        disableHud()
+        --disableHud()
         module:Open()
     end
 end
@@ -57,11 +59,11 @@ end
 -- init main menu module
 module:Initialize(gui)
 
-task.delay(0.2, function()
+--[[task.delay(0.2, function()
     if module.Gui.Enabled then
         disableHud()
     end
-end)
+end)]]
 
 -- connect keybinds
 UserInputService.InputBegan:Connect(function(input, gp)

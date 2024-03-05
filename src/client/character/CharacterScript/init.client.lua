@@ -41,7 +41,11 @@ task.delay(1, function()
     end
 
     -- FOV changed
-    PlayerData:PathValueChanged("options.camera.FOV", function(newValue)
+    PlayerData:PathValueChanged("options.camera.FOV", function(newValue, a, b, c)
+        print(a)
+        print(b)
+        print(c)
+        print(newValue)
         deffov = newValue
         smooth(deffov)
     end)

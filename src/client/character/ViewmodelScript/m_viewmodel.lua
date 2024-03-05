@@ -20,6 +20,7 @@ local Math =  require(Framework.shfc_math.Location)
 local Tables = require(Framework.shfc_tables.Location)
 local viewmodelModel = ReplicatedStorage.Assets.Models.viewModel
 local PlayerDied = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
+local PlayerData = require(Framework.Module.PlayerData)
 
 local viewmodelModule = {}
 viewmodelModule.cfg = Tables.clone(require(script.Parent:WaitForChild("config")))
@@ -41,6 +42,9 @@ function viewmodelModule.initialize()
     self.movementVel = self.charhrp:WaitForChild("movementVelocity")
     self.movementGet = self.char:WaitForChild("MovementScript").Events.Get
     self.cdt = 1/60
+
+	-- playerdata
+	self.bobAmnt = PlayerData:GetPath("options.camera.vmBob")
     
     -- springs
     self:initDefaultSprings()
@@ -97,6 +101,9 @@ function viewmodelModule:connect()
 		viewmodelModule.storedClass = false
 	end)
 
+	self._pdChanged = PlayerData:PathValueChanged("options.camera.vmBob", function(new)
+		self.bobAmnt = new
+	end)
 end
 
 function viewmodelModule:disconnect()
@@ -148,7 +155,7 @@ function viewmodelModule:bob(dt)
     local _c = bcfg.clamp
     local spring = self.springs.bob
 
-    local movementSway = Vector3.new(getBob(4.75, _s, _m), getBob(2.25, _s, _m), getBob(2.25, _s, _m))
+    local movementSway = Vector3.new(getBob(4.75 * self.bobAmnt, _s, _m), getBob(2.25 * self.bobAmnt, _s, _m), getBob(2.25 * self.bobAmnt, _s, _m))
 	
     -- don't bob if jumping
 	if self:isJumping() then magnitude = 0 end

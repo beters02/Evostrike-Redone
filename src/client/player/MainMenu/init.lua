@@ -64,6 +64,8 @@ local MainMenu = {
 function MainMenu:Initialize(gui)
     self.Gui = gui
     self.CurrentMenuType = GamemodeService:GetMenuType()
+    self.HUD = require(game.Players.LocalPlayer.PlayerScripts:WaitForChild("HUD"))
+    self.DisabledHUDs = {}
 
     initPages(self)
     initButtonSounds(self)
@@ -88,12 +90,16 @@ end
 -- Open the Menu, Re-opens last open page
 function MainMenu:Open()
     self.Gui.Enabled = true
+
     if self.CurrentOpenPage then
+        print(self.CurrentOpenPage)
         self.CurrentOpenPage:Open()
     end
+
     UIState:removeOpenUI("MainMenu")
 	UIState:addOpenUI("MainMenu", self.Gui, true)
     task.spawn(function()
+        disableHud(self)
         disableChat()
     end)
 
@@ -111,6 +117,7 @@ function MainMenu:Close()
     self.Gui.Enabled = false
     UIState:removeOpenUI("MainMenu")
     task.spawn(function()
+        enableHud(self)
         enableChat()
     end)
 
@@ -342,6 +349,35 @@ function enableChat()
 	if not success then
 		error(message)
 	end
+end
+
+function enableHud(self)
+    local hud = self.HUD
+
+    if hud.gui then
+        hud:Enable()
+    end
+
+    for i, v in pairs(self.DisabledHUDs) do
+        v.Enabled = true
+    end
+    self.DisabledHUDs = {}
+end
+
+function disableHud(self)
+    local hud = self.HUD
+
+    if hud.gui then
+        hud:Disable()
+    end
+    
+    for _, v in pairs(game.Players.LocalPlayer.PlayerGui:GetChildren()) do
+        if v.Enabled and v.Name ~= "MainMenuGui" then
+            print(v)
+            v.Enabled = false
+            table.insert(self.DisabledHUDs, v)
+        end
+    end
 end
 
 return MainMenu
