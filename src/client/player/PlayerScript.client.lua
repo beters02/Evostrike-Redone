@@ -1,8 +1,8 @@
 -- [[ CONFIGURATION ]]
-local HIGHLIGHT_OUTLINE_COLOR = Color3.fromRGB(217, 51, 0)
-local HIGHLIGHT_OUTLINE_TRANSPARENCY = 0.65
-local HIGHLIGHT_FILL_COLOR = Color3.fromRGB(254, 62, 62)
-local HIGHLIGHT_FILL_TRANSPARENCY = 0.7
+local HIGHLIGHT_OUTLINE_COLOR = Color3.fromRGB(255, 0, 0)
+local HIGHLIGHT_OUTLINE_TRANSPARENCY = 0.3
+local HIGHLIGHT_FILL_COLOR = Color3.fromRGB(255, 73, 73)
+local HIGHLIGHT_FILL_TRANSPARENCY = 0.4
 
 game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
@@ -64,7 +64,6 @@ function playerRemoving(player)
 end
 
 function characterAdded(char)
-    
     local deadHighlight = Instance.new("Highlight")
     deadHighlight.Enabled = true
     deadHighlight.Parent = char

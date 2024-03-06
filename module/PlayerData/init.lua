@@ -8,7 +8,7 @@ end
 
 local DataStore2 = require(script:WaitForChild("DataStore2"))
 local Strings = require(script:WaitForChild("Strings"))
-local Default = require(script:WaitForChild("Shared"))
+local Shared = require(script:WaitForChild("Shared"))
 local RemoteFunction = script:WaitForChild("Events").RemoteFunction
 local RemoteEvent = script.Events.RemoteEvent
 local Admins = require(game:GetService("ServerStorage"):WaitForChild("Stored").AdminIDs)
@@ -16,7 +16,7 @@ local Overrides = require(script:WaitForChild("Overrides"))
 
 local PlayerData = {}
 PlayerData._storecache = {}
-PlayerData._def, PlayerData._defOpt = Default.def, Default.defVar
+PlayerData._def, PlayerData._defOpt = Shared.def, Shared.defVar
 
 --@summary Get PlayerData
 function PlayerData:Get(player: Player)
@@ -133,6 +133,14 @@ end
 
 function PlayerData:ClearPlayerCache(player)
     PlayerData._storecache[player.Name] = nil
+end
+
+--@summary Set an Option Value, enforcing limits and type restrictions.
+function PlayerData:SetOptionValue(player, optionKey, valueKey, value)
+    if not Shared:VerifyNewOptionValue(optionKey, valueKey, value) then
+        return false, "Option value not verified."
+    end
+    return PlayerData:SetPath(player, "options." .. optionKey .. "." .. valueKey, value)
 end
 
 --@private

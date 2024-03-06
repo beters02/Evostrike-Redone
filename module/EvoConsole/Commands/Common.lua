@@ -56,7 +56,10 @@ Commands.viewmodel_fov = {
 		end
 
 		if tonumber(value) then
-			PlayerData:SetPath("options.camera.FOV", tonumber(value))
+			local didSet = PlayerData:SetOptionValue("camera", "FOV", tonumber(value))
+			if not didSet then
+				value = PlayerData:GetPath("options.camera.FOV")
+			end
 			self:Print("viewmodel_fov " .. tostring(value))
 		end
 	end
@@ -73,7 +76,10 @@ Commands.viewmodel_bob = {
 		end
 
 		if tonumber(value) then
-			PlayerData:SetPath("options.camera.vmBob", tonumber(value))
+			local didSet = PlayerData:SetOptionValue("camera", "vmBob", tonumber(value))
+			if not didSet then
+				value = PlayerData:GetPath("options.camera.vmBob")
+			end
 			self:Print("viewmodel_bob " .. tostring(value))
 		end
 	end

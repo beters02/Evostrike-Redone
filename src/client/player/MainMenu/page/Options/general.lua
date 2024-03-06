@@ -38,7 +38,11 @@ function general:_updateOptionValue(prefix, key, value)
 	--main.page.options.profile[parentSettingDataPrefix][dataKey] = newValue
 	--local new, wasChanged, notChangedError = self.playerdata:Set("options." .. parentSettingDataPrefix ..  "." .. dataKey, newValue)
 	--if not wasChanged then end
-	PlayerData:SetPath("options." .. prefix ..  "." .. key, value)
+	local didSet = PlayerData:SetOptionValue(prefix, key, value)
+	if not didSet then
+		self.Main.Popup.new(game.Players.LocalPlayer, "Cannot set Option to this value.", 3)
+	end
+	--PlayerData:SetPath("options." .. prefix ..  "." .. key, value)
 
 	if prefix == "crosshair" then
 		self:_updateCrosshairFrame()

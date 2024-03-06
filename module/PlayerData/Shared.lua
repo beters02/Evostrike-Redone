@@ -117,4 +117,26 @@ Shared.def.economy = {
     xp = 0
 }
 
+--
+
+function Shared:VerifyNewOptionValue(optionKey, valueKey, value)
+    local limit = Shared.defLimits.options[optionKey]
+    limit = limit and limit[valueKey]
+
+    if limit then
+        if math.clamp(value, limit.min, limit.max) ~= value then
+            print("Could not verify Option Limits.")
+            return false
+        end
+    end
+
+    local opType = type(Shared.def.options[optionKey][valueKey])
+    if type(value) ~= opType then
+        print("Could not verify Option Type.")
+        return false
+    end
+    
+    return true
+end
+
 return Shared

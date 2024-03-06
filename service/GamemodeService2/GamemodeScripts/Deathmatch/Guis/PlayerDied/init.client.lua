@@ -347,13 +347,21 @@ function init()
 	end)
 
 	if succ then
-		if killer == player then
-			local rag = killerChar:WaitForChild("RagdollValue").Value
-			rag:WaitForChild("EnemyHighlight").DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-			rag.EnemyHighlight.Adornee = rag
-		else
-			killerChar:WaitForChild("EnemyHighlight").DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		end
+		task.spawn(function()
+			if killer == player then
+				local rag = killerChar:WaitForChild("RagdollValue", 1)
+				local eh = rag and rag:WaitForChild("EnemyHighlight", 1)
+				if eh then
+					eh.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+					eh.Adornee = rag
+				end
+			else
+				local eh = killerChar:WaitForChild("EnemyHighlight", 2)
+				if eh then
+					eh.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				end
+			end
+		end)
 	end
 
 	camera.CameraType = Enum.CameraType.Scriptable

@@ -57,7 +57,8 @@ local MainMenu = {
     Var = {},
     CurrentOpenPage = false,
     Gui = false,
-    CurrentMenuType = false
+    CurrentMenuType = false,
+    Popup = require(script:WaitForChild("Popup"))
 }
 
 -- Initialize Pages, Sounds and GamemodeService
