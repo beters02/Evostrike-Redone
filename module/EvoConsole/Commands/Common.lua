@@ -45,47 +45,73 @@ Commands.Stats = {
 	end,
 }
 
+local function setIntOption(self, optionKey, valueKey, value)
+	local path = "options." .. optionKey .. "." .. valueKey
+	print(path)
+
+	if not value then
+		self:Print(path .. " " .. PlayerData:GetPath(path))
+		return
+	end
+
+	if tonumber(value) then
+		local didSet = PlayerData:SetOptionValue(optionKey, valueKey, tonumber(value))
+		if didSet then
+			self:Print(path .. " " .. value)
+			return
+		end
+
+		self:Error("Cannot set option to this value.")
+		return
+	end
+
+	self:Error("Cannot set int value to string.")
+	return
+end
+
+-- Initialize Viewmodel Commands
+for _, v in pairs({"X", "Y", "Z", "Bob"}) do
+
+	-- init viewmodel_ ..
+	Commands["viewmodel_" .. v] = {
+		Description = "Change the Viewmodel " .. tostring(v) .. " Setting",
+		Public = true,
+
+		Function = function(self, _, value)
+			setIntOption(self, "camera", "vm" .. v, value)
+		end
+	}
+
+	-- init alias vm_ ..
+	Commands["vm_" .. v] = Commands["viewmodel_" .. v]
+end
+
+-- FOV command has to be seperate because of Data Key difference.
 Commands.viewmodel_fov = {
 	Description = "Change the Viewmodel FOV",
 	Public = true,
 
 	Function = function(self, _, value)
-		if not value then
-			self:Print(PlayerData:GetPath("options.camera.FOV"))
-			return
-		end
-
-		if tonumber(value) then
-			local didSet = PlayerData:SetOptionValue("camera", "FOV", tonumber(value))
-			if not didSet then
-				value = PlayerData:GetPath("options.camera.FOV")
-			end
-			self:Print("viewmodel_fov " .. tostring(value))
-		end
+		setIntOption(self, "camera", "FOV", value)
 	end
 }
-
-Commands.viewmodel_bob = {
-	Description = "Change the Viewmodel Bob Setting",
-	Public = true,
-
-	Function = function(self, _, value)
-		if not value then
-			self:Print("viewmodel_bob " .. PlayerData:GetPath("options.camera.vmBob"))
-			return
-		end
-
-		if tonumber(value) then
-			local didSet = PlayerData:SetOptionValue("camera", "vmBob", tonumber(value))
-			if not didSet then
-				value = PlayerData:GetPath("options.camera.vmBob")
-			end
-			self:Print("viewmodel_bob " .. tostring(value))
-		end
-	end
-}
-
 Commands.vm_fov = Commands.viewmodel_fov
-Commands.vm_bob = Commands.viewmodel_bob
+
+-- Init Crosshair Commands
+-- crosshair_red ...
+
+-- Int Values
+for _, v in pairs({"red", "blue", "green", "gap", "size", "thickness"}) do
+	Commands["crosshair_" .. v] = {
+		Description = "Change the Crosshair " .. v,
+		Public = true,
+
+		Function = function(self, _, value)
+			setIntOption(self, "crosshair", v, value)
+		end
+	}
+end
+
+-- True/False Values
 
 return Commands

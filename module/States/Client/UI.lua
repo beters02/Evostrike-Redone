@@ -47,6 +47,10 @@ function UI:getOpenUI(uiName)
 	return self._variables.openUIs[uiName]
 end
 
+function UI:getOpenUIs()
+	return self._variables.openUIs
+end
+
 -- check if mouse icon should be enabled depending on currently open uis
 function UI:shouldMouseBeEnabled() -- to be deprecated name is bad
 	for _, v in pairs(self._variables.openUIs) do

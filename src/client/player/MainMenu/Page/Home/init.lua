@@ -117,7 +117,6 @@ function HomePage:Connect()
 end
 
 function HomePage:MenuTypeChanged(newMenuType)
-    print('ASDJKAHSD:AKLND')
     if newMenuType == "Lobby" then
         self.BottomButton.InfoLabel.Text = LOBBY_BOTTOM_DEFAULT_TEXT
         self.BottomButtonCallback = joinGameButtonClicked

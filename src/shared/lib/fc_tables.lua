@@ -61,6 +61,7 @@ function Tables.doIn(tab, callback)
     end
 end
 
+--@summary Get random element in table.
 function Tables.random(tab)
     return tab[math.random(1,#tab)]
 end
@@ -73,5 +74,14 @@ function Tables.toArray(tbl)
     end
     return n
 end
+
+-- Sleitnick Fisher-Yates shuffle
+function Tables.shuffle(tbl)
+    for i = #tbl, 2, -1 do
+      local j = math.random(i)
+      tbl[i], tbl[j] = tbl[j], tbl[i]
+    end
+    return tbl
+  end
 
 return Tables

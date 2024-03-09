@@ -30,6 +30,7 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	for _, v in pairs(model:GetDescendants()) do
 		if not v:IsA("MeshPart") and not v:IsA("BasePart") then continue end
 		v.CollisionGroup = "Weapons"
+		v.Massless = true
 	end
 	
 	-- init server and client model

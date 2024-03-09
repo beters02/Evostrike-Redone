@@ -10,11 +10,19 @@ crosshair._isInit = false
 -- length, thickness
 local defaultSize = Vector2.new(5, 1)
 
+-- util func
+local function getOrigin(self)
+    --return UDim2.fromScale(self.resolution.X/2, self.resolution.Y/2)
+    return UDim2.fromOffset(self.resolution.X/2, self.resolution.Y/2)
+    --return UDim2.fromScale(0.5,0.5)
+end
+
 function crosshair.initialize(hud)
     local self = crosshair
     self.hud = hud
     self.resolution = self.hud.AbsoluteSize
-    self.origin = UDim2.fromOffset(self.resolution.X / 2, self.resolution.Y / 2)
+    --self.origin = UDim2.fromOffset(self.resolution.X / 2, self.resolution.Y / 2)
+    self.origin = getOrigin(self)
     self.hairs = {}
 
     -- this is a brute force way to get client stored player data
@@ -72,11 +80,14 @@ function crosshair:updateCrosshair(dataKey: string?, newValue: any?)
     end
 
     -- update pos
-	local verticalOffset, horizontalOffset = UDim2.fromOffset(0, self.gap + (self.size/2)), UDim2.fromOffset(self.gap + (self.size/2), 0)
+    self.resolution = self.hud.AbsoluteSize
+	--local verticalOffset, horizontalOffset = UDim2.fromOffset(0, self.gap + (self.size/2)), UDim2.fromOffset(self.gap + (self.size/2), 0)
+    local verticalOffset, horizontalOffset = UDim2.fromOffset(0, self.gap), UDim2.fromOffset(self.gap, 0)
     local hairs = self.hairs
-    local origin = UDim2.fromOffset(self.resolution.X / 2, self.resolution.Y / 2)
+    --local origin = UDim2.fromOffset(self.resolution.X / 2, self.resolution.Y / 2)
+    local origin = getOrigin(self)
     self.origin = origin
-	
+
 	hairs.top.Position = origin + -verticalOffset
 	hairs.bottom.Position = origin + verticalOffset
 	hairs.right.Position = origin + -horizontalOffset

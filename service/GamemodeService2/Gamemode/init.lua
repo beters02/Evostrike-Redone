@@ -63,7 +63,7 @@ function Gamemode.Start(GamemodeService)
     clearModuleConnections()
     clearGamemodeConnections()
 
-    -- Connect Bindables
+    -- Connect Bindables (CurrentGamemode -> Gamemode)
     connectModuleEvent("B_GameEnd", gm.Bindables.GameEnd.Event, function()
         Gamemode.Stop()
     end)

@@ -82,9 +82,9 @@ end
 
 -- [[ SCRIPT RUN ]]
 Players.CharacterAutoLoads = false
-Players.PlayerAdded:Once(function(player: Player)
+--[[Players.PlayerAdded:Once(function(player: Player)
     Init(player)
-end)
+end)]]
 
 GamemodeService2Bindable.Event:Connect(function(action, ...)
     if action == "Restart" then

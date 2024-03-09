@@ -124,6 +124,10 @@ function Shared:VerifyNewOptionValue(optionKey, valueKey, value)
     limit = limit and limit[valueKey]
 
     if limit then
+        print(value)
+        print(limit)
+        print(value)
+        print(math.clamp(value, limit.min, limit.max))
         if math.clamp(value, limit.min, limit.max) ~= value then
             print("Could not verify Option Limits.")
             return false

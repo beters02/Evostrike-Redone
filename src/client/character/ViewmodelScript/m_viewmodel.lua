@@ -26,6 +26,26 @@ local viewmodelModule = {}
 viewmodelModule.cfg = Tables.clone(require(script.Parent:WaitForChild("config")))
 viewmodelModule.storedClass = false
 
+-- [[ Utility Functions ]]
+
+function util_getVMStartCF(self)
+
+	-- get default vm offset based on FOV & custom offset
+	local _defoff = Vector3.new(
+		self.vmX ~= 0 and self.vmX/3 or self.vmX,
+		self.vmY ~= 0 and self.vmY/3 or self.vmY,
+		self.vmZ ~= 0 and self.vmZ/3 or self.vmZ
+	)
+
+	if workspace.CurrentCamera.FieldOfView > 70 then
+		-- every 5 fov we increment a specific amount
+		local diff = workspace.CurrentCamera.FieldOfView - 70
+		_defoff = Vector3.new(_defoff.X + (-0.04 * (diff/5)), 0, _defoff.Z + (0.07 * (diff/5)))
+	end
+
+	return self.camera.CFrame + self.camera.CFrame:VectorToWorldSpace(_defoff)
+end
+
 --[[ Init Functions ]]
 
 function viewmodelModule.initialize()
@@ -44,7 +64,11 @@ function viewmodelModule.initialize()
     self.cdt = 1/60
 
 	-- playerdata
-	self.bobAmnt = PlayerData:GetPath("options.camera.vmBob")
+	local pd = PlayerData:Get()
+	self.vmBob = pd.options.camera.vmBob
+	self.vmX = pd.options.camera.vmX
+	self.vmY = pd.options.camera.vmY
+	self.vmZ = pd.options.camera.vmZ
     
     -- springs
     self:initDefaultSprings()
@@ -101,9 +125,11 @@ function viewmodelModule:connect()
 		viewmodelModule.storedClass = false
 	end)
 
-	self._pdChanged = PlayerData:PathValueChanged("options.camera.vmBob", function(new)
-		self.bobAmnt = new
-	end)
+	for _, v in pairs({"vmX", "vmY", "vmZ", "vmBob"}) do
+		self["_" .. v .. "Changed"] = PlayerData:PathValueChanged("options.camera." .. v, function(new)
+			self[v] = new
+		end)
+	end
 end
 
 function viewmodelModule:disconnect()
@@ -155,7 +181,7 @@ function viewmodelModule:bob(dt)
     local _c = bcfg.clamp
     local spring = self.springs.bob
 
-    local movementSway = Vector3.new(getBob(4.75 * self.bobAmnt, _s, _m), getBob(2.25 * self.bobAmnt, _s, _m), getBob(2.25 * self.bobAmnt, _s, _m))
+    local movementSway = Vector3.new(getBob(4.75 * self.vmBob, _s, _m), getBob(2.25 * self.vmBob, _s, _m), getBob(2.25 * self.vmBob, _s, _m))
 	
     -- don't bob if jumping
 	if self:isJumping() then magnitude = 0 end
@@ -258,18 +284,6 @@ function viewmodelModule:jumpSway(dt)
 	-- shove
 	spring:shove(shov)
 	return
-end
-
-function util_getVMStartCF(self)
-	-- get default vm offset based on FOV
-	local _defoff = Vector3.zero -- TODO: grab offset from playeroptions
-	if workspace.CurrentCamera.FieldOfView > 70 then
-		-- every 5 fov we increment a specific amount
-		local diff = workspace.CurrentCamera.FieldOfView - 70
-		_defoff = Vector3.new(_defoff.X + (-0.04 * (diff/5)), 0, _defoff.Z + (0.07 * (diff/5)))
-	end
-
-	return self.camera.CFrame + self.camera.CFrame:VectorToWorldSpace(_defoff)
 end
 
 -- [[ Custom Viewmodel Spring Functionality ]]
