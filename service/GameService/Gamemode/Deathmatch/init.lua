@@ -97,8 +97,10 @@ function Deathmatch:PlayerRemoved(service)
 end
 
 function Deathmatch:PlayerDied(service, died, killer, killNotRegistered)
-    Gamemode.CallUIFunction(self, service, died, "PlayerDied", "Enable", killer)
-    listenForPlayerSpawn(self, service, died)
+    local canRespawnTime = tick() + self.GameOptions.RESPAWN_LENGTH
+
+    Gamemode.CallUIFunction(self, service, died, "PlayerDied", "Enable", killer, self.GameOptions.RESPAWN_LENGTH)
+    listenForPlayerSpawn(self, service, died, canRespawnTime)
     
     Gamemode.CallUIFunction(self, service, died, "TopBar", "UpdateScoreFrame", false, service.PlayerData:Get(died, "deaths"))
     if not killNotRegistered then
@@ -186,11 +188,16 @@ function getPlayerSpawnPoint(service)
     return lowest.CFrame
 end
 
-function listenForPlayerSpawn(self, service, player)
+function listenForPlayerSpawn(self, service, player, canRespawnTime)
     -- wait for player to click spawn button.
     local spwnConnStr = player.Name .. "_Spawn"
     service.Connections[spwnConnStr] = GameServiceRemotes.PlayerSpawn.OnServerEvent:Connect(function(spawnPlr)
         if spawnPlr == player then
+
+            if canRespawnTime and tick() < canRespawnTime then
+                return
+            end
+
             service.PlayerData:Set(player, "alive", true)
             self:SpawnPlayer(service, player)
             service.Connections[player.Name .. "_Spawn"]:Disconnect()

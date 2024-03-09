@@ -387,7 +387,6 @@ function connect()
 	updateConn = RunService.RenderStepped:Connect(update)
 
     connections[1] = loadoutButton.MouseButton1Click:Connect(clickLoadout)
-	connections[2] = respawnButton.MouseButton1Click:Connect(clickRespawn)
 	connections[3] = UserInputService.InputBegan:Connect(inputBegan)
 end
 
@@ -426,7 +425,7 @@ local PlayerDied = {}
 
 local started = false
 
-function PlayerDied:Enable(uiContainer, sentKiller)
+function PlayerDied:Enable(uiContainer, sentKiller, respawnWaitLength)
     killer = sentKiller or player
 
     if not buyMenuModule then
@@ -443,6 +442,38 @@ function PlayerDied:Enable(uiContainer, sentKiller)
     init()
     connect()
     start()
+
+	if killer == player then
+		self:EnableRespawnButton()
+		return
+	end
+
+	local lastSec = 3
+	local timeElapsed = 0
+	respawnWaitLength = respawnWaitLength + 0.2
+
+	respawnButton.TextLabel.Text = tostring(lastSec)
+
+	connections[4] = RunService.RenderStepped:Connect(function(dt)
+		timeElapsed += dt
+
+		if timeElapsed >= respawnWaitLength then
+			self:EnableRespawnButton()
+			connections[4]:Disconnect()
+			return
+		end
+
+		local currLastSec = 3 - math.floor(timeElapsed)
+		if lastSec ~= currLastSec then
+			lastSec = currLastSec
+			respawnButton.TextLabel.Text = tostring(lastSec)
+		end
+	end)
+end
+
+function PlayerDied:EnableRespawnButton()
+	respawnButton.TextLabel.Text = "RESPAWN"
+	connections[2] = respawnButton.MouseButton1Click:Connect(clickRespawn)
 end
 
 return PlayerDied
