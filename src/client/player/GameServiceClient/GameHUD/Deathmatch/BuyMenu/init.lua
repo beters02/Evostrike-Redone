@@ -4,7 +4,10 @@ local Framework = require(game:GetService("ReplicatedStorage"):WaitForChild("Fra
 local UIState = require(Framework.Module.States):Get("UI")
 
 --local remoteEvent = script:WaitForChild("Events"):WaitForChild("RemoteEvent")
-local buyMenuEvent = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("BuyMenuSelected")
+--local buyMenuEvent = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("BuyMenuSelected")
+local buyMenuEvent = Framework.Service.GameService.Remotes.BuyMenuEvent
+local hud = require(game.Players.LocalPlayer.PlayerScripts:WaitForChild("HUD"))
+
 local popupText = require(gui:WaitForChild("BuyMenuPopupText"))
 local clickDebounce = tick()
 local player = game:GetService("Players").LocalPlayer
@@ -71,8 +74,8 @@ end
 local BuyMenu = {}
 
 function BuyMenu:Enable(uiContainer)
+    init()
     
-
     -- connect open
     game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
         if gp or player:GetAttribute("Typing") then return end
@@ -101,11 +104,14 @@ function BuyMenu:Open()
     end
 
     gui.Enabled = true
+    hud:Disable()
 
     -- connect ability buttons
     for _, v in pairs(buttons.abilityMiddleFrame) do
+        print('CONNECTING')
         v.Modal = true
         connections[v.Parent.Name.."Clicked"] = v.MouseButton1Click:Connect(function()
+            print('clicked')
             local slot = v.Parent.Parent.Parent.Name == "Movement" and "primary" or "secondary"
             buyMenuEvent:FireServer("AbilitySelected", v.Parent.Name, slot)
             popupText.burst("Selected " .. v.Parent.Name .. "! Press ESC and Reset Character to get ability.", 2)
@@ -116,6 +122,7 @@ function BuyMenu:Open()
     for i, v in pairs(buttons.gunMiddleFrame) do
         v.Modal = true
         connections[v.Parent.Name .. "Clicked"] = v.MouseButton1Click:Connect(function()
+            print('clicked')
             local slot = v.Parent.Parent.Parent.Name == "Rifles" and "primary" or "secondary"
             buyMenuEvent:FireServer("WeaponSelected", v.Parent.Name, slot)
             popupText.burst("Selected " .. v.Parent.Name .. "! Press ESC and Reset Character to get weapon.", 2)
@@ -144,7 +151,7 @@ function BuyMenu:Open()
     connections["BackButtonClicked"] = buttons.menuButtons.back.MouseButton1Click:Connect(function()
         if tick() < clickDebounce then return end
         clickDebounce = tick() + 0.1
-        gui.Enabled = false
+        self:Close()
         UIState:removeOpenUI("BuyMenu")
     end)
 end
@@ -155,6 +162,7 @@ function BuyMenu:Close()
         return
     end
 
+    hud:Enable()
     gui.Enabled = false
     for i, v in pairs(connections) do
         v:Disconnect()

@@ -40,6 +40,8 @@ local Deathmatch = {
         },
 
         MENU_TYPE = "Lobby",
+        BUY_MENU_ENABLED = true,
+        BUY_MENU_ADD_INSTANT = false,
 
         START_HEALTH = 100,
         START_SHIELD = 50,

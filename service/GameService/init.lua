@@ -246,6 +246,27 @@ function GameService:InitalizeGame()
         end
     end)
 
+    -- BUY MENU
+    if self.GameOptions.BUY_MENU_ENABLED then
+        self.Connections.BuyMenu = GameServiceRemotes.BuyMenuEvent.OnServerEvent:Connect(function(_bmplayer, action, item, slot)
+            if action == "AbilitySelected" then
+                local inv = self.PlayerData:Get(_bmplayer, "inventory")
+                inv.ABILITIES[slot] = item
+                self.PlayerData:Set(_bmplayer, "inventoy", inv)
+                if self.GameOptions.BUY_MENU_ADD_INSTANT then
+                    AbilityService:AddAbility(_bmplayer, item)
+                end
+            elseif action == "WeaponSelected" then
+                local inv = self.PlayerData:Get(_bmplayer, "inventory")
+                inv.WEAPONS[slot] = item
+                self.PlayerData:Set(_bmplayer, "inventoy", inv)
+                if self.GameOptions.BUY_MENU_ADD_INSTANT then
+                    WeaponService:AddWeapon(_bmplayer, item)
+                end
+            end
+        end)
+    end
+
     -- WAITING FOR PLAYERS
     if #self.PlayerData:GetPlayers() < self.GameOptions.MIN_PLAYERS then
         repeat task.wait(0.5) until #self.PlayerData:GetPlayers() >= self.GameOptions.MIN_PLAYERS

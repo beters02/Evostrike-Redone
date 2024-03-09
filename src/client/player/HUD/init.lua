@@ -258,6 +258,9 @@ function hud:DisconnectPlayer()
 end
 
 function hud:Enable()
+    if not hud.gui then
+        return
+    end
     for _, component in pairs(hud.gui:GetChildren()) do
         local _, err = pcall(function()
             if component:IsA("ScreenGui") then
@@ -272,6 +275,9 @@ function hud:Enable()
 end
 
 function hud:Disable()
+    if not hud.gui then
+        return
+    end
     for _, component in pairs(hud.gui:GetChildren()) do
         local _, err = pcall(function()
             if component:IsA("ScreenGui") then

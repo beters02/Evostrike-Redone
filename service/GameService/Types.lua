@@ -41,8 +41,10 @@ export type GamemodeOptions = {
     START_SHIELD: number,
     START_HELMET: boolean,
     SPAWN_INVINCIBILITY: number,
-
+    
     MENU_TYPE: string,
+    BUY_MENU_ENABLED: boolean,
+    BUY_MENU_ADD_INSTANT: boolean,
 
     START_INVENTORY: {ABILITIES: PlayerInventory, WEAPONS: PlayerInventory},
     START_CAMERA_CFRAME_MAP: {}
