@@ -30,7 +30,11 @@ GameServiceRemotes.SetUIGamemode.OnClientEvent:Connect(function(gamemode)
     for _, uiModule in pairs(getGamemodeHUD(gamemode):GetChildren()) do
         local c = uiModule:Clone()
         c.Parent = currUIContainer
-        c:WaitForChild("Gui").Enabled = false
+        for _, ui in pairs(c:GetChildren()) do
+            if ui:IsA("ScreenGui") then
+                ui.Enabled = false
+            end
+        end
     end
 end)
 

@@ -151,6 +151,11 @@ function EvoPlayer:SetSpawnInvincibility(character: Model, enabled: boolean, len
     end
 end
 
+--@summary Kill a player without triggering a PlayerDiedEvent.
+function EvoPlayer:ForceKill(player)
+    
+end
+
 --#region Handle Player Death @server
 
 --@tutorial

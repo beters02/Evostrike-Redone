@@ -308,8 +308,6 @@ function GameService:InitalizeGame()
             return true
         end
     end
-
-    self:RoundStart()
 end
 
 function GameService:InitPlayer(player)
@@ -321,15 +319,18 @@ function GameService:InitPlayer(player)
 end
 
 function GameService:EndGame(result, ...)
-    gmCall("End", result, ...)
 
     -- clear connections and restart
     for _, v in pairs(self.Connections) do
         v:Disconnect()
     end
+
+    gmCall("End", result, ...)
 end
 
 function GameService:RoundStart()
+    print('GameService RoundStart called...')
+
     self.RoundStatus = "STARTED"
 
     self.TimeElapsed = 0
@@ -362,6 +363,8 @@ function GameService:TimerUpdate(dt)
 end
 
 function GameService:TimerEnded()
+
+    print('TIMER ENDED')
 
     if self.GameOptions.ROUND_END_CONDITION == "Custom"
     or self.GameOptions.GAME_END_CONDITION == "Custom" then
