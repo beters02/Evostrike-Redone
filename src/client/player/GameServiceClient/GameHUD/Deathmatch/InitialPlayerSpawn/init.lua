@@ -70,12 +70,10 @@ local function clickRespawn()
 		return
 	end
 	processClickDebounce()
-	disconnect()
-    playerSpawnEvent:FireServer()
-	--remoteEvent:FireServer("Respawn")
 	require(buyMenuModule):Close()
 	camera.CameraType = Enum.CameraType.Custom
 	finish()
+	playerSpawnEvent:FireServer()
 end
 
 local function clickBack()

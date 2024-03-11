@@ -25,6 +25,7 @@ local EvoPlayer = require(Framework.Module.EvoPlayer)
 local GlobalSounds = Framework.Service.WeaponService.ServiceAssets.Sounds
 local Particles = ReplicatedStorage.Services.WeaponService.ServiceAssets.Emitters
 local Replicate = Framework.Service.WeaponService.Events.Replicate
+local PlayerAttributes = require(Framework.Module.PlayerAttributes)
 
 local Shared = {}
 Shared.WallbagMaterials = {
@@ -235,6 +236,8 @@ function Shared.PlayerHitParticles(character, hitPartInstance, wasKilled)
     task.spawn(function() EmitParticle.EmitParticles(hitPartInstance, particleFolder:GetChildren(), hitPartInstance) end)
 end
 
+
+
 function getDamageFromHumanoidResult(resultData: ShotResultData)
 	
 	local char = resultData.hitCharacter
@@ -287,6 +290,7 @@ function getDamageFromHumanoidResult(resultData: ShotResultData)
 	damage = math.round(damage)
 
 	-- set ragdoll variations
+
 	char:SetAttribute("bulletRagdollNormal", -resultData.result.Normal)
 	char:SetAttribute("bulletRagdollKillDir", (resultData.shooter.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Unit)
 	char:SetAttribute("lastHitPart", instance.Name)
@@ -295,7 +299,7 @@ function getDamageFromHumanoidResult(resultData: ShotResultData)
 	char:SetAttribute("lastUsedWeaponHelmetMultiplier", weaponOptions.damage.helmetMultiplier or 1)
 
 	-- apply damage
-	damage, killed = EvoPlayer:TakeDamage(char, damage, resultData.shooter.Character, weaponOptions.name)
+	damage, killed = EvoPlayer:TakeDamage(char, damage, resultData.shooter.Character, weaponOptions.name, instance.Name)
 
 	if RunService:IsServer() then
 		-- apply tag so we can easily access damage information

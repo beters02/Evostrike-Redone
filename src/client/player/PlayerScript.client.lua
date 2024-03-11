@@ -3,6 +3,7 @@ local HIGHLIGHT_OUTLINE_COLOR = Color3.fromRGB(255, 0, 0)
 local HIGHLIGHT_OUTLINE_TRANSPARENCY = 0.3
 local HIGHLIGHT_FILL_COLOR = Color3.fromRGB(255, 73, 73)
 local HIGHLIGHT_FILL_TRANSPARENCY = 0.4
+local DEFAULT_IMPULSE_NORMAL = Vector3.new(math.random(1,10),math.random(1,10),math.random(1,10)).Unit
 
 game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
@@ -15,6 +16,7 @@ local SelfDiedEvent = EvoPlayerEvents:WaitForChild("PlayerDiedBindable")
 local PlayerDiedEvent = EvoPlayerEvents:WaitForChild("PlayerDiedRemote")
 local BotAddedEvent = Framework.Service.BotService.Remotes.BotAdded
 local StoredDamageInfo = require(Framework.Module.EvoPlayer.StoredDamageInformation)
+local PlayerAttributes = require(Framework.Module.PlayerAttributes)
 
 local plr = Players.LocalPlayer
 local currentStoredDamageInfo = false
@@ -34,6 +36,7 @@ local Ragdolls = {
 
 -- | Main |
 function main()
+    
     for _, v in pairs(Players:GetPlayers()) do
         playerAdded(v)
     end
@@ -74,7 +77,7 @@ function characterAdded(char)
     deadHighlight.OutlineTransparency = HIGHLIGHT_OUTLINE_TRANSPARENCY
     deadHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
 
-    if char == plr.Character then
+    if Players:GetPlayerFromCharacter(char) == plr then
         if currentStoredDamageInfo then
             currentStoredDamageInfo:Destroy()
         end
@@ -298,13 +301,19 @@ function Ragdolls.ragdollCharacter(character, ragdollClone)
     game:GetService("Debris"):AddItem(ragdollClone, Ragdolls.config.RagdollDecayLength)
 end
 
+function getCharAttribute(character, attribute)
+    local player = Players:GetPlayerFromCharacter(character) or {Name = "BOT_" .. character.Name}
+    return PlayerAttributes:GetCharacterAttribute(player, attribute)
+end
+
 function Ragdolls.impulse(character, ragdollClone)
-    local bulletRagdollNorm = -(character:GetAttribute("bulletRagdollKillDir") or Vector3.new(math.random(1,10),math.random(1,10),math.random(1,10)).Unit)
-    local impulseModifier = character:GetAttribute("impulseModifier") or 1
+
+    local bulletRagdollNorm = -(getCharAttribute(character, "bulletRagdollKillDir") or DEFAULT_IMPULSE_NORMAL)
+    local impulseModifier = getCharAttribute(character, "impulseModifier") or 1
 
     if bulletRagdollNorm then
         local bulletRagdollPart
-        local bulletRagdollPartName = character:GetAttribute("lastHitPart")
+        local bulletRagdollPartName = getCharAttribute(character, "lastHitPart") --character:GetAttribute("lastHitPart")
 
         if not bulletRagdollPartName then bulletRagdollPart = ragdollClone.Head else
             bulletRagdollPart = ragdollClone:FindFirstChild(bulletRagdollPartName)

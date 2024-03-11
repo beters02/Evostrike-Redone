@@ -1,5 +1,6 @@
 --[[ Purpose: Centralizing Evostrike Player Functionality ]]
 
+local Debris = game:GetService("Debris")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -8,60 +9,174 @@ local Events = script:WaitForChild("Events")
 local DiedEvent = Events.PlayerDiedRemote
 local PlayerData = require(ReplicatedStorage.Modules.PlayerData)
 local BotServiceModule = ReplicatedStorage.Services.BotService
+local GlobalSounds = ReplicatedStorage.Services.WeaponService.ServiceAssets.Sounds
 local StoredDamageInformation = require(script:WaitForChild("StoredDamageInformation"))
+local PlayerAttributes = require(ReplicatedStorage.Modules.PlayerAttributes)
 
-local EvoPlayer = {}
+local EvoPlayer = {
+
+    -- These are functions that execute when the player is loaded.
+    LoadingFunctions = { } -- Server: playerName = {callback}  Client: {callback}
+}
+
+function setCharAttribute(player, attribute, value)
+    return PlayerAttributes:SetCharacterAttributeAsync(player, attribute, value)
+end
+
+function getCharAttribute(player, attribute)
+    return PlayerAttributes:GetCharacterAttribute(player, attribute)
+end
+
+function playSound(playFrom, weaponName, sound) -- if not weaponName, sound will not be destroyed upon recreation
+	local c: Sound
+
+	-- destroy sound on recreation if weaponName is specified
+	if weaponName then
+		c = playFrom:FindFirstChild(weaponName .. "_" .. sound.Name) :: Sound
+		if c then
+			c:Stop()
+			c:Destroy()
+		end
+	else
+		weaponName = "Weapon"
+	end
+
+	c = sound:Clone() :: Sound
+	c.Name = weaponName .. "_" .. sound.Name
+	c.Parent = playFrom
+	c:Play()
+	Debris:AddItem(c, c.TimeLength + 2)
+	return c
+end
+
+function playAllSoundsIn(where: Folder, playFrom: any, ignoreNames: table)
+    for _, sound in pairs(where:GetChildren()) do
+		if not sound:IsA("Sound") or (ignoreNames and ignoreNames[sound.Name]) then continue end
+        playSound(playFrom, false, sound)
+	end
+end
+
+function playerHitSoundsClient(damagedChar, damagerChar, wasKilled, hitPart)
+    local plr = Players:GetPlayerFromCharacter(damagedChar) or {Name = "BOT_" .. damagedChar.Name}
+    local ignore = false
+    local killSoundPlayed = getCharAttribute(plr, "ClientKillSoundPlayed")
+    local helmet = getCharAttribute(plr, "Helmet")
+    local helmetBroken = getCharAttribute(plr, "HelmetBroken")
+
+    local soundFolder
+
+    if wasKilled then
+        --damagedChar:SetAttribute("ClientKillSoundPlayed", true)
+        setCharAttribute(plr, "ClientKillSoundPlayed", true)
+        task.spawn(function()
+            playAllSoundsIn(GlobalSounds.PlayerKilled, damagedChar)
+        end)
+    end
+
+    if string.match(string.lower(hitPart), "head") and not killSoundPlayed then
+        soundFolder = GlobalSounds.PlayerHit.Headshot
+
+        if helmet or helmetBroken then
+            setCharAttribute(plr, "HelmetBroken", false)
+            ignore = {headshot1 = not wasKilled}
+        else
+            ignore = {helmet = true, helmet1 = true}
+        end
+
+    else
+        soundFolder = GlobalSounds.PlayerHit.Bodyshot
+    end
+
+    local testParent = RunService:IsClient() and game.Players.LocalPlayer.Character or damagedChar
+    task.spawn(function()
+        --_PlayAllSoundsIn(soundFolder, character, ignore)
+        playAllSoundsIn(soundFolder, testParent, ignore)
+    end)
+end
 
 --@summary Correctly apply damage to the player, checking for shields
-function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
+--         Plays necessary Sounds
+function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
     if damager and damager.Humanoid.Health <= 0 then return 0 end
     if not EvoPlayer:CanDamage(character) then return 0 end
-    local shield = character:GetAttribute("Shield") or 0
+
+    --[[local shield = character:GetAttribute("Shield") or 0
     local helmet = character:GetAttribute("Helmet") or false
     local hitPart = character:GetAttribute("lastHitPart") or "Head"
     local destroysHelmet = character:GetAttribute("lastUsedWeaponDestroysHelmet") or false
-    local helmetMultiplier = character:GetAttribute("lastUsedWeaponHelmetMultiplier") or 1
+    local helmetMultiplier = character:GetAttribute("lastUsedWeaponHelmetMultiplier") or 1]]
+    local damagedPlayer = Players:GetPlayerFromCharacter(character) or false
+    local damagerPlayer = Players:GetPlayerFromCharacter(damager)
+    local attributePlayer = damagedPlayer or {Name = "BOT_" .. character.Name}
+    local isBot = not damagedPlayer
+
+    local shield = getCharAttribute(attributePlayer, "Shield") or 0
+    local helmet = getCharAttribute(attributePlayer, "Helmet") or false
+    --local hitPart = getCharAttribute(damagedPlayer, "lastHitPart") or "Head"
+    local destroysHelmet = getCharAttribute(attributePlayer, "lastUsedWeaponDestroysHelmet") or false
+    local helmetMultiplier = getCharAttribute(attributePlayer, "lastUsedWeaponHelmetMultiplier") or 1
+    hitPart = hitPart or "Head"
+
+    local absoluteDamage = damage
+
     local damageAppliedToCharacter = true
     local killed = false
 
     if string.find(string.lower(hitPart), "head") then
         if helmet then
             if destroysHelmet then
-                character:SetAttribute("Helmet", false)
-                character:SetAttribute("HelmetBroken", true)
+                setCharAttribute(attributePlayer, "Helmet", false)
+                setCharAttribute(attributePlayer, "HelmetBroken", true)
+                setCharAttribute(attributePlayer, "HelmetBrokenParticles", true)
+                --character:SetAttribute("Helmet", false)
+                --character:SetAttribute("HelmetBroken", true)
             end
             damage *= helmetMultiplier
         end
     end
 
     if shield > 0 then
-        if shield >= damage then -- no damage taken, only apply to shield
-            character:SetAttribute("Shield", shield - damage)
+        if shield >= damage then
+            shield -= damage
+            damage = 0
             damageAppliedToCharacter = false
         else
             damage -= shield
-            character:SetAttribute("Shield", 0)
+            shield = 0
         end
+
+        setCharAttribute(attributePlayer, "Shield", shield)
     end
 
+    local currHealth = character.Humanoid.Health
+    local newHealth
+
     if RunService:IsClient() then
-        local lastHealth = math.max(0, (character:GetAttribute("LastRegisteredHealth") or character.Humanoid.Health) - damage)
-        character:SetAttribute("LastRegisteredHealth", lastHealth)
+
+        local lastRegistered = getCharAttribute(attributePlayer, "LastRegisteredHealth")
+        currHealth = lastRegistered or currHealth
+        newHealth = currHealth - damage
+        killed = newHealth <= 0
+
+        local lastHealth = character.Humanoid.Health - damage
         killed = lastHealth <= 0
 
+        playerHitSoundsClient(character, damager, killed, hitPart)
+        setCharAttribute(attributePlayer, "LastRegisteredHealth", lastHealth)
+        
         local charPlr = Players:GetPlayerFromCharacter(character)
         if charPlr then
             Events.PlayerGaveDamageBind:Fire(charPlr.Name, damage)
         end
-        
-    else
+    elseif RunService:IsServer() then
+        PlayerAttributes:SetCharacterAttribute(attributePlayer, "Shield", shield)
 
-        local damagedPlr = Players:GetPlayerFromCharacter(character)
-        if damagedPlr then
-            Events.PlayerReceivedDamageRemote:FireClient(damagedPlr, Players:GetPlayerFromCharacter(damager).Name, damage)
+        newHealth = currHealth - damage
+        killed = newHealth <= 0
+
+        if damagedPlayer then
+            Events.PlayerReceivedDamageRemote:FireClient(damagedPlayer, Players:GetPlayerFromCharacter(damager).Name, damage)
         end
-        
-        killed = character.Humanoid.Health - damage <= 0
 
         character:SetAttribute("Killer", damager.Name)
         if damage - character.Humanoid.Health <= 0 then
@@ -72,19 +187,23 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed)
             character.Humanoid:TakeDamage(damage)
         end
 
-        task.spawn(function()
-            local bots = BotServiceModule.Remotes.GetBotsBindable:Invoke()
-            if killed and (not bots or #bots == 0) then
-                character = Players:GetPlayerFromCharacter(character)
+        local t = character.Humanoid:LoadAnimation(character.DamagedAnimation)
+        t:Play()
+        t.Ended:Once(function()
+            t:Destroy()
+        end)
 
-                if not damager:IsA("Player") then
-                    damager = Players:GetPlayerFromCharacter(damager)
-                end
-
+        if killed then
+            if isBot then
+                print('KILLED A BOT')
+                task.delay(1, function()
+                    PlayerAttributes:ResetCharacterAttributes(attributePlayer)
+                end)
+            elseif damagedPlayer ~= damagerPlayer then
                 PlayerData:IncrementPath(damager, "pstats.kills", 1)
                 PlayerData:IncrementPath(character, "pstats.deaths", 1)
             end
-        end)
+        end
     end
 
     return damage, killed
@@ -92,13 +211,17 @@ end
 
 --@summary Set the Shield of a player.
 function EvoPlayer:SetShield(character, shield): number
-    character:SetAttribute("Shield", shield)
+    --character:SetAttribute("Shield", shield)
+    local plr = Players:GetPlayerFromCharacter(character) or {Name = "BOT_" .. character.Name}
+    PlayerAttributes:SetCharacterAttribute(plr, "Shield", shield)
     return shield :: number
 end
 
 --@summary Set the Helmet of a player.
 function EvoPlayer:SetHelmet(character, helmet): boolean
-    character:SetAttribute("Helmet", helmet)
+    --character:SetAttribute("Helmet", helmet)
+    local plr = Players:GetPlayerFromCharacter(character) or {Name = "BOT_" .. character.Name}
+    PlayerAttributes:SetCharacterAttribute(plr, "Helmet", helmet)
     return helmet :: boolean
 end
 
@@ -110,13 +233,18 @@ end
 --@summary Do a function after a player has loaded.
 --         If the player is not loaded, This function threads a repeat wait and then calls when loaded.
 --         Otherwise, it will just call the function.
-function EvoPlayer:DoWhenLoaded(player, callback)
+function EvoPlayer:DoWhenLoaded(player: Player, callback)
     if not player:GetAttribute("Loaded") then
-        player = player :: Player
-        task.spawn(function()
-            repeat task.wait() until player:GetAttribute("Loaded")
-            callback()
-        end)
+
+        if RunService:IsClient() then
+            table.insert(EvoPlayer.LoadingFunctions, callback)
+        elseif RunService:IsServer() then
+            if not EvoPlayer.LoadingFunctions[player.Name] then
+                EvoPlayer.LoadingFunctions[player.Name] = {}
+            end
+            table.insert(EvoPlayer.LoadingFunctions[player.Name], callback)
+        end
+
         return
     end
     return callback()
@@ -153,7 +281,14 @@ end
 
 --@summary Kill a player without triggering a PlayerDiedEvent.
 function EvoPlayer:ForceKill(player)
-    
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        if player.Character.Humanoid.Health <= 0 then
+            return
+        end
+
+        Events.ForceKillPlayer:InvokeClient(player)
+        player.Character.Humanoid:TakeDamage(10000)
+    end
 end
 
 --#region Handle Player Death @server
@@ -164,14 +299,78 @@ end
 -- EvoPlayer.PlayerDied:Once(callback)
 -- EvoPlayer.PlayerDied:Disconnect()
 
-if RunService:IsServer() then
+if RunService:IsClient() then
+    
+    -- Local Loading Functions
+    local function callLoadingFunctions()
+        for _, v in pairs(EvoPlayer.LoadingFunctions) do
+            v()
+        end
+        EvoPlayer.LoadingFunctions = nil
+    end
+
+    local player = game.Players.LocalPlayer
+    if player:GetAttribute("Loaded") then
+        callLoadingFunctions()
+    else
+        local loadingFunctionsConn
+        loadingFunctionsConn = game.Players.LocalPlayer:GetAttributeChangedSignal("Loaded"):Connect(function()
+            if player:GetAttribute("Loaded") then
+                callLoadingFunctions()
+                loadingFunctionsConn:Disconnect()
+            end
+        end)
+    end
+    
+elseif RunService:IsServer() then
+
+    -- Server loading events function
+    local function callLoadingFunctions(player)
+        if not EvoPlayer.LoadingFunctions[player.Name] then
+            return
+        end
+
+        for _, v in pairs(EvoPlayer.LoadingFunctions[player.Name]) do
+            v()
+        end
+        EvoPlayer.LoadingFunctions[player.Name] = nil
+    end
+
+    -- Damage Animations
+    local function createDamagedAnimation(character)
+        local DamagedAnimation = ReplicatedStorage.Services.WeaponService.ServiceAssets.Animations.PlayerHit:Clone()
+        DamagedAnimation.Name = "DamagedAnimation"
+        DamagedAnimation.Parent = character
+    end
+
+    BotServiceModule.Remotes.BotAddedBindable.Event:Connect(function(character)
+        createDamagedAnimation(character)
+    end)
+
+    Players.PlayerAdded:Connect(function(player)
+
+        -- Handle loading functions if necessary
+        local loadingFunctionConn
+        loadingFunctionConn = player:GetAttributeChangedSignal("Loaded"):Connect(function()
+            if player:GetAttribute("Loaded") then
+                callLoadingFunctions(player)
+                loadingFunctionConn:Disconnect()
+            end
+        end)
+
+        player.CharacterAdded:Connect(function(character)
+            createDamagedAnimation(character)
+        end)
+    end)
 
     --@summary Register a death event received from the client via RemoteEvent -> signal
-    local Signal = require(script:WaitForChild("Signal"))
-    EvoPlayer.PlayerDied = Signal.new()
+    --local Signal = require(script:WaitForChild("Signal"))
+    --EvoPlayer.PlayerDied = Signal.new()
 
+    -- Authenticate Died Event
     DiedEvent.OnServerEvent:Connect(function(killed, killer)
-        EvoPlayer.PlayerDied:Fire(killed, killer)
+        --EvoPlayer.PlayerDied:Fire(killed, killer)
+        Events.PlayerDiedBindable:Fire(killed, killer)
 
         -- fire the event for clients
         for _, v in pairs(Players:GetPlayers()) do
@@ -179,29 +378,6 @@ if RunService:IsServer() then
                 DiedEvent:FireClient(v, killed, killer)
             end
         end
-    end)
-
-    --@summary Create the Damaged Remote Event & Animation when a player's character is added.
-    --@note    Is all of this connection management necessary? Does CharAdded get removed when a player is removed?
-    --         If it is necessary, than there's a good 1GB of memory leakage in this game from just that concept alone
-    Players.PlayerAdded:Connect(function(player)
-        local charadd
-        local plrRemove
-
-        charadd = player.CharacterAdded:Connect(function(character)
-            local DamagedAnimation = ReplicatedStorage.Services.WeaponService.ServiceAssets.Animations.PlayerHit:Clone()
-            DamagedAnimation.Name = "DamagedAnimation"
-            DamagedAnimation.Parent = character
-            local DamagedEvent = Instance.new("RemoteEvent", character)
-            DamagedEvent.Name = "EvoPlayerDamagedEvent"
-        end)
-
-        plrRemove = Players.PlayerRemoving:Connect(function(_rplayer)
-            if player == _rplayer then
-                charadd:Disconnect()
-                plrRemove:Disconnect()
-            end
-        end)
     end)
 end
 

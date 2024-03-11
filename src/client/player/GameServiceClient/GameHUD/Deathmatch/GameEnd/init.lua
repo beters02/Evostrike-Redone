@@ -1,7 +1,7 @@
 --[[ CONFIGURATION ]]
 local FADE_IN_LENGTH = 2 -- maybe send this from gamemode
-local POST_MAP_CAMERA_CF_POS = CFrame.new(Vector3.new(532.239, 275.639, 166.093))
-local POST_MAP_CAMERA_CF_ROT = CFrame.fromOrientation(math.rad(-2.55), math.rad(-90.326), math.rad(0))
+local POST_MAP_CAMERA_CF_POS = CFrame.new(Vector3.new(9.985, -46.283, -1.825))
+local POST_MAP_CAMERA_CF_ROT = CFrame.fromOrientation(math.rad(-3.567), math.rad(-90.613), math.rad(0))
 local POST_MAP_CAMERA_CF = POST_MAP_CAMERA_CF_POS * POST_MAP_CAMERA_CF_ROT
 
 --[[ SERVICES ]]
@@ -40,6 +40,10 @@ function GameEnd:MoveToMap()
     camera.CFrame = POST_MAP_CAMERA_CF
 
     blackTweenOut:Play()
+end
+
+function GameEnd:Finish()
+    camera.CameraType = Enum.CameraType.Custom
 end
 
 return GameEnd

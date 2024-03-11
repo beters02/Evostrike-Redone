@@ -36,7 +36,6 @@ function hud.initialize(player: Player)
     hud.var = Tables.clone(var)
     hud._resetVar = function() hud.var = var end
 
-    
     -- init object animations
     local weaponBar = hud.gui:WaitForChild("WeaponBar")
     hud._weaponLabelSizes = {}
@@ -54,23 +53,6 @@ function hud.initialize(player: Player)
 
         hud._abilityLabelSizes[str] = abilityBar:WaitForChild(str):WaitForChild("IconImage").Size
     end
-
-    hud.playerConnections.FireBullet = script:WaitForChild("FireBullet").Event:Connect(function()
-        bulletFireTween()
-    end)
-
-    hud.playerConnections.EquipGun = script:WaitForChild("EquipGun").Event:Connect(function(slot)
-        equipGunTween(slot)
-    end)
-
-    hud.playerConnections.ReloadGun = script:WaitForChild("ReloadGun").Event:Connect(function(newMag, newTotal)
-        reloadGunTween(newMag, newTotal)
-    end)
-
-    hud.playerConnections.UseAbility = script:WaitForChild("UseAbility").Event:Connect(function(slot)
-        useAbilityTween(slot)
-    end)
-
 
     -- wait for children
     for _, v in pairs({hud.healthfr, hud.weaponfr}) do
@@ -226,7 +208,7 @@ function hud:ConnectPlayer()
 
     -- update (health)
     local upc = hud.pccount
-    table.insert(self.playerConnections, RunService.RenderStepped:Connect(function()
+    self.playerConnections.Update = RunService.RenderStepped:Connect(function()
         if not self.player.Character then
             warn("Framework.cm_hud: There is no character for this player.. disconnecting this connection.")
             self.playerConnections[upc]:Disconnect()
@@ -236,8 +218,23 @@ function hud:ConnectPlayer()
         end
 
         hud.health:update()
-    end))
+    end)
 
+    self.playerConnections.FireBullet = script:WaitForChild("FireBullet").Event:Connect(function()
+        bulletFireTween()
+    end)
+
+    self.playerConnections.EquipGun = script:WaitForChild("EquipGun").Event:Connect(function(slot)
+        equipGunTween(slot)
+    end)
+
+    self.playerConnections.ReloadGun = script:WaitForChild("ReloadGun").Event:Connect(function(newMag, newTotal)
+        reloadGunTween(newMag, newTotal)
+    end)
+
+    self.playerConnections.UseAbility = script:WaitForChild("UseAbility").Event:Connect(function(slot)
+        useAbilityTween(slot)
+    end)
 end
 
 function hud:DisconnectPlayer()

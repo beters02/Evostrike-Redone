@@ -22,8 +22,8 @@ local Deathmatch = {
         TEAM_SIZE = 0,
 
         MAX_ROUNDS = 1,
-        --ROUND_LENGTH = 60 * 5,
-        ROUND_LENGTH = 15,
+        ROUND_LENGTH = 60 * 5,
+        --ROUND_LENGTH = 15,
         ROUND_WAIT_TIME = 3,
         OVERTIME_ENABLED = false,
         OVERTIME_SCORE_TO_WIN = 0,
@@ -32,11 +32,13 @@ local Deathmatch = {
         ROUND_END_CONDITION = "Timer",
         GAME_END_CONDITION = "TimerScore",
         
-        SPECTATE_ENABLED = false,
+        SPECTATE_ENABLED = false, 
         PLAYER_SPAWN_ON_JOIN = true,
         RESPAWN_ENABLED = false,
         RESPAWN_LENGTH = 3,
-        REQUIRE_REQUEST_SPAWN = true,
+        REQUIRE_REQUEST_JOIN = true,
+
+        GAME_RESTART_LENGTH = 5,
 
         START_INVENTORY = {
             ABILITIES = {primary = "Dash", secondary = "LongFlash"},
@@ -64,15 +66,10 @@ function Deathmatch:Start(service)
 end
 
 function Deathmatch:End(service)
-    print("GAMEMODE ENDED")
     -- fade in players screen while we set up post match map
     Gamemode.CallUIFunctionAll(self, service, "GameEnd", "Start")
-    
-    for i, v in pairs(Players:GetPlayers()) do
-        if v.Character then
-            pcall(function() v.Character.Humanoid:TakeDamage(10000) end)
-        end
-    end
+
+    Gamemode.ForceKillAllPlayers(self, service)
     AbilityService:ClearAllPlayerInventories()
     WeaponService:ClearAllPlayerInventories()
 
@@ -81,6 +78,16 @@ function Deathmatch:End(service)
     Gamemode.CallUIFunctionAll(self, service, "GameEnd", "MoveToMap")
 
     print('Gamemode ended!')
+
+    task.wait(self.GameOptions.GAME_RESTART_LENGTH)
+
+    Gamemode.CallUIFunctionAll(self, service, "GameEnd", "Finish")
+
+    task.wait(1)
+
+    if workspace:FindFirstChild("PostGameMap") then
+        workspace.PostGameMap:Destroy()
+    end
 end
 
 function Deathmatch:InitPlayer(service, player)
@@ -98,11 +105,15 @@ end
 
 function Deathmatch:PlayerDied(service, died, killer, killNotRegistered)
     local canRespawnTime = tick() + self.GameOptions.RESPAWN_LENGTH
+    if killNotRegistered then
+        canRespawnTime = 0
+    end
 
     Gamemode.CallUIFunction(self, service, died, "PlayerDied", "Enable", killer, self.GameOptions.RESPAWN_LENGTH)
     listenForPlayerSpawn(self, service, died, canRespawnTime)
     
     Gamemode.CallUIFunction(self, service, died, "TopBar", "UpdateScoreFrame", false, service.PlayerData:Get(died, "deaths"))
+
     if not killNotRegistered then
         Gamemode.CallUIFunction(self, service, killer, "TopBar", "UpdateScoreFrame", service.PlayerData:Get(killer, "kills"))
     end
@@ -142,14 +153,22 @@ function Deathmatch:SpawnPlayer(service, player)
     task.wait()
 
     -- grab point, set health, add inventory
-    local cf = getPlayerSpawnPoint(service)
+    
     local char = player.Character or player.CharacterAdded:Wait()
+    self:InitCharacter(service, player, char)
+
+    print('Player spawned!')
+end
+
+function Deathmatch:InitCharacter(service, player, char)
+    local cf = getPlayerSpawnPoint(service)
     char:WaitForChild("HumanoidRootPart").CFrame = cf + Vector3.new(0, 2, 0)
     EvoPlayer:SetSpawnInvincibility(char, true, service.GameOptions.SPAWN_INVINCIBILITY)
     Gamemode.SetPlayerHealth(self, service, char)
-    Gamemode.AddPlayerInventory(self, service, player)
 
-    print('Player spawned!')
+    if player then
+        Gamemode.AddPlayerInventory(self, service, player)
+    end
 end
 
 function Deathmatch:PlayerJoinedDuringRound(service, player)
@@ -191,19 +210,28 @@ end
 function listenForPlayerSpawn(self, service, player, canRespawnTime)
     -- wait for player to click spawn button.
     local spwnConnStr = player.Name .. "_Spawn"
+    local waiting = false
+
     service.Connections[spwnConnStr] = GameServiceRemotes.PlayerSpawn.OnServerEvent:Connect(function(spawnPlr)
         if spawnPlr == player then
 
-            if canRespawnTime and tick() < canRespawnTime then
+            if waiting then
                 return
             end
 
+            if canRespawnTime and tick() < canRespawnTime then
+                waiting = true
+                repeat task.wait() until tick() >= canRespawnTime
+            end
+
+            print('Spawning Player...')
             service.PlayerData:Set(player, "alive", true)
             self:SpawnPlayer(service, player)
             service.Connections[player.Name .. "_Spawn"]:Disconnect()
             service.Connections[player.Name .. "_Spawn"] = nil
         end
     end)
+
 end
 
 --[[ POST MATCH SCREEN ]]

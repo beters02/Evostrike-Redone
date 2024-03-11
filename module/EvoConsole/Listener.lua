@@ -3,6 +3,13 @@ if RunService:IsClient() then return {} end
 
 local StoredMapIDs = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("MapIDs"))
 local TeleportService = game:GetService("TeleportService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local GameService = require(Framework.Service.GameService)
+local Permissions = require(game:GetService("ServerStorage"):WaitForChild("Stored"):WaitForChild("AdminIDs"))
+
+local AdminCommands = require(script.Parent.Commands.Admin)
+local Events = script.Parent.Events
 
 local listener = {
     connections = false
@@ -18,6 +25,13 @@ end
 function listener:_connectListener()
     self.Bridge.OnServerInvoke = function(...)
         return self:BridgeInvoke(...)
+    end
+    Events.VerifyCommandEvent.OnServerInvoke = function(player, command, ...)
+        -- check if is cheating command, verify is admin or cheats enabled
+        if AdminCommands[command] and (not GameService:IsCheatsEnabled() and not Permissions:IsHigherPermission(player)) then
+            return false
+        end
+        return true
     end
 end
 

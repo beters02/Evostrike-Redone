@@ -8,8 +8,6 @@ PlayerLoadedEvent.OnServerEvent:Connect(function(player)
     player:SetAttribute("Loaded", true)
 end)
 
-
-
 Players.PlayerAdded:Connect(function(player)
     player:SetAttribute("Loaded", false)
     

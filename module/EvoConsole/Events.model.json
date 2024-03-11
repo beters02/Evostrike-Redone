@@ -8,6 +8,10 @@
       {
         "Name": "CommandFunction",
         "ClassName": "RemoteFunction"
+      },
+      {
+        "Name": "VerifyCommandEvent",
+        "ClassName": "RemoteFunction"
       }
     ]
   }

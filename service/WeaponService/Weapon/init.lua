@@ -30,215 +30,242 @@ local weaponWallbangInformation = require(ReplicatedStorage.Services.WeaponServi
 
 local SharedWeaponFunctions = require(Framework.Module.shared.weapon.fc_sharedWeaponFunctions)
 
-function Weapon.new(weapon: string, tool: Tool, recoilScript)
-local weaponModule = require(ReplicatedStorage.Services.WeaponService):GetWeaponModule(weapon)
-local self = Tables.clone(require(weaponModule))
-self.defCfg = cfg
-self.Name = weapon
-self.Tool = tool
-self.Options = self.Configuration
-self.Slot = self.Configuration.inventorySlot
-self.Connections = {}
-self.Variables = {equipped = false, equipping = false, firing = false, reloading = false, inspecting = false, mousedown = false, fireScheduled = false, fireScheduleCancelThread = false,
-fireDebounce = false, currentBullet = 1, accumulator = 0, fireLoop = false, nextFireTime = tick(), lastFireTime = tick(), scoping = false, rescope = false, scopeTweens = false, scopedWhenShot = false}
-if self.Options.ammo then
-    self.Variables.ammo = {magazine = self.Options.ammo.magazine, total = self.Options.ammo.total}
-end
-self.ClientModel = tool:WaitForChild("ClientModelObject").Value
-self.ServerModel = tool:WaitForChild("ServerModel")
-self.Viewmodel = workspace.CurrentCamera:WaitForChild("viewModel")
-self.Player = game:GetService("Players").LocalPlayer
-self.Character = self.Player.Character
-self.Humanoid = self.Character:WaitForChild("Humanoid")
-self.Module = weaponModule
-self.MovementCfg = ReplicatedStorage:WaitForChild("Movement").get:InvokeServer()
-self.RemoteFunction = self.Tool.WeaponRemoteFunction
-self.ServerEquipEvent = self.Tool.WeaponServerEquippedEvent
-self.RemoteEvent = self.Tool.WeaponRemoteEvent
-self.CameraObject = require(ReplicatedStorage.Services.WeaponService.WeaponCamera).new(weapon)
-self.Variables.CrosshairModule = require(self.Character:WaitForChild("CrosshairScript"):WaitForChild("m_crosshair"))
-self.Variables.cameraFireThread = false
-
-if self.Options.ammo then
-    local cacheBullets = self.Options.ammo.magazine + self.Options.ammo.total
-    self.Variables.MainWeaponPartCache = WeaponPartCache.new(cacheBullets, cacheBullets)
-end
-
-if self.init then
-    self:init()
-end
-
-if string.lower(self.Name) == "knife" then
-    self.Assets = self.Module.Assets[self.ClientModel:GetAttribute("SkinModel")]
-else
-    self.Assets = self.Module.Assets
-end
-
--- init weapon controller
-local controllermodule = require(self.Character:WaitForChild("WeaponController").Interface)
-local controller = controllermodule.currentController
-if not controller then
-    repeat controller = controllermodule.currentController until controller
-end
-controller = controller :: Types.WeaponController
-self.Controller = controller
-
--- init animations
-self.Animations = {client = {}, server = {}}
-for _, client in pairs(self.Assets.Animations:GetChildren()) do
-    -- init server animations
-    if client.Name == "Server" then
-        for _, server in pairs(client:GetChildren()) do
-            self.Animations.server[server.Name] = self.Humanoid.Animator:LoadAnimation(server)
+-- If ... = true then return. Prints results if returns true
+local function debugCheckVar(varTab: table)
+    local result = false
+    for i, v in pairs(varTab) do
+        if v then
+            result = true
+            print(i)
         end
-        continue
-    elseif client.ClassName ~= "Animation" then continue end
-    self.Animations.client[client.Name] = self.Viewmodel.AnimationController:LoadAnimation(client)
-end
-
--- init hud
-self.Variables.weaponBar = self.Player.PlayerGui:WaitForChild("HUD").WeaponBar
-self.Variables.weaponFrame = self.Variables.weaponBar:WaitForChild(Strings.firstToUpper(self.Options.inventorySlot))
-self.Variables.infoFrame = self.Player.PlayerGui.HUD.WeaponFrame
-
-if self.Options.scope then
-    Weapon.ScopeInit(self)
-end
-
--- init icons
-self.Variables.weaponIconEquipped = self.Variables.weaponFrame:WaitForChild("EquippedIconLabel")
-self.Variables.weaponIconEquipped.Image = self.Assets.Images.iconEquipped.Image
-
--- init weapon parts as table (equip optimization)
-self.WeaponParts = {Client = {}, Server = {}}
-for _, part in pairs(self.ClientModel:GetDescendants()) do
-    if part.Name == "WeaponHandle" or part.Name == "WeaponTip" then
-        continue
     end
-    if part:IsA("MeshPart") or part:IsA("Part") or part:IsA("Texture") then
-        table.insert(self.WeaponParts.Client, part)
-    end
-end
-for _, part in pairs(self.ServerModel:GetDescendants()) do
-    if part.Name == "WeaponHandle" or part.Name == "WeaponTip" then
-        continue
-    end
-    if part:IsA("MeshPart") or part:IsA("Part") or part:IsA("Texture") then
-        table.insert(self.WeaponParts.Server, part)
-    end
+    return result
 end
 
--- key
-self.Variables.weaponBar.SideBar[self.Options.inventorySlot .. "Key"].Text = Strings.convertFullNumberStringToNumberString(self.Controller.Keybinds[self.Slot .. "Weapon"])
+function Weapon.new(weapon: string, tool: Tool, recoilScript)
+    local weaponModule = require(ReplicatedStorage.Services.WeaponService):GetWeaponModule(weapon)
+    local self = Tables.clone(require(weaponModule))
+    self.defCfg = cfg
+    self.Name = weapon
+    self.Tool = tool
+    self.Options = self.Configuration
+    self.Slot = self.Configuration.inventorySlot
+    self.Connections = {}
+    self.Variables = {equipped = false, equipping = false, firing = false, reloading = false, inspecting = false, mousedown = false, fireScheduled = false, fireScheduleCancelThread = false,
+    fireDebounce = false, currentBullet = 1, accumulator = 0, fireLoop = false, nextFireTime = tick(), lastFireTime = tick(), scoping = false, rescope = false, scopeTweens = false, scopedWhenShot = false}
+    if self.Options.ammo then
+        self.Variables.ammo = {magazine = self.Options.ammo.magazine, total = self.Options.ammo.total}
+    end
+    self.ClientModel = tool:WaitForChild("ClientModelObject").Value
+    self.ServerModel = tool:WaitForChild("ServerModel")
+    self.Viewmodel = workspace.CurrentCamera:WaitForChild("viewModel")
+    self.Player = game:GetService("Players").LocalPlayer
+    self.Character = self.Player.Character
+    self.Humanoid = self.Character:WaitForChild("Humanoid")
+    self.Module = weaponModule
+    self.MovementCfg = ReplicatedStorage:WaitForChild("Movement").get:InvokeServer()
+    self.RemoteFunction = self.Tool.WeaponRemoteFunction
+    self.ServerEquipEvent = self.Tool:WaitForChild("WeaponServerEquippedEvent")
+    self.ServerReloadEvent = self.Tool:WaitForChild("WeaponServerReloadedEvent")
+    self.RemoteEvent = self.Tool.WeaponRemoteEvent
+    self.CameraObject = require(ReplicatedStorage.Services.WeaponService.WeaponCamera).new(weapon)
+    self.Variables.CrosshairModule = require(self.Character:WaitForChild("CrosshairScript"):WaitForChild("m_crosshair"))
+    self.Variables.cameraFireThread = false
 
--- connect key changed bind for hud elements
-self.Connections["KeybindChanged"] = PlayerData2:PathValueChanged("options.keybinds." .. self.Slot .. "Weapon", function(new)
-    self.Variables.weaponBar.SideBar[self.Options.inventorySlot .. "Key"].Text = Strings.convertFullNumberStringToNumberString(new)
-end)
+    if self.Options.ammo then
+        local cacheBullets = self.Options.ammo.magazine + self.Options.ammo.total
+        self.Variables.MainWeaponPartCache = WeaponPartCache.new(cacheBullets, cacheBullets)
+    end
 
--- enable
-self.Variables.weaponFrame.Visible = true
+    if self.init then
+        self:init()
+    end
 
--- connect equip & unequip
-self.Connections.Equip = self.Tool.Equipped:Connect(function()
-    self:Equip()
-end)
+    if string.lower(self.Name) == "knife" then
+        self.Assets = self.Module.Assets[self.ClientModel:GetAttribute("SkinModel")]
+    else
+        self.Assets = self.Module.Assets
+    end
 
-self.Connections.Unequip = self.Tool.Unequipped:Connect(function()
-    self.Controller:UnequipWeapon(self.Slot)
-end)
+    -- init weapon controller
+    local controllermodule = require(self.Character:WaitForChild("WeaponController").Interface)
+    local controller = controllermodule.currentController
+    if not controller then
+        repeat controller = controllermodule.currentController until controller
+    end
+    controller = controller :: Types.WeaponController
+    self.Controller = controller
 
-self = setmetatable(self, Weapon)
-self:_SetServerModelTransparency(1)
-self:SetIconEquipped(false)
+    -- init animations
+    self.Animations = {client = {}, server = {}}
+    for _, client in pairs(self.Assets.Animations:GetChildren()) do
+        -- init server animations
+        if client.Name == "Server" then
+            for _, server in pairs(client:GetChildren()) do
+                self.Animations.server[server.Name] = self.Humanoid.Animator:LoadAnimation(server)
+            end
+            continue
+        elseif client.ClassName ~= "Animation" then continue end
+        self.Animations.client[client.Name] = self.Viewmodel.AnimationController:LoadAnimation(client)
+    end
 
-if self.Name ~= "knife" then
-    self.Recoil = require(recoilScript)
-    self.Recoil.init(self)
-end
+    -- init hud
+    self.Variables.weaponBar = self.Player.PlayerGui:WaitForChild("HUD").WeaponBar
+    self.Variables.weaponFrame = self.Variables.weaponBar:WaitForChild(Strings.firstToUpper(self.Options.inventorySlot))
+    self.Variables.infoFrame = self.Player.PlayerGui.HUD.WeaponFrame
 
-return self
+    if self.Options.scope then
+        Weapon.ScopeInit(self)
+    end
+
+    -- init icons
+    self.Variables.weaponIconEquipped = self.Variables.weaponFrame:WaitForChild("EquippedIconLabel")
+    self.Variables.weaponIconEquipped.Image = self.Assets.Images.iconEquipped.Image
+
+    -- init weapon parts as table (equip optimization)
+    self.WeaponParts = {Client = {}, Server = {}}
+    for _, part in pairs(self.ClientModel:GetDescendants()) do
+        if part.Name == "WeaponHandle" or part.Name == "WeaponTip" then
+            continue
+        end
+        if part:IsA("MeshPart") or part:IsA("Part") or part:IsA("Texture") then
+            table.insert(self.WeaponParts.Client, part)
+        end
+    end
+    for _, part in pairs(self.ServerModel:GetDescendants()) do
+        if part.Name == "WeaponHandle" or part.Name == "WeaponTip" then
+            continue
+        end
+        if part:IsA("MeshPart") or part:IsA("Part") or part:IsA("Texture") then
+            table.insert(self.WeaponParts.Server, part)
+        end
+    end
+
+    -- key
+    self.Variables.weaponBar.SideBar[self.Options.inventorySlot .. "Key"].Text = Strings.convertFullNumberStringToNumberString(self.Controller.Keybinds[self.Slot .. "Weapon"])
+
+    -- connect key changed bind for hud elements
+    self.Connections["KeybindChanged"] = PlayerData2:PathValueChanged("options.keybinds." .. self.Slot .. "Weapon", function(new)
+        self.Variables.weaponBar.SideBar[self.Options.inventorySlot .. "Key"].Text = Strings.convertFullNumberStringToNumberString(new)
+    end)
+
+    -- enable
+    self.Variables.weaponFrame.Visible = true
+
+    -- connect equip & unequip
+    self.Connections.Equip = self.Tool.Equipped:Connect(function()
+        self:Equip()
+    end)
+
+    self.Connections.Unequip = self.Tool.Unequipped:Connect(function()
+        self.Controller:UnequipWeapon(self.Slot)
+    end)
+
+    self.ServerEquipEvent.OnClientEvent:Connect(function(success)
+        if success and self.Variables.equipping then
+            self.Variables.equipped = true
+            self.Variables.equipping = false
+            PlayerActionsState:set("weaponEquipping", false)
+        end
+    end)
+
+    self.ServerReloadEvent.OnClientEvent:Connect(function(mag, total)
+        self.Variables.ammo.magazine = mag
+        self.Variables.ammo.total = total
+        self.Player.PlayerScripts.HUD:WaitForChild("ReloadGun"):Fire(mag, total)
+        self.Variables.reloading = false
+        PlayerActionsState:set("reloading", false)
+    end)
+
+    self = setmetatable(self, Weapon)
+    self:_SetServerModelTransparency(1)
+    self:SetIconEquipped(false)
+
+    if self.Name ~= "knife" then
+        self.Recoil = require(recoilScript)
+        self.Recoil.init(self)
+    end
+
+    return self
 end
 
 function Weapon:Equip()
 
-if self.Tool:GetAttribute("IsForceEquip") then
-    self.Tool:SetAttribute("IsForceEquip", false)
-else
-    if self.Player:GetAttribute("Typing") then return end
-    if self.Player.PlayerGui.MainMenuGui.Enabled then return end
-    if UIState:hasOpenUI() then return end
-end
-
-self:SetIconEquipped(true)
-
-task.spawn(function()
-    if string.lower(self.Name) == "knife" then
-        self:PlaySound("Equip")
-        self:SetInfoFrame("knife")
+    if self.Tool:GetAttribute("IsForceEquip") then
+        self.Tool:SetAttribute("IsForceEquip", false)
     else
-        self:SetInfoFrame("gun")
+        if self.Player:GetAttribute("Typing") then return end
+        if self.Player.PlayerGui.MainMenuGui.Enabled then return end
+        if UIState:hasOpenUI() then return end
     end
-end)
 
--- var
-self.Variables.forcestop = false
-self.Variables.equipping = true
-PlayerActionsState:set("weaponEquipping", true)
-PlayerActionsState:set("weaponEquipped", self.Name)
-PlayerActionsState:set("currentEquipPenalty", self.Options.movement.penalty)
+    self.lastEquipTime = tick()
 
--- process equip animation and sounds next frame ( to let unequip run )
-self:_ProcessEquipAnimation()
+    self:SetIconEquipped(true)
 
--- move model and set motors
-self.ClientModel.Parent = self.Viewmodel.Equipped
-local gripParent = self.Viewmodel:FindFirstChild("RightArm") or self.Viewmodel.RightHand
-gripParent.RightGrip.Part1 = self.ClientModel.GunComponents.WeaponHandle
+    task.spawn(function()
+        if string.lower(self.Name) == "knife" then
+            self:PlaySound("Equip")
+            self:SetInfoFrame("knife")
+        else
+            self:SetInfoFrame("gun")
+        end
+    end)
 
--- run server equip timer
-self.ServerEquipEvent.OnClientEvent:Once(function(success)
-    if success and self.Variables.equipping then
-        self.Variables.equipped = true
-        self.Variables.equipping = false
-        PlayerActionsState:set("weaponEquipping", false)
-    end
-end)
+    -- var
+    self.Variables.forcestop = false
+    self.Variables.equipping = true
+    PlayerActionsState:set("weaponEquipping", true)
+    PlayerActionsState:set("weaponEquipped", self.Name)
+    PlayerActionsState:set("currentEquipPenalty", self.Options.movement.penalty)
 
--- set movement speed
-self.Controller:HandleHoldMovementPenalty(self.Slot, true)
+    -- process equip animation and sounds next frame ( to let unequip run )
+    self:_ProcessEquipAnimation()
+
+    -- move model and set motors
+    self.ClientModel.Parent = self.Viewmodel.Equipped
+    local gripParent = self.Viewmodel:FindFirstChild("RightArm") or self.Viewmodel.RightHand
+    gripParent.RightGrip.Part1 = self.ClientModel.GunComponents.WeaponHandle
+
+    -- run server equip timer
+
+    -- set movement speed
+    self.Controller:HandleHoldMovementPenalty(self.Slot, true)
 end
 
 function Weapon:Unequip()
-if not self.Character or self.Humanoid.Health <= 0 then return end
+    if not self.Character or self.Humanoid.Health <= 0 then return end
 
-self:MouseUp(true)
-self:SetIconEquipped(false)
+    self:MouseUp(true)
+    self:SetIconEquipped(false)
 
-if self.Options.scope then
-    if self.Variables.scoping then
-        self:ScopeOut()
+    if self.Options.scope then
+        if self.Variables.scoping then
+            self:ScopeOut()
+        end
+        self.Variables.scoping = false
+        self.Variables.rescope = false
+        self.Variables.scopedWhenShot = false
     end
-    self.Variables.scoping = false
-    self.Variables.rescope = false
-    self.Variables.scopedWhenShot = false
-end
 
-self.ClientModel.Parent = game:GetService("ReplicatedStorage").temp
-self.Variables.equipped = false
-self.Variables.firing = false
-self.Variables.reloading = false
-self.Variables.inspecting = false
-PlayerActionsState:set("weaponEquipped", false)
-PlayerActionsState:set("weaponEquipping", false)
-PlayerActionsState:set("reloading", false)
-PlayerActionsState:set("shooting", false)
-PlayerActionsState:set("currentEquipPenalty", 0)
+    self.ClientModel.Parent = game:GetService("ReplicatedStorage").temp
+    self.Variables.equipped = false
+    self.Variables.equipping = false
+    self.Variables.firing = false
+    self.Variables.reloading = false
+    self.Variables.inspecting = false
+    self.Variables.didFire = false
+    self.Variables.mousedown = false
+    PlayerActionsState:set("weaponEquipped", false)
+    PlayerActionsState:set("weaponEquipping", false)
+    PlayerActionsState:set("reloading", false)
+    PlayerActionsState:set("shooting", false)
+    PlayerActionsState:set("currentEquipPenalty", 0)
 
-self.Variables.equipping = false
+    self.Variables.equipping = false
 
-self:_StopAllActionAnimations()
-self.CameraObject:StopCurrentRecoilThread()
+    self:_StopAllActionAnimations()
+    self.CameraObject:StopCurrentRecoilThread()
 end
 
 function Weapon:Remove()
@@ -252,68 +279,82 @@ self = nil
 end
 
 function Weapon:PrimaryFire(moveSpeed)
-local fireTick = tick()
+    local fireTick = tick()
 
-if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get("grenadeThrowing") then return end
-if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
+    local checks = {
+        notCharacter = not self.Character,
+        healthZero = self.Humanoid.Health <= 0,
+        throwingGrenade = PlayerActionsState:get("grenadeThrowing"),
+        notEquipped = not self.Variables.equipped,
+        reloading = self.Variables.reloading,
+        noAmmo = self.Variables.ammo.magazine <= 0,
+        fireDebounce = self.Variables.fireDebounce
+    }
 
-if not self.Variables.recoilReset then
-    self.Variables.recoilReset = self.Options.recoilResetMin
-end
+    if debugCheckVar(checks) then
+        return
+    end
 
--- set var
-PlayerActionsState:set("shooting", true)
+    --if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get("grenadeThrowing") then return end
+    --if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
 
-self.Variables.firing = true
-self.Variables.ammo.magazine -= 1
-self.Variables.currentBullet = (fireTick - self.Variables.lastFireTime >= (math.min(self._camReset, self.Options.recoilResetMax))) and 1 or self.Variables.currentBullet + 1
-self.Variables.lastFireTime = fireTick
-self.CameraObject.weaponVar.currentBullet = self.Variables.currentBullet
+    if not self.Variables.recoilReset then
+        self.Variables.recoilReset = self.Options.recoilResetMin
+    end
 
-task.spawn(function()
-     -- Unscope + rescope if necessary
-    if self.Options.scope then
-        if self.Variables.scoping then
-            self.Variables.rescope = true
-            self.Variables.scopedWhenShot = true
-            self:ScopeOut()
-            task.delay(self.Options.fireRate - 0.03, function()
-                if self.Variables.rescope then
-                    self:ScopeIn()
-                end
-            end)
-        else
-            self.Variables.rescope = false
-            self.Variables.scopedWhenShot = false
+    -- set var
+    PlayerActionsState:set("shooting", true)
+
+    self.Variables.firing = true
+    self.Variables.ammo.magazine -= 1
+    self.Variables.currentBullet = (fireTick - self.Variables.lastFireTime >= (math.min(self._camReset, self.Options.recoilResetMax))) and 1 or self.Variables.currentBullet + 1
+    self.Variables.lastFireTime = fireTick
+    self.CameraObject.weaponVar.currentBullet = self.Variables.currentBullet
+
+    task.spawn(function()
+        -- Unscope + rescope if necessary
+        if self.Options.scope then
+            if self.Variables.scoping then
+                self.Variables.rescope = true
+                self.Variables.scopedWhenShot = true
+                self:ScopeOut()
+                task.delay(self.Options.fireRate - 0.03, function()
+                    if self.Variables.rescope then
+                        self:ScopeIn()
+                    end
+                end)
+            else
+                self.Variables.rescope = false
+                self.Variables.scopedWhenShot = false
+            end
         end
-    end
 
-    -- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
-    self:RegisterRecoils(moveSpeed)
-end)
+        -- Create Visual Bullet, Register Camera & Vector Recoil, Register Accuracy & fire to server
+        self:RegisterRecoils(moveSpeed)
+    end)
 
--- play animations
-self:PlayAnimation("client", "Fire")
-self:PlayAnimation("server", "Fire")
+    -- play animations
+    self:PlayAnimation("client", "Fire")
+    self:PlayAnimation("server", "Fire")
 
--- Play Emitters and Sounds
-self:PlayReplicatedSound("Fire", true)
-SharedWeaponFunctions.ReplicateFireEmitters(self.Tool.ServerModel, self.ClientModel)
+    -- Play Emitters and Sounds
+    self:PlayReplicatedSound("Fire", true)
+    SharedWeaponFunctions.ReplicateFireEmitters(self.Tool.ServerModel, self.ClientModel)
 
--- handle client fire rate & auto reload
-local nextFire = fireTick + self.Options.fireRate
-task.spawn(function()
-    repeat task.wait() until tick() >= nextFire
-    self.Variables.firing = false
-    PlayerActionsState:set("shooting", false)
-    if self.Variables.ammo.magazine <= 0 and self.Variables.equipped then
-        self:Reload()
-    end
-end)
+    -- handle client fire rate & auto reload
+    local nextFire = fireTick + self.Options.fireRate
+    task.spawn(function()
+        repeat task.wait() until tick() >= nextFire
+        self.Variables.firing = false
+        PlayerActionsState:set("shooting", false)
+        if self.Variables.ammo.magazine <= 0 and self.Variables.equipped then
+            self:Reload()
+        end
+    end)
 
--- update hud
-self.Variables.infoFrame.CurrentMagLabel.Text = tostring(self.Variables.ammo.magazine)
-self.Player.PlayerScripts.HUD.FireBullet:Fire()
+    -- update hud
+    self.Variables.infoFrame.CurrentMagLabel.Text = tostring(self.Variables.ammo.magazine)
+    self.Player.PlayerScripts.HUD.FireBullet:Fire()
 end
 
 function Weapon:SecondaryFire()
@@ -331,59 +372,51 @@ end
 end
 
 function Weapon:Reload()
-if self.Variables.ammo.total <= 0 or self.Variables.ammo.magazine == self.Options.ammo.magazine then return end
-if self.Variables.firing or self.Variables.reloading or not self.Variables.equipped then return end
-if self.Variables.scoping and self.Options.scope then
-    if not self.Variables.rescope then
-        self.Variables.rescope = true
-        task.delay(self.Options.reloadLength - 0.03, function()
-            if self.Variables.rescope then
-                self:ScopeIn()
-            end
-        end)
+    if self.Variables.ammo.total <= 0 or self.Variables.ammo.magazine == self.Options.ammo.magazine then return end
+    if self.Variables.firing or self.Variables.reloading or not self.Variables.equipped then return end
+    if self.Variables.scoping and self.Options.scope then
+        if not self.Variables.rescope then
+            self.Variables.rescope = true
+            task.delay(self.Options.reloadLength - 0.03, function()
+                if self.Variables.rescope then
+                    self:ScopeIn()
+                end
+            end)
+        end
+        self:ScopeOut()
     end
-    self:ScopeOut()
-end
 
-PlayerActionsState:set("reloading", true)
-self.Variables.reloading = true
+    PlayerActionsState:set("reloading", true)
+    self.Variables.reloading = true
 
-self:PlayAnimation("client", "Reload", true)
+    self:PlayAnimation("client", "Reload", true)
 
-local mag, total = self.RemoteFunction:InvokeServer("Reload")
-self.Variables.ammo.magazine = mag
-self.Variables.ammo.total = total
-
--- update hud
-self.Player.PlayerScripts.HUD:WaitForChild("ReloadGun"):Fire(mag, total)
-
-self.Variables.reloading = false
-PlayerActionsState:set("reloading", false)
+    self.RemoteEvent:FireServer("Reload")
 end
 
 function Weapon:Inspect()
-if not self.Animations.client.Inspect then return end
-if not self.Variables.equipped or self.Variables.equipping then return end
+    if not self.Animations.client.Inspect then return end
+    if not self.Variables.equipped or self.Variables.equipping then return end
 
--- force start the hold animation if we are still pulling the weapon out
-if not self.Animations.client.Hold.IsPlaying then
-    self.Animations.client.Hold:Play()
-end
-
--- time skip or play
-if self.Animations.client.Inspect.IsPlaying then
-    local skinModel = self.ClientModel:GetAttribute("SkinModel")
-    if skinModel then
-        if string.match(skinModel, "default") then skinModel = "default" end
-        self.Animations.client.Inspect.TimePosition = self.Options.inspectAnimationTimeSkip[string.lower(skinModel)]
-    else
-        self.Animations.client.Inspect.TimePosition = (self.Options.inspectAnimationTimeSkip and (self.Options.inspectAnimationTimeSkip.default or self.Options.inspectAnimationTimeSkip) or 0)
+    -- force start the hold animation if we are still pulling the weapon out
+    if not self.Animations.client.Hold.IsPlaying then
+        self.Animations.client.Hold:Play()
     end
 
-    return
-end
+    -- time skip or play
+    if self.Animations.client.Inspect.IsPlaying then
+        local skinModel = self.ClientModel:GetAttribute("SkinModel")
+        if skinModel then
+            if string.match(skinModel, "default") then skinModel = "default" end
+            self.Animations.client.Inspect.TimePosition = self.Options.inspectAnimationTimeSkip[string.lower(skinModel)]
+        else
+            self.Animations.client.Inspect.TimePosition = (self.Options.inspectAnimationTimeSkip and (self.Options.inspectAnimationTimeSkip.default or self.Options.inspectAnimationTimeSkip) or 0)
+        end
 
-self:PlayAnimation("client", "Inspect", true)
+        return
+    end
+
+    self:PlayAnimation("client", "Inspect", true)
 end
 
 --
@@ -544,6 +577,16 @@ for i, v in pairs(self.Connections) do
 end
 self.Connections.ActionsDown = nil
 self.Connections.ActionsUp = nil
+end
+
+function Weapon:ConnectUpdate()
+    self.Connections.Update = RunService.RenderStepped:Connect(function(dt)
+        self:Update()
+    end)
+end
+
+function Weapon:DisconnectUpdate()
+    
 end
 
 function Weapon:MouseDown(isSecondary: boolean?)
@@ -816,33 +859,33 @@ end
 
 function Weapon:RegisterRecoils(moveSpeed)
 
-local vecRecoil = self.Recoil.Fire(self, self.Variables.currentBullet)
-local bullet = self.Variables.currentBullet
+    local vecRecoil = self.Recoil.Fire(self, self.Variables.currentBullet)
+    local bullet = self.Variables.currentBullet
 
--- Vector Recoil
-local m = self.Player:GetMouse()
-local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
-self.Variables.currentVectorModifier = self._vecModifier
-self.Variables.recoilReset = self._camReset
+    -- Vector Recoil
+    local m = self.Player:GetMouse()
+    local mray = workspace.CurrentCamera:ScreenPointToRay(m.X, m.Y)
+    self.Variables.currentVectorModifier = self._vecModifier
+    self.Variables.recoilReset = self._camReset
 
--- get total accuracy and recoil vec direction
-local direction = self:CalculateRecoils(mray, vecRecoil, bullet, moveSpeed)
+    -- get total accuracy and recoil vec direction
+    local direction = self:CalculateRecoils(mray, vecRecoil, bullet, moveSpeed)
 
--- check to see if we're wallbanging
-local wallDmgMult, hitchar, result, isBangable
-local normParams = SharedWeaponFunctions.getFireCastParams(self.Player, workspace.CurrentCamera)
-wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
-isBangable = wallDmgMult and true or false
+    -- check to see if we're wallbanging
+    local wallDmgMult, hitchar, result, isBangable
+    local normParams = SharedWeaponFunctions.getFireCastParams(self.Player, workspace.CurrentCamera)
+    wallDmgMult, result, hitchar = self:_ShootWallRayRecurse(mray.Origin, direction * 250, normParams, nil, 1)
+    isBangable = wallDmgMult and true or false
 
-if result then
-    self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
+    if result then
+        self.RemoteEvent:FireServer("Fire", self.Variables.currentBullet, false, SharedWeaponFunctions.createRayInformation(mray, result), workspace:GetServerTimeNow(), wallDmgMult)
 
-    --Shared.RegisterShot(resultData)
-    SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, isBangable, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
-    return true
-end
+        --Shared.RegisterShot(resultData)
+        SharedWeaponFunctions.RegisterShot(self.Player, self.Options, result, mray.Origin, nil, nil, hitchar, wallDmgMult or 1, isBangable, self.Tool, self.ClientModel, false, self.Variables.MainWeaponPartCache)
+        return true
+    end
 
-return false
+    return false
 end
 
 function Weapon:CalculateRecoils(mray, recoilVector3, bullet, moveSpeed)

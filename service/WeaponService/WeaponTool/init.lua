@@ -87,6 +87,9 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	local weaponServerEquippedEvent = Instance.new("RemoteEvent")
 	weaponServerEquippedEvent.Name = "WeaponServerEquippedEvent"
 	weaponServerEquippedEvent.Parent = tool
+	local weaponServerReloadedEvent = Instance.new("RemoteEvent")
+	weaponServerReloadedEvent.Name = "WeaponServerReloadedEvent"
+	weaponServerReloadedEvent.Parent = tool
 	
 	local PlayerObject = Instance.new("ObjectValue")
 	PlayerObject.Name = "PlayerObject"

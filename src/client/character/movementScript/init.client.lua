@@ -140,9 +140,9 @@ Movement.Sounds = {
 	landWood = Movement.collider.Land_Wood
 }
 
-local localRunVolume = 0.5
+local localRunVolume = 0.2
 local runv = localRunVolume
-local serverRunVolume = 2
+local serverRunVolume = 2.2
 
 Movement.Sounds.runDefault.Volume = runv
 
@@ -635,6 +635,17 @@ function getMoveSum()
 end
 
 function Movement.ProcessMovement()
+
+	if hum.Health <= 0 then
+		if Movement.Sounds.runDefault.isPlaying then
+			Movement.Sounds.runDefault:Stop()
+		end
+		if Movement.Sounds.landDefault.isPlaying then
+			Movement.Sounds.landDefault:Stop()
+		end
+		--if runsnd.IsPlaying then SoundModule.StopReplicated(runsnd) end
+	end
+
 	cameraYaw = Movement:GetYaw()
 	cameraLook = cameraYaw.lookVector
 	Movement.cameraYaw = cameraYaw

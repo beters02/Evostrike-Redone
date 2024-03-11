@@ -27,10 +27,11 @@ export type GamemodeOptions = {
     OVERTIME_ENABLED: boolean,
     OVERTIME_SCORE_TO_WIN: number,
     SCORE_TO_WIN: number,
+    GAME_RESTART_LENGTH: number,
 
     SPECTATE_ENABLED: boolean,
     PLAYER_SPAWN_ON_JOIN: boolean,
-    REQUIRE_REQUEST_SPAWN: boolean,
+    REQUIRE_REQUEST_JOIN: boolean,
     RESPAWN_ENABLED: boolean,
     RESPAWN_LENGTH: number,
 

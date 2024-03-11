@@ -249,6 +249,4 @@ Commands.addbot = {
 	end
 }
 
-
-
 return Commands

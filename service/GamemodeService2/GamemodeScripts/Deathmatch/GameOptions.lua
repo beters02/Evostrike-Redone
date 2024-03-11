@@ -63,7 +63,6 @@ function GameOptions.new(overrideOptions: table?)
         },
         starting_camera_cframe_map = {
             default = CFrame.new(Vector3.new(543.643, 302.107, -37.932)) * CFrame.Angles(math.rad(-25.593), math.rad(149.885), math.rad(-0)),
-
             warehouse = CFrame.new(Vector3.new(543.643, 302.107, -37.932)) * CFrame.fromOrientation(-25.593, math.rad(149.885), -0)
         }
     }

@@ -30,6 +30,8 @@ local Tables = require(Framework.Module.lib.fc_tables)
 --[[ CONFIGURATION ]]
 local ForceEquipDelay = 0.9
 local EquipInputDebounce = 0.04
+local TurnWeaponVisibleLength = 0.1
+
 local NeededKeybindKeys = {"primaryWeapon", "secondaryWeapon", "ternaryWeapon", "bombWeapon", "inspect", "drop", "equipLastEquippedWeapon", "aimToggle"}
 local util_vmParts = {"LeftLowerArm", "LeftUpperArm", "RightUpperArm", "RightLowerArm"}
 
@@ -61,6 +63,7 @@ function WeaponController.new()
     self.CurrentController = nil
     self.MovementCommunicate = require(self.Owner.Character:WaitForChild("MovementScript"):WaitForChild("Communicate"))
     self.GroundMaxSpeed = self.MovementCommunicate.GetVar("groundMaxSpeed")
+    self.EquipVariables = {currentEquippedSlot = false, processingWeaponTransparency = false, nextVisibleTime = false}
 
     util_initKeybinds(self)
 
@@ -88,18 +91,7 @@ function WeaponController.new()
     end)
 
     -- this is where we will do bomb observe update
-    self.Connections.Update = RunService.RenderStepped:Connect(function(dt)
-        -- is player looking at bomb?
-        -- can player defuse bomb?
-
-        -- update equip spring
-        for _, v in pairs(self.Inventory) do
-            if v and v.EquipSpring then
-                local pos = v.EquipSpring:update(dt)
-                workspace.CurrentCamera.CFrame *= CFrame.Angles(math.rad(pos.X), math.rad(pos.Y), math.rad(pos.Z))
-            end
-        end
-    end)
+    self.Connections.Update = RunService.RenderStepped:Connect(function(dt) self:Update(dt) end)
 
     return self
 end
@@ -118,6 +110,27 @@ function WeaponController:Remove()
     WeaponController.CurrentController = false
     self.PlayerDiedConnect:Disconnect()
     self = nil
+end
+
+function WeaponController:Update(dt)
+    -- is player looking at bomb?
+    -- can player defuse bomb?
+
+    -- update equip transparency
+    if self.EquipVariables.processingWeaponTransparency then
+        if tick() >= self.EquipVariables.nextVisibleTime then
+            self.EquipVariables.processingWeaponTransparency = false
+            util_processEquipTransparency(self, self.Inventory[self.EquipVariables.currentEquippedSlot])
+        end
+    end
+
+    -- update equip spring
+    for _, v in pairs(self.Inventory) do
+        if v and v.EquipSpring then
+            local pos = v.EquipSpring:update(dt)
+            workspace.CurrentCamera.CFrame *= CFrame.Angles(math.rad(pos.X), math.rad(pos.Y), math.rad(pos.Z))
+        end
+    end
 end
 
 --
@@ -177,10 +190,15 @@ end
 function WeaponController:EquipWeapon(weaponSlot, bruteForce)
     if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
     if not self:IsWeaponInSlot(weaponSlot) then return end
+
     if not bruteForce then
         if self:IsWeaponEquipped(weaponSlot) then return end
         if self.InitialWeaponAddDebounce then return end
     end
+
+    self.EquipVariables.currentEquippedSlot = weaponSlot
+    self.EquipVariables.nextVisibleTime = tick() + TurnWeaponVisibleLength
+    self.EquipVariables.processingWeaponTransparency = true
 
     -- turn the weapon invisible, fix glitchy equip
     util_processUnequipTransparency(self, self.Inventory[weaponSlot])
@@ -215,9 +233,9 @@ function WeaponController:EquipWeapon(weaponSlot, bruteForce)
 
     -- turn the weapon visible again!
     if self.Inventory.equipped and self.Inventory.equipped.ClientModel then
-        task.delay(0.06, function()
+        --[[task.delay(0.06, function()
             util_processEquipTransparency(self, self.Inventory[weaponSlot])
-        end)
+        end)]]
     end
 
     self.InitialWeaponAddDebounce = false
@@ -227,7 +245,10 @@ end
 function WeaponController:UnequipWeapon(weaponSlot)
     if not self.Owner.Character or not self.Owner.Character.Humanoid or self.Owner.Character.Humanoid.Health <= 0 then return end
 
+    --self.EquipVariables.processingWeaponTransparency = false
+
     --util_processUnequipTransparency(self, self.Inventory[weaponSlot])
+    self.Inventory[weaponSlot]:DisconnectUpdate()
     self.Inventory[weaponSlot]:DisconnectActions()
     self.Inventory[weaponSlot]:Unequip()
 

@@ -11,7 +11,7 @@ Commands.Help = {
 	
 	Function = function(self)
 		for i, v in pairs(self.Commands) do
-			self:Print(string.lower(i) .. ": " .. v.Description or "Command")
+			self:Print(string.lower(i) .. ": " .. (v.Description or "Command"))
 		end
 	end,
 }

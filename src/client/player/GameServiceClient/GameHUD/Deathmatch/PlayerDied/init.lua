@@ -82,16 +82,18 @@ function clickLoadout()
     uistate:addOpenUI("BuyMenu", buyMenu, true)
 end
 
+local respawnButtonEnabled = false
 local function clickRespawn()
 	if not canpress then
 		return
 	end
+	if not respawnButtonEnabled then
+		return
+	end
 	processClickDebounce()
-	disconnect()
-	--remoteEvent:FireServer("Respawn")
-    playerSpawnEvent:FireServer()
     require(buyMenuModule):Close()
 	finish()
+	playerSpawnEvent:FireServer()
 end
 
 local function clickBack()
@@ -384,8 +386,7 @@ function update(dt)
 end
 
 function connect()
-	updateConn = RunService.RenderStepped:Connect(update)
-
+	connections[5] = RunService.RenderStepped:Connect(update)
     connections[1] = loadoutButton.MouseButton1Click:Connect(clickLoadout)
 	connections[3] = UserInputService.InputBegan:Connect(inputBegan)
 end
@@ -407,6 +408,7 @@ function start()
 end
 
 function finish()
+	disconnect()
 	hud:Enable()
 	uistate:removeOpenUI("BuyMenu")
     uistate:removeOpenUI("DeathMenu")
@@ -414,7 +416,6 @@ function finish()
     if player ~= killer and killer.Character then
 		killer.Character.EnemyHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
 	end
-    updateConn:Disconnect()
 	camera.CameraType = Enum.CameraType.Custom
     gui.Enabled = false
     loadoutButton.Modal = false
@@ -427,6 +428,7 @@ local started = false
 
 function PlayerDied:Enable(uiContainer, sentKiller, respawnWaitLength)
     killer = sentKiller or player
+	respawnButtonEnabled = false
 
     if not buyMenuModule then
         buyMenuModule = uiContainer:WaitForChild("BuyMenuScript")
@@ -472,6 +474,7 @@ function PlayerDied:Enable(uiContainer, sentKiller, respawnWaitLength)
 end
 
 function PlayerDied:EnableRespawnButton()
+	respawnButtonEnabled = true
 	respawnButton.TextLabel.Text = "RESPAWN"
 	connections[2] = respawnButton.MouseButton1Click:Connect(clickRespawn)
 end

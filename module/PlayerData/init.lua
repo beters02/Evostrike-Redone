@@ -198,6 +198,7 @@ function _validateIncoming(player, new)
     local _rep = false
     for i, _ in pairs(new) do
         if PlayerData._defOpt[i] then
+            warn("Could not validate playerdata key '" .. tostring(i) .. "' ... overriding with default value.")
             _rep = PlayerData:GetKey(player, i)
             new[i] = _hardCopy(_rep)
         end

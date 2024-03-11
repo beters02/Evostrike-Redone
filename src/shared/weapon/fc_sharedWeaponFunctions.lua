@@ -19,6 +19,8 @@ local BulletHole = MainObj:WaitForChild("BulletHole")
 local GlobalSounds = Framework.Service.WeaponService.ServiceAssets.Sounds
 local Replicate = Framework.Service.WeaponService.Events.Replicate
 
+local PlayerAttributes = require(Framework.Module.PlayerAttributes)
+
 local module = {}
 
 -- Weapon Spray Pattern Utility
@@ -231,6 +233,15 @@ function module.FireBullet(fromChar, result, isHumanoid, isBangable, tool, fromM
 	end
 end
 
+-- Get attributes from PlayerAttributes
+function setCharAttribute(player, attribute, value)
+    return PlayerAttributes:SetCharacterAttributeAsync(player, attribute, value)
+end
+
+function getCharAttribute(player, attribute)
+    return PlayerAttributes:GetCharacterAttribute(player, attribute)
+end
+
 -- Weapon Shot & Damage Registration
 
 -- Utility
@@ -282,15 +293,24 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 		damage = math.round(damage)
 
 		-- set ragdoll variations
-		char:SetAttribute("bulletRagdollNormal", -normal)
+
+		local attributePlayer = Players:GetPlayerFromCharacter(char) or  {Name = "BOT_" .. char.Name}
+
+		--[[char:SetAttribute("bulletRagdollNormal", -normal)
 		char:SetAttribute("bulletRagdollKillDir", (player.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Unit)
 		char:SetAttribute("lastHitPart", instance.Name)
 		char:SetAttribute("lastUsedWeapon", weaponOptions.name)
 		char:SetAttribute("lastUsedWeaponDestroysHelmet", weaponOptions.damage.destroysHelmet or false)
-		char:SetAttribute("lastUsedWeaponHelmetMultiplier", weaponOptions.damage.helmetMultiplier or 1)
+		char:SetAttribute("lastUsedWeaponHelmetMultiplier", weaponOptions.damage.helmetMultiplier or 1)]]
+		setCharAttribute(attributePlayer, "bulletRagdollNormal", -normal)
+		setCharAttribute(attributePlayer, "bulletRagdollKillDir", (player.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Unit)
+		setCharAttribute(attributePlayer, "lastHitPart", instance.Name)
+		setCharAttribute(attributePlayer, "lastUsedWeapon", weaponOptions.name)
+		setCharAttribute(attributePlayer, "lastUsedWeaponDestroysHelmet", weaponOptions.damage.destroysHelmet or false)
+		setCharAttribute(attributePlayer, "lastUsedWeaponHelmetMultiplier", weaponOptions.damage.helmetMultiplier or 1)
 
 		-- apply damage
-		damage, killed = EvoPlayer:TakeDamage(char, damage, player.Character, weaponOptions.name)
+		damage, killed = EvoPlayer:TakeDamage(char, damage, player.Character, weaponOptions.name, instance.Name)
 
         if RunService:IsServer() then
 			-- apply tag so we can easily access damage information
@@ -338,7 +358,7 @@ function module.RegisterShot(player, weaponOptions, result, origin, _, _, isHuma
 			-- _[1] = damage, _[2] = particleFolderName[deprecated]
 			_, _, killed = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
 			BulletHitUtil.PlayerHitParticles(char, result.Instance, killed)
-			BulletHitUtil.PlayerHitSounds(char, result.Instance, killed)
+			--BulletHitUtil.PlayerHitSounds(char, result.Instance, killed)
 		end
 		
 		return module.FireBullet(player.Character, result, isHumanoid, isBangable, tool, fromModel, partCache)

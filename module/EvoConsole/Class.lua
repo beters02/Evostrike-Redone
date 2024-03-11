@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local Types = require(EvoConsole.Types)
 local Tables = require(EvoConsole.Tables)
 local Configuration = require(EvoConsole.Configuration)
+local Events = script.Parent.Events
 
 local States = require(Framework.Module.States)
 local UIState = States:Get("UI")
@@ -153,19 +154,24 @@ local colors = {
 function _printMsg(self, msg: string, msgType: Types.ReturnMessageType|nil)
     if not msgType then msgType = "message" :: Types.ReturnMessageType end
 
-    local lineTemplate = self.console.UI.MainFrame.TextReturnFrame.Line
+    local txtReturnFrame = self.console.UI.MainFrame.TextReturnFrame
+    local lineTemplate = txtReturnFrame.Line
 
     -- check if max lines have been reached
-    if lineTemplate.Position.Y.Scale - lineTemplate.Size.Y.Scale < 0 then
-        self.returnLines[#self.returnLines]:Destroy() -- destroy last line
-        table.remove(self.returnLines, #self.returnLines)
+    local maxLines = txtReturnFrame.CanvasSize.Y.Scale / lineTemplate.Size.Y.Scale
+    if #self.returnLines >= maxLines then
+        txtReturnFrame.CanvasSize.Y.Scale = UDim2.new(txtReturnFrame.CanvasSize.X.Scale, txtReturnFrame.CanvasSize.Y.Scale + lineTemplate.Size.Y.Scale)
+    end
+
+    if lineTemplate.Position.Y.Scale > txtReturnFrame.CanvasSize.Y.Scale then
+        local diff = lineTemplate.Position.Y.Scale - txtReturnFrame.CanvasSize.Y.Scale
+        txtReturnFrame.CanvasSize = UDim2.fromScale(txtReturnFrame.CanvasSize.X.Scale, txtReturnFrame.CanvasSize.Y.Scale + diff)
     end
 
     -- remove default text if necessary
     if #self.returnLines == 0 then
         lineTemplate.Visible = false
     else
-    
         -- shift the text index number up
         for i, v in pairs(self.returnLines) do
 
@@ -197,6 +203,7 @@ function _printMsg(self, msg: string, msgType: Types.ReturnMessageType|nil)
 end
 
 function _doCommand(self, commandSplit: table)
+
     -- verify command string was found
     if not commandSplit or not commandSplit[1] then -- split[1] == command
         return self:Error("Could not get command from string")
@@ -218,6 +225,12 @@ function _doCommand(self, commandSplit: table)
 
 	-- remove action string to single out and send arguments
     table.remove(commandSplit, 1)
+
+    -- verify via server remote
+    local canPerformCommand = Events.VerifyCommandEvent:InvokeServer(table.unpack(commandSplit))
+    if not canPerformCommand then
+        return self:Error("Must have cheats enabled to use this command.")
+    end
 	
     -- function
 	return commandTable.Function(self, self.player, table.unpack(commandSplit))

@@ -29,13 +29,14 @@ local Gamemode = {
         OVERTIME_ENABLED = false,
         OVERTIME_SCORE_TO_WIN = 0,
         SCORE_TO_WIN = 12,
+        GAME_RESTART_LENGTH = 15,
 
         ROUND_END_CONDITION = "PlayerKilled",
         GAME_END_CONDITION = "Score",
         
         SPECTATE_ENABLED = true,
         PLAYER_SPAWN_ON_JOIN = true,
-        REQUIRE_REQUEST_SPAWN = false,
+        REQUIRE_REQUEST_JOIN = true,
         RESPAWN_ENABLED = true,
         RESPAWN_LENGTH = 3,
 
@@ -74,11 +75,17 @@ function Gamemode:InitPlayer(service, player) end
 
 function Gamemode:SpawnAllPlayers(service)
     for _, v in pairs(service.PlayerData:GetPlayers()) do
-        if service.GameOptions.REQUIRE_REQUEST_SPAWN
-        and not service.PlayerData:Get(v, "spawned") then
+        if service.GameOptions.REQUIRE_REQUEST_JOIN
+        and not service.ServicePlayerData:Get(v, "joined") then
             continue
         end
         self:SpawnPlayer(service, v)
+    end
+end
+
+function Gamemode:ForceKillAllPlayers(service)
+    for _, v in pairs(service.PlayerData:GetPlayers()) do
+        EvoPlayer:ForceKill(v)
     end
 end
 

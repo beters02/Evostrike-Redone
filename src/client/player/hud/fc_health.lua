@@ -1,5 +1,7 @@
 --[[ Bound to m_hud ]]
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlayerAttributes = require(ReplicatedStorage.Modules.PlayerAttributes)
 
 local player = Players.LocalPlayer
 
@@ -20,7 +22,7 @@ function health:update()
 	local bar = healthBarFrame.Bar
 	local char = player.Character or player.CharacterAdded:Wait()
 	local hum = char:WaitForChild("Humanoid")
-	local currentShield = player.Character:GetAttribute("Shield")
+	local currentShield = PlayerAttributes:GetCharacterAttribute(player, "Shield")
 	if currentShield == nil or not currentShield then currentShield = 0 end
 	
 	health = math.floor(hum.Health + currentShield)

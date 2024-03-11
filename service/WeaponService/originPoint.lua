@@ -225,6 +225,7 @@ function Weapon:PrimaryFire()
     if not self.Character or self.Humanoid.Health <= 0 or PlayerActionsState:get("grenadeThrowing") then return end
     if not self.Variables.equipped or self.Variables.reloading or self.Variables.ammo.magazine <= 0 or self.Variables.fireDebounce then return end
     local fireTick = tick()
+    self.Variables.nextFireTime = tick() + self.Options.fireRate
 
     if not self.Variables.recoilReset then
         self.Variables.recoilReset = self.Options.recoilResetMin
@@ -584,7 +585,10 @@ function Weapon:MouseDown(isSecondary: boolean?)
 end
 
 function Weapon:AutomaticMouseDown()
-    if not self.Variables.fireLoop then
+
+    self.Variables.mousedown = true
+
+    --[[if not self.Variables.fireLoop then
 
         -- register initial fire boolean
         local startWithInit = false
@@ -614,7 +618,7 @@ function Weapon:AutomaticMouseDown()
         if startWithInit then
             self:PrimaryFire()
         end
-    end
+    end]]
 end
 
 function Weapon:MouseUp(forceCancel: boolean?)

@@ -11,20 +11,34 @@ local hum = char:WaitForChild("Humanoid")
 -- Register Death & Damage
 local DiedEvent = EvoPlayer.Events:WaitForChild("PlayerDiedRemote")
 local DiedBind = EvoPlayer.Events:WaitForChild("PlayerDiedBindable")
-local FromEvoPlayerDamagedEvent = char:WaitForChild("EvoPlayerDamagedEvent")
+--local FromEvoPlayerDamagedEvent = char:WaitForChild("EvoPlayerDamagedEvent")
 local DamagedAnimationObj = char:WaitForChild("DamagedAnimation")
 local DamagedAnimation = hum.Animator:LoadAnimation(DamagedAnimationObj)
+local ForceKillPlayer = EvoPlayer.Events:WaitForChild("ForceKillPlayer")
+
+local killIsForced = false
+
+ForceKillPlayer.OnClientInvoke = function()
+    killIsForced = true
+    return true
+end
 
 hum.Died:Connect(function()
     local killer = char:FindFirstChild("DamageTag") and char.DamageTag.Value or false
     local weaponUsed = char:GetAttribute("WeaponUsedToKill")
+
+    if killIsForced then
+        killIsForced = false
+        return
+    end
+    
     DiedEvent:FireServer(killer, weaponUsed)
     DiedBind:Fire(killer)
 end)
 
-FromEvoPlayerDamagedEvent.OnClientEvent:Connect(function()
+--[[FromEvoPlayerDamagedEvent.OnClientEvent:Connect(function()
     DamagedAnimation:Play()
-end)
+end)]]
 
 -- Initialize Camera Variables
 task.delay(1, function()

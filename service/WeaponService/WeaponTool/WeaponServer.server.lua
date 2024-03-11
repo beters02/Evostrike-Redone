@@ -1,5 +1,8 @@
+export type KnifeDamageType = "PrimaryStab" | "SecondaryStab" | "Primary" | "Secondary"
+
 local tool = script.Parent.Parent
 local serverModel = tool:WaitForChild("ServerModel")
+local weaponHandle = serverModel.GunComponents.WeaponHandle
 local player = tool:WaitForChild("PlayerObject").Value
 local character = player.Character
 
@@ -10,12 +13,22 @@ local EvoPlayer = require(Framework.Module.shared.Modules.EvoPlayer)
 local WeaponRemoteEvent: RemoteEvent = tool:WaitForChild("WeaponRemoteEvent")
 local WeaponRemoteFunction: RemoteFunction = tool:WaitForChild("WeaponRemoteFunction")
 local WeaponServerEquippedEvent: RemoteEvent = tool:WaitForChild("WeaponServerEquippedEvent")
+local WeaponServerReloadedEvent: RemoteEvent = tool:WaitForChild("WeaponServerReloadedEvent")
 
 local SharedWeaponFunctions = require(game:GetService("ReplicatedStorage").weapon.fc_sharedWeaponFunctions)
+local RunService = game:GetService("RunService")
 
 local Module = tool:WaitForChild("WeaponModuleObject").Value
 local Options = require(Module).Configuration
-local Variables = {equipEndTime = tick(), equipCancel = false, equipping = false}
+local Variables = {equipEndTime = tick(), equipCancel = false, equipping = false, lastEquipTime = false, equipTimeElapsed = 0, reloadTimeElapsed = 0, reloading = false, equipped = false}
+
+local KnifeDamageArray = {
+	PrimaryStab = Options.damage.primaryBackstab,
+	SecondaryStab = Options.damage.secondaryBackstab,
+	Secondary = Options.damage.secondary,
+	Primary = Options.damage.base
+}
+
 if Options.ammo then
     Variables.ammo = {magazine = Options.ammo.magazine, total = Options.ammo.total}
 end
@@ -24,60 +37,86 @@ local Grip = character:FindFirstChild("Grip") or Instance.new("Motor6D", charact
 Grip.Name = "Grip"
 Grip.Part0 = character.RightHand
 
-function ServerEquip()
-    task.spawn(EquipTimer)
+--
 
-	if character:GetAttribute("SpawnInvincibility") then
-		EvoPlayer:SetSpawnInvincibility(character, false)
+function handleEquipUpdate(dt)
+	if not Variables.equipping then
+		return
 	end
 
-    local weaponHandle = serverModel.GunComponents.WeaponHandle
+	Variables.equipTimeElapsed += dt
+	if Variables.equipTimeElapsed >= Options.equipLength then
+		Variables.equipping = false
+		Variables.equipped = true
+		WeaponServerEquippedEvent:FireClient(player, true)
+	end
+end
 
-	-- 10/08/2023 So yeah just figured out I was creating a new Motor6D every time a weapon was equipped and NEVER DESTROYING IT
-	--[[
-	local grip = Instance.new("Motor6D")
-	grip.Name = "RightGrip"
-	grip.Parent = character.RightHand
-	grip.Part0 = character.RightHand
-	]]
+function doReload()
+	local newMag
+	local newTotal
+	local defMag = Options.ammo.magazine
+	local need = defMag - Variables.ammo.magazine
 
+	if Variables.ammo.total >= need then
+		newMag = Variables.ammo.magazine + need
+		Variables.ammo.total -= need
+	else
+		newMag = Variables.ammo.total + Variables.ammo.magazine
+		Variables.ammo.total = 0
+	end
+
+	Variables.ammo.magazine = newMag
+	newTotal = Variables.ammo.total
+
+	WeaponServerReloadedEvent:FireClient(player, newMag, newTotal)
+end
+
+function handleReloadUpdate(dt)
+	if not Variables.reloading then
+		return
+	end
+
+	if not Variables.equipped then
+		resetReloadVar()
+		return
+	end
+
+	Variables.reloadTimeElapsed += dt
+
+	if Variables.reloadTimeElapsed >= Options.reloadLength then
+		Variables.reloading = false
+		doReload()
+	end
+end
+
+function resetReloadVar()
+	Variables.reloadTimeElapsed = 0
+	Variables.reloading = false
+end
+
+--
+
+function Update(dt)
+	handleEquipUpdate(dt)
+	handleReloadUpdate(dt)
+end
+
+function ServerEquip()
 	Grip.Part1 = weaponHandle
+	Variables.equipTimeElapsed = 0
+	Variables.equipping = true
+	Variables.equipped = false
 end
 
 function ServerUnequip()
 	Grip.Part1 = nil
-
-    if Variables.equipping then
-        EquipTimerCancel()
-    end
-end
-
---@summary Start the Equip Timer.
-function EquipTimer()
-    local equipped = true
-
-    Variables.equipping = true
-    Variables.equipEndTime = tick() + Options.equipLength
-    repeat task.wait() until tick() >= Variables.equipEndTime or Variables.equipCancel
-    Variables.equipping = false
-
-    if Variables.equipCancel then
-        Variables.equipCancel = false
-        equipped = false
-    end
-
-    WeaponServerEquippedEvent:FireClient(player, equipped)
-end
-
---@summary Cancel the EquipTimer
-function EquipTimerCancel()
-    Variables.equipCancel = true
+	Variables.equipping = false
+	Variables.equipped = false
+	resetReloadVar()
 end
 
 function ServerFire(currentBullet, clientAccuracyVector, rayInformation, shotRegisteredTime, wallbangDamageMultiplier)
-	-- check client->server timer diff
-	--if not util_registerFireDiff() then return false end
-
 	if character:GetAttribute("SpawnInvincibility") then
 		EvoPlayer:SetSpawnInvincibility(character, false)
 	end
@@ -98,41 +137,20 @@ function ServerFire(currentBullet, clientAccuracyVector, rayInformation, shotReg
 	return true
 end
 
-export type KnifeDamageType = "PrimaryStab" | "SecondaryStab" | "Primary" | "Secondary"
 function VerifyKnifeDamage(knifeDamageType: KnifeDamageType, damagedHumanoid)
 	if player.Character.Humanoid.Health <= 0 then return end
+
 	if character:GetAttribute("SpawnInvincibility") then
 		EvoPlayer:SetSpawnInvincibility(character, false)
 	end
-	if knifeDamageType == "PrimaryStab" then
-		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.primaryBackstab, player.Character, "knife")
-	elseif knifeDamageType == "SecondaryStab" then
-		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.secondaryBackstab, player.Character, "knife")
-	elseif knifeDamageType == "Secondary" then
-		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.secondary, player.Character, "knife")
-	else -- "Primary" is default
-		EvoPlayer:TakeDamage(damagedHumanoid.Parent, Options.damage.base, player.Character, "knife")
-	end
+
+	EvoPlayer:TakeDamage(damagedHumanoid.Parent, KnifeDamageArray[knifeDamageType], player.Character, "knife")
 end
 
 function ServerReload()
-    if Variables.ammo.total <= 0 then return Variables.ammo.magazine, Variables.ammo.total end
-	local newMag
-	local defMag = Options.ammo.magazine
-	task.spawn(function()
-		local need = defMag - Variables.ammo.magazine
-		if Variables.ammo.total >= need then
-			newMag = Variables.ammo.magazine + need
-			Variables.ammo.total -= need
-		else
-			newMag = Variables.ammo.total + Variables.ammo.magazine
-			Variables.ammo.total = 0
-		end
-		Variables.ammo.magazine = newMag
-	end)
-	local endTime = tick() + Options.reloadLength
-	repeat task.wait() until tick() >= endTime
-	return newMag, Variables.ammo.total
+    if Variables.ammo.total <= 0 then return end
+	Variables.reloading = true
+	Variables.reloadTimeElapsed = 0
 end
 
 function ServerAttemptBombPlant()
@@ -140,15 +158,8 @@ function ServerAttemptBombPlant()
 end
 
 --@start
-
 WeaponRemoteFunction.OnServerInvoke = function(_plr, action, ...)
-    if action == "EquipTimer" then
-        return EquipTimer()
-    elseif action == "EquipTimerCancel" then
-        return EquipTimerCancel()
-    elseif action == "Reload" then
-        return ServerReload()
-	end
+	return false
 end
 
 WeaponRemoteEvent.OnServerEvent:Connect(function(_plr, action, ...)
@@ -156,8 +167,11 @@ WeaponRemoteEvent.OnServerEvent:Connect(function(_plr, action, ...)
         ServerFire(...)
 	elseif action == "VerifyKnifeDamage" then
 		VerifyKnifeDamage(...)
+	elseif action == "Reload" then
+        return ServerReload()
 	end
 end)
 
+RunService.Heartbeat:Connect(Update)
 tool.Equipped:Connect(ServerEquip)
 tool.Unequipped:Connect(ServerUnequip)

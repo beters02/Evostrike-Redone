@@ -1,17 +1,19 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
+local Types = require(script:WaitForChild("Types"))
+local EvoPlayer = require(Framework.Module.EvoPlayer)
+
+local StarterCharacterTemplate = game:GetService("StarterPlayer").StarterCharacter
 
 local RagdollRE = Framework.Module.Ragdolls.Remotes.RemoteEvent
 local PlayerDiedEvent = Framework.Module.EvoPlayer.Events.PlayerDiedRemote
 local BotAddedEvent = Framework.Service.BotService.Remotes.BotAdded
-local Types = require(script:WaitForChild("Types"))
-local ServerStorage = game:GetService("ServerStorage")
-local StarterCharacterTemplate = game:GetService("StarterPlayer").StarterCharacter
-local EvoPlayer = require(Framework.Module.EvoPlayer)
+local BotAddedBind = Framework.Service.BotService.Remotes.BotAddedBindable
 local BotDiedBind = script.Remotes.BotDiedBindable
-local RunService = game:GetService("RunService")
 
 local Bots = {}
 Bots.Bots = {}
@@ -19,8 +21,10 @@ Bots.BotNames = {"Fred", "Dave", "Laney", "George", "Ardiis"}
 
 -- Add a bot to the game
 function Bots:AddBot(properties)
+    print("ADDING BOT")
     local character = StarterCharacterTemplate:Clone()
     character.Parent = ServerStorage
+    character:SetAttribute("Bot", true)
 
     properties = properties or {}
     if not properties.SpawnCFrame then properties.SpawnCFrame = game.ReplicatedStorage.Services.GamemodeService2.GamemodeScripts.Deathmatch.Spawns.Default.CFrame end
@@ -90,6 +94,8 @@ function Bots:AddBot(properties)
     character.Parent = workspace
 
     -- fire botadded event to all clients
+    
+    BotAddedBind:Fire(character, new_bot)
     BotAddedEvent:FireAllClients(character, new_bot)
 
     -- create ragdolls

@@ -48,6 +48,7 @@ local AbilityService = require(Framework.Service.AbilityService)
 local GamemodeService2 = require(Framework.Service.GamemodeService2)
 local RequestSpawnEvent = Framework.Service.GamemodeService2.RequestSpawn
 local GameServiceRemotes = script:WaitForChild("Remotes")
+local BotService = require(Framework.Service.BotService)
 
 --[[ MODULE ]]
 local GameService = {
@@ -55,7 +56,10 @@ local GameService = {
     CurrentMap = false,
     GameOptions = Table.clone(CGamemode.GameOptions),
     PlayerData = false,
+    ServicePlayerData = GM_PlayerData.new(), -- ServicePlayerData does not reset each game, while PlayerData does.
     TeamData = false,
+    IsSoloMode = false,
+    CheatsEnabled = false,
 
     StartTime = 0,
     TimeElapsed = 0,
@@ -76,6 +80,7 @@ end
 --
 
 -- [[ GET ]]
+
 function getGMod(gamemode: string)
     return LGamemode:FindFirstChild(gamemode)
 end
@@ -108,6 +113,27 @@ function incRoundScore(plr: Player)
     GameService.PlayerData:Increment(plr, "score", 1)
     return GameService.PlayerData:Get(plr, "score")
 end
+--
+
+-- [[ EVENT FUNC ]]
+
+function requestSpawnInvoke(self, plr)
+    local pd = self.ServicePlayerData:GetPlayer(plr)
+
+    if not pd then
+        warn("Player does not have playerdata, cant spawn.")
+        return false
+    end
+
+    if pd.joined then
+        warn("Player already joined, cant join again.")
+        return false
+    end
+
+    self.ServicePlayerData:Set(plr, "joined", true)
+    gmCall("SpawnPlayer", plr)
+    return true
+end
 
 -- [[ MAIN ]]
 
@@ -128,6 +154,10 @@ function GameService.Initialize()
     local teleData = player:GetJoinData().teleportData
     local mmGameData = EvoMM.MatchmakingService:GetUserData(player)
     local requestedGamemode = DEFAULT_GAMEMODE
+
+    if teleData and teleData.IsSoloMode then
+        GameService.IsSoloMode = true
+    end
 
     if teleData and teleData.RequestedGamemode then
         requestedGamemode = teleData.RequestedGamemode
@@ -166,14 +196,18 @@ function GameService:Main(gamemodeStr: string?)
     self:RoundStart()
 end
 
+-- Initializes ConVar, connections, etc for the game
 function GameService:InitalizeGame()
 
+    -- disable spawn request for time being.
     RequestSpawnEvent.OnServerInvoke = function()
         return false
     end
 
+    -- set the MainMenuType for ui changes.
     GamemodeService2:SetMenuType(self.GameOptions.MENU_TYPE)
 
+    -- init Spawns
     local Spawns = ServerStorage:FindFirstChild("Spawns")
     if Spawns then Spawns:Destroy() end
     Spawns = getGMod(self.CurrentGamemode.Name).Spawns:Clone()
@@ -205,8 +239,8 @@ function GameService:InitalizeGame()
     end
 
     -- force spawn request?
-    if self.GameOptions.REQUIRE_REQUEST_SPAWN then
-        self.PlayerData.DefaultData.initialSpawned = false
+    if self.GameOptions.REQUIRE_REQUEST_JOIN then
+        self.ServicePlayerData.DefaultData.joined = false
     end
 
     -- init players
@@ -214,7 +248,20 @@ function GameService:InitalizeGame()
         self:InitPlayer(v)
     end
 
-    --@Event PLAYER ADDED MAIN CONNECTION
+    -- init teams
+    if self.GameOptions.TEAMS_ENABLED then
+        local plrs = Table.clone(self.PlayerData:GetPlayers())
+        plrs = Table.shuffle(plrs)
+        for i, v in pairs(plrs) do
+            local team = i % 2 == 0 and "attackers" or "defenders"
+            self.PlayerData:Set(v, "team", team)
+            self.TeamData:Insert(self.Teams[team], "players", v)
+        end
+    end
+
+    -- [[ INIT MAIN CONNECTIONS ]]
+
+    -- player added
     self.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
 
         self:InitPlayer(player)
@@ -246,7 +293,7 @@ function GameService:InitalizeGame()
         end
     end)
 
-    -- BUY MENU
+    -- buy menu
     if self.GameOptions.BUY_MENU_ENABLED then
         self.Connections.BuyMenu = GameServiceRemotes.BuyMenuEvent.OnServerEvent:Connect(function(_bmplayer, action, item, slot)
             if action == "AbilitySelected" then
@@ -267,50 +314,43 @@ function GameService:InitalizeGame()
         end)
     end
 
-    -- WAITING FOR PLAYERS
+    -- waiting for players?
     if #self.PlayerData:GetPlayers() < self.GameOptions.MIN_PLAYERS then
         repeat task.wait(0.5) until #self.PlayerData:GetPlayers() >= self.GameOptions.MIN_PLAYERS
     end
 
-    -- INITIALIZE TEAMS
-    if self.GameOptions.TEAMS_ENABLED then
-        local plrs = Table.clone(self.PlayerData:GetPlayers())
-        plrs = Table.shuffle(plrs)
-
-        for i, v in pairs(plrs) do
-            local team = i % 2 == 0 and "attackers" or "defenders"
-            self.PlayerData:Set(v, "team", team)
-            self.TeamData:Insert(self.Teams[team], "players", v)
-        end
-    end
-
-    --@Event PLAYER DIED MAIN CONNECTION
+    -- DIED
     self.Connections.PlayerDied = PlayerDiedEvent.OnServerEvent:Connect(function(died, killer)
         self:PlayerDied(died, killer)
     end)
 
     -- REQUEST SPAWN
-    if self.GameOptions.REQUIRE_REQUEST_SPAWN then
+    if self.GameOptions.REQUIRE_REQUEST_JOIN then
         RequestSpawnEvent.OnServerInvoke = function(plr)
-            local pd = self.PlayerData:GetPlayer(plr)
-
-            if not pd then
-                warn("Player does not have playerdata, cant spawn.")
-                return false
-            end
-            if pd.initialSpawned then
-                warn("Player already spawned, cant spawn.")
-                return false
-            end
-
-            self.PlayerData:Set(plr, "initialSpawned", true)
-            gmCall("SpawnPlayer", plr)
-            return true
+            requestSpawnInvoke(self, plr)
         end
     end
+
+    local GamemodeEvents = ReplicatedStorage.GamemodeEvents
+    self.Connections.AddBot = GamemodeEvents.Game.AddBot.OnServerEvent:Connect(function()
+        BotSpawn()
+    end)
+end
+
+function BotSpawn()
+    local Bot = BotService:AddBot({Respawn = false})
+    gmCall("InitCharacter", false, Bot.Character)
+    Framework.Service.BotService.Remotes.BotDiedBindable.Event:Once(function(bot, botChar)
+        task.delay(3, function()
+            BotSpawn()
+        end)
+    end)
 end
 
 function GameService:InitPlayer(player)
+    if not self.ServicePlayerData:GetPlayer(player) then
+        self.ServicePlayerData:AddPlayer(player)
+    end
     if not self.PlayerData:GetPlayer(player) then
         self.PlayerData:AddPlayer(player)
         GameServiceRemotes.SetUIGamemode:FireClient(player, self.CurrentGamemode.Name)
@@ -318,21 +358,28 @@ function GameService:InitPlayer(player)
     end
 end
 
-function GameService:EndGame(result, ...)
+function GameService:PlayerRemoving(player)
+    if self.ServicePlayerData:GetPlayer(player) then
+        self.ServicePlayerData:RemovePlayer(player)
+    end
+end
 
+function GameService:EndGame(result, ...)
     -- clear connections and restart
     for _, v in pairs(self.Connections) do
         v:Disconnect()
     end
 
+    -- wait on Gamemode Class...
     gmCall("End", result, ...)
+
+    GameService:Main(self.CurrentGamemode.Name)
 end
 
 function GameService:RoundStart()
     print('GameService RoundStart called...')
 
     self.RoundStatus = "STARTED"
-
     self.TimeElapsed = 0
     self.Connections.Timer = RunService.Heartbeat:Connect(function(dt)
         self:TimerUpdate(dt)
@@ -445,6 +492,12 @@ function GameService:PlayerDied(died, killer)
             gmCall("SpawnPlayer", died)
         end)
     end
+end
+
+-- [[ MODULE ]]
+
+function GameService:IsCheatsEnabled()
+    return self.CheatsEnabled
 end
 
 return GameService

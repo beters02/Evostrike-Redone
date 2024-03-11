@@ -20,6 +20,10 @@
       {
         "Name": "GetPlayerDamageInteractionsBind",
         "ClassName": "BindableFunction"
+      },
+      {
+        "Name": "ForceKillPlayer",
+        "ClassName": "RemoteFunction"
       }
     ]
   }
