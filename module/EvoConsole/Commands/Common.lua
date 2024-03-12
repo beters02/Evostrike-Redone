@@ -45,7 +45,8 @@ Commands.Stats = {
 }
 
 -- [[ PARSED PREFIX COMMANDS ]]
-Tables.combine(Commands, require(script.Parent:WaitForChild("Viewmodel")))
-Tables.combine(Commands, require(script.Parent:WaitForChild("Crosshair")))
+Commands = Tables.combine(Commands, require(script.Parent:WaitForChild("Viewmodel")))
+Commands = Tables.combine(Commands, require(script.Parent:WaitForChild("Crosshair")))
+print(Commands)
 
 return Commands

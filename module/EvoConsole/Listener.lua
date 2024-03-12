@@ -28,7 +28,16 @@ function listener:_connectListener()
     end
     Events.VerifyCommandEvent.OnServerInvoke = function(player, command, ...)
         -- check if is cheating command, verify is admin or cheats enabled
-        if AdminCommands[command] and (not GameService:IsCheatsEnabled() and not Permissions:IsHigherPermission(player)) then
+        if not AdminCommands[command] then
+            return true
+        end
+
+        local isAdmin = Permissions:IsAdmin(player)
+        if isAdmin then
+            return true
+        end
+        
+        if not AdminCommands[command].Public or not GameService:IsCheatsEnabled() then
             return false
         end
         return true

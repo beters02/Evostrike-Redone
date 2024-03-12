@@ -21,7 +21,7 @@ local Commands = {}
 
 Commands.Emit = {
 	Description = "Emit specified particle from the part you are looking at",
-	Public = false,
+	Public = true,
 	
 	Function = function(self, _, particle, ...)
 		-- raycast
@@ -44,7 +44,7 @@ Commands.Emit = {
 
 Commands.SetCameraMode = {
 	Description = "Set to LockFirstPerson or Classic",
-	Public = false,
+	Public = true,
 	
 	Function = function(_, _, cameraType)
 		local t = Enum.CameraMode[cameraType] or false
@@ -56,7 +56,7 @@ Commands.SetCameraMode = {
 
 Commands.AddWeapon = {
 	Description = "Add specified weapon to your inventory",
-	Public = false,
+	Public = true,
 	
 	Function = function(_, player, weapon)
 		require(game:GetService("ReplicatedStorage").Services.WeaponService):AddWeapon(player, weapon)
@@ -65,42 +65,24 @@ Commands.AddWeapon = {
 
 Commands.AddAbility = {
 	Description = "Add specified ability to your inventory",
-	Public = false,
+	Public = true,
 
 	Function = function(_, player, ability)
 		require(game:GetService("ReplicatedStorage").Services.AbilityService):AddAbility(player, ability)
 	end
 }
 
-Commands.GM = {
-	Description = "Gamemode management commands.<br /> 'get', 'set', 'restart'",
-	public = false,
-
-	Function = function(_, _, action, gamemode)
-		if action == "get" then
-			print(GamemodeService.Gamemode and GamemodeService.Gamemode.Name or "None")
-		elseif action == "set" then
-			GamemodeService:ChangeGamemode(gamemode)
-		elseif action == "restart" then
-			GamemodeService:RestartGamemode()
-		end
-	end
-}
-
 Commands.Gamemode = {
 	Description = "Set the gamemode",
-	Public = false,
+	Public = true,
 	
 	Function = function(self, _, gamemodeName)
-		print('Attempt change the mothjercucking j')
+		self:Print("This command is not available right now.")
+		--[[print('Attempt change the mothjercucking j')
 		GamemodeService:SetGamemode(gamemodeName)
 		print("Post attempt change the motherufkcing ad")
-		--game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName)
+		--game:GetService("ReplicatedStorage").gamemode.remote.Set:FireServer(gamemodeName)]]
 	end,
-}
-
-Commands.gm_restart = {
-
 }
 
 Commands.Place = {
@@ -136,7 +118,7 @@ Commands.Place = {
 
 Commands.Map = {
 	Description = "Set the game's map. Will restart the current gamemode.",
-	Public = false,
+	Public = true,
 
 	Function = function(self, player, mapName)
 		if not Globals.wassert(mapName, "Could not teleport, Map Name is required!") then return end
@@ -151,20 +133,9 @@ Commands.Map = {
 
 --
 
-Commands.as_add = {
-	Description = "Add an ability using AbilityService (new)",
-	Public = false,
-
-	Function = function(_, player, ability)
-		require(game.ReplicatedStorage.Services.AbilityService):AddAbility(player, ability)
-	end
-}
-
---
-
 Commands.addsc = {
 	Description = "Add Strafe Coins to a player",
-	Public = false,
+	Public = true,
 
 	Function = function(self, _, player, amount)
 		player = player == "self" and game.Players.LocalPlayer or Players:FindFirstChild(player)
@@ -183,7 +154,7 @@ Commands.addsc = {
 
 Commands.addinvitem = {
 	Description = "Add Strafe Coins to a player",
-	Public = false,
+	Public = true,
 
 	Function = function(self, _, player, item) -- player is sent player via text
 		player = player == "self" and game.Players.LocalPlayer or Players:FindFirstChild(player)
@@ -202,7 +173,7 @@ Commands.addinvitem = {
 
 Commands.addbot = {
 	Description = "Add a bot",
-	public = false,
+	Public = true,
 
 	Function = function(self)
 		Framework.Service.GameService.Remotes.BotSpawn:FireServer()
@@ -212,7 +183,7 @@ Commands.addbot = {
 
 Commands.svlist = {
 	Description = "List all of the sv commands.",
-	public = false,
+	Public = true,
 
 	Function = function(self)
 		if not storedSvList then
@@ -227,7 +198,7 @@ Commands.svlist = {
 
 Commands.mp_restartgame = {
 	Description = "Restart the game without changing the GameOptions.",
-	public = false,
+	Public = true,
 
 	Function = function(self, _, length)
 		local success, err = Framework.Service.GameService.Remotes.MultiplayerFunction:InvokeServer("RestartGame", length)
@@ -241,7 +212,7 @@ Commands.mp_restartgame = {
 
 Commands.mp_resetgame = {
 	Description = "Restart the game and reset GameOptions.",
-	public = false,
+	Public = true,
 
 	Function = function(self, _, length)
 		local success, err = Framework.Service.GameService.Remotes.MultiplayerFunction:InvokeServer("ResetGame", length)

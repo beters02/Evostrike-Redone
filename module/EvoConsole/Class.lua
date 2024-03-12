@@ -6,6 +6,7 @@ local Tables = require(EvoConsole.Tables)
 local Configuration = require(EvoConsole.Configuration)
 local Events = script.Parent.Events
 local GameService = require(Framework.Service.GameService)
+local Strings = require(Framework.Module.lib.fc_strings)
 
 local States = require(Framework.Module.States)
 local UIState = States:Get("UI")
@@ -217,7 +218,7 @@ function _doCommand(self, commandSplit: table)
     end
 	
 	-- locate command from Commands
-	local commandTable = self.Commands[commandSplit[1]]
+	local commandTable = self.Commands[commandSplit[1]] or self.Commands[Strings.firstToUpper(commandSplit[1])]
 
     -- cant find command
 	if not commandTable then
