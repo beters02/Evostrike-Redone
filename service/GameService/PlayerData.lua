@@ -25,8 +25,8 @@ function PlayerData.new()
         deaths = 0,
         money = 0,
         inventory = {
-            weapon = { primary = "ak103", secondary = "glock17" },
-            ability = { primary = "dash", secondary = "longFlash" }
+            WEAPONS = { primary = "ak103", secondary = "glock17" },
+            ABILITIES = { primary = "dash", secondary = "longFlash" }
         }
     }
     

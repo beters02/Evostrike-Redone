@@ -87,6 +87,8 @@ function MainMenu:Initialize(gui)
 
     if self.CurrentMenuType == "Lobby" then
         self:Open()
+    else
+        --self:Close()
     end
 end
 

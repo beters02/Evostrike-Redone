@@ -27,7 +27,7 @@
 ]]
 
 --[[ SERVICE CONFIG ]]
-local DEFAULT_GAMEMODE = "Deathmatch"
+local DEFAULT_GAMEMODE = "1v1"
 
 --[[ SERVICES ]]
 local Players = game:GetService("Players")
@@ -63,7 +63,10 @@ local GameService = {
     TeamData = false,
     IsSoloMode = false,
     CheatsEnabled = false,
+    BarriersUp = false,
     MenuType = "Lobby",
+    Spawns = false,
+    Barriers = false,
 
     StartTime = 0,
     TimeElapsed = 0,
@@ -223,6 +226,12 @@ end
 -- Starts the specified or default gamemode.
 function GameService:Main(gamemodeStr: string?, ignoreResetGameOptions: boolean?)
 
+    -- destroy connections from EndGame
+    for _, v in pairs(self.Connections) do
+        v:Disconnect()
+    end
+    self.Connections = {}
+
     -- get gamemode class
     local gamemode = getGMod(gamemodeStr)
     if not gamemode then
@@ -267,6 +276,15 @@ function GameService:InitalizeGame()
     Spawns.Parent = ServerStorage
     Spawns.Name = "Spawns"
     self.Spawns = Spawns
+
+    if self.GameOptions.BARRIERS_ENABLED then
+        local Barriers = ServerStorage:FindFirstChild("Barriers")
+        if Barriers then Barriers:Destroy() end
+        Barriers = getGMod(self.CurrentGamemode.Name).Barriers:Clone()
+        Barriers.Parent = ServerStorage
+        Barriers.Name = "Barriers"
+        self.Barriers = Barriers
+    end
 
     -- init var
     self.GameStatus = "LOADING" :: Types.GameServiceStatus
@@ -333,6 +351,10 @@ function GameService:InitalizeGame()
             return
         end
 
+        --[[if self.GameStatus == "LOADING" then
+            -- add loading UI
+        end]]
+
         -- round is started
         if self.RoundStatus == "STARTED" then
             
@@ -372,6 +394,16 @@ function GameService:InitalizeGame()
         repeat task.wait(0.5) until #self.PlayerData:GetPlayers() >= self.GameOptions.MIN_PLAYERS
     end
 
+    if self.GameOptions.REQUIRE_PLAYERS_TO_BE_LOADED_START then
+        -- Gamemode.CallUIFunctionAll()
+        for _, v in pairs(self.PlayerData:GetPlayers()) do
+            if not v:GetAttribute("Loaded") then
+                repeat task.wait(0.5) until v:GetAttribute("Loaded")
+            end
+        end
+        task.wait(2)
+    end
+
     -- DIED
     self.Connections.PlayerDied = PlayerDiedEvent.OnServerEvent:Connect(function(died, killer)
         self:PlayerDied(died, killer)
@@ -407,7 +439,6 @@ function GameService:PlayerRemoving(player)
 end
 
 function GameService:EndGame(result, ...)
-
     self.GameStatus = "ENDED"
 
     -- clear connections and restart
@@ -423,9 +454,16 @@ end
 
 function GameService:RoundStart()
     print('GameService RoundStart called...')
+    self.CurrentRound += 1
 
     self.RoundStatus = "STARTED"
     self.TimeElapsed = 0
+
+    if self.GameOptions.BARRIERS_ENABLED then
+        self.BarriersUp = true
+        self.Barriers:Clone().Parent = workspace
+    end
+
     self.Connections.Timer = RunService.Heartbeat:Connect(function(dt)
         self:TimerUpdate(dt)
     end)
@@ -448,6 +486,16 @@ end
 
 function GameService:TimerUpdate(dt)
     self.TimeElapsed += dt
+
+    if self.GameOptions.BARRIERS_ENABLED and self.BarriersUp then
+        if self.TimeElapsed >= GameService.GameOptions.BARRIERS_LENGTH then
+            self.BarriersUp = false
+            workspace.Barriers:Destroy()
+            self.TimeElapsed = 0
+            gmCall("BarriersFinished")
+        end
+    end
+
     if self.TimeElapsed >= GameService.GameOptions.ROUND_LENGTH and self.GameStatus ~= "ENDED" then
         self.GameStatus = "ENDED"
         self:TimerEnded()
@@ -508,13 +556,26 @@ function GameService:PlayerDied(died, killer)
 
     -- round will end if (PlayerKilled)
     if self.GameOptions.ROUND_END_CONDITION == "PlayerKilled" then
+        if not killRegistered then
+            -- set killer to other player
+            for _, v in pairs(self.PlayerData:GetPlayers()) do
+                if died ~= v then
+                    killer = v
+                    break
+                end
+            end
+        end
 
-        -- will game end?
-        -- check if round score is won
-        if self.GameOptions.GAME_END_CONDITION == "RoundScore"
-        and getRoundScore(killer) >= self.GameOptions.SCORE_TO_WIN then
-            self:EndGame("Condition", killer)
-            return
+        if killer then
+            incRoundScore(killer)
+
+            -- will game end?
+            -- check if round score is won
+            if self.GameOptions.GAME_END_CONDITION == "RoundScore"
+            and getRoundScore(killer) >= self.GameOptions.SCORE_TO_WIN then
+                self:EndGame("Condition", killer)
+                return
+            end
         end
 
         self:RoundEnd(true, "Condition", killer)

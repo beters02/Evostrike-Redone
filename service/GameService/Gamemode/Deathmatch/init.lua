@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
@@ -22,12 +23,16 @@ local Deathmatch = {
         TEAM_SIZE = 0,
 
         MAX_ROUNDS = 1,
-        ROUND_LENGTH = 60 * 5,
-        --ROUND_LENGTH = 15,
+        --ROUND_LENGTH = 60 * 5,
+        ROUND_LENGTH = 15,
+        --ROUND_WAIT_TIME = 15,
         ROUND_WAIT_TIME = 3,
         OVERTIME_ENABLED = false,
         OVERTIME_SCORE_TO_WIN = 0,
         SCORE_TO_WIN = 0,
+
+        BARRIERS_ENABLED = false,
+        BARRIERS_LENGTH = 3,
 
         ROUND_END_CONDITION = "Timer",
         GAME_END_CONDITION = "TimerScore",
@@ -37,8 +42,10 @@ local Deathmatch = {
         RESPAWN_ENABLED = false,
         RESPAWN_LENGTH = 3,
         REQUIRE_REQUEST_JOIN = true,
+        REQUIRE_PLAYERS_TO_BE_LOADED_START = false,
 
-        GAME_RESTART_LENGTH = 5,
+        --GAME_RESTART_LENGTH = 5,
+        GAME_RESTART_LENGTH = 15,
 
         START_INVENTORY = {
             ABILITIES = {primary = "Dash", secondary = "LongFlash"},
@@ -76,6 +83,10 @@ function Deathmatch:End(service)
     preparePostMatchScreen(self, service)
 
     Gamemode.CallUIFunctionAll(self, service, "GameEnd", "MoveToMap")
+
+    task.delay(3, function()
+        tellModelsToWalk(self, service)
+    end)
 
     print('Gamemode ended!')
 
@@ -259,9 +270,41 @@ function preparePostMatchScreen(self, service)
         local clone = CharacterModel:Clone()
         clone.Parent = map.Models
         clone.PrimaryPart.Anchored = true
-        clone.PrimaryPart.CFrame = map.Spawns[i].CFrame + Vector3.new(0,5,0)
+
+        for _, part in pairs(clone:GetChildren()) do
+            if part:IsA("Part") or part:IsA("MeshPart") then
+                part.CollisionGroup = "DeadCharacters"
+            end
+        end
+
+        clone.PrimaryPart.Anchored = false
+        clone.PrimaryPart.CFrame = map.Spawns[i].CFrame + Vector3.new(0,3,0)
+        clone.PrimaryPart.CFrame = CFrame.new(clone.PrimaryPart.CFrame.Position) * (CFrame.fromOrientation(math.rad(-3.567), math.rad(-90.613), math.rad(0)):Inverse())
     end
 end
 
+function tellModelsToWalk(self, service)
+
+    local bots = workspace.PostGameMap.Models:GetChildren()
+    local botAnims = {}
+
+    for i, v in pairs(bots) do
+        botAnims[i] = {
+            run = v.Humanoid:LoadAnimation(v.Humanoid.Animations.Run)
+        }
+        v.Humanoid:MoveTo(v.PrimaryPart.CFrame.Position + (v.PrimaryPart.CFrame.LookVector.Unit * 10))
+    end
+
+    service.Connections.ModelWalking = RunService.Heartbeat:Connect(function()
+        for i, v in pairs(bots) do
+            local vel = v.PrimaryPart.Velocity.Magnitude
+            if vel >= 2 and not botAnims[i].run.IsPlaying then
+                botAnims[i].run:Play()
+            elseif vel < 2 and botAnims[i].run.IsPlaying then
+                botAnims[i].run:Stop()
+            end
+        end
+    end)
+end
 
 return Deathmatch

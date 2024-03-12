@@ -196,11 +196,17 @@ end
 --@summary Overrides unvalidated data with what was previously stored.
 function _validateIncoming(player, new)
     local _rep = false
-    for i, _ in pairs(new) do
+    for i, v in pairs(new) do
         if PlayerData._defOpt[i] then
-            warn("Could not validate playerdata key '" .. tostring(i) .. "' ... overriding with default value.")
             _rep = PlayerData:GetKey(player, i)
-            new[i] = _hardCopy(_rep)
+            
+            for a, b in pairs(v) do
+                if _rep[a] ~= b then
+                    new[i] = _hardCopy(_rep)
+                    warn("Could not validate playerdata key '" .. tostring(i) .. "' ... overriding with default value.")
+                    break
+                end
+            end
         end
     end
 end

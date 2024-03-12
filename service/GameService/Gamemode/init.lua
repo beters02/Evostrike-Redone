@@ -33,6 +33,11 @@ local Gamemode = {
 
         ROUND_END_CONDITION = "PlayerKilled",
         GAME_END_CONDITION = "Score",
+
+        BARRIERS_ENABLED = false,
+        BARRIERS_LENGTH = 3,
+
+        REQUIRE_PLAYERS_TO_BE_LOADED_START = false,
         
         SPECTATE_ENABLED = true,
         PLAYER_SPAWN_ON_JOIN = true,
@@ -70,6 +75,9 @@ function Gamemode:SpawnPlayer(service, player) end -- Only called if player join
 function Gamemode:PlayerJoinedDuringRound(service, player) end
 function Gamemode:TimerEnded(service, player) end -- Only called if ROUND_END_CONDITION or GAME_END_CONDITION is set to Custom.
 function Gamemode:InitPlayer(service, player) end
+function Gamemode:InitCharacter(service, player) end
+function Gamemode:ForceEnd(service, player) end
+function Gamemode:BarriersFinished(service) end -- Only called if BARRIERS_ENABLED = true
 
 -- Not Required, shared access.
 
@@ -94,9 +102,11 @@ function Gamemode:AddPlayerInventory(service, player)
     if player then
         WeaponService:AddWeapon(player, "knife")
         for slot, item in pairs(pd.inventory.WEAPONS) do
+            if not item then continue end
             WeaponService:AddWeapon(player, item, slot == "primary")
         end
         for _, item in pairs(pd.inventory.ABILITIES) do
+            if not item then continue end
             AbilityService:AddAbility(player, item)
         end
     end
