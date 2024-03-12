@@ -50,8 +50,6 @@ function EvoConsole:_instantiateConsole(player)
     if higherPerm then
         if group == "admin" then
             table.insert(commandModules, CommandsFolder.Admin)
-        elseif group == "playtester" then
-            table.insert(commandModules, CommandsFolder.Playtester)
         end
     end
 

@@ -1,2 +1,0 @@
-local Credits = {}
-return Credits

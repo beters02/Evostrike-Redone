@@ -68,10 +68,10 @@ local Framework = {}
 Framework._types = Types
 
 -- Compile Functions
-Framework = combine(Framework, require(FrameworkLocation:WaitForChild("Compiler")))
+Framework = combine(Framework, require(FrameworkLocation:WaitForChild("TypeCompiler")))
 
 -- Compile Explicit Access Functions
-Framework.Module = setmetatable(require(FrameworkLocation.ExplicitCompiler), Framework)
+Framework.Module = setmetatable(require(FrameworkLocation.Modules), Framework)
 
 -- Services
 Framework.Service = game:GetService("ReplicatedStorage"):WaitForChild("Services")

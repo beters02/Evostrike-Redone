@@ -27,7 +27,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local AssetService = game:GetService("AssetService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local GamemodeService = require(Framework.Service.GamemodeService2)
+--local GamemodeService = require(Framework.Service.GamemodeService2)
+local GameService = require(Framework.Service.GameService)
 local States = require(Framework.Module.States)
 local UIState = States:Get("UI")
 local StarterGui = game:GetService("StarterGui")
@@ -64,7 +65,8 @@ local MainMenu = {
 -- Initialize Pages, Sounds and GamemodeService
 function MainMenu:Initialize(gui)
     self.Gui = gui
-    self.CurrentMenuType = GamemodeService:GetMenuType()
+    --self.CurrentMenuType = GamemodeService:GetMenuType()
+    self.CurrentMenuType = GameService:GetMenuType()
     self.HUD = require(game.Players.LocalPlayer.PlayerScripts:WaitForChild("HUD"))
     self.DisabledHUDs = {}
 
@@ -72,7 +74,7 @@ function MainMenu:Initialize(gui)
     initButtonSounds(self)
     initTopBar(self)
 
-    self.BaseConnections.MenuTypeChanged = GamemodeService:MenuTypeChanged(menuTypeChanged)
+    self.BaseConnections.MenuTypeChanged = GameService:MenuTypeChanged(menuTypeChanged)
     self.CurrentOpenPage = getPage("Home")
 
     self.BlurLightingEffect = Lighting:FindFirstChild("MainMenuBlur")

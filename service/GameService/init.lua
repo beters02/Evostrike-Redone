@@ -45,10 +45,13 @@ local CGamemode = require(LGamemode)
 local EvoMM = require(Framework.Module.EvoMMWrapper)
 local WeaponService = require(Framework.Service.WeaponService)
 local AbilityService = require(Framework.Service.AbilityService)
-local GamemodeService2 = require(Framework.Service.GamemodeService2)
-local RequestSpawnEvent = Framework.Service.GamemodeService2.RequestSpawn
 local GameServiceRemotes = script:WaitForChild("Remotes")
 local BotService = require(Framework.Service.BotService)
+
+-- Call GetServerVars(), Stores a copy of the array so we dont have to reloop every time.
+local StoredServerVars = false
+
+local IsRestarting = false
 
 --[[ MODULE ]]
 local GameService = {
@@ -60,6 +63,7 @@ local GameService = {
     TeamData = false,
     IsSoloMode = false,
     CheatsEnabled = false,
+    MenuType = "Lobby",
 
     StartTime = 0,
     TimeElapsed = 0,
@@ -78,6 +82,32 @@ function gmCall(func: string, ...: any)
     return GameService.CurrentGamemode[func](GameService.CurrentGamemode, GameService, ...)
 end
 --
+
+function restartGame(self, length, ignoreResetGameOptions)
+    if IsRestarting then
+        return false, "Game already restarting!"
+    end
+
+    IsRestarting = true
+
+    if length then
+        task.delay(length, function()
+            IsRestarting = false
+            restartGame(self, false, ignoreResetGameOptions)
+        end)
+        return true
+    end
+
+    for _, v in pairs(self.Connections) do
+        v:Disconnect()
+    end
+
+    gmCall("ForceEnd")
+
+    GameService:Main(self.CurrentGamemode.Name, ignoreResetGameOptions)
+    IsRestarting = false
+    return true
+end
 
 -- [[ GET ]]
 
@@ -113,6 +143,7 @@ function incRoundScore(plr: Player)
     GameService.PlayerData:Increment(plr, "score", 1)
     return GameService.PlayerData:Get(plr, "score")
 end
+
 --
 
 -- [[ EVENT FUNC ]]
@@ -133,6 +164,26 @@ function requestSpawnInvoke(self, plr)
     self.ServicePlayerData:Set(plr, "joined", true)
     gmCall("SpawnPlayer", plr)
     return true
+end
+
+function botSpawn()
+    local Bot = BotService:AddBot({Respawn = false})
+    gmCall("InitCharacter", false, Bot.Character)
+    Framework.Service.BotService.Remotes.BotDiedBindable.Event:Once(function(bot, botChar)
+        task.delay(3, function()
+            botSpawn()
+        end)
+    end)
+end
+
+function setMenuType(menuType)
+    for _, v in pairs(Players:GetPlayers()) do
+        local mm = v.PlayerGui and v.PlayerGui:FindFirstChild("MainMenu")
+        if mm then
+            mm:SetAttribute("MenuType", menuType)
+        end
+        GameServiceRemotes.SetMenuType:FireClient(v, "ChangeMenuType", menuType)
+    end
 end
 
 -- [[ MAIN ]]
@@ -170,7 +221,7 @@ function GameService.Initialize()
 end
 
 -- Starts the specified or default gamemode.
-function GameService:Main(gamemodeStr: string?)
+function GameService:Main(gamemodeStr: string?, ignoreResetGameOptions: boolean?)
 
     -- get gamemode class
     local gamemode = getGMod(gamemodeStr)
@@ -182,10 +233,13 @@ function GameService:Main(gamemodeStr: string?)
     -- set CurrentGamemode, GameOptions, Menu Type
     self.CurrentGamemode = gamemode
     self.CurrentGamemode.Name = gamemodeStr
-    self.GameOptions = table.clone(gamemode.GameOptions)
-    GamemodeService2:SetMenuType(self.GameOptions.MENU_TYPE)
-    GamemodeService2.CurrentGamemode = gamemodeStr
 
+    if not ignoreResetGameOptions then
+        self.GameOptions = table.clone(gamemode.GameOptions)
+    end
+    
+    setMenuType(self.GameOptions.MENU_TYPE)
+    
     -- init game
     self:InitalizeGame()
 
@@ -200,12 +254,11 @@ end
 function GameService:InitalizeGame()
 
     -- disable spawn request for time being.
-    RequestSpawnEvent.OnServerInvoke = function()
+    GameServiceRemotes.PlayerRequestSpawn.OnServerInvoke = function()
         return false
     end
 
-    -- set the MainMenuType for ui changes.
-    GamemodeService2:SetMenuType(self.GameOptions.MENU_TYPE)
+    --GamemodeService2:SetMenuType(self.GameOptions.MENU_TYPE)
 
     -- init Spawns
     local Spawns = ServerStorage:FindFirstChild("Spawns")
@@ -326,24 +379,13 @@ function GameService:InitalizeGame()
 
     -- REQUEST SPAWN
     if self.GameOptions.REQUIRE_REQUEST_JOIN then
-        RequestSpawnEvent.OnServerInvoke = function(plr)
+        GameServiceRemotes.PlayerRequestSpawn.OnServerInvoke = function(plr)
             requestSpawnInvoke(self, plr)
         end
     end
-
-    local GamemodeEvents = ReplicatedStorage.GamemodeEvents
-    self.Connections.AddBot = GamemodeEvents.Game.AddBot.OnServerEvent:Connect(function()
-        BotSpawn()
-    end)
-end
-
-function BotSpawn()
-    local Bot = BotService:AddBot({Respawn = false})
-    gmCall("InitCharacter", false, Bot.Character)
-    Framework.Service.BotService.Remotes.BotDiedBindable.Event:Once(function(bot, botChar)
-        task.delay(3, function()
-            BotSpawn()
-        end)
+    
+    GameServiceRemotes.BotSpawn.OnServerEvent:Connect(function()
+        botSpawn()
     end)
 end
 
@@ -365,6 +407,9 @@ function GameService:PlayerRemoving(player)
 end
 
 function GameService:EndGame(result, ...)
+
+    self.GameStatus = "ENDED"
+
     -- clear connections and restart
     for _, v in pairs(self.Connections) do
         v:Disconnect()
@@ -373,7 +418,7 @@ function GameService:EndGame(result, ...)
     -- wait on Gamemode Class...
     gmCall("End", result, ...)
 
-    GameService:Main(self.CurrentGamemode.Name)
+    GameService:Main(self.CurrentGamemode.Name, true)
 end
 
 function GameService:RoundStart()
@@ -496,8 +541,124 @@ end
 
 -- [[ MODULE ]]
 
+function GameService:GetCurrentGamemode()
+    if RunService:IsServer() then
+        return GameService.CurrentGamemode.Name
+    end
+    return GameServiceRemotes.Get:InvokeServer("CurrentGamemode")
+end
+
+function GameService:GetMenuType()
+    if RunService:IsServer() then
+        return GameService.MenuType
+    end
+    return GameServiceRemotes.Get:InvokeServer("MenuType")
+end
+
+function GameService:GetServerVars()
+    if StoredServerVars then
+        return StoredServerVars
+    end
+
+    StoredServerVars = {}
+    for i, _ in pairs(GameService.GameOptions) do
+        table.insert(StoredServerVars, string.lower(i))
+    end
+
+    return StoredServerVars
+end
+
+function GameService:MenuTypeChanged(callback)
+    if RunService:IsServer() then
+        return
+    end
+    return GameServiceRemotes.SetMenuType.OnClientEvent:Connect(function(action, newMenuType)
+        if action == "ChangeMenuType" then
+            callback(newMenuType)
+        end
+    end)
+end
+
 function GameService:IsCheatsEnabled()
     return self.CheatsEnabled
+end
+
+function GameService:ChangeServerVar(key, value) -- success, err
+    if RunService:IsServer() then
+        return
+    end
+    return GameServiceRemotes.ServerVar:InvokeServer(key, value)
+end
+
+-- Restarts Game without changing GameOptions.
+function GameService:RestartGame(length)
+    restartGame(self, length, true)
+end
+
+-- Restarts Game and Resets GameOptions.
+function GameService:ResetGame(length)
+    restartGame(self, length)
+end
+
+-- [[ SCRIPT ]]
+
+if RunService:IsServer() then
+    GameServiceRemotes.Get.OnServerInvoke = function(_, action, ...)
+        return GameService["Get" .. action](GameService)
+    end
+    GameServiceRemotes.ServerVar.OnServerInvoke = function(player, key, value)
+        local plrIsAdmin = require(game.ServerStorage.Stored.AdminIDs):IsAdmin(player)
+
+        local low = string.lower(key)
+        if low == "cheats" or low == "cheats_enabled" then
+            if not GameService.IsSoloMode and not plrIsAdmin then
+                return false, "Cannot enable cheats on this server."
+            end
+            GameService.CheatsEnabled = true
+            return true
+        end
+
+        if not GameService:IsCheatsEnabled() and not plrIsAdmin then
+            return false, "Must have cheats enabled on this server."
+        end
+
+        key = string.upper(key)
+        if not GameService.GameOptions[key] then
+            return false, "This option does not exist. sv_" .. low
+        end
+
+        local currentValue = GameService.GameOptions[key]
+        if not value then
+            return currentValue
+        end
+
+        local newValueType = typeof("")
+        local currentValueType = typeof(currentValue)
+
+        if tonumber(value) then
+            value = tonumber(value)
+            newValueType = typeof(1)
+        elseif value == "true" or value == "false" then
+            value = value == "true"
+            newValueType = typeof(true)
+        end
+
+        if newValueType ~= currentValueType then
+            return false, "Cannot set value to this type. " .. tostring(currentValueType) .. " -> " .. tostring(newValueType)
+        end
+
+        GameService.GameOptions[key] = value
+        return value
+    end
+    GameServiceRemotes.MultiplayerFunction.OnServerInvoke = function(player, action, ...)
+        if not GameService:IsCheatsEnabled() and not require(game.ServerStorage.Stored.AdminIDs):IsAdmin(player) then
+            return false, "Must have cheats enabled on this server."
+        end
+        if not GameService[action] then
+            return false, "This command does not exist."
+        end
+        return GameService[action](GameService, ...)
+    end
 end
 
 return GameService

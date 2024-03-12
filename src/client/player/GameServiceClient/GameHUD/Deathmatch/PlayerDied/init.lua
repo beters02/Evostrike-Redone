@@ -62,6 +62,7 @@ local plrKillerDmgInteractions = false
 local getCurrCameraLerpCF
 local tweens = {}
 local defFov = playerData:GetPath("options.camera.FOV")
+local enabled = false
 
 --[[ UTILITY FUNC ]]
 
@@ -408,11 +409,14 @@ function start()
 end
 
 function finish()
+	if zoomEnemyTween.PlaybackState == Enum.PlaybackState.Playing then
+		zoomEnemyTween:Cancel()
+	end
 	disconnect()
+	camera.FieldOfView = defFov
 	hud:Enable()
 	uistate:removeOpenUI("BuyMenu")
     uistate:removeOpenUI("DeathMenu")
-	camera.FieldOfView = defFov
     if player ~= killer and killer.Character then
 		killer.Character.EnemyHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
 	end
@@ -420,6 +424,7 @@ function finish()
     gui.Enabled = false
     loadoutButton.Modal = false
     respawnButton.Modal = false
+	enabled = false
 end
 
 local PlayerDied = {}
@@ -440,6 +445,8 @@ function PlayerDied:Enable(uiContainer, sentKiller, respawnWaitLength)
     if not started then
         started = true
     end
+
+	enabled = true
 
     init()
     connect()
@@ -477,6 +484,13 @@ function PlayerDied:EnableRespawnButton()
 	respawnButtonEnabled = true
 	respawnButton.TextLabel.Text = "RESPAWN"
 	connections[2] = respawnButton.MouseButton1Click:Connect(clickRespawn)
+end
+
+function PlayerDied:Disable()
+	if enabled then
+		finish()
+		enabled = false
+	end
 end
 
 return PlayerDied

@@ -90,6 +90,19 @@ function Deathmatch:End(service)
     end
 end
 
+function Deathmatch:ForceEnd(service)
+    Gamemode.CallUIFunctionAll(self, service, "PlayerDied", "Disable")
+    Gamemode.ForceKillAllPlayers(self, service)
+    AbilityService:ClearAllPlayerInventories()
+    WeaponService:ClearAllPlayerInventories()
+    if service.GameStatus == "ENDED" then
+        Gamemode.CallUIFunctionAll(self, service, "GameEnd", "Finish")
+    end
+    if workspace:FindFirstChild("PostGameMap") then
+        workspace.PostGameMap:Destroy()
+    end
+end
+
 function Deathmatch:InitPlayer(service, player)
     Gamemode.CallUIFunction(self, service, player, "BuyMenu", "Enable")
     Gamemode.CallUIFunction(self, service, player, "TopBar", "Enable", service.GameOptions.ROUND_LENGTH - service.TimeElapsed)

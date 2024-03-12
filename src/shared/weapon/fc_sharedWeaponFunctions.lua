@@ -96,6 +96,37 @@ end
 
 -- Weapon Bullets
 
+function module.GetBulletHitSound(result)
+	print(result)
+
+	local material = result.Instance:GetAttribute("ObjectHitMaterial") or result.Instance:GetAttribute("Bangable") or result.Instance.Material.Name
+
+	if material == "Metal" then
+		material = "HeavyMetal"
+	end
+
+	local hitSoundFolder
+	pcall(function()
+		hitSoundFolder = GlobalSounds.ObjectHit[material]
+	end)
+	hitSoundFolder = hitSoundFolder or GlobalSounds.ObjectHit.Pavement
+
+	local volumeMinMax = Vector2.new(3,6)
+	if result.Distance and result.Distance < 50 then
+		volumeMinMax *= result.Distance / 50
+	end
+	if result.IsReplicated then
+		volumeMinMax *= 0.7
+	end
+
+	local properties = {
+		Volume = math.random(volumeMinMax.X, volumeMinMax.Y) * 0.1
+	}
+
+	local children = hitSoundFolder:GetChildren()
+	return children[math.random(1,#children)], properties
+end
+
 function module.CreateBulletHole(result, partCache)
 	if not result then return end
 	local isBangable = false
@@ -103,6 +134,7 @@ function module.CreateBulletHole(result, partCache)
 		isBangable = result.IsBangableWall
 	end)
 	isBangable = _succ and isBangable or false
+
 	EmitParticle.EmitParticles(result.Instance, EmitParticle.GetBulletParticlesFromInstance(result.Instance), result.Position, nil, nil, nil, isBangable)
 
 	local normal = result.Normal
@@ -126,6 +158,9 @@ function module.CreateBulletHole(result, partCache)
 	bullet_hole.CanCollide = false
 	weld.Part1 = result.Instance
 	bullet_hole.Parent = workspace.Temp
+
+	local sound, properties = module.GetBulletHitSound(result)
+	module.PlaySound(bullet_hole, false, sound, properties)
 
 	if RunService:IsClient() then
 		CollectionService:AddTag(bullet_hole, "DestroyOnPlayerDied_" .. Players.LocalPlayer.Name)
@@ -222,14 +257,10 @@ end
 function module.FireBullet(fromChar, result, isHumanoid, isBangable, tool, fromModel, partCache)
 	if game:GetService("RunService"):IsServer() then return end
 	module.CreateBullet(tool, result.Position, true, fromModel, partCache)
-	task.spawn(function()
-		Replicate:FireServer("CreateBullet", tool, result.Position, false)
-	end)
+	Replicate:FireServer("CreateBullet", tool, result.Position, false)
 	if not isHumanoid then
-		module.CreateBulletHole({Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable}, partCache)
-		task.spawn(function()
-			Replicate:FireServer("CreateBulletHole", {Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable})
-		end)
+		module.CreateBulletHole({Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable, Distance = result.Distance}, partCache)
+		Replicate:FireServer("CreateBulletHole", {Position = result.Position, Instance = result.Instance, Normal = result.Normal, IsBangableWall = isBangable, IsReplicated = true, Distance = result.Distance})
 	end
 end
 
@@ -358,7 +389,8 @@ function module.RegisterShot(player, weaponOptions, result, origin, _, _, isHuma
 			-- _[1] = damage, _[2] = particleFolderName[deprecated]
 			_, _, killed = util_getDamageFromHumResult(player, char, weaponOptions, result.Position, result.Instance, result.Normal, origin, wallbangDamageMultiplier)
 			BulletHitUtil.PlayerHitParticles(char, result.Instance, killed)
-			--BulletHitUtil.PlayerHitSounds(char, result.Instance, killed)
+			--BulletHitUtil.PlayerHitSounds(char, result.Instance, killed) Player hit sounds handeled in EvoPlayer!
+			-- Maybe Particles can be handeled there too.
 		end
 		
 		return module.FireBullet(player.Character, result, isHumanoid, isBangable, tool, fromModel, partCache)
@@ -383,7 +415,7 @@ end
 
 -- Weapon Sounds
 
-function module.PlaySound(playFrom, weaponName, sound) -- if not weaponName, sound will not be destroyed upon recreation
+function module.PlaySound(playFrom, weaponName, sound, properties) -- if not weaponName, sound will not be destroyed upon recreation
 	local c: Sound
 
 	-- destroy sound on recreation if weaponName is specified
@@ -400,7 +432,15 @@ function module.PlaySound(playFrom, weaponName, sound) -- if not weaponName, sou
 	c = sound:Clone() :: Sound
 	c.Name = weaponName .. "_" .. sound.Name
 	c.Parent = playFrom
+
+	if properties then
+		for i, v in pairs(properties) do
+			c[i] = v
+		end
+	end
+
 	c:Play()
+
 	Debris:AddItem(c, c.TimeLength + 0.06)
 	return c
 end

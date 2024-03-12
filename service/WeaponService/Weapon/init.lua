@@ -712,29 +712,28 @@ end
 --
 
 function Weapon:PlaySound(sound: string, dontDestroyOnRecreate: boolean?, isReplicated: boolean?)
+    local weaponName = self.Name
+    if not dontDestroyOnRecreate then weaponName = false end
 
-local weaponName = self.Name
-if not dontDestroyOnRecreate then weaponName = false end
+    local _sound = self.Assets.Sounds:FindFirstChild(sound)
+    if not _sound then return end
 
-local _sound = self.Assets.Sounds:FindFirstChild(sound)
-if not _sound then return end
-
-if _sound:IsA("Folder") then
-    for _, v in pairs(_sound:GetChildren()) do
-        if isReplicated then
-            SoundModule.PlayReplicatedClone(v, self.Character.HumanoidRootPart, true)
-        else
-            SharedWeaponFunctions.PlaySound(self.Character, weaponName, v)
+    if _sound:IsA("Folder") then
+        for _, v in pairs(_sound:GetChildren()) do
+            if isReplicated then
+                SoundModule.PlayReplicatedClone(v, self.Character.HumanoidRootPart, true)
+            else
+                SharedWeaponFunctions.PlaySound(self.Character, weaponName, v)
+            end
         end
+        return
     end
-    return
-end
 
-if isReplicated then
-    return SoundModule.PlayReplicatedClone(_sound, self.Character.HumanoidRootPart, true)
-end
+    if isReplicated then
+        return SoundModule.PlayReplicatedClone(_sound, self.Character.HumanoidRootPart, true)
+    end
 
-return SharedWeaponFunctions.PlaySound(self.Character, weaponName, _sound)
+    return SharedWeaponFunctions.PlaySound(self.Character, weaponName, _sound)
 end
 
 function Weapon:PlayReplicatedSound(sound: string, dontDestroyOnRecreate: boolean?)

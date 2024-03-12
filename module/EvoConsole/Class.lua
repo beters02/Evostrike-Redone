@@ -5,6 +5,7 @@ local Types = require(EvoConsole.Types)
 local Tables = require(EvoConsole.Tables)
 local Configuration = require(EvoConsole.Configuration)
 local Events = script.Parent.Events
+local GameService = require(Framework.Service.GameService)
 
 local States = require(Framework.Module.States)
 local UIState = States:Get("UI")
@@ -19,20 +20,11 @@ function class.new(Console, player)
     -- get all command modules w/ access & create GUI via server
     local gui, commandModules = Console:ClientToServer(player, "instantiateConsole")
 
-    -- compile command modules
-    -- todo: compile in order of lowest permission to highest
-    -- for now we just do admin perms last
+    -- compile commands
     self.Commands = {}
-    for i, v in pairs(commandModules) do
-        if v.Name == "Admin" then
-            self.Commands._ADMINLAST = v
-        else
-            self.Commands = Tables.merge(self.Commands, require(v))
-        end
-    end
-    if self.Commands._ADMINLAST then
-        self.Commands = Tables.merge(self.Commands, require(self.Commands._ADMINLAST))
-        self.Commands._ADMINLAST = nil
+    self.ParsedCommands = {}
+    for _, v in pairs(commandModules) do
+        self.Commands = Tables.merge(self.Commands, require(v))
     end
 
     -- convert objects into object of Console type
@@ -202,23 +194,32 @@ function _printMsg(self, msg: string, msgType: Types.ReturnMessageType|nil)
     return true
 end
 
+function _doServerVarCommand(self, commandSplit)
+    local key = string.gsub(commandSplit[1], "sv_", "")
+    local value = commandSplit[2]
+    print(key, value)
+    local success, err = GameService:ChangeServerVar(key, value)
+    if not success then
+        return self:Error(err)
+    end
+    return self:Print(commandSplit[1] .. " " .. success)
+end
+
 function _doCommand(self, commandSplit: table)
 
     -- verify command string was found
     if not commandSplit or not commandSplit[1] then -- split[1] == command
         return self:Error("Could not get command from string")
 	end
+
+    if string.find(commandSplit[1], "sv_") then
+        return _doServerVarCommand(self, commandSplit)
+    end
 	
 	-- locate command from Commands
-	local commandTable = false
-	for i, v in pairs(self.Commands) do
-		if string.lower(i) == string.lower(commandSplit[1]) and v.Function then
-			commandTable = v
-			break
-		end
-	end
+	local commandTable = self.Commands[commandSplit[1]]
 
-	-- cant find command
+    -- cant find command
 	if not commandTable then
         return self:Error("Could not find command " .. commandSplit[1])
 	end
@@ -229,7 +230,7 @@ function _doCommand(self, commandSplit: table)
     -- verify via server remote
     local canPerformCommand = Events.VerifyCommandEvent:InvokeServer(table.unpack(commandSplit))
     if not canPerformCommand then
-        return self:Error("Must have cheats enabled to use this command.")
+        return self:Error("Must have cheats enabled on the server to use this command.")
     end
 	
     -- function

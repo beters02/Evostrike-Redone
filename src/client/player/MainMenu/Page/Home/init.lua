@@ -29,8 +29,8 @@ local Math = require(Framework.Module.lib.fc_math)
 local LoadingUI = require(game.Players.LocalPlayer.PlayerScripts:WaitForChild("LoadingUI"))
 
 local RequestQueueEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("requestQueueFunction")
-local RequestSpawnEvent = ReplicatedStorage.Services.GamemodeService2.RequestSpawn
-local RequestDeathEvent = ReplicatedStorage.Services.GamemodeService2.RequestDeath
+local RequestSpawnEvent = ReplicatedStorage.Services.GameService.Remotes.PlayerRequestSpawn
+--local RequestDeathEvent = ReplicatedStorage.Services.GamemodeService2.RequestDeath
 
 local Page = require(script.Parent)
 local HomePage = setmetatable({}, Page)
@@ -285,15 +285,11 @@ function teleportBackToLobbyButtonClicked(self)
 end
 
 function joinGameButtonClicked(self)
-    print('CLICKED!')
-
     if self.ActionProcessing then return end
     self.ActionProcessing  = true
 
     local card = self.Frame.Card_Bottom
-    if card:GetAttribute("Joined") then
-        --leaveGame(card)
-    else
+    if not card:GetAttribute("Joined") then
         joinGame(self, card)
     end
 
@@ -301,44 +297,18 @@ function joinGameButtonClicked(self)
 end
 
 function joinGame(self, button)
-    local loadingTime = tick()
     local loading = LoadingUI.new()
 
     task.wait()
     self.Main:Close()
 
     local success = RequestSpawnEvent:InvokeServer()
-    --[[local ct = tick()
-    loadingTime = ct - loadingTime
-    print(loadingTime)
-    if loadingTime < 5 then
-        repeat
-            loadingTime = tick() - ct
-            task.wait()
-            print(loadingTime)
-        until loadingTime >= 5
-    end]]
-
     loading:destroy()
+
     if success then
         self.Frame.Card_Bottom:SetAttribute("Joined", true)
         self.Main:Close()
         button.InfoLabel.Text = LOBBY_BOTTOM_CLICKED_TEXT
-        --TODO: make it so you can open menu
-    else
-        --self.Main:Open()
-    end
-end
-
-function leaveGame(button)
-    local success = RequestDeathEvent:InvokeServer()
-    if success then
-        button.InfoLabel.Text = LOBBY_BOTTOM_DEFAULT_TEXT
-        button:SetAttribute("Joiend", false)
-        task.delay(0.2, function()
-            game:GetService("UserInputService").MouseIconEnabled = true
-        end)
-        --TODO: make it so you cannot open the menu
     end
 end
 

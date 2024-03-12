@@ -8,6 +8,8 @@ local Globals = require(Framework.Module.lib.fc_global)
 local GamemodeEvents = ReplicatedStorage.GamemodeEvents
 local PlayerData = require(Framework.Module.PlayerData)
 
+local storedSvList = false
+
 local ParticlesTable
 task.spawn(function()
 	ParticlesTable = EmitParticles.GetParticles()
@@ -147,24 +149,6 @@ Commands.Map = {
 	end
 }
 
-Commands.qs_clearqueues = {
-	Description = "Clear all queue data stores {Debug}",
-	Public = false,
-
-	Function = function()
-		game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("ClearAll")
-	end
-}
-
-Commands.qs_printqueues = {
-	Description = "Print all players that are in queues {Debug}",
-	Public = false,
-
-	Function = function()
-		game:GetService("ReplicatedStorage").main.sharedMainRemotes.requestQueueFunction:InvokeServer("PrintAll")
-	end
-}
-
 --
 
 Commands.as_add = {
@@ -216,36 +200,56 @@ Commands.addinvitem = {
 	end
 }
 
-Commands.gmhud_test = {
-	Description = "Test a Gamemode HUD event. Will test RoundOver",
-	public = false,
-
-	Function = function(self, player, length)
-		local m1 = require(player.PlayerScripts.GamemodeHUD["1v1"])
-		m1.Init()
-		m1.Enable(player)
-		m1.RoundOver(player)
-		task.wait(tonumber(length) or 3)
-		m1.RoundStart()
-		m1.Disable()
-	end
-}
-
-Commands.gmforcestart = {
-	Description = "Forcestart the 2v2 Gamemode",
-	public = false,
-
-	Function = function()
-		GamemodeEvents.Game.ForceStart:FireServer()
-	end
-}
-
 Commands.addbot = {
 	Description = "Add a bot",
 	public = false,
 
-	Function = function()
-		GamemodeEvents.Game.AddBot:FireServer()
+	Function = function(self)
+		Framework.Service.GameService.Remotes.BotSpawn:FireServer()
+		return self:Print("Adding bot...")
+	end
+}
+
+Commands.svlist = {
+	Description = "List all of the sv commands.",
+	public = false,
+
+	Function = function(self)
+		if not storedSvList then
+			storedSvList = Framework.Service.GameService.Remotes.Get:InvokeServer("ServerVars")
+		end
+
+		for _, v in pairs(storedSvList) do
+			self:Print(v)
+		end
+	end
+}
+
+Commands.mp_restartgame = {
+	Description = "Restart the game without changing the GameOptions.",
+	public = false,
+
+	Function = function(self, _, length)
+		local success, err = Framework.Service.GameService.Remotes.MultiplayerFunction:InvokeServer("RestartGame", length)
+		if not success then
+			err = err or "Command error, no error message provided."
+			return self:Error(err)
+		end
+		return self:Print("Restarting game...")
+	end
+}
+
+Commands.mp_resetgame = {
+	Description = "Restart the game and reset GameOptions.",
+	public = false,
+
+	Function = function(self, _, length)
+		local success, err = Framework.Service.GameService.Remotes.MultiplayerFunction:InvokeServer("ResetGame", length)
+		if not success then
+			err = err or "Command error, no error message provided."
+			return self:Error(err)
+		end
+		return self:Print("Restarting game...")
 	end
 }
 
