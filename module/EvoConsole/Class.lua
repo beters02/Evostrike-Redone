@@ -59,29 +59,20 @@ end
 -- Open the console
 function class:Open()
     self:ConnectCommandRegister()
-
     UIState:addOpenUI("Console", self.console.UI, true)
-
-    -- start at bottom
-    self.console.UI.MainFrame.TextReturnFrame.CanvasPosition = Vector2.new(0, self.console.UI.MainFrame.TextReturnFrame.AbsoluteCanvasSize.Y)
-
-    -- vissi
-    self.console.UI.Enabled = true
-
-    self.player:SetAttribute("Typing", true)
     UIState:setIsTyping(true)
+    self.player:SetAttribute("Typing", true)
+    self.console.UI.MainFrame.TextReturnFrame.CanvasPosition = Vector2.new(0, self.console.UI.MainFrame.TextReturnFrame.AbsoluteCanvasSize.Y)
+    self.console.UI.Enabled = true
     self.enterBox:CaptureFocus()
 end
 
 -- Close the console
 function class:Close()
     self:DisconnectCommandRegister()
-
-    UIState:removeOpenUI("Console")
-    print('removed')
-
     self.console.UI.Enabled = false
     self.player:SetAttribute("Typing", false)
+    UIState:removeOpenUI("Console")
     UIState:setIsTyping(false)
 end
 
