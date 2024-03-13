@@ -78,8 +78,8 @@ local InventoryDefs = {
     ability_primary = {"Dash"},
     ability_secondary = {"LongFlash", "SmokeGrenade", "HEGrenade", "Molly"}
 }
-InventoryDefs.primary = Tables.combine(InventoryDefs.light_primary, InventoryDefs.heavy_primary)
-InventoryDefs.secondary = Tables.combine(InventoryDefs.light_secondary, InventoryDefs.heavy_secondary)
+InventoryDefs.primary = Tables.combineNew(InventoryDefs.light_primary, InventoryDefs.heavy_primary)
+InventoryDefs.secondary = Tables.combineNew(InventoryDefs.light_secondary, InventoryDefs.heavy_secondary)
 
 local RoundInventories = {
     [1] = {primary = false, secondary = "light_secondary"},
@@ -91,6 +91,9 @@ local RoundInventories = {
 
 local function getPlayerRoundInventory(round)
     local roundInv = Tables.clone(RoundInventories[round])
+    print(round)
+    print(roundInv)
+
     for i, v in pairs(roundInv) do
         if not v then
             continue

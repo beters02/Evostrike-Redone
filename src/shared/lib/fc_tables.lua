@@ -9,6 +9,22 @@ function Tables.combine(tab: table, value: table)
     return tab
 end
 
+-- Combines the elements of two tables into a new table.
+function Tables.combineNew(tab: table, tab1: table)
+    local new = {}
+    for i, v in pairs(tab) do
+        new[i] = v
+    end
+    for i, v in pairs(tab1) do
+        if new[i] then
+            table.insert(new, v)
+            continue
+        end
+        new[i] = v
+    end
+    return new
+end
+
 -- Clones the table
 function Tables.clone(tab: table)
     local n = {}

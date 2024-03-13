@@ -97,8 +97,6 @@ end
 -- Weapon Bullets
 
 function module.GetBulletHitSound(result)
-	print(result)
-
 	local material = result.Instance:GetAttribute("ObjectHitMaterial") or result.Instance:GetAttribute("Bangable") or result.Instance.Material.Name
 
 	if material == "Metal" then

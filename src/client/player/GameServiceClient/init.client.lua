@@ -14,6 +14,14 @@ local function getUIModule(moduleStr)
     return currUIContainer:FindFirstChild(moduleStr)
 end
 
+local function disableUIModals(ui)
+    for i, v in pairs(ui:GetDescendants()) do
+        pcall(function()
+            v.Modal = false
+        end)
+    end
+end
+
 -- Creates a Gamemode UI Container with all needed UI elements for the gamemode.
 GameServiceRemotes.SetUIGamemode.OnClientEvent:Connect(function(gamemode)
     if currUIContainer then
@@ -33,6 +41,7 @@ GameServiceRemotes.SetUIGamemode.OnClientEvent:Connect(function(gamemode)
         for _, ui in pairs(c:GetChildren()) do
             if ui:IsA("ScreenGui") then
                 ui.Enabled = false
+                disableUIModals(ui)
             end
         end
     end
