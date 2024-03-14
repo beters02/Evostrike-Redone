@@ -1,8 +1,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
+local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 
 local player = game:GetService("Players").LocalPlayer
+
+local function getWeaponIconID(weapon)
+	return Framework.Service.WeaponService.Weapon[weapon].Assets.Images.iconEquipped.Image
+end
 
 local killfeed = {}
 killfeed.__index = killfeed
@@ -10,7 +15,8 @@ killfeed.__index = killfeed
 function killfeed.init(self)
     local _n = {}
     _n.frame = self.killfr
-    _n.itemframe = _n.frame:WaitForChild("ItemFrame")
+    --_n.itemframe = _n.frame:WaitForChild("ItemFrame")
+	_n.itemframe = _n.frame:WaitForChild("ItemFrame")
 	_n.currentItems = {}
 	_n.upLength = self.upLength or 5
 	_n.yours = self.yours
@@ -52,6 +58,21 @@ function killfeed:addItem(killer, killed)
 	self:setKillfeedTexts(item, killer, killed)
 	item.Visible = true
 	item.GroupTransparency = 1
+
+	if not self.yours then
+		if killed.Character:GetAttribute("DiedToHeadshot") then
+			item:WaitForChild("WeaponIcon").Position = UDim2.fromScale(0.37, 0.201)
+			item:WaitForChild("Icon1").Visible = true
+		else
+			item:WaitForChild("WeaponIcon").Position = UDim2.fromScale(0.429, 0.201)
+			item:WaitForChild("Icon1").Visible = false
+		end
+	end
+
+	local weaponUsed = killed:GetAttribute("WeaponUsedToKill")
+	if weaponUsed then
+		item.WeaponIcon.Image = getWeaponIconID(weaponUsed)
+	end
 	
 	local index = #self.currentItems + 1
 	local newTable = {frame = item, tweenIn = nil, tweenOut = nil}

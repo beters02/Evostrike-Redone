@@ -12,6 +12,7 @@ local EvoPlayer = require(Framework.Module.EvoPlayer)
 local GameServiceRemotes = Framework.Service.GameService.Remotes
 local PostGameMap = ServerStorage:WaitForChild("PostGameMap")
 local CharacterModel = game.StarterPlayer.StarterCharacter
+local UIService = require(Framework.Service.UIService)
 
 local Gamemode = require(script.Parent)
 local Deathmatch = {
@@ -23,8 +24,8 @@ local Deathmatch = {
         TEAM_SIZE = 0,
 
         MAX_ROUNDS = 1,
-        --ROUND_LENGTH = 60 * 5,
-        ROUND_LENGTH = 15,
+        ROUND_LENGTH = 60 * 5,
+        --ROUND_LENGTH = 15,
         --ROUND_WAIT_TIME = 15,
         ROUND_WAIT_TIME = 3,
         OVERTIME_ENABLED = false,
@@ -68,6 +69,8 @@ local Deathmatch = {
     }
 }
 
+local currentEndUIState = false
+
 function Deathmatch:Start(service)
     print('Gamemode started!')
 end
@@ -75,6 +78,7 @@ end
 function Deathmatch:End(service)
     -- fade in players screen while we set up post match map
     Gamemode.CallUIFunctionAll(self, service, "GameEnd", "Start")
+    currentEndUIState = "Start"
 
     Gamemode.ForceKillAllPlayers(self, service)
     AbilityService:ClearAllPlayerInventories()
@@ -83,6 +87,7 @@ function Deathmatch:End(service)
     preparePostMatchScreen(self, service)
 
     Gamemode.CallUIFunctionAll(self, service, "GameEnd", "MoveToMap")
+    currentEndUIState = "MoveToMap"
 
     task.delay(3, function()
         tellModelsToWalk(self, service)
@@ -93,6 +98,7 @@ function Deathmatch:End(service)
     task.wait(self.GameOptions.GAME_RESTART_LENGTH)
 
     Gamemode.CallUIFunctionAll(self, service, "GameEnd", "Finish")
+    currentEndUIState = false
 
     task.wait(1)
 
@@ -121,6 +127,17 @@ end
 
 function Deathmatch:PlayerAdded(service, player)
     print('Player added!')
+end
+
+function Deathmatch:PlayerJoinedAfterGame(service, player)
+    if not currentEndUIState then
+        return
+    end
+
+    Gamemode.CallUIFunction(self, service, player, "GameEnd", "Start")
+    if currentEndUIState == "MoveToMap" then
+        Gamemode.CallUIFunction(self, service, player, "GameEnd", "MoveToMap")
+    end
 end
 
 function Deathmatch:PlayerRemoved(service)

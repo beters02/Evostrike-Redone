@@ -161,6 +161,10 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
         self.Controller:UnequipWeapon(self.Slot)
     end)
 
+    self.Connections.Died = self.Humanoid.Died:Connect(function()
+        self.Variables.MainWeaponPartCache:Destroy()
+    end)
+
     self.ServerEquipEvent.OnClientEvent:Connect(function(success)
         if success and self.Variables.equipping then
             self.Variables.equipped = true
@@ -269,13 +273,14 @@ function Weapon:Unequip()
 end
 
 function Weapon:Remove()
-self.Tool:Destroy()
-self.ClientModel:Destroy()
-for i, v in pairs(self.Connections) do
-    v:Disconnect()
-    self.Connections[i] = nil
-end
-self = nil
+    self.Tool:Destroy()
+    self.ClientModel:Destroy()
+    for i, v in pairs(self.Connections) do
+        v:Disconnect()
+        self.Connections[i] = nil
+    end
+    self.Variables.MainWeaponPartCache:Destroy()
+    self = nil
 end
 
 function Weapon:PrimaryFire(moveSpeed)

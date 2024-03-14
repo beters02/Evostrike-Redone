@@ -121,8 +121,11 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
 
     local damageAppliedToCharacter = true
     local killed = false
+    local isHeadShot = false
 
     if string.find(string.lower(hitPart), "head") then
+        isHeadShot = true
+
         if helmet then
             if destroysHelmet then
                 setCharAttribute(attributePlayer, "Helmet", false)
@@ -179,8 +182,10 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
         end
 
         character:SetAttribute("Killer", damager.Name)
-        if damage - character.Humanoid.Health <= 0 then
+        if killed then
             character:SetAttribute("WeaponUsedToKill", weaponUsed)
+            character:SetAttribute("DiedToHeadshot", isHeadShot)
+            -- died through smoke
         end
 
         if damageAppliedToCharacter then

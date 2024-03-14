@@ -73,6 +73,7 @@ function Gamemode:RoundStart(service, round) end
 function Gamemode:RoundEnd(service, result, ...) end
 function Gamemode:SpawnPlayer(service, player) end -- Only called if player joins during round and PLAYER_SPAWN_ON_JOIN is true.
 function Gamemode:PlayerJoinedDuringRound(service, player) end
+function Gamemode:PlayerJoinedAfterGame(service, player) end
 function Gamemode:TimerEnded(service, player) end -- Only called if ROUND_END_CONDITION or GAME_END_CONDITION is set to Custom.
 function Gamemode:InitPlayer(service, player) end
 function Gamemode:InitCharacter(service, player) end

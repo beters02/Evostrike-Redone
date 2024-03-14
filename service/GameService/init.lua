@@ -27,7 +27,7 @@
 ]]
 
 --[[ SERVICE CONFIG ]]
-local DEFAULT_GAMEMODE = "1v1"
+local DEFAULT_GAMEMODE = "Deathmatch"
 
 --[[ SERVICES ]]
 local Players = game:GetService("Players")
@@ -355,6 +355,11 @@ function GameService:InitalizeGame()
             -- add loading UI
         end]]
 
+        if self.GameStatus == "ENDED" then
+            gmCall("PlayerJoinedAfterGame", player)
+            return
+        end
+
         -- round is started
         if self.RoundStatus == "STARTED" then
             
@@ -503,7 +508,6 @@ function GameService:TimerUpdate(dt)
 end
 
 function GameService:TimerEnded()
-
     print('TIMER ENDED')
 
     if self.GameOptions.ROUND_END_CONDITION == "Custom"
