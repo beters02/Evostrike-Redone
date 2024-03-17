@@ -19,7 +19,7 @@ local Commands = {}
 
 -- _ == player
 
-Commands.Emit = {
+Commands.emit = {
 	Description = "Emit specified particle from the part you are looking at",
 	Public = true,
 	
@@ -42,7 +42,7 @@ Commands.Emit = {
 	end,
 }
 
-Commands.SetCameraMode = {
+Commands.setcameramode = {
 	Description = "Set to LockFirstPerson or Classic",
 	Public = true,
 	
@@ -54,7 +54,7 @@ Commands.SetCameraMode = {
 	end,
 }
 
-Commands.AddWeapon = {
+Commands.addweapon = {
 	Description = "Add specified weapon to your inventory",
 	Public = true,
 	
@@ -63,7 +63,7 @@ Commands.AddWeapon = {
 	end
 }
 
-Commands.AddAbility = {
+Commands.addability = {
 	Description = "Add specified ability to your inventory",
 	Public = true,
 

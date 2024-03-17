@@ -24,10 +24,10 @@ local ACR = {
 		
 		accuracy = {
 			firstBullet = 2,
-			base = 3.5,
+			base = 3.4,
 			crouch = 3.2,
-			walk = 190,
-			run = 190,
+			walk = 130,
+			run = 130,
 			jump = 150
 		},
 		
