@@ -124,6 +124,12 @@ function InventorySubPage:Connect()
 end
 
 function InventorySubPage:ConnectPageChangeButtons()
+    if self.ItemPageNumberVar.Connections.NextPage then
+        self.ItemPageNumberVar.Connections.NextPage:Disconnect()
+    end
+    if self.ItemPageNumberVar.Connections.PreviousPage then
+        self.ItemPageNumberVar.Connections.PreviousPage:Disconnect()
+    end
     self.ItemPageNumberVar.Connections.NextPage = self.Frame.NextPageNumberButton.MouseButton1Click:Connect(function()
         self:NextContentFrame()
     end)
@@ -145,9 +151,7 @@ function InventorySubPage:Disconnect()
     for _, v in pairs(self.Connections) do
         v:Disconnect()
     end
-    if self.ItemPageNumberVar.PageAmount > 1 then
-        self:DisconnectPageChangeButtons()
-    end
+    self:DisconnectPageChangeButtons()
 end
 
 function InventorySubPage:AddContentFrame(num) -- Num will never be 1 since first content frame is pre-created

@@ -25,6 +25,7 @@ local LongFlash = require(Ability:WaitForChild("LongFlash"))
 local SmokeGrenade = require(Ability:WaitForChild("SmokeGrenade"))
 local HEGrenade = require(Ability:WaitForChild("HEGrenade"))
 local Satchel = require(Ability:WaitForChild("Satchel"))
+local ReconGrenade = require(Ability:WaitForChild("ReconGrenade"))
 
 AbilityService._Connections = {}
 AbilityService._PlayerData = {}
@@ -69,6 +70,8 @@ function AbilityService:Start()
             HEGrenade.ServerPop(...)
         elseif action == "SatchelServerPop" then
             Satchel.ServerPop(player, ...)
+        elseif action == "ReconGrenadePop" then
+            ReconGrenade.ServerPop(...)
         end
     end)
     RemoteFunction.OnServerInvoke = function(_, action, ...)

@@ -1,21 +1,20 @@
-local ACR = {
+local wepconfig = {
 	Configuration = {
-		name = "acr",
+		name = "mp5",
 		inventorySlot = "primary",
 		automatic = true,
 		
-		equipLength = 0.85,
-		fireRate = 0.093, -- 645 RPM
-		reloadLength = 0.85,
-		recoilReset = 0.22,
-		camRecoilReset = 0.5,
+		equipLength = 0.8,
+		fireRate = 0.071, -- 850 rpm
+		reloadLength = 0.8,
+		recoilReset = 0.45,
+
+		recoilResetMin = 0.27, -- 1st bullet reset
+		recoilResetMax = 0.45, -- Based on cameraRecoilReset in sprayPattern
 		
-		recoilResetMin = 0.25, -- 1st bullet reset
-		recoilResetMax = 0.41, -- Based on cameraRecoilReset in sprayPattern
-		
-		fireVectorCameraOffset = Vector2.new(3, 20), -- Side, Up
-		fireAccuracyCameraOffset = Vector2.new(3, 3), -- Side, Up
-		fireVectorCameraMax = Vector3.new(0.03, 0.05, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
+		fireVectorCameraOffset = Vector2.new(2, 31), -- Side, Up
+		fireAccuracyCameraOffset = Vector2.new(4, 4), -- Side, Up
+		fireVectorCameraMax = Vector3.new(0.03, 0.07, 0.3), -- Up, Side, Shake
 		
 		ammo = {
 			magazine = 25,
@@ -23,25 +22,26 @@ local ACR = {
 		},
 		
 		accuracy = {
-			firstBullet = 2,
-			base = 3.4,
-			crouch = 3.2,
-			walk = 130,
-			run = 130,
-			jump = 150
+			firstBullet = false,
+			base = 11,
+			crouch = 10.5,
+			walk = 17,
+			run = 19,
+			jump = 150,
+			spread = true
 		},
 		
 		damage = {
-			base = 30,
-			min = 26,
+			base = 23,
+			min = 17,
 
-			headMultiplier = 4.6,
+			headMultiplier = 2,
 			legMultiplier = 0.9,
 			damageFalloffPerMeter = 0.7,
-			damageFalloffDistance = 35,
-			damageFalloffMinimumDamage = 19,
-			enableHeadFalloff = false,
-			helmetMultiplier = 0.88,
+			damageFalloffDistance = 25,
+			damageFalloffMinimumDamage = 17,
+			enableHeadFalloff = true,
+			helmetMultiplier = 0.7,
 			destroysHelmet = true,
 		},
 		
@@ -85,6 +85,6 @@ local ACR = {
 }
 
 local sprayPattern = require(script:WaitForChild("spraypattern"))
-ACR.Configuration.sprayPattern = require(game:GetService("ReplicatedStorage"):WaitForChild("weapon"):WaitForChild("fc_initSprayPattern"))(sprayPattern.vec)
+wepconfig.Configuration.sprayPattern = require(game:GetService("ReplicatedStorage"):WaitForChild("weapon"):WaitForChild("fc_initSprayPattern"))(sprayPattern.spread)
 
-return ACR
+return wepconfig

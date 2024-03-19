@@ -10,7 +10,7 @@ local Assets = Framework.Service.AbilityService.Ability.LongFlash.Assets
 local LongFlash = {
     Options = {
         -- data
-        name = "LongFlash",
+        name = "ReconGrenade",
         isGrenade = true,
         inventorySlot = "secondary",
 
@@ -32,12 +32,19 @@ local LongFlash = {
         throwAnimFadeTime = 0.18,
         throwFinishSpringShove = Vector3.new(-0.4, -0.5, 0.2),
 
+        -- recon specific
+        reconRadius = 30,
+        reconPulses = 3,
+        reconPulseLength = 1,
+        popLength = 0.5,
+        reconRevealLength = 1,
+
         -- flash specific
-        anchorTime = 0.2,
+        --[[anchorTime = 0.2,
         anchorDistance = 7,
         popTime = 0.18,
         blindLength = 1.01,
-        canSeeAngle = 1.07,
+        canSeeAngle = 1.07,]]
 
         -- absr = Absolute Value Random
         -- rtabsr = Random to Absolute Value Random
@@ -112,9 +119,9 @@ function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
     grenadeModel.Anchored = true
     task.wait(LongFlash.Options.popTime)
 
-    if self.FlashCast(Players.LocalPlayer, newPos) and LongFlash.CanSee(grenadeModel) then
+    --[[if self.FlashCast(Players.LocalPlayer, newPos) and LongFlash.CanSee(grenadeModel) then
         self:BlindPlayer(Players.LocalPlayer)
-    end
+    end]]
 
     -- play pop sound
     self:PlaySound(self.Module.Assets.Sounds.Pop, grenadeModel)
@@ -123,7 +130,7 @@ function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
     if grenadeModel:FindFirstChild("Throwing") then
         TweenService:Create(grenadeModel.Throwing, TweenInfo.new(0.1), {Volume = 0}):Play()
         task.delay(0.11, function()
-            pcall(function() grenadeModel.Throwing:Stop() end)
+            pcall(function()grenadeModel.Throwing:Stop()end)
         end)
     end
 
@@ -144,7 +151,29 @@ function LongFlash:RayHit(caster, result, segmentVelocity, grenadeModel)
     disableAllParticleEmittersAndLights(grenadeModel)
 end
 
--- check if flash can hit player (wall collision)
+function RevealPlayer(player)
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.new()
+end
+
+function Pulse(position)
+    for i, v in pairs(Players:GetPlayers()) do
+        if not v.Character then
+            continue
+        end
+
+        local distance = (v.Character.PrimaryPart.CFrame.Position - position).Magnitude
+        if distance <= LongFlash.Options.reconRadius then
+            
+        end
+    end
+end
+
+function LongFlash.ServerPop(position)
+    
+end
+
+-- Check if flash can hit player (wall collision)
 function LongFlash.FlashCast(player, pos)
     local params = RaycastParams.new()
     params.FilterDescendantsInstances = {workspace.Temp, workspace.MovementIgnore}

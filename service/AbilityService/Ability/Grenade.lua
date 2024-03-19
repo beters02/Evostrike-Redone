@@ -126,7 +126,6 @@ function Grenade:LengthChanged(_, lastPoint, direction, length, velocity, bullet
 end
 
 function Grenade:CastTerminating()
-    
 end
 
 function Grenade:GetRaycastParams()

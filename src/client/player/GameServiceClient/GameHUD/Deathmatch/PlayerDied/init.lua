@@ -488,7 +488,7 @@ end
 
 function PlayerDied:Disable()
 	if enabled then
-		finish()
+	finish()
 		enabled = false
 	end
 end

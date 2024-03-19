@@ -60,6 +60,8 @@ Shared.def.ownedItems = {case = {}, key = {}, skin = {}, states = {}, equipped =
     deagle = "deagle_deagle_default_0",
     intervention = "intervention_intervention_default_0",
     hkp30 = "hkp30_hkp30_default_0",
+    mp5 = "mp5_mp5_default_0",
+    mp9 = "mp9_mp9_default_0"
 }}
 
 --[OPTIONS]
