@@ -7,14 +7,16 @@ AK103.Configuration = {
 	equipLength = 0.9,
 	fireRate = 0.1, -- 600 rpm
 	reloadLength = 0.9,
+
 	recoilReset = 0.24, -- DEPRECATEd
 	camRecoilReset = 0.5, -- DEPRECATED
-
 	recoilResetMin = 0.25, -- 1st bullet reset
 	recoilResetMax = 0.45, -- Based on cameraRecoilReset in sprayPattern
+	cameraShakeAmount = 0.3,
 	
-	fireVectorCameraOffset = Vector2.new(3, 23), -- Side, Up
-	fireAccuracyCameraOffset = Vector2.new(3, 3), -- Side, Up
+	fireVectorCameraOffset = Vector2.new(1, 23), -- Side, Up
+	--fireAccuracyCameraOffset = Vector2.new(3,3), -- Side, Up
+	fireAccuracyCameraOffset = Vector2.new(1.2, 1.5), -- Side, Up
 	fireVectorCameraMax = Vector3.new(0.03, 0.03, 0.3), -- Up, Side (0.38 is the 5th bullet's camera vector amount.)
 	--fireVectorCameraMax = Vector3.new(1, 1, 3), -- Up, Side
 	
@@ -25,8 +27,8 @@ AK103.Configuration = {
 	
 	accuracy = {
 		firstBullet = 2,
-		base = 3.8,
-		crouch = 3.6,
+		base = 2.1,
+		crouch = 2,
 		walk = 130,
 		run = 130,
 		jump = 150

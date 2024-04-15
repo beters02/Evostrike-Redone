@@ -1,3 +1,5 @@
+local GLOBAL_CAM_MULT = 0.027
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Strings = require(game:GetService("ReplicatedStorage"):WaitForChild("lib"):WaitForChild("fc_strings"))
@@ -6,7 +8,6 @@ local RunService = game:GetService("RunService")
 local VMSprings = require(Framework.Module.lib.c_vmsprings)
 
 local Recoil = {}
-local GLOBAL_CAM_MULT = 0.027
 local Viewmodel = require(script:WaitForChild("Viewmodel"))
 
 function Recoil:init() -- Be sure to apply Vector and Camera values seperately
@@ -83,7 +84,18 @@ function Recoil:Update(dt)
     end
 
     if self.Up then
-        rupf = self.CamRecoil/us
+
+        local rec = self.CamRecoil
+        if self.Options.cameraShakeAmount then
+            self.Shake = Math.absValueRandom(self.Options.cameraShakeAmount) * GLOBAL_CAM_MULT * self._camModifier
+            rec = Vector3.new(
+                rec.X,
+                rec.Y + self.Shake,
+                rec.Z
+            )
+        end
+
+        rupf = rec/us
         goalRotation = Vector3.new(rupf.X, rupf.Y, 0) * dt
         if (self.UpAmount + goalRotation).Magnitude >= self.CamRecoil.Magnitude then
             goalRotation = self.CamRecoil - self.UpAmount
@@ -96,7 +108,20 @@ function Recoil:Update(dt)
     else
         --self:UpdateOrigin(dt)
 
-        rdpf = self.NupGoal/ds
+        local rec = self.NupGoal
+        --[[if self.Shake then
+            rec = Vector3.new(
+                rec.X,
+                rec.Y - self.Shake,
+                rec.Z
+            )
+            self.Shake = false
+        end]]
+        if self.Shake then
+            self.Shake = false
+        end
+        
+        rdpf = rec/ds
         goalRotation = Vector3.new(-rdpf.X, -rdpf.Y, 0) * dt
         self.UpAmount += Vector3.new(math.abs(goalRotation.X), math.abs(goalRotation.Y), 0)
 

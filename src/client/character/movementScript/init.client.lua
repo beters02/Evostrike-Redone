@@ -55,6 +55,7 @@ local onGroundMovementState = false
 local playerVelocity = Vector3.zero
 local landed = Events:WaitForChild("Landed")
 local dashModule = require(ReplicatedStorage.Services.AbilityService.Ability.Dash)
+local startLand = 0
 
 local runningAnimation = hum.Animator:LoadAnimation(hum.Animations.Run)
 local jumpingAnimation = hum.Animator:LoadAnimation(hum.Animations.Jump)
@@ -357,7 +358,7 @@ local cnumval = Instance.new("NumberValue", RepTemp)
 function landFinish()
 	ctween[1]:Destroy()
 	ctween[2]:Destroy()
-	cconn:Disconnect()
+	--cconn:Disconnect()
 	landProcessing = false
 	landing = false
 	MovementState:set("landing", false)
@@ -390,16 +391,16 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 	if landProcessing then
 		ctween[1]:Destroy()
 		ctween[2]:Destroy()
-		cconn:Disconnect()
+		--cconn:Disconnect()
 	end
 
 	landProcessing = true
 	cnumval.Value = 0
-	local startLand = tick() + Movement.landingMovementJumpGrace
+	startLand = tick() + Movement.landingMovementJumpGrace
 
 	ctween = {
 		TweenService:Create(cnumval, TweenInfo.new(waitTime/2), {Value = fric}),
-		TweenService:Create(cnumval, TweenInfo.new(waitTime), {Value = 0})
+		TweenService:Create(cnumval, TweenInfo.new(waitTime/2), {Value = 0})
 	}
 
 	ctween[1].Completed:Once(function()
@@ -409,16 +410,9 @@ function Movement.Land(fric: number, waitTime: number, hitMaterial)
 		end)
 	end)
 
-	cconn = RunService.RenderStepped:Connect(function(dt)
-		if tick() < startLand or not landProcessing then
-			return
-		end
-		if jumping or inAir then
-			landFinish()
-			return
-		end
-		Movement:ApplyFriction(cnumval.Value)
-	end)
+	--[[cconn = RunService.RenderStepped:Connect(function(dt)
+		
+	end)]]
 
 	-- play friction tween
 	ctween[1]:Play()
@@ -718,6 +712,7 @@ function Movement.ProcessMovement()
 	end
 	
 	-- [[ LANDING REGISTRATION ]]
+
 	if playerGrounded and inAir and (not Movement.jumpGrace or tick() >= Movement.jumpGrace) then
 		local a = inAir
 		inAir = false
@@ -731,7 +726,14 @@ function Movement.ProcessMovement()
 			Movement.Run(hitPosition, hitNormal, hitPart.Material)
 			return
 		end
+	end
 
+	if landing then
+		if jumping or inAir then
+			landFinish()
+		else
+			Movement:ApplyFriction(cnumval.Value)
+		end
 	end
 	
 	-- [[ JUMP & CROUCH INPUT REGISTRATION ]]

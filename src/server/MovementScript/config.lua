@@ -12,8 +12,6 @@ local module = {
 	walkNoiseSpeed = 15.5,
 
 	--[[ Ground Settings ]]
-	--groundAccelerate = 10.6,
-	--groundDeccelerate = 17, -- the lower this number is, the longer it takes to decel btw
 	groundAccelerate = 10,
 	groundDeccelerate = 12.6, -- the lower this number is, the longer it takes to decel btw
 	groundMaxSpeed = 21.5,
@@ -27,7 +25,8 @@ local module = {
 	crouchDecelerate = 10,
 
 	--[[ Air Settings ]]
-	airAccelerate = 40,
+	--airAccelerate = 40,
+	airAccelerate = 52,
 	airSpeed = 6,
 	
 	airMaxSpeed = 36.5, -- 34
@@ -42,8 +41,8 @@ local module = {
 	minInAirTimeRegisterLand = 0.1,
 	landingMovementJumpGrace = 0.06,
 
-	landingMovementDecreaseLength = 0.27,
-	landingMovementDecreaseFriction = 0.80, -- 0.7
+	landingMovementDecreaseLength = 0.4,
+	landingMovementDecreaseFriction = 0.73, -- 0.7
 
 	--[[ Bhop Settings ]]
 	--missedBhopDecrease = 0.6,
