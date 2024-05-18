@@ -5,17 +5,9 @@ Listen for remotes or whatever, call a Cleanup remote if necessary, destroy the 
 ]]
 
 --[[ CONFIGURATION ]]
-local deathText = "KILLED BY\n_plr"
 local fadeInTime = 2
-local cameraFollowOffset = Vector3.new(5, 10, 0)
-local showDeadPlayerTime = 2
-local cameraFollowPlayerLerpSpeed = 10
-local cameraSwitchLerpSpeed = 6
-local cameraLookAtEnemyLerpSpeed = 10
 
 -- [[ SERVICES ]]
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -23,16 +15,17 @@ local UserInputService = game:GetService("UserInputService")
 local player = game.Players.LocalPlayer
 local framework = require(game.ReplicatedStorage.Framework)
 local uistate = require(framework.Module.States):Get("UI")
---local hud = require(player.PlayerScripts.HUD)
 local gui = script:WaitForChild("Gui")
 local loadoutButton = gui:WaitForChild("LoadoutButton")
 local respawnButton = gui:WaitForChild("RespawnButton")
 local killedLabel = gui:WaitForChild("KilledLabel")
---local remoteEvent = script:WaitForChild("Events"):WaitForChild("RemoteEvent")
---local finishedEvent = script:WaitForChild("Events"):WaitForChild("Finished")
 local buyMenu
 local buyMenuModule
 local playerSpawnEvent = framework.Service.GameService.Remotes.PlayerSpawn
+
+local respawned = false
+
+local Debugger = require(framework.Module.Debugger)
 
 loadoutButton.Modal = false
 respawnButton.Modal = false
@@ -40,7 +33,6 @@ respawnButton.Modal = false
 local inLoadout = false
 local connections = {}
 local canpress = true
-local updateConn = false
 local tweens = {}
 local camera = workspace.CurrentCamera
 
@@ -66,7 +58,8 @@ function clickLoadout()
 end
 
 local function clickRespawn()
-	if not canpress then
+	if respawned or not canpress then
+		print('attempting respawn during incorrect time...')
 		return
 	end
 	processClickDebounce()
@@ -74,6 +67,7 @@ local function clickRespawn()
 	camera.CameraType = Enum.CameraType.Custom
 	finish()
 	playerSpawnEvent:FireServer()
+	respawned = true
 end
 
 local function clickBack()
@@ -150,9 +144,11 @@ function init()
 end
 
 function connect()
-    connections[1] = loadoutButton.MouseButton1Click:Connect(clickLoadout)
-	connections[2] = respawnButton.MouseButton1Click:Connect(clickRespawn)
-	connections[3] = UserInputService.InputBegan:Connect(inputBegan)
+	Debugger:PrepareTableConnect(connections, "InitialPlayerSpawn")
+	disconnect()
+	table.insert(connections, loadoutButton.MouseButton1Click:Connect(clickLoadout))
+    table.insert(connections, respawnButton.MouseButton1Click:Connect(clickRespawn))
+	table.insert(connections, UserInputService.InputBegan:Connect(inputBegan))
 end
 
 function disconnect()
@@ -178,6 +174,9 @@ function finish()
 			end
 		end
 	end
+
+	task.wait()
+	task.wait()
 end
 
 function start(uiContainer)
@@ -185,7 +184,6 @@ function start(uiContainer)
 	respawnButton.Modal = true
 	playGuiAnimation()
 	camera.CFrame = gui:GetAttribute("StartCF")
-    --gui.Parent = uiContainer
 	gui.Enabled = true
     uistate:addOpenUI("SpawnMenu", gui, true)
 end

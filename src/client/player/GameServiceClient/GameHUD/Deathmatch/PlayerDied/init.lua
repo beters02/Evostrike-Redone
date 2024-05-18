@@ -39,6 +39,7 @@ local killstr = script:GetAttribute("KilledString") or "You died!"
 local killer --=script:WaitForChild("KillerObject", 3)
 local Math = require(framework.Module.lib.fc_math)
 local playerSpawnEvent = framework.Service.GameService.Remotes.PlayerSpawn
+local Debugger = require(framework.Module.Debugger)
 
 loadoutButton.Modal = false
 respawnButton.Modal = false
@@ -94,6 +95,7 @@ local function clickRespawn()
 	processClickDebounce()
     require(buyMenuModule):Close()
 	finish()
+	respawnButtonEnabled = false
 	playerSpawnEvent:FireServer()
 end
 
@@ -387,8 +389,10 @@ function update(dt)
 end
 
 function connect()
-	connections[5] = RunService.RenderStepped:Connect(update)
-    connections[1] = loadoutButton.MouseButton1Click:Connect(clickLoadout)
+	Debugger:PrepareTableConnect(connections, "PlayerDied")
+	disconnect()
+	connections[1] = RunService.RenderStepped:Connect(update)
+    connections[2] = loadoutButton.MouseButton1Click:Connect(clickLoadout)
 	connections[3] = UserInputService.InputBegan:Connect(inputBegan)
 end
 
@@ -452,10 +456,10 @@ function PlayerDied:Enable(uiContainer, sentKiller, respawnWaitLength)
     connect()
     start()
 
-	if killer == player then
+	--[[if killer == player then
 		self:EnableRespawnButton()
 		return
-	end
+	end]]
 
 	local lastSec = 3
 	local timeElapsed = 0
@@ -483,7 +487,7 @@ end
 function PlayerDied:EnableRespawnButton()
 	respawnButtonEnabled = true
 	respawnButton.TextLabel.Text = "RESPAWN"
-	connections[2] = respawnButton.MouseButton1Click:Connect(clickRespawn)
+	connections[4] = respawnButton.MouseButton1Click:Connect(clickRespawn)
 end
 
 function PlayerDied:Disable()

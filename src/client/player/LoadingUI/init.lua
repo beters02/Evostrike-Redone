@@ -88,13 +88,13 @@ function Loading.new()
 
     self.conn = {}
     self.connected = false
-    self:connect()
-    self:playLoadingAnimation()
+    --[[self:connect()
+    self:playLoadingAnimation()]]
     return self
 end
 
 function Loading:connect()
-    if self.connected then
+    --[[if self.connected then
         return
     end
     self.connected = true
@@ -115,7 +115,7 @@ function Loading:connect()
             self.lbl.Text = txt
             print(txt)
         end
-    end)
+    end)]]
 end
 
 function Loading:playLoadingAnimation()
@@ -140,9 +140,9 @@ function Loading:destroy()
     end
 
     -- animation
-    self:playEndAnimation()
+    --self:playEndAnimation()
 
-    coroutine.close(self.tasks.loadBG)
+    --coroutine.close(self.tasks.loadBG)
 
     self.ui:Destroy()
     self = nil

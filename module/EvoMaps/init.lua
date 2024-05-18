@@ -12,7 +12,8 @@ local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
-local GamemodeService = require(Framework.Service.GamemodeService2)
+--local GamemodeService = require(Framework.Service.GamemodeService2)
+local GameService = require(Framework.Service.GameService)
 
 local remoteFunction = script:WaitForChild("RemoteFunction")
 
@@ -62,7 +63,11 @@ function Maps:RequestClientSetMap(player, mapName)
         return remoteFunction:InvokeServer("RequestClientSetMap", mapName)
     end
     
-    return is_player_admin(player)
+    if is_player_admin(player) then
+        Maps.LoadMap(mapName)
+        GameService:RestartGame(2)
+        return true
+    end
 end
 
 -- SERVER
@@ -173,7 +178,8 @@ if RunService:IsServer() then
         load_map(mobj)
 
         print(_logpref .. upper"finished loading map")
-        GamemodeService.CurrentMap = map
+        GameService.CurrentMap = map
+        --GamemodeService.CurrentMap = map
     end
 
 end

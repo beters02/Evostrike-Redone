@@ -56,7 +56,7 @@ local IsRestarting = false
 --[[ MODULE ]]
 local GameService = {
     CurrentGamemode = false,
-    CurrentMap = false,
+    CurrentMap = "warehouse",
     GameOptions = Table.clone(CGamemode.GameOptions),
     PlayerData = false,
     ServicePlayerData = GM_PlayerData.new(), -- ServicePlayerData does not reset each game, while PlayerData does.
@@ -270,11 +270,7 @@ function GameService:InitalizeGame()
     --GamemodeService2:SetMenuType(self.GameOptions.MENU_TYPE)
 
     -- init Spawns
-    local Spawns = ServerStorage:FindFirstChild("Spawns")
-    if Spawns then Spawns:Destroy() end
-    Spawns = getGMod(self.CurrentGamemode.Name).Spawns:Clone()
-    Spawns.Parent = ServerStorage
-    Spawns.Name = "Spawns"
+    local Spawns = ServerStorage.CurrentSpawns:FindFirstChild(self.CurrentGamemode.Name) or ServerStorage.CurrentSpawns.Default
     self.Spawns = Spawns
 
     if self.GameOptions.BARRIERS_ENABLED then

@@ -7,6 +7,7 @@ local EvoMaps = require(Framework.Module.EvoMaps)
 local Globals = require(Framework.Module.lib.fc_global)
 local GamemodeEvents = ReplicatedStorage.GamemodeEvents
 local PlayerData = require(Framework.Module.PlayerData)
+local GameService = require(Framework.Service.GameService)
 
 local storedSvList = false
 
@@ -124,9 +125,8 @@ Commands.Map = {
 		if not Globals.wassert(mapName, "Could not teleport, Map Name is required!") then return end
 		self:Print("Setting map to " .. mapName)
 		local canSetMap = EvoMaps:RequestClientSetMap(player, mapName)
-		print(canSetMap)
 		if canSetMap then
-			GamemodeService:RestartGamemode(mapName)
+			self:Print('Restarting in 2 sec')
 		end
 	end
 }

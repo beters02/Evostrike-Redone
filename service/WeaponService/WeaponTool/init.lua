@@ -47,6 +47,13 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 		model.Inventory:Destroy()
 	end
 
+	-- Disable shadows on client model
+	for _, v in pairs(clientModel:GetDescendants()) do
+		if v:IsA("Part") or v:IsA("MeshPart") then
+			v.CastShadow = false
+		end
+	end
+
 	serverModel.Name = "ServerModel"
 	serverModel.Parent = tool
 	clientModel.Name = "ClientModel"

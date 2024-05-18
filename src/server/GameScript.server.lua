@@ -1,4 +1,4 @@
-local Players = game:GetService("Players")
+--[[local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
@@ -80,11 +80,11 @@ function Stop(restart: boolean?, delayLength: number?, map: string?, newGamemode
     --Maps:SetMap(map) -- change map randomly, ignore current map
 end
 
--- [[ SCRIPT RUN ]]
+-- [[ SCRIPT RUN
 Players.CharacterAutoLoads = false
 --[[Players.PlayerAdded:Once(function(player: Player)
     Init(player)
-end)]]
+end)
 
 GamemodeService2Bindable.Event:Connect(function(action, ...)
     if action == "Restart" then
@@ -92,4 +92,4 @@ GamemodeService2Bindable.Event:Connect(function(action, ...)
     elseif action == "Set" then
         Stop(true, 1, false, ...)
     end
-end)
+end)]]
