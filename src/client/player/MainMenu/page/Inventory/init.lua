@@ -1,7 +1,6 @@
 
 
 -- SubPages are the Contanier Frames which have their own Content Frames (SkinPage, CasePage, KeyPage)
-local SubPage = require(script.InventorySubPage)
 local SkinSubPage = require(script.InventorySubPage.Skin)
 local CaseSubPage = require(script.InventorySubPage.Case)
 local KeySubPage = require(script.InventorySubPage.Key)
@@ -20,6 +19,8 @@ function Inventory.new(mainMenu, frame)
     self.SubPages.Case = CaseSubPage:init(self, frame.Case)
     self.SubPages.Key = KeySubPage:init(self, frame.Key)
     self.Var.CurrentOpenSubPage = self.SubPages.Skin
+    self.SubPageButtonActiveColor = frame.SkinsButton:GetAttribute("ActiveColor")
+    self.SubPageButtonInactiveColor = frame.SkinsButton:GetAttribute("InactiveColor")
 
     self.SubPageButtons = {
         Skin = frame.SkinsButton,
@@ -66,7 +67,7 @@ function Inventory:OpenSubPage(name)
 
     subpage:Open()
     self.Var.CurrentOpenSubPage = subpage
-    self.SubPageButtons[name].BackgroundColor3 = Color3.fromRGB(136, 164, 200)
+    self.SubPageButtons[name].BackgroundColor3 = self.SubPageButtonActiveColor
 end
 
 function Inventory:CloseSubPage(name)
@@ -76,7 +77,7 @@ function Inventory:CloseSubPage(name)
     end
 
     subpage:Close()
-    self.SubPageButtons[name].BackgroundColor3 = Color3.fromRGB(80, 96, 118)
+    self.SubPageButtons[name].BackgroundColor3 = self.SubPageButtonInactiveColor
 end
 
 function Inventory:EnableSubPageButtons()

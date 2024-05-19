@@ -6,28 +6,20 @@
 --[[ CONFIG ]]
 local DISABLE_CHAT_RETRIES = 5
 local MENU_OPEN_WITH_HOMEPAGE = true
-
---local TOPBAR_BUTTON_DEFAULT_COLOR = Color3.fromRGB(23, 29, 38)
---local TOPBAR_BUTTON_ACTIVE_COLOR = Color3.fromRGB(95, 120, 157)
 local TOPBAR_BUTTON_ACTIVE_COLOR = Color3.fromRGB(57, 120, 125)
 local TOPBAR_BUTTON_DEFAULT_COLOR = Color3.fromRGB(235, 241, 255)
-
 local TOPBAR_BUTTON_OPEN_FADEIN_LENGTH = .8
 local TOPBAR_BAR_OPEN_LENGTH = .8
-
 local TOPBAR_BUTTON_CLOSE_FADEOUT_LENGTH = .6
 local TOPBAR_BAR_CLOSE_LENGTH = .7
-
 local TOPBAR_BUTTON_HOVER_FADEIN_LENGTH = 1
 local TOPBAR_BUTTON_HOVER_FADEOUT_LENGTH = 1
+--
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local AssetService = game:GetService("AssetService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
---local GamemodeService = require(Framework.Service.GamemodeService2)
 local GameService = require(Framework.Service.GameService)
 local States = require(Framework.Module.States)
 local UIState = States:Get("UI")
@@ -65,6 +57,7 @@ local MainMenu = {
 -- Initialize Pages, Sounds and GamemodeService
 function MainMenu:Initialize(gui)
     self.Gui = gui
+    self.IsTopBarOpen = false
     --self.CurrentMenuType = GamemodeService:GetMenuType()
     self.CurrentMenuType = GameService:GetMenuType()
     self.HUD = require(game.Players.LocalPlayer.PlayerScripts:WaitForChild("HUD"))
@@ -87,8 +80,6 @@ function MainMenu:Initialize(gui)
 
     if self.CurrentMenuType == "Lobby" then
         self:Open()
-    else
-        --self:Close()
     end
 end
 
@@ -159,11 +150,13 @@ function MainMenu.MenuType()
 end
 
 function MainMenu:OpenTopBar()
+    self.IsTopBarOpen = true
     openTopBarTween(self)
     connectTopBar(self)
 end
 
 function MainMenu:CloseTopBar()
+    self.IsTopBarOpen = false
     closeTopBarTween(self)
     disconnectTopBar(self)
 end
@@ -208,7 +201,7 @@ function initPages(self)
 end
 
 function initTopBar(self)
-    local tb = self.Gui.TopBar
+    local tb: Frame = self.Gui.TopBar
     self.Var.topBarDefSizeY = tb.Size.Y.Scale
 
     local tboti = TweenInfo.new(TOPBAR_BAR_OPEN_LENGTH, Enum.EasingStyle.Cubic)
@@ -233,8 +226,6 @@ function initTopBar(self)
         self.Tweens.TopBarOpen[v.Name .. "_Stroke"] = TweenService:Create(v.TextButton.UIStroke, tbbofiti, {Transparency = 0})
         self.Tweens.TopBarClose[v.Name] = TweenService:Create(v.TextButton, tbbofoti, {TextTransparency = 1})
         self.Tweens.TopBarClose[v.Name .. "_Stroke"] = TweenService:Create(v.TextButton.UIStroke, tbbofoti, {Transparency = 1})
-        --self.Tweens.TopBarHoverOn[v.Name] = TweenService:Create(v.TextButton.UIStroke, tbbhiti, {Color = TOPBAR_BUTTON_ACTIVE_COLOR})
-		--self.Tweens.TopBarHoverOff[v.Name] = TweenService:Create(v.TextButton.UIStroke, tbbhoti, {Color = TOPBAR_BUTTON_DEFAULT_COLOR})
         self.Tweens.TopBarHoverOn[v.Name] = TweenService:Create(v.TextButton, tbbhiti, {TextColor3 = TOPBAR_BUTTON_ACTIVE_COLOR})
 		self.Tweens.TopBarHoverOff[v.Name] = TweenService:Create(v.TextButton, tbbhoti, {TextColor3 = TOPBAR_BUTTON_DEFAULT_COLOR})
         v.TextButton.UIStroke.Transparency = 1
@@ -242,6 +233,7 @@ function initTopBar(self)
     end
 
     tb.Size = UDim2.fromScale(1, 0)
+    tb.Visible = true
 end
 
 function connectTopBar(self)
@@ -275,6 +267,9 @@ end
 function openTopBarTween(self)
     self.Tweens.TopBarOpen.Bar:Play()
     self.Tweens.TopBarOpen.Bar.Completed:Once(function()
+        if not self.IsTopBarOpen then
+            return
+        end
         for i, v in pairs(self.Tweens.TopBarOpen) do
             if i == "Bar" then
                 continue
@@ -300,7 +295,9 @@ function closeTopBarTween(self)
         hoverOffTopBarTween(self, frame)
     end
     last.Completed:Once(function()
-        self.Tweens.TopBarClose.Bar:Play()
+        if not self.IsTopBarOpen then
+            self.Tweens.TopBarClose.Bar:Play()
+        end
     end)
 end
 
