@@ -75,13 +75,3 @@ ReplicatedStorage.Services.WeaponService.Events.Replicate.OnClientEvent:Connect(
 	return func(...)
 end)
 --
-
--- Gamemode Service
---[[local GamemodeServiceRemoteEvent = Framework.Service.GamemodeService2:WaitForChild("RemoteEvent")
-
-GamemodeServiceRemoteEvent.OnClientEvent:Connect(function(action, var)
-    if action == "ChangeMenuType" then
-        --require(game.Players.LocalPlayer.PlayerScripts.MainMenu):
-        --require(game.Players.LocalPlayer.PlayerScripts.MainMenu).setMenuType(var)
-    end
-end)]]
