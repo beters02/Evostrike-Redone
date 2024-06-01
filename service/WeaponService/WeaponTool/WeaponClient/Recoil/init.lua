@@ -73,7 +73,7 @@ function Recoil:Update(dt)
 
     self.processing = true
         
-    dt = self._stepDT or dt
+    --dt = self._stepDT or dt
     
     if self.Up and self.Unxt and self.Unxt == "skip" then
         self.Unxt = nil
