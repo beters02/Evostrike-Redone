@@ -198,13 +198,13 @@ function _waitForCache()
 end
 
 function _update()
+    local didFinish = false
     if not Players:FindFirstChild(player.Name) then
         conn[1]:Disconnect()
         conn[2]:Disconnect()
-        Client:Save()
-        return
+        didFinish = true
     end
-    if Client._changed and tick() >= Client._changed then
+    if didFinish or Client._changed and tick() >= Client._changed then
         Client._changed = false
         Client:Save()
     end
