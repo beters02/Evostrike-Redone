@@ -197,7 +197,7 @@ end
 function _validateIncoming(player, new)
     local _rep = false
     for i, v in pairs(new) do
-        if PlayerData._defOpt[i] then
+        if PlayerData._defOpt[i] and PlayerData._defOpt[i].clientReadOnly then
             _rep = PlayerData:GetKey(player, i)
             
             for a, b in pairs(v) do
