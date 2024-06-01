@@ -12,8 +12,14 @@ end
 
 function Server.GetEquippedSkin(player: Player, weapon: string)
     local skinStr = PlayerData:Get(player).ownedItems.equipped[weapon]
-    local skin = Shared.ParseSkinString(skinStr)
+    local skin
     local skinData
+
+    if skinStr == nil then
+        skinStr = Shared.GetDefaultSkinStrForWeapon(weapon)
+    end
+
+    skin = Shared.ParseSkinString(skinStr)
 
     if weapon == "knife" then
         skinData = SkinsDatabase:GetSkin(skin)

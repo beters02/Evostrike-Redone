@@ -60,6 +60,8 @@ function WeaponService:AddWeapon(player: Player, weapon: string, forceEquip: boo
         return false
     end
 
+    print('Adding weapon ' .. weapon)
+
     -- server inventory management
     local weaponSlot = require(weaponModule).Configuration.inventorySlot
     if WeaponService:GetPlayerInventorySlot(player, weaponSlot) then
@@ -91,6 +93,7 @@ end
 --
 
 function WeaponService:GetWeaponModule(weapon: string)
+    print(weapon)
     local module = false
     for i, v in pairs(Weapons:GetChildren()) do
         if string.lower(weapon) == string.lower(v.Name) then

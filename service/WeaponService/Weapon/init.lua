@@ -586,7 +586,8 @@ end
 
 function Weapon:ConnectUpdate()
     self.Connections.Update = RunService.RenderStepped:Connect(function(dt)
-        self:Update()
+        self._currDT = dt
+        self:Update() -- i cant find this fucking update function
     end)
 end
 
@@ -777,44 +778,44 @@ return animationTrack
 end
 
 function Weapon:_ProcessEquipAnimation()
--- [[!!!! Weapon Camera Equip Functionality is in WeaponController !!!!]]
+    -- [[!!!! Weapon Camera Equip Functionality is in WeaponController !!!!]]
 
-task.spawn(function()
-    self.Player.PlayerScripts.HUD.EquipGun:Fire(self.Slot)
-end)
+    task.spawn(function()
+        self.Player.PlayerScripts.HUD.EquipGun:Fire(self.Slot)
+    end)
 
-self.Controller:_StopAllVMAnimations()
+    self.Controller:_StopAllVMAnimations()
 
-local _throwing = PlayerActionsState:get("grenadeThrowing")
-if _throwing then
-    require(Framework.Service.AbilityService):StopAbilityAnimations()
-end
-
-local clientPullout = self:PlayAnimation("client", "Pullout")
-clientPullout.Stopped:Once(function()
-    if self.Variables.forcestop then return end
-    if not self.Variables.equipped and not self.Variables.equipping then return end
-    self.Animations.client.Hold:Play()
-end)
-
-for _, v in pairs(self.Humanoid.Animator:GetPlayingAnimationTracks()) do
-    if not string.match(v.Name, "Run") and not string.match(v.Name, "Jump") then
-        v:Stop()
+    local _throwing = PlayerActionsState:get("grenadeThrowing")
+    if _throwing then
+        require(Framework.Service.AbilityService):StopAbilityAnimations()
     end
-end
 
-local serverPullout = self:PlayAnimation("server", "Pullout")
-serverPullout.Stopped:Once(function()
-    if self.Variables.forcestop then return end
-    if not self.Variables.equipped and not self.Variables.equipping then return end
-    self.Animations.server.Hold:Play()
-end)
-
-task.delay(clientPullout.Length + self._stepDT, function()
-    if self.equipped and not self.Animations.client.Hold.IsPlaying then
+    local clientPullout = self:PlayAnimation("client", "Pullout")
+    clientPullout.Stopped:Once(function()
+        if self.Variables.forcestop then return end
+        if not self.Variables.equipped and not self.Variables.equipping then return end
         self.Animations.client.Hold:Play()
+    end)
+
+    for _, v in pairs(self.Humanoid.Animator:GetPlayingAnimationTracks()) do
+        if not string.match(v.Name, "Run") and not string.match(v.Name, "Jump") then
+            v:Stop()
+        end
     end
-end)
+
+    local serverPullout = self:PlayAnimation("server", "Pullout")
+    serverPullout.Stopped:Once(function()
+        if self.Variables.forcestop then return end
+        if not self.Variables.equipped and not self.Variables.equipping then return end
+        self.Animations.server.Hold:Play()
+    end)
+
+    task.delay(clientPullout.Length + self._stepDT, function()
+        if self.equipped and not self.Animations.client.Hold.IsPlaying then
+            self.Animations.client.Hold:Play()
+        end
+    end)
 end
 
 function Weapon:_StopAllClientActionAnimations(fadeOut, except) -- except = {animName = true}
@@ -1044,22 +1045,23 @@ end
 
 --@summary Set the user's weapon HUD to display guns or knife
 function Weapon:SetInfoFrame(weapon: "gun" | "knife")
-if weapon == "gun" then
-    self.Variables.infoFrame.KnifeNameLabel.Visible = false
-    self.Variables.infoFrame.GunNameLabel.Visible = true
-    self.Variables.infoFrame.CurrentMagLabel.Visible = true
-    self.Variables.infoFrame.CurrentTotalAmmoLabel.Visible = true
-    self.Variables.infoFrame["/"].Visible = true
-    self.Variables.infoFrame.CurrentMagLabel.Text = tostring(self.Variables.ammo.magazine)
-    self.Variables.infoFrame.CurrentTotalAmmoLabel.Text = tostring(self.Variables.ammo.total)
-    self.Variables.infoFrame.GunNameLabel.Text = Strings.firstToUpper(self.Name)
-elseif weapon == "knife" then
-    self.Variables.infoFrame.KnifeNameLabel.Visible = true
-    self.Variables.infoFrame.GunNameLabel.Visible = false
-    self.Variables.infoFrame.CurrentMagLabel.Visible = false
-    self.Variables.infoFrame.CurrentTotalAmmoLabel.Visible = false
-    self.Variables.infoFrame["/"].Visible = false
-end
+    if weapon == "gun" then
+        self.Variables.infoFrame.KnifeNameLabel.Visible = false
+        self.Variables.infoFrame.GunNameLabel.Visible = true
+        self.Variables.infoFrame.CurrentMagLabel.Visible = true
+        self.Variables.infoFrame.CurrentTotalAmmoLabel.Visible = true
+        self.Variables.infoFrame["/"].Visible = true
+        self.Variables.infoFrame.CurrentMagLabel.Text = tostring(self.Variables.ammo.magazine)
+        self.Variables.infoFrame.CurrentTotalAmmoLabel.Text = tostring(self.Variables.ammo.total)
+        self.Variables.infoFrame.GunNameLabel.Text = string.upper(self.Name)
+    elseif weapon == "knife" then
+        self.Variables.infoFrame.KnifeNameLabel.Visible = true
+        self.Variables.infoFrame.KnifeNameLabel.Text = string.upper(self.Variables.infoFrame.KnifeNameLabel.Text)
+        self.Variables.infoFrame.GunNameLabel.Visible = false
+        self.Variables.infoFrame.CurrentMagLabel.Visible = false
+        self.Variables.infoFrame.CurrentTotalAmmoLabel.Visible = false
+        self.Variables.infoFrame["/"].Visible = false
+    end
 end
 
 --

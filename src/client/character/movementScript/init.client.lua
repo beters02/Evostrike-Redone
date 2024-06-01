@@ -975,9 +975,6 @@ end
 	Main Scope
 ]]
 
-local prevUpdateTime = nil
-local updateDT = 1/60
-
 function Update(dt)
 	if not hum or (hum and hum.Health <= 0) then return end
 	currentDT = dt
@@ -986,21 +983,6 @@ function Update(dt)
 	Inputs.UpdateMovementSum()
 	Movement.ProcessMovement()
 	listenForPropertyChanged()
-end
-
-function SetDeltaTime() --seconds
-	local UpdateTime = tick() 
-	if prevUpdateTime ~= nil then
-		updateDT = (UpdateTime - prevUpdateTime)
-	else
-		updateDT = 1/60
-	end
-	prevUpdateTime = UpdateTime
-end
-
-function UpdateLoop()
-	SetDeltaTime()
-	Update(updateDT)
 end
 
 function Main()
@@ -1017,7 +999,7 @@ function Main()
 	UserInputService.InputBegan:Connect(Inputs.OnInput)
 	UserInputService.InputEnded:Connect(Inputs.OnInput)
 	UserInputService.InputChanged:Connect(Inputs.OnInputChange)
-	RunService:BindToRenderStep("updateLoop", 100, UpdateLoop)
+	RunService:BindToRenderStep("updateLoop", 100, Update)
 
 	-- connect movement abilities
 	script.Events.Dash.Event:Connect(Movement.RegisterDashVariables)

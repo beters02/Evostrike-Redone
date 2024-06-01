@@ -91,7 +91,7 @@ function WeaponController.new()
     end)
 
     -- this is where we will do bomb observe update
-    self.Connections.Update = RunService.RenderStepped:Connect(function(dt) self:Update(dt) end)
+    self.Connections.Update = RunService.RenderStepped:Connect(function(dt) self._currDT = dt self:Update(dt) end)
 
     return self
 end
@@ -150,9 +150,11 @@ function WeaponController:AddWeapon(weapon: string, tool: Tool, forceEquip: bool
     wepObject.EquipSpring = equipSpring
 
     local function shoveEquip()
-        local dt = wepObject._stepDT
+        --local dt = wepObject._stepDT -- stepdt is the same for everybody no matter the fps. woops.
+        local dt = self._currDT
         equipSpring:shove(shoveVec*dt*60)
-        task.wait((1/60)*(dt/(1/60))*2)
+        --task.wait((1/60)*(dt/(1/60))*2) -- how long are we waiting for exactly, wtf?
+        task.wait((1/60) * 2)
         equipSpring:shove(-shoveVec*dt*60)
     end
     shoveEquip = wepObject.Options.equipSpringShoveFunction or shoveEquip
