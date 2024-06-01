@@ -41,6 +41,7 @@ function general:_updateOptionValue(prefix, key, value)
 	local didSet = PlayerData:SetOptionValue(prefix, key, value)
 	if not didSet then
 		self.Main.Popup.new(game.Players.LocalPlayer, "Cannot set Option to this value.", 3)
+		return
 	end
 	--PlayerData:SetPath("options." .. prefix ..  "." .. key, value)
 
@@ -53,6 +54,8 @@ function general:_updateOptionValue(prefix, key, value)
 		-- fire viewmodel script event
 		self:_updateViewmodelFrame()
 	end
+
+	PlayerData:Save()
 end
 
 function general:_typingFocusFinished(enterPressed, button, frame, isButton)

@@ -63,6 +63,7 @@ local Skins = {
             ruby = {            name = "Ruby",            rarity = "Legendary",     price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
             sapphire = {        name = "Sapphire",        rarity = "Legendary",     price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
             matteObsidian = {   name = "Matte Obsidian",  rarity = "Legendary",     price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
+            fractal7 = {        name = "Fractal",         rarity = "Legendary",     price_pc = 1850,   price_sc = 18500,   sell_sc = 13875},
         },
         butterfly = {
             default = {         name = "Default",         rarity = "Legendary",     price_pc = 1500,   price_sc = 15000,   sell_sc = 11250},

@@ -264,6 +264,9 @@ function Frames.CreateSkinFrameModel(invSkin)
 end
 
 function Frames.SetSkinFrameEquipped(self, skinfo, ignoreUnequip)
+    print(self)
+    print(skinfo)
+    print(ignoreUnequip)
     --skinfo.frame.BackgroundColor3 = skinfo.frame:GetAttribute("equippedColor")
     skinfo.frame:WaitForChild("EquippedCheckMark").Visible = true
     skinfo.frame:SetAttribute("Equipped", true)

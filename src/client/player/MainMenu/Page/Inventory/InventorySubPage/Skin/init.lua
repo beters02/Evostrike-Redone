@@ -36,14 +36,14 @@ function Skin:init(Inventory, Frame)
 
     Skin.ItemDisplay.ClickedMainButton = function(itd)
         Skin.Inventory.Main:PlayButtonSound("Select1")
-        if self:SetSkinEquipped() then
+        if Skin:SetSkinEquipped() then
             itd.Frame.MainButton.Text = "EQUIPPED"
         end
     end
 
     Skin.ItemDisplay.ClickedSecondaryButton = function(itd)
         Skin.Inventory.Main:PlayButtonSound("Select1")
-        self:SellSkin(Skin.CurrentOpenSkinFrame)
+        Skin:SellSkin(Skin.CurrentOpenSkinFrame)
     end
 
     Skin.ItemDisplay.ClickedBackButton = function(itd)
@@ -79,13 +79,19 @@ function Skin:SetSkinEquipped(skinFrame: Frame?)
     end
     self.Var.Equipping = true
 
+    print(self.ItemDisplay.Var.CurrentSkinfo)
+
     local skinfo
+
     if skinFrame then
         skinfo = Frames.GetSkinFromFrame(skinFrame)
+        skinfo.frame = skinFrame
     else
         skinfo = self.ItemDisplay.Var.CurrentSkinfo
+        --skinfo.Frame = Frames.GetSkiNFrame
     end
-    skinfo.frame = skinFrame
+    
+    print(skinfo)
 
     local succ, err = pcall(function()
         InventoryInterface2.SetEquippedSkinFromSkinObject(skinfo)
@@ -202,6 +208,7 @@ function changeDisplayItem(itd, skinfo)
     model:SetPrimaryPartCFrame(model.PrimaryPart.CFrame + Vector3.new(0,0,7.8))
 
     itd.Var.CurrentSkinfo = skinfo
+    print(skinfo)
 end
 
 function canSellItem(invskin)

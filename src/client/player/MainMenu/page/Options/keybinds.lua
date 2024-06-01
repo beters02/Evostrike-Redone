@@ -127,6 +127,7 @@ function keybinds:_setKey(dataKey, newKeyStr, textBox, currValue)
     if success then
         Popup.new(self.player, "Keybind set!", 3)
         textBox.Text = newKeyStr
+        PlayerData:Save()
         return
     end
 

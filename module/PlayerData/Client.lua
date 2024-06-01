@@ -201,6 +201,7 @@ function _update()
     if not Players:FindFirstChild(player.Name) then
         conn[1]:Disconnect()
         conn[2]:Disconnect()
+        Client:Save()
         return
     end
     if Client._changed and tick() >= Client._changed then
@@ -213,5 +214,6 @@ end
 _getFromServer(true)
 conn[1] = RemoteEvent.OnClientEvent:Connect(_remoteClientEvent)
 conn[2] = RunService.RenderStepped:Connect(_update)
+
 
 return Client
