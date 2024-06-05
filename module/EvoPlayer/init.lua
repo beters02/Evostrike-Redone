@@ -20,7 +20,11 @@ local EvoPlayer = {
 }
 
 function setCharAttribute(player, attribute, value)
-    return PlayerAttributes:SetCharacterAttributeAsync(player, attribute, value)
+    if RunService:IsServer() then
+        PlayerAttributes:SetCharacterAttribute(player, attribute, value)
+    else
+        PlayerAttributes:SetCharacterAttributeAsync(player, attribute, value)
+    end
 end
 
 function getCharAttribute(player, attribute)

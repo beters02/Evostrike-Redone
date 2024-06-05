@@ -170,7 +170,7 @@ function requestSpawnInvoke(self, plr)
 end
 
 function botSpawn()
-    local Bot = BotService:AddBot({Respawn = false})
+    local Bot = BotService:AddBot({Respawn = false, StartingHelmet = true, StartingShield = 50})
     gmCall("InitCharacter", false, Bot.Character)
     Framework.Service.BotService.Remotes.BotDiedBindable.Event:Once(function(bot, botChar)
         task.delay(3, function()

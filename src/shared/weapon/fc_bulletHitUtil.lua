@@ -81,10 +81,9 @@ function util.PlayerHitSounds(character, hitPartInstance, wasKilled) -- Player H
 end
 
 function util.PlayerHitParticles(character, hitPartInstance, wasKilled)
-
     local player = Players:GetPlayerFromCharacter(character) or {Name = "BOT_" .. character.Name}
-    local helmet = PlayerAttributes:GetAttribute(player, "Helmet")
-    local helmetBroken = PlayerAttributes:GetAttribute(player, "HelmetBrokenParticles")
+    local helmet = PlayerAttributes:GetCharacterAttribute(player, "Helmet")
+    local helmetBroken = PlayerAttributes:GetCharacterAttribute(player, "HelmetBrokenParticles")
 
     if not wasKilled then
         local lrh = PlayerAttributes:GetAttribute(player, "LastRegisteredHealth")
