@@ -999,22 +999,23 @@ end
 --@return damageMultiplier (total damage reduction added up from recursion)
 function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageMultiplier, filter)
 	if not filter then filter = params.FilterDescendantsInstances end
-
+    print('1')
     -- filter params
 	local _p = RaycastParams.new()
 	_p.CollisionGroup = "Bullets"
 	_p.FilterDescendantsInstances = filter
 	_p.FilterType = Enum.RaycastFilterType.Exclude
-
+    print('1')
 	local result = workspace:Raycast(origin, direction, _p)
 	if not result then warn("No wallbang result but player result") return false end
-
+    print('1')
 	local hitchar = result.Instance:FindFirstAncestorWhichIsA("Model")
 	if hitchar and hitchar:FindFirstChild("Humanoid") then
 		return damageMultiplier, result, hitchar
 	end
-
+    print('1')
 	local bangableMaterial = result.Instance:GetAttribute("Bangable") or hitchar:GetAttribute("Bangable")
+    print(bangableMaterial)
 	if not bangableMaterial then return false, result end
 
 	for _, v in pairs(filter) do

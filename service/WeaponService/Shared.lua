@@ -28,7 +28,7 @@ local Replicate = Framework.Service.WeaponService.Events.Replicate
 local PlayerAttributes = require(Framework.Module.PlayerAttributes)
 
 local Shared = {}
-Shared.WallbagMaterials = {
+Shared.WallbangMaterials = {
 	LightMetal = 0.7,
 	HeavyMetal = 0.4,
 	LightWood = 0.85,

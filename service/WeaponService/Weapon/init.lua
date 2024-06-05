@@ -1020,7 +1020,7 @@ function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageM
         return damageMultiplier, result, hitchar
     end
 
-    local bangableMaterial = hitchar:GetAttribute("Bangable")
+    local bangableMaterial = result.Instance:GetAttribute("Bangable") or result.Instance.Parent:GetAttribute("Bangable")
     if not bangableMaterial then return false, result end
 
     for _, v in pairs(filter) do

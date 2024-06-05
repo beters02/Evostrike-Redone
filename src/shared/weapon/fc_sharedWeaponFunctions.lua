@@ -113,7 +113,12 @@ function module.GetBulletHitSound(result)
 	if result.Distance and result.Distance < 50 then
 		volumeMinMax *= result.Distance / 50
 	end
-	if result.IsReplicated then
+
+	local IsReplicated = false
+	pcall(function()
+		IsReplicated = result.IsReplicated
+	end)
+	if IsReplicated then
 		volumeMinMax *= 0.7
 	end
 
