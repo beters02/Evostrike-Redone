@@ -56,6 +56,9 @@ local Gamemode = {
         START_HELMET = true,
         SPAWN_INVINCIBILITY = 3,
 
+        HEALTH_PICKUPS = false,
+        HEALTH_PICKUP_HEALTH_AMNT = 50,
+
         START_CAMERA_CFRAME_MAP = {
             default = CFrame.new(Vector3.new(543.643, 302.107, -37.932)) * CFrame.Angles(math.rad(-25.593), math.rad(149.885), math.rad(-0)),
             warehouse = CFrame.new(Vector3.new(543.643, 302.107, -37.932)) * CFrame.fromOrientation(-25.593, math.rad(149.885), -0)
@@ -79,6 +82,7 @@ function Gamemode:InitPlayer(service, player) end
 function Gamemode:InitCharacter(service, player) end
 function Gamemode:ForceEnd(service, player) end
 function Gamemode:BarriersFinished(service) end -- Only called if BARRIERS_ENABLED = true
+function Gamemode:Update() end
 
 -- Not Required, shared access.
 

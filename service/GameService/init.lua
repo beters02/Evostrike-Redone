@@ -410,6 +410,10 @@ function GameService:InitalizeGame()
         self:PlayerDied(died, killer)
     end)
 
+    self.Connections.Update = RunService.Heartbeat:Connect(function()
+        gmCall("Update", self)
+    end)
+
     -- REQUEST SPAWN
     if self.GameOptions.REQUIRE_REQUEST_JOIN then
         GameServiceRemotes.PlayerRequestSpawn.OnServerInvoke = function(plr)

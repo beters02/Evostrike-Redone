@@ -1,18 +1,16 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local WeaponService = require(Framework.Service.WeaponService)
 local AbilityService = require(Framework.Service.AbilityService)
-local ConnectionsLib = require(Framework.Module.lib.fc_rbxsignals)
 local EvoPlayer = require(Framework.Module.EvoPlayer)
 local GameServiceRemotes = Framework.Service.GameService.Remotes
 local PostGameMap = ServerStorage:WaitForChild("PostGameMap")
 local CharacterModel = game.StarterPlayer.StarterCharacter
-local UIService = require(Framework.Service.UIService)
+local MedicalPackModel = ReplicatedStorage.Assets.Models.MedicalPack
 
 local Gamemode = require(script.Parent)
 local Deathmatch = {
@@ -62,6 +60,10 @@ local Deathmatch = {
         START_HELMET = true,
         SPAWN_INVINCIBILITY = 3,
 
+        HEALTH_PICKUPS = true,
+        HEALTH_PICKUP_LENGTH = 7,
+        HEALTH_PICKUP_HEALTH_AMNT = 50,
+
         START_CAMERA_CFRAME_MAP = {
             default = CFrame.new(Vector3.new(543.643, 302.107, -37.932)) * CFrame.Angles(math.rad(-25.593), math.rad(149.885), math.rad(-0)),
             warehouse = CFrame.new(Vector3.new(543.643, 302.107, -37.932)) * CFrame.fromOrientation(-25.593, math.rad(149.885), -0)
@@ -73,12 +75,26 @@ local currentEndUIState = false
 
 function Deathmatch:Start(service)
     print('Gamemode started!')
+    self.CurrentHealthPickups = {}
+end
+
+function Deathmatch:Update(service)
+    if service.GameStatus == "ENDED" then
+        return
+    end
+    self:UpdateHealthPickups()
 end
 
 function Deathmatch:End(service)
     -- fade in players screen while we set up post match map
     Gamemode.CallUIFunctionAll(self, service, "GameEnd", "Start")
     currentEndUIState = "Start"
+
+    -- destroy all health pickups
+    for i, v in pairs(self.CurrentHealthPickups) do
+        v.model:Destroy()
+    end
+    self.CurrentHealthPickups = {}
 
     Gamemode.ForceKillAllPlayers(self, service)
     AbilityService:ClearAllPlayerInventories()
@@ -146,9 +162,14 @@ end
 
 function Deathmatch:PlayerDied(service, died, killer, killNotRegistered)
     local canRespawnTime = tick() + self.GameOptions.RESPAWN_LENGTH
-    if killNotRegistered then
+
+    -- ?????
+    -- lemme remove this for now
+    --[[if killNotRegistered then
         canRespawnTime = 0
-    end
+    end]]
+
+    self:CreateHealthPickup(died)
 
     Gamemode.CallUIFunction(self, service, died, "PlayerDied", "Enable", killer, self.GameOptions.RESPAWN_LENGTH)
     listenForPlayerSpawn(self, service, died, canRespawnTime)
@@ -218,6 +239,43 @@ end
 
 -- Only called if ROUND_END_CONDITION or GAME_END_CONDITION is set to Custom.
 function Deathmatch:TimerEnded(service, player)
+end
+
+function Deathmatch:CreateHealthPickup(diedPlr)
+    if not self.GameOptions.HEALTH_PICKUPS then
+        return
+    end
+
+    local cf = diedPlr.Character.HumanoidRootPart.CFrame
+    local model = MedicalPackModel:Clone()
+
+    table.insert(self.CurrentHealthPickups, {model = model, endTick = tick() + self.GameOptions.HEALTH_PICKUP_LENGTH})
+    local ind = #self.CurrentHealthPickups
+    model:SetAttribute("PickupIndex", ind)
+    CollectionService:AddTag(model, "HealthPack")
+
+    local pickedUp = Instance.new("RemoteEvent", model)
+    pickedUp.OnServerEvent:Connect(function(player)
+        local dist = player.Character.HumanoidRootPart.CFrame.Position - model.PrimaryPart.CFrame.Position
+        dist = dist.Magnitude
+        if dist <= 10 then
+            EvoPlayer:AddHealth(player.Character, self.GameOptions.HEALTH_PICKUP_HEALTH_AMNT)
+            self.CurrentHealthPickups[ind] = nil
+            model:Destroy()
+        end
+    end)
+
+    model.Parent = workspace.Temp
+    model.PrimaryPart.CFrame = cf --+ --Vector3.new(0,,0)
+end
+
+function Deathmatch:UpdateHealthPickups()
+    for i, v in pairs(self.CurrentHealthPickups) do
+        if tick() >= v.endTick then
+            v.model:Destroy()
+            self.CurrentHealthPickups[i] = nil
+        end
+    end
 end
 
 -- [[ PLAYER SPAWNING ]]

@@ -85,6 +85,7 @@ function clickLoadout()
 end
 
 local respawnButtonEnabled = false
+
 local function clickRespawn()
 	if not canpress then
 		return
@@ -388,16 +389,43 @@ function update(dt)
 	processCameraAnimation(dt)
 end
 
-function connect()
+local PlayerDied = {}
+
+function connect(self, respawnWaitLength)
 	Debugger:PrepareTableConnect(connections, "PlayerDied")
 	disconnect()
-	connections[1] = RunService.RenderStepped:Connect(update)
-    connections[2] = loadoutButton.MouseButton1Click:Connect(clickLoadout)
+
+	local lastSec = 3
+	local timeElapsed = 0
+	local _respawnButtonEnabled = false
+	respawnWaitLength = respawnWaitLength + 0.2
+
+	respawnButton.TextLabel.Text = tostring(lastSec)
+
+	connections[1] = RunService.RenderStepped:Connect(function(dt)
+		update(dt)
+
+		timeElapsed += dt
+
+		if timeElapsed >= respawnWaitLength and not _respawnButtonEnabled then
+			_respawnButtonEnabled = true
+			self:EnableRespawnButton()
+			return
+		end
+
+		local currLastSec = 3 - math.floor(timeElapsed)
+		if lastSec ~= currLastSec then
+			lastSec = currLastSec
+			respawnButton.TextLabel.Text = tostring(lastSec)
+		end
+	end)
+
+	connections[2] = loadoutButton.MouseButton1Click:Connect(clickLoadout)
 	connections[3] = UserInputService.InputBegan:Connect(inputBegan)
 end
 
 function disconnect()
-	for _, v in pairs(connections) do
+	for i, v in pairs(connections) do
 		v:Disconnect()
 	end
 	connections = {}
@@ -431,8 +459,6 @@ function finish()
 	enabled = false
 end
 
-local PlayerDied = {}
-
 local started = false
 
 function PlayerDied:Enable(uiContainer, sentKiller, respawnWaitLength)
@@ -453,35 +479,8 @@ function PlayerDied:Enable(uiContainer, sentKiller, respawnWaitLength)
 	enabled = true
 
     init()
-    connect()
+    connect(self, respawnWaitLength)
     start()
-
-	--[[if killer == player then
-		self:EnableRespawnButton()
-		return
-	end]]
-
-	local lastSec = 3
-	local timeElapsed = 0
-	respawnWaitLength = respawnWaitLength + 0.2
-
-	respawnButton.TextLabel.Text = tostring(lastSec)
-
-	connections[4] = RunService.RenderStepped:Connect(function(dt)
-		timeElapsed += dt
-
-		if timeElapsed >= respawnWaitLength then
-			self:EnableRespawnButton()
-			connections[4]:Disconnect()
-			return
-		end
-
-		local currLastSec = 3 - math.floor(timeElapsed)
-		if lastSec ~= currLastSec then
-			lastSec = currLastSec
-			respawnButton.TextLabel.Text = tostring(lastSec)
-		end
-	end)
 end
 
 function PlayerDied:EnableRespawnButton()

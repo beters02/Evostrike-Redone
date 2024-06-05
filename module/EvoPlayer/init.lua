@@ -214,6 +214,33 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
     return damage, killed
 end
 
+function EvoPlayer:AddHealth(character, amnt)
+    local attributePlayer = false
+    pcall(function()
+        attributePlayer = Players:GetPlayerFromCharacter(character)
+    end)
+
+    attributePlayer = attributePlayer or {Name = "BOT_" .. character.Name}
+
+    local shield = getCharAttribute(attributePlayer, "Shield")
+    local health = character.Humanoid.Health
+    local healthToAdd = 0
+    local shieldToAdd = 0
+
+    if health == 100 then
+        shieldToAdd = amnt
+    elseif health + amnt > 100 then
+        local h = health + amnt
+        shieldToAdd = h - 100
+        healthToAdd = amnt - shieldToAdd
+    else
+        healthToAdd = amnt
+    end
+
+    character.Humanoid.Health = health + healthToAdd
+    EvoPlayer:SetShield(character, shield + shieldToAdd)
+end
+
 --@summary Set the Shield of a player.
 function EvoPlayer:SetShield(character, shield): number
     --character:SetAttribute("Shield", shield)

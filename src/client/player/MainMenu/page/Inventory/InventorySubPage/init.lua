@@ -84,7 +84,7 @@ function InventorySubPage.new(Inventory, Frame, Name)
     }
 
     self.Connections = {}
-    self.Var = {ItemDisplayOpened = false}
+    self.Var = {ItemDisplayOpened = false, PageChangeConnected = false}
     return self
 end
 
@@ -118,12 +118,14 @@ function InventorySubPage:CloseItemDisplay(onPageClose)
 end
 
 function InventorySubPage:Connect()
-    if self.ItemPageNumberVar.PageAmount > 1 then
-        self:ConnectPageChangeButtons()
-    end
+    self:ConnectPageChangeButtons()
 end
 
 function InventorySubPage:ConnectPageChangeButtons()
+    if self.Var.PageChangeConnected then
+        return
+    end
+    self.Var.PageChangeConnected = true
     self.ItemPageNumberVar.Connections.NextPage = self.Frame.NextPageNumberButton.MouseButton1Click:Connect(function()
         self:NextContentFrame()
     end)
@@ -133,6 +135,10 @@ function InventorySubPage:ConnectPageChangeButtons()
 end
 
 function InventorySubPage:DisconnectPageChangeButtons()
+    if not self.Var.PageChangeConnected then
+        return
+    end
+    self.Var.PageChangeConnected = false
     for _, v in pairs({"NextPage", "PreviousPage"}) do
         local conn = self.ItemPageNumberVar.Connections[v]
         if conn then
@@ -145,9 +151,7 @@ function InventorySubPage:Disconnect()
     for _, v in pairs(self.Connections) do
         v:Disconnect()
     end
-    if self.ItemPageNumberVar.PageAmount > 1 then
-        self:DisconnectPageChangeButtons()
-    end
+    self:DisconnectPageChangeButtons()
 end
 
 function InventorySubPage:AddContentFrame(num) -- Num will never be 1 since first content frame is pre-created
@@ -165,12 +169,16 @@ function InventorySubPage:NextContentFrame()
         return
     end
 
+    print("Prechange current page: " .. tostring(curr))
+
     self.Frame["Content" .. tostring(curr)].Visible = false
     curr += 1
     self.Frame["Content" .. tostring(curr)].Visible = true
     
     self.Frame.CurrentPageNumberLabel.Text = tostring(curr)
     self.ItemPageNumberVar.CurrentPage = curr
+
+    print("Postchange current page: " .. tostring(curr))
 end
 
 function InventorySubPage:PreviousContentFrame()
