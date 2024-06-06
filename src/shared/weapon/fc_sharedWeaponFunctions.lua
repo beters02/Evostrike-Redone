@@ -310,7 +310,7 @@ function util_getDamageFromHumResult(player, char, weaponOptions, pos, instance,
 			particleFolderName = "Headshot"
 			soundFolderName = "Headshot"
 
-		elseif string.match(instance.Name, "Leg") or string.match(instance.Name, "Foot") then
+		elseif string.match(instance.Name, "LowerLeg") or string.match(instance.Name, "Foot") then
 			damage *= weaponOptions.damage.legMultiplier
 		end
 

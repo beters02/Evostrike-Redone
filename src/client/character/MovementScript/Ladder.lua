@@ -73,7 +73,7 @@ function Ladder:Check()
     end
 
     if hit then
-        local result = workspace:Raycast(hitOrigin, direction * 5, self.LadderParams)
+        local result = workspace:Raycast(hitOrigin, direction.Unit * 3, self.LadderParams)
         if result and result.Instance.CollisionGroup ~= "Ladders" then
             hit = false
         end
