@@ -8,16 +8,25 @@ local Pattern = {
 }
 
 function Pattern.ParseSprayPattern(options: table)
-    if options.vectorLeavesCrosshairBullet then
-        options.sprayPattern[1][4] = 0 -- change the first bullet vectorModifier to 0
+    if options.vectorLeavesCrosshairBullet and not options.sprayPattern.parsedVLCB then
+        options.sprayPattern.parsedVLCB = true
 
-        local bullet = tostring(options.vectorLeavesCrosshairBullet)
-        local step = Math.twoDec((1/options.vectorLeavesCrosshairBullet)*2)
-        options.sprayPattern[2][4] = "range_"..bullet.."_"..tostring(step).."-1" -- set the second bullet's vectorModifier to the specified range
+        -- change the first bullet vectorModifier to 0
+        options.sprayPattern[1][4] = 0
+
+        -- set the second bullet's vectorModifier
+        -- to a range that ends at specified bullet
+        local bullet = options.vectorLeavesCrosshairBullet
+        local step = Math.twoDec(2/bullet)
+        options.sprayPattern[2][4] = "range_"..tostring(bullet).."_"..tostring(step).."-1"
     end
 
     Pattern.Parsed = {}
     for i, v in pairs(options.sprayPattern) do
+        if not tonumber(i) then
+            continue
+        end
+
         Pattern.Parsed[i] = parseBulletKey(v)
     end
 end
@@ -39,7 +48,7 @@ local function parseBulletKeyString(str: string)
             end
         end
 
-        return (math.random(0, 1) == 1 and 1 or -1) * tonumber(numstr)
+        return Math.absValueRandom(tonumber(numstr))
     end
 end
 

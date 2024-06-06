@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
+local TweenService = game:GetService("TweenService")
 
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local WeaponService = require(Framework.Service.WeaponService)
@@ -11,6 +12,7 @@ local GameServiceRemotes = Framework.Service.GameService.Remotes
 local PostGameMap = ServerStorage:WaitForChild("PostGameMap")
 local CharacterModel = game.StarterPlayer.StarterCharacter
 local MedicalPackModel = ReplicatedStorage.Assets.Models.MedicalPack
+local ReplenishEvent = Framework.Service.WeaponService.Events.Replenish
 
 local Gamemode = require(script.Parent)
 local Deathmatch = {
@@ -61,7 +63,7 @@ local Deathmatch = {
         SPAWN_INVINCIBILITY = 3,
 
         HEALTH_PICKUPS = true,
-        HEALTH_PICKUP_LENGTH = 7,
+        HEALTH_PICKUP_LENGTH = 10,
         HEALTH_PICKUP_HEALTH_AMNT = 50,
 
         START_CAMERA_CFRAME_MAP = {
@@ -254,12 +256,17 @@ function Deathmatch:CreateHealthPickup(diedPlr)
     model:SetAttribute("PickupIndex", ind)
     CollectionService:AddTag(model, "HealthPack")
 
+    local didPickUp = false
     local pickedUp = Instance.new("RemoteEvent", model)
     pickedUp.OnServerEvent:Connect(function(player)
+        if didPickUp then return end
+        didPickUp = true
+
         local dist = player.Character.HumanoidRootPart.CFrame.Position - model.PrimaryPart.CFrame.Position
         dist = dist.Magnitude
         if dist <= 10 then
-            EvoPlayer:AddHealth(player.Character, self.GameOptions.HEALTH_PICKUP_HEALTH_AMNT)
+            EvoPlayer:AddHealth(player.Character, self.GameOptions.HEALTH_PICKUP_HEALTH_AMNT, true)
+            ReplenishEvent:Fire(player)
             self.CurrentHealthPickups[ind] = nil
             model:Destroy()
         end

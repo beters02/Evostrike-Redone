@@ -17,7 +17,7 @@ local function initCharHud(char)
     hud:ConnectPlayer()
 
     local hum = char:WaitForChild("Humanoid")
-    hum.Died:Once(function()
+    hum.Died:Connect(function()
         hud:DisconnectPlayer()
     end)
 end

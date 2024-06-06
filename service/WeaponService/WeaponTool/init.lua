@@ -23,9 +23,7 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	tool.Name = "Tool_" .. weaponName
 
 	-- get weapon skin
-	print(weaponName)
 	local invSkin, skinData = InventoryInterface2.GetEquippedSkin(player, string.lower(weaponName))
-	print(invSkin)
 	model = InventoryInterface2.GetSkinModelFromSkinObject(invSkin)
 
 	-- set collision groups

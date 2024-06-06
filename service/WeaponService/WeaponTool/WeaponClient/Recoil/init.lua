@@ -107,6 +107,11 @@ function Recoil:Update(dt)
     else
         local rec = self.NupGoal
         if self.Shake then
+            rec = Vector3.new(
+                rec.X,
+                rec.Y - self.Shake,
+                rec.Z
+            )
             self.Shake = false
         end
         

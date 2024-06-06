@@ -14,6 +14,8 @@ local WeaponRemoteEvent: RemoteEvent = tool:WaitForChild("WeaponRemoteEvent")
 local WeaponRemoteFunction: RemoteFunction = tool:WaitForChild("WeaponRemoteFunction")
 local WeaponServerEquippedEvent: RemoteEvent = tool:WaitForChild("WeaponServerEquippedEvent")
 local WeaponServerReloadedEvent: RemoteEvent = tool:WaitForChild("WeaponServerReloadedEvent")
+local ReplenishEvent = Framework.Service.WeaponService.Events.Replenish
+local ReplenishClientEvent = Framework.Service.WeaponService.Events.ReplenishClient
 
 local SharedWeaponFunctions = require(game:GetService("ReplicatedStorage").weapon.fc_sharedWeaponFunctions)
 local RunService = game:GetService("RunService")
@@ -169,6 +171,17 @@ WeaponRemoteEvent.OnServerEvent:Connect(function(_plr, action, ...)
 		VerifyKnifeDamage(...)
 	elseif action == "Reload" then
         return ServerReload()
+	end
+end)
+
+ReplenishEvent.Event:Connect(function(plr)
+	if plr.Name ~= player.Name then
+		return
+	end
+
+	ReplenishClientEvent:FireClient(player)
+	if Options.ammo then
+		Variables.ammo = {magazine = Options.ammo.magazine, total = Options.ammo.total}
 	end
 end)
 

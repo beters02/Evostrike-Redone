@@ -26,6 +26,7 @@ local UIState = require(Framework.Module.States):Get("UI")
 local Weapon = require(game:GetService("ReplicatedStorage").Services.WeaponService.Weapon)
 local VMSprings = require(Framework.Module.lib.c_vmsprings)
 local Tables = require(Framework.Module.lib.fc_tables)
+local ReplenishClient = Framework.Service.WeaponService.Events.ReplenishClient
 
 --[[ CONFIGURATION ]]
 local ForceEquipDelay = 0.9
@@ -84,14 +85,21 @@ function WeaponController.new()
             end
         elseif action == "ClearInventory" then
             for i, v in pairs(self.Inventory) do
-                if v then v:Remove() end
-                self.Inventory[i] = false
+                self:ClearInventory()
+                --if v then v:Remove() end
+                --self.Inventory[i] = false
             end
         end
     end)
 
     -- this is where we will do bomb observe update
     self.Connections.Update = RunService.RenderStepped:Connect(function(dt) self._currDT = dt self:Update(dt) end)
+
+    self.Connections.ReplenishClient = ReplenishClient.OnClientEvent:Connect(function()
+        self:DoInInventory(function(_, v)
+            v:Replenish()
+        end)
+    end)
 
     return self
 end
@@ -274,11 +282,22 @@ function WeaponController:IsWeaponInSlot(weaponSlot)
     return self.Inventory[weaponSlot] and true or false
 end
 
+function WeaponController:DoInInventory(cb) -- cb = (slot, weapon) -> ()
+    for _, i in pairs({"primary", "secondary", "ternary"}) do
+        if self.Inventory[i] then
+            cb(i, self.Inventory[i])
+        end
+    end
+end
+
 --@summary Remove all Weapons from the Controller
 function WeaponController:ClearInventory()
-    for _, v in pairs(self.Inventory) do
+    self:DoInInventory(function(_, v)
         if v then v:Remove() end
-    end
+    end)
+    --[[for _, v in pairs(self.Inventory) do
+        
+    end]]
 end
 
 -- Weapon Action Processing

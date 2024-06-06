@@ -218,7 +218,7 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
     return damage, killed
 end
 
-function EvoPlayer:AddHealth(character, amnt)
+function EvoPlayer:AddHealth(character, amnt, limitAmnt)
     local attributePlayer = false
     pcall(function()
         attributePlayer = Players:GetPlayerFromCharacter(character)
@@ -230,6 +230,16 @@ function EvoPlayer:AddHealth(character, amnt)
     local health = character.Humanoid.Health
     local healthToAdd = 0
     local shieldToAdd = 0
+
+    if limitAmnt then
+        if health + shield >= 150 then
+            return
+        end
+
+        if health+shield+amnt > 150 then
+            amnt = 150 - (health+shield)
+        end
+    end
 
     if health == 100 then
         shieldToAdd = amnt

@@ -88,7 +88,6 @@ function MainMenu:Open()
     self.Gui.Enabled = true
 
     if self.CurrentOpenPage then
-        print(self.CurrentOpenPage)
         self.CurrentOpenPage:Open()
     end
 
@@ -375,7 +374,6 @@ function disableHud(self)
     
     for _, v in pairs(game.Players.LocalPlayer.PlayerGui:GetChildren()) do
         if v.Enabled and v.Name ~= "MainMenuGui" then
-            print(v)
             v.Enabled = false
             table.insert(self.DisabledHUDs, v)
         end

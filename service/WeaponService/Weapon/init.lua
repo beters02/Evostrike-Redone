@@ -189,7 +189,9 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
 	end)
 
 	self.Connections.Died = self.Humanoid.Died:Connect(function()
-		self.Variables.MainWeaponPartCache:Destroy()
+		pcall(function()
+			self.Variables.MainWeaponPartCache:Destroy()
+		end)
 	end)
 
 	self.ServerEquipEvent.OnClientEvent:Connect(function(success)
@@ -313,7 +315,9 @@ function Weapon:Remove()
 		v:Disconnect()
 		self.Connections[i] = nil
 	end
-	self.Variables.MainWeaponPartCache:Destroy()
+	pcall(function()
+		self.Variables.MainWeaponPartCache:Destroy()
+	end)
 	self = nil
 end
 
@@ -479,6 +483,16 @@ function Weapon:Inspect()
 	end
 
 	self:PlayAnimation("client", "Inspect", true)
+end
+
+function Weapon:Replenish()
+	if self.Options.ammo then
+		self.Variables.ammo.magazine = self.Options.ammo.magazine
+		self.Variables.ammo.total = self.Options.ammo.total
+		if self.Variables.equipped then
+			self.Player.PlayerScripts.HUD:WaitForChild("Replenish"):Fire(self.Options.ammo.magazine, self.Options.ammo.total)
+		end
+	end
 end
 
 --

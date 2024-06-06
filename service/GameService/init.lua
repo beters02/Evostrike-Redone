@@ -269,6 +269,11 @@ function GameService:InitalizeGame()
 
     --GamemodeService2:SetMenuType(self.GameOptions.MENU_TYPE)
 
+    -- lol
+    if self.GameOptions.HEALTH_PICKUP_LENGTH then
+        workspace:SetAttribute("HEALTH_PICKUP_LENGTH", self.GameOptions.HEALTH_PICKUP_LENGTH)
+    end
+
     -- init Spawns
     local Spawns = ServerStorage.CurrentSpawns:FindFirstChild(self.CurrentGamemode.Name) or ServerStorage.CurrentSpawns.Default
     self.Spawns = Spawns

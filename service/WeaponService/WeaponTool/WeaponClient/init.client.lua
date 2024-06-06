@@ -30,7 +30,11 @@ local function died()
         Weapon.Variables.rescope = false
         Weapon:ScopeOut()
     end
-    Weapon.Variables.MainWeaponPartCache:Destroy()
+
+    pcall(function()
+        Weapon.Variables.MainWeaponPartCache:Destroy()
+    end)
+    
 end
 
 local function stepped(_, dt)

@@ -185,7 +185,6 @@ function State:changed(callback)
     end
 
     local conn = createListenerChangedConnection(self, listener, self.properties.owner, callback)
-    print(conn)
     return {
         Disconnect = function() conn:Disconnect() remove() end
     }

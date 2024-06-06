@@ -21,6 +21,9 @@ function hud.initialize(player: Player)
     hud.charfr = hud.infomainfr:WaitForChild("CharacterFrame")
     hud.killfr = hud.gui:WaitForChild("KillfeedFrame")
 
+    hud.bulletTweenPlaying = false
+    hud.reloadTweenPlaying = false
+
     hud.playerConnections = {}
     hud.killConnections = {}
     hud = hud.initKillfeeds(hud)
@@ -85,6 +88,7 @@ function hud.initKillfeeds(self)
 end
 
 function bulletFireTween()
+    hud.bulletTweenPlaying = true
     local goalmod = 1.1
     local goalrot = math.random(5, 8)
     goalrot *= (math.random(1,2) == 1) and 1 or -1
@@ -105,7 +109,9 @@ function bulletFireTween()
     ft1.Completed:Wait()
     ft2:Play()
     ft1:Destroy()
+    ft2.Completed:Wait()
     ft2:Destroy()
+    hud.bulletTweenPlaying = false
 end
 
 function equipGunTween(slot)
@@ -136,6 +142,7 @@ function equipGunTween(slot)
 end
 
 function reloadGunTween(newMag, newTotal)
+    hud.reloadTweenPlaying = true
     local oldMagValue = Instance.new("IntValue")
     oldMagValue.Value = tonumber(hud.weaponfr.CurrentMagLabel.Text)
 
@@ -171,6 +178,7 @@ function reloadGunTween(newMag, newTotal)
     ft2:Destroy()
     oldMagValue:Destroy()
     oldTotalValue:Destroy()
+    hud.reloadTweenPlaying = false
 end
 
 function useAbilityTween(slot)
@@ -204,6 +212,8 @@ end
 --
 
 function hud:ConnectPlayer()
+    print('CONNECTING HUD')
+
     hud.pccount = 1
 
     -- update (health)
@@ -232,6 +242,21 @@ function hud:ConnectPlayer()
         reloadGunTween(newMag, newTotal)
     end)
 
+    local replenishing = false
+    
+    self.playerConnections.Replenish = script:WaitForChild("Replenish").Event:Connect(function(newMag, newTotal)
+        if replenishing then
+            return
+        end
+        if hud.bulletTweenPlaying then
+            repeat task.wait() until not hud.bulletTweenPlaying
+        end
+        if hud.reloadTweenPlaying then
+            repeat task.wait() until not hud.reloadTweenPlaying
+        end
+        reloadGunTween(newMag, newTotal)
+    end)
+
     self.playerConnections.UseAbility = script:WaitForChild("UseAbility").Event:Connect(function(slot)
         useAbilityTween(slot)
     end)
@@ -251,7 +276,6 @@ function hud:DisconnectPlayer()
     end
 
     self.gui.WeaponBar.Ternary.Visible = false
-
 end
 
 function hud:Enable()

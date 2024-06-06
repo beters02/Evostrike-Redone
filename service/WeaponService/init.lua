@@ -93,7 +93,6 @@ end
 --
 
 function WeaponService:GetWeaponModule(weapon: string)
-    print(weapon)
     local module = false
     for i, v in pairs(Weapons:GetChildren()) do
         if string.lower(weapon) == string.lower(v.Name) then
