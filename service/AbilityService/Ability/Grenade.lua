@@ -77,7 +77,7 @@ function Grenade:FireGrenadePre()
     local startLv = self.Player.Character.HumanoidRootPart.CFrame.LookVector
     local origin = self.Player.Character.HumanoidRootPart.Position + (startLv * 1.5) + Vector3.new(0, self.Options.startHeight, 0)
     local direction = (hit.Position - origin).Unit
-    self.RemoteFunction:InvokeServer("FireGrenadeServer", hit, origin, direction)
+    self.RemoteFunction:InvokeServer("FireGrenadeServer", hit, origin + (direction.Unit * 2), direction)
 end
 
 --@summary The FireGrenade Middleware function. Not recommended to override
