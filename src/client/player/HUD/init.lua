@@ -6,6 +6,7 @@ local Tables = require(Framework.Module.lib.fc_tables)
 local Strings = require(Framework.Module.lib.fc_strings)
 local DiedBind = Framework.Module.EvoPlayer.Events.PlayerDiedBindable
 local DiedEvent = Framework.Module.EvoPlayer.Events.PlayerDiedRemote
+local TweenObject = require(script:WaitForChild("TweenObject"))
 
 local hud = {}
 
@@ -23,6 +24,8 @@ function hud.initialize(player: Player)
 
     hud.bulletTweenPlaying = false
     hud.reloadTweenPlaying = false
+
+    hud.tweenObjects = {}
 
     hud.playerConnections = {}
     hud.killConnections = {}
@@ -88,67 +91,68 @@ function hud.initKillfeeds(self)
 end
 
 function bulletFireTween()
-    hud.bulletTweenPlaying = true
     local goalmod = 1.1
     local goalrot = math.random(5, 8)
     goalrot *= (math.random(1,2) == 1) and 1 or -1
     
-    local ft1 = TweenService:Create(
-        hud.weaponfr.CurrentMagLabel,
-        TweenInfo.new(0.3, Enum.EasingStyle.Bounce),
-        {Size = UDim2.fromScale(hud._magLabelSize.X.Scale * goalmod, hud._magLabelSize.Y.Scale * goalmod), Rotation = goalrot}
-    )
+    if hud.tweenObjects.bullet and hud.tweenObjects.bullet:IsPlaying() then
+        hud.tweenObjects.bullet:Pause()
+        hud.tweenObjects.bullet:Destroy()
+    end
 
-    local ft2 = TweenService:Create(
-        hud.weaponfr.CurrentMagLabel,
-        TweenInfo.new(0.3),
-        {Size = hud._magLabelSize, Rotation = 0}
-    )
+    hud.tweenObjects.bullet = TweenObject.new({
+        TweenService:Create(
+            hud.weaponfr.CurrentMagLabel,
+            TweenInfo.new(0.3, Enum.EasingStyle.Bounce),
+            {Size = UDim2.fromScale(hud._magLabelSize.X.Scale * goalmod, hud._magLabelSize.Y.Scale * goalmod), Rotation = goalrot}
+        ),
+        TweenService:Create(
+            hud.weaponfr.CurrentMagLabel,
+            TweenInfo.new(0.3),
+            {Size = hud._magLabelSize, Rotation = 0}
+        )
+    })
 
-    ft1:Play()
-    ft1.Completed:Wait()
-    ft2:Play()
-    ft1:Destroy()
-    ft2.Completed:Wait()
-    ft2:Destroy()
-    hud.bulletTweenPlaying = false
+    hud.tweenObjects.bullet:PlayInOrder()
 end
 
 function equipGunTween(slot)
     slot = Strings.firstToUpper(slot)
     local label = hud.gui.WeaponBar[slot].EquippedIconLabel
-
     local goalmod = math.random(11, 13) / 10
     local startSize: UDim2 = hud._weaponLabelSizes[slot]
     local goalSize = UDim2.fromScale(startSize.X.Scale * goalmod, startSize.Y.Scale * goalmod)
 
-    local ft1 = TweenService:Create(
-        label,
-        TweenInfo.new(0.06),
-        {Size = goalSize}
-    )
+    if hud.tweenObjects.equip and hud.tweenObjects.equip:IsPlaying() then
+        hud.tweenObjects.equip:Pause()
+        hud.tweenObjects.equip:Destroy()
+    end
+    if hud.tweenObjects.reload and hud.tweenObjects.reload:IsPlaying() then
+        hud.tweenObjects.reload:Cancel()
+    end
 
-    local ft2 = TweenService:Create(
-        label,
-        TweenInfo.new(0.09),
-        {Size = startSize}
-    )
+    hud.tweenObjects.equip = TweenObject.new({
+        TweenService:Create(
+            label,
+            TweenInfo.new(0.06),
+            {Size = goalSize}
+        ),
+        TweenService:Create(
+            label,
+            TweenInfo.new(0.09),
+            {Size = startSize}
+        )
+    })
 
-    ft1:Play()
-    ft1.Completed:Wait()
-    ft2:Play()
-    ft1:Destroy()
-    ft2:Destroy()
+    hud.tweenObjects.equip:PlayInOrder()
 end
 
 function reloadGunTween(newMag, newTotal)
-    hud.reloadTweenPlaying = true
     local oldMagValue = Instance.new("IntValue")
-    oldMagValue.Value = tonumber(hud.weaponfr.CurrentMagLabel.Text)
-
     local oldTotalValue = Instance.new("IntValue")
+    oldMagValue.Value = tonumber(hud.weaponfr.CurrentMagLabel.Text)
     oldTotalValue.Value = tonumber(hud.weaponfr.CurrentTotalAmmoLabel.Text)
-    
+
     local ft1 = TweenService:Create(
         oldMagValue,
         TweenInfo.new(0.3, Enum.EasingStyle.Cubic),
@@ -161,24 +165,38 @@ function reloadGunTween(newMag, newTotal)
         {Value = newTotal}
     )
 
+    if hud.tweenObjects.reload and hud.tweenObjects.reload:IsPlaying() then
+        hud.tweenObjects.reload:Pause()
+        hud.tweenObjects.reload:Destroy()
+    end
+
+    hud.tweenObjects.reload = TweenObject.new({ft1, ft2})
+
     local conn = RunService.RenderStepped:Connect(function()
         hud.weaponfr.CurrentMagLabel.Text = tostring(oldMagValue.Value)
         hud.weaponfr.CurrentTotalAmmoLabel.Text = tostring(oldTotalValue.Value)
     end)
 
-    ft1:Play()
-    ft2:Play()
-    ft2.Completed:Wait()
+    local finished = false
 
-    hud.weaponfr.CurrentMagLabel.Text = tostring(newMag)
-    hud.weaponfr.CurrentTotalAmmoLabel.Text = tostring(newTotal)
+    local function finish()
+        if finished then
+            return
+        end
+        finished = true
+        conn:Disconnect()
+        ft1:Destroy()
+        ft2:Destroy()
+        oldMagValue:Destroy()
+        oldTotalValue:Destroy()
+        hud.reloadTweenPlaying = false
+    end
 
-    conn:Disconnect()
-    ft1:Destroy()
-    ft2:Destroy()
-    oldMagValue:Destroy()
-    oldTotalValue:Destroy()
-    hud.reloadTweenPlaying = false
+    ft2.Destroying:Once(finish)
+    ft2.Completed:Once(finish)
+
+    --hud.tweenObjects.reload:PlayInOrder()
+    hud.tweenObjects.reload:Play()
 end
 
 function useAbilityTween(slot)
@@ -212,7 +230,6 @@ end
 --
 
 function hud:ConnectPlayer()
-    print('CONNECTING HUD')
 
     hud.pccount = 1
 
@@ -248,12 +265,15 @@ function hud:ConnectPlayer()
         if replenishing then
             return
         end
-        if hud.bulletTweenPlaying then
+        if hud.tweenObjects.bullet and hud.tweenObjects.bullet:IsPlaying() then
+            hud.tweenObjects.bullet:Cancel()
+        end
+        --[[if hud.bulletTweenPlaying then
             repeat task.wait() until not hud.bulletTweenPlaying
         end
         if hud.reloadTweenPlaying then
             repeat task.wait() until not hud.reloadTweenPlaying
-        end
+        end]]
         reloadGunTween(newMag, newTotal)
     end)
 

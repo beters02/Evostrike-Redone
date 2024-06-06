@@ -27,7 +27,7 @@ function Bots:AddBot(properties)
     character:SetAttribute("Bot", true)
 
     properties = properties or {}
-    if not properties.SpawnCFrame then properties.SpawnCFrame = game.ReplicatedStorage.Services.GamemodeService2.GamemodeScripts.Deathmatch.Spawns.Default.CFrame end
+    if not properties.SpawnCFrame then properties.SpawnCFrame = game.ServerStorage.CurrentSpawns.Deathmatch.Default.CFrame end
     local botProperties = Types.BotProperties.new(properties)
 
     -- set bot loaded property

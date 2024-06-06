@@ -241,15 +241,24 @@ function Weapon:Equip()
 
 	self:SetIconEquipped(true)
 
+	local nm = string.lower(self.Name)
 	task.spawn(function()
-		if string.lower(self.Name) == "knife" then
+		if nm == "knife" then
 			self:PlaySound("Equip")
+		end
+	end)
+
+	task.delay(0.03, function()
+		if not self.Variables.equipped and not self.Variables.equipping then
+			return
+		end
+		if nm == "knife" then
 			self:SetInfoFrame("knife")
 		else
 			self:SetInfoFrame("gun")
 		end
 	end)
-
+	
 	-- var
 	self.Variables.forcestop = false
 	self.Variables.equipping = true

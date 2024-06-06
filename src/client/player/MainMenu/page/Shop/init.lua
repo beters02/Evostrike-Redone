@@ -92,49 +92,45 @@ function Shop:DisconnectButtons()
 end
 
 -- [[ COLLECTIONS / SKINS / CASES PAGE ]]
-function Shop:OpenSkinsPage(async)
-    if not async and self.openItemList == "Skins" then
+
+local pages = {
+    Skins = {"Skins"},
+    Cases = {"Cases", "Keys"},
+    Collections = {"Collections"}
+}
+
+local function openPage(self, page, async)
+    if not async and self.openItemList == page then
         return
     end
-    self.openItemList = "Skins"
 
-    self.Frame.SkinsButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
-    self.Frame.CollectionsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Frame.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.itemLists.ItemList_Skins:Enable()
-    self.itemLists.ItemList_Cases:Disable()
-    self.itemLists.ItemList_Keys:Disable()
-    self.itemLists.ItemList_Collections:Disable()
+    self.openItemList = page
+    for pageName, strs in pairs(pages) do
+        local funcName = "Disable"
+        local bgColor = Color3.fromRGB(176, 187, 200)
+        if pageName == page then
+            funcName = "Enable"
+            bgColor = Color3.fromRGB(94, 100, 107)
+        end
+
+        for _, subPageName in pairs(strs) do
+            local pg = self.itemLists["ItemList_"..subPageName]
+            self.Frame[pageName.."Button"].BackgroundColor3 = bgColor
+            pg[funcName](pg)
+        end
+    end
+end
+
+function Shop:OpenSkinsPage(async)
+    openPage(self, "Skins", async)
 end
 
 function Shop:OpenCollectionsPage(async)
-    if not async and self.openItemList == "Collections" then
-        return
-    end
-    self.openItemList = "Collections"
-
-    self.Frame.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Frame.CollectionsButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
-    self.Frame.CasesButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.itemLists.ItemList_Skins:Disable()
-    self.itemLists.ItemList_Cases:Disable()
-    self.itemLists.ItemList_Keys:Disable()
-    self.itemLists.ItemList_Collections:Enable()
+    openPage(self, "Collections", async)
 end
 
 function Shop:OpenCasesPage(async)
-    if not async and self.openItemList == "Cases" then
-        return
-    end
-    self.openItemList = "Cases"
-
-    self.Frame.SkinsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Frame.CollectionsButton.BackgroundColor3 = Color3.fromRGB(136, 164, 200)
-    self.Frame.CasesButton.BackgroundColor3 = Color3.fromRGB(29, 42, 59)
-    self.itemLists.ItemList_Cases:Enable()
-    self.itemLists.ItemList_Keys:Enable()
-    self.itemLists.ItemList_Skins:Disable()
-    self.itemLists.ItemList_Collections:Disable()
+    openPage(self, "Cases", async)
 end
 
 -- Toggle All Pages On/Off

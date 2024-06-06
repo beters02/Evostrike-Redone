@@ -70,6 +70,8 @@ function MainMenu:Initialize(gui)
     self.BaseConnections.MenuTypeChanged = GameService:MenuTypeChanged(menuTypeChanged)
     self.CurrentOpenPage = getPage("Home")
 
+    self.CurrentTopBarSelectedButton = "HomeButtonFrame"
+
     self.BlurLightingEffect = Lighting:FindFirstChild("MainMenuBlur")
     if not self.BlurLightingEffect then
         self.BlurLightingEffect = Instance.new("BlurEffect", Lighting)
@@ -125,6 +127,13 @@ function MainMenu:OpenPage(pageName)
     self:ClosePage()
     newPage:Open()
     self.CurrentOpenPage = newPage
+
+    local fn = pageName .. "ButtonFrame"
+    self.Tweens.TopBarHoverOn[self.CurrentTopBarSelectedButton]:Pause()
+    self.Tweens.TopBarHoverOff[self.CurrentTopBarSelectedButton]:Play()
+    self.CurrentTopBarSelectedButton = fn
+    self.Tweens.TopBarHoverOff[fn]:Pause()
+    self.Tweens.TopBarHoverOn[fn]:Play()
 end
 
 -- Closes the Currently Opened Page
@@ -242,11 +251,17 @@ function connectTopBar(self)
         end
         self.TopBarConnections[frame.Name .. "Began"] = frame.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseMovement then
+                if self.CurrentTopBarSelectedButton == frame.Name then
+                    return
+                end
                 hoverOnTopBarTween(self, frame)
 			end
         end)
         self.TopBarConnections[frame.Name .. "Ended"] = frame.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseMovement then
+                if self.CurrentTopBarSelectedButton == frame.Name then
+                    return
+                end
                 hoverOffTopBarTween(self, frame)
 			end
         end)
