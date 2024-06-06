@@ -405,9 +405,13 @@ function connect(self, respawnWaitLength)
 	connections[1] = RunService.RenderStepped:Connect(function(dt)
 		update(dt)
 
+		if _respawnButtonEnabled then
+			return
+		end
+
 		timeElapsed += dt
 
-		if timeElapsed >= respawnWaitLength and not _respawnButtonEnabled then
+		if timeElapsed >= respawnWaitLength then
 			_respawnButtonEnabled = true
 			self:EnableRespawnButton()
 			return
