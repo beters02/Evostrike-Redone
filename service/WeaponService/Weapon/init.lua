@@ -219,6 +219,8 @@ function Weapon.new(weapon: string, tool: Tool, recoilScript)
 		self.Recoil.init(self)
 	end
 
+	self:InitExtraVar()
+
 	return self
 end
 
@@ -430,6 +432,8 @@ function Weapon:SecondaryFire()
 		self:ScopeIn()
 	end
 end --
+
+function Weapon:InitExtraVar() end
 
 function Weapon:Reload()
 	if self.Variables.ammo.total <= 0 or self.Variables.ammo.magazine == self.Options.ammo.magazine then

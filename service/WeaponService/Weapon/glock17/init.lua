@@ -1,4 +1,4 @@
-local wepconfig = {
+local Glock = {
 	Configuration = {
 		name = "glock17",
 		inventorySlot = "secondary",
@@ -95,9 +95,64 @@ local wepconfig = {
 	}
 }
 
-wepconfig.Configuration.damage.damageFalloffMinimumDamage = wepconfig.Configuration.damage.min
-
 local sprayPattern = require(script:WaitForChild("spraypattern"))
-wepconfig.Configuration.sprayPattern = require(game:GetService("ReplicatedStorage"):WaitForChild("weapon"):WaitForChild("fc_initSprayPattern"))(sprayPattern.spread)
+Glock.Configuration.sprayPattern = require(game:GetService("ReplicatedStorage"):WaitForChild("weapon"):WaitForChild("fc_initSprayPattern"))(sprayPattern.spread)
+Glock.Configuration.damage.damageFalloffMinimumDamage = Glock.Configuration.damage.min
 
-return wepconfig
+local defAcc = {
+	firstBullet = 5,
+	base = 12,
+	crouch = 9,
+	spray = 2,
+	walk = 15,
+	run = 17,
+	jump = 120,
+	spread = true
+}
+
+local accmod = 4
+local secAcc = {
+	firstBullet = 5*accmod,
+	base = 12*accmod,
+	crouch = 9*accmod,
+	spray = 2*accmod,
+	walk = 15*accmod,
+	run = 17*accmod,
+	jump = 120*accmod,
+	spread = true
+}
+
+local defFireRate = Glock.Configuration.fireRate
+local secFireRateBurst = 0.055
+local secFireRate = defFireRate * 2.5
+
+function Glock:SecondaryFire()
+	if not self.Variables.equipped then
+		return
+	end
+	if self.Variables.firing or self.Variables.secondFiring then
+		return
+	end
+	self.Variables.secondFiring = true
+
+	local st = tick()
+
+	self.Configuration.accuracy = secAcc
+	self.Configuration.fireRate = secFireRateBurst
+	for _ = 1, 3 do
+		self:PrimaryFire(self.Character.HumanoidRootPart.Velocity)
+	end
+	self.Configuration.fireRate = defFireRate
+	self.Configuration.accuracy = defAcc
+
+	task.wait(secFireRate - (tick()-st))
+	self.Variables.secondFiring = false
+	--self.Variables.currentFireMode = "secondary"
+end
+
+function Glock:InitExtraVar()
+	self.Variables.secondFiring = false
+	--self.Variables.currentFireMode = "primary"
+end
+
+return Glock
