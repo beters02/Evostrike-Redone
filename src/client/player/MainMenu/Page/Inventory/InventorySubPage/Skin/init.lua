@@ -79,8 +79,6 @@ function Skin:SetSkinEquipped(skinFrame: Frame?)
     end
     self.Var.Equipping = true
 
-    print(self.ItemDisplay.Var.CurrentSkinfo)
-
     local skinfo
 
     if skinFrame then
@@ -90,8 +88,6 @@ function Skin:SetSkinEquipped(skinFrame: Frame?)
         skinfo = self.ItemDisplay.Var.CurrentSkinfo
         --skinfo.Frame = Frames.GetSkiNFrame
     end
-    
-    print(skinfo)
 
     local succ, err = pcall(function()
         InventoryInterface2.SetEquippedSkinFromSkinObject(skinfo)

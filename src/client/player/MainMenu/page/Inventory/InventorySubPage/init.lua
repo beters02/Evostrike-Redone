@@ -15,6 +15,8 @@ function ItemDisplay.new(SubPage)
     self.Frame.Visible = false
     self.Frame.Parent = SubPage.Inventory.Frame
 
+    self.Mouse = game.Players.LocalPlayer:GetMouse()
+
     self.Connections = {}
     self.Var = {CurrentSkinfo = false}
     return self
@@ -130,6 +132,14 @@ function InventorySubPage:ConnectPageChangeButtons()
         self:NextContentFrame()
     end)
     self.ItemPageNumberVar.Connections.PreviousPage = self.Frame.PreviousPageNumberButton.MouseButton1Click:Connect(function()
+        self:PreviousContentFrame()
+    end)
+
+    local m = game.Players.LocalPlayer:GetMouse()
+    self.ItemPageNumberVar.Connections.MouseF = m.WheelForward:Connect(function()
+        self:NextContentFrame()
+    end)
+    self.ItemPageNumberVar.Connections.MouseF = m.WheelBackward:Connect(function()
         self:PreviousContentFrame()
     end)
 end

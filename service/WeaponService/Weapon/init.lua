@@ -1164,6 +1164,10 @@ end
 function Weapon:_ShootWallRayRecurse(origin, direction, params, hitPart, damageMultiplier, filter)
 	if not filter then
 		filter = params.FilterDescendantsInstances
+	else
+		for _, v in pairs(params.FilterDescendantsInstances) do
+			table.insert(filter, v)
+		end
 	end
 
 	-- filter params

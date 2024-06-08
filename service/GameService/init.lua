@@ -255,6 +255,13 @@ function GameService:Main(gamemodeStr: string?, ignoreResetGameOptions: boolean?
     -- start game!
     gmCall("Start")
 
+    for _, v in pairs(ServerStorage.CurrentSpawns:GetDescendants()) do
+        if v:IsA("Part") or v:IsA("MeshPart") then
+            print(v)
+            v.CollisionGroup = "BulletAndMovementIgnore"
+        end
+    end
+
     -- start round
     self:RoundStart()
 end
@@ -277,7 +284,7 @@ function GameService:InitalizeGame()
     -- init Spawns
     local Spawns = ServerStorage.CurrentSpawns:FindFirstChild(self.CurrentGamemode.Name) or ServerStorage.CurrentSpawns.Default
     self.Spawns = Spawns
-
+ 
     if self.GameOptions.BARRIERS_ENABLED then
         local Barriers = ServerStorage:FindFirstChild("Barriers")
         if Barriers then Barriers:Destroy() end
