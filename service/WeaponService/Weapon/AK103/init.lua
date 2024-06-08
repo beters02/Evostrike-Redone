@@ -40,9 +40,9 @@ AK103.Configuration = {
 		
 		headMultiplier = 5,
 		legMultiplier = 0.9,
-		damageFalloffPerMeter = 0.7,
-		damageFalloffDistance = 40,
-		damageFalloffMinimumDamage = 20,
+		damageFalloffPerMeter = 0.2,
+		damageFalloffDistance = 57,
+		damageFalloffMinimumDamage = 33,
 		enableHeadFalloff = false,
 		helmetMultiplier = 1,
 		destroysHelmet = true,

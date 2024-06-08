@@ -36,6 +36,10 @@
       {
         "Name": "ConnectOpenInput",
         "ClassName": "RemoteEvent"
+      },
+      {
+        "Name": "Extras",
+        "ClassName": "RemoteFunction"
       }
     ]
   }

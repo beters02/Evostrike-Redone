@@ -38,9 +38,9 @@ local ACR = {
 
 			headMultiplier = 4.6,
 			legMultiplier = 0.9,
-			damageFalloffPerMeter = 0.7,
-			damageFalloffDistance = 35,
-			damageFalloffMinimumDamage = 19,
+			damageFalloffPerMeter = 0.2,
+			damageFalloffDistance = 54,
+			damageFalloffMinimumDamage = 28,
 			enableHeadFalloff = false,
 			helmetMultiplier = 0.88,
 			destroysHelmet = true,

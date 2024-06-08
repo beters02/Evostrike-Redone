@@ -8,13 +8,13 @@
 -- spread[i] * fireDirection[i] * baseAccuracy
 -- vec current = {[1] = x, [2] = y, [3] = z, [4] = vectorModifier, [5] = camModifier, [6] = cameraRecoilReset}
 local sprayPattern = {
-	spread = {{"range_4_0-1", "range_4_0.5-1", "0.4absr", "range_4_0-0.65", 0.4, 0.35}, -- Bullet #1
+	spread = {{"range_4_0-1", "range_4_0.5-1", "0.4absr", "range_4_0-0.65", 0.27, 0.35}, -- Bullet #1
 		{0, 0, 0, "0.4absr"},
 		{0, 0, "0.4absr"},
 		{0, 0, 0},
+		{"const_12_1.5", "const_12_1.5", 0},
 		{0, 0, 0},
 		{0, 0, 0},
-		{"const_12_1", "const_12_1.5", 0},
 		{0, 0, 0},
 		{0, 0, 0},
 		{0, 0, 0},

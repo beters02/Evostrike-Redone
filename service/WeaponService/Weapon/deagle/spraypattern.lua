@@ -9,7 +9,7 @@
 -- vec current = {[1] = x, [2] = y, [3] = z, [4] = vectorModifier, [5] = camModifier, [6] = cameraRecoilReset}
 local sprayPattern = {
 	spread = {{"1absr", 1.2, 0, 0.1, 0.65, 0.6}, -- Bullet #1
-		{"range_3_0.5-1", "range_3_0.5-1", 0, 1},
+		{"range_3_0.4-1", "range_3_0.4-1", 0, 1},
 		{0, 0, 0},
 		{"const_7_1", "const_7_1", 0},
 		{0, 0, 0},

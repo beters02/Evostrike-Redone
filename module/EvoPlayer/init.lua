@@ -19,6 +19,9 @@ local EvoPlayer = {
     LoadingFunctions = { } -- Server: playerName = {callback}  Client: {callback}
 }
 
+local DebugEnabled = true
+local function debugPrint(msg) if DebugEnabled then print(msg) end end
+
 function setCharAttribute(player, attribute, value)
     if RunService:IsServer() then
         PlayerAttributes:SetCharacterAttribute(player, attribute, value)
@@ -121,7 +124,11 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
     local helmetMultiplier = getCharAttribute(attributePlayer, "lastUsedWeaponHelmetMultiplier") or 1
     hitPart = hitPart or "Head"
 
+    local initialDamage = damage
     local absoluteDamage = damage
+    local shieldDamage = 0
+    local healthDamage = 0
+    local distance = (character.HumanoidRootPart.CFrame.Position - damager.HumanoidRootPart.CFrame.Position).Magnitude
 
     local damageAppliedToCharacter = true
     local killed = false
@@ -139,21 +146,26 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
                 --character:SetAttribute("HelmetBroken", true)
             end
             damage *= helmetMultiplier
+            absoluteDamage = damage
         end
     end
 
     if shield > 0 then
         if shield >= damage then
+            shieldDamage = damage
             shield -= damage
             damage = 0
             damageAppliedToCharacter = false
         else
+            shieldDamage = shield
             damage -= shield
             shield = 0
         end
 
         setCharAttribute(attributePlayer, "Shield", shield)
     end
+
+    healthDamage = damage
 
     local currHealth = character.Humanoid.Health
     local newHealth
@@ -196,6 +208,11 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
             character.Humanoid:TakeDamage(damage)
         end
 
+        debugPrint("Total Distance Between Damagers: " .. distance)
+        debugPrint("Total Damage Taken: " .. absoluteDamage)
+        debugPrint("Shield Damage Taken: " .. shieldDamage)
+        debugPrint("Health Damage Taken: " .. healthDamage)
+
         local t = character.Humanoid:LoadAnimation(character.DamagedAnimation)
         t:Play()
         t.Ended:Once(function()
@@ -204,7 +221,6 @@ function EvoPlayer:TakeDamage(character, damage, damager, weaponUsed, hitPart)
 
         if killed then
             if isBot then
-                print('KILLED A BOT')
                 task.delay(1, function()
                     PlayerAttributes:ResetCharacterAttributes(attributePlayer)
                 end)

@@ -5,7 +5,7 @@ local wepconfig = {
 		automatic = false,
 		
 		equipLength = 0.6,
-		fireRate = 0.15,
+		fireRate = 0.12,
 		reloadLength = 0.6,
 		recoilReset = 0.35,
 
@@ -22,7 +22,7 @@ local wepconfig = {
 		-- bulletsTillFinalReset : How many bullets will it take for Weapon to reach Target Reset
 		recoilResetCfg = {
 			firstBulletReset = 0.1,
-			targetBulletReset = 0.35,
+			targetBulletReset = 0.27,
 			bulletsTillFinalReset = 3,
 		},
 		
@@ -43,16 +43,17 @@ local wepconfig = {
 		},
 		
 		damage = {
-			base = 16,
-			min = 10,
+			base = 19,
+			min = 12,
 
-			headMultiplier = 6.35,
+			headMultiplier = 5.35,
 			legMultiplier = 0.9,
-			damageFalloffPerMeter = 1.5,
-			damageFalloffDistance = 20,
+			damageFalloffPerMeter = .2,
+			damageFalloffDistance = 30,
+			damageFalloffMinimumDamage = 10,
 			enableHeadFalloff = true,
 			headFalloffMultiplier = 1, -- Multiplier applied to damage falloff per meter
-			helmetMultiplier = 0.8,
+			helmetMultiplier = 0.75,
 			destroysHelmet = false,
 		},
 
