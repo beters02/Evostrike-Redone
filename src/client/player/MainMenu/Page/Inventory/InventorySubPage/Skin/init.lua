@@ -15,6 +15,8 @@ local AttemptItemSellGui = ShopAssets:WaitForChild("AttemptItemSell")
 
 local InventorySubPage = require(script.Parent)
 local Frames = require(script:WaitForChild("Frames"))
+local Organize = require(script:WaitForChild("Organize"))
+local Config = require(script:WaitForChild("Config"))
 local Skin = setmetatable({}, InventorySubPage)
 Skin.__index = Skin
 
@@ -60,6 +62,9 @@ end
 function Skin:Open()
     InventorySubPage.Open(self)
     Frames.ConnectSkinFrames(self)
+    self.Connections.DropdownPrimary = self.Frame.SortByDropdown.Button.MouseButton1Click:Connect(function()
+        MainOrganizeButtonClicked(self)
+    end)
 end
 
 function Skin:Close()
@@ -74,19 +79,18 @@ end
 
 --@summary Set specific skin frame or CurrentSkinFrame equipped
 function Skin:SetSkinEquipped(skinFrame: Frame?)
-    if self.Var.Equipping then
-        return false
-    end
+    if self.Var.Equipping then return false end
     self.Var.Equipping = true
 
+<<<<<<< Updated upstream
     local skinfo
+=======
+    local skinfo = self.ItemDisplay.Var.CurrentSkinfo
+>>>>>>> Stashed changes
 
     if skinFrame then
         skinfo = Frames.GetSkinFromFrame(skinFrame)
         skinfo.frame = skinFrame
-    else
-        skinfo = self.ItemDisplay.Var.CurrentSkinfo
-        --skinfo.Frame = Frames.GetSkiNFrame
     end
 
     local succ, err = pcall(function()
@@ -209,6 +213,79 @@ end
 
 function canSellItem(invskin)
     return invskin.uuid ~= 0
+end
+
+--
+
+local isDropdownEnabled = false
+local currentOrganizeSelected = "Date Added"
+
+function MainOrganizeButtonClicked(self)
+    OrganizeButtonClicked(self, currentOrganizeSelected)
+end
+
+function OrganizeButtonClicked(self, typeSelected)
+    if not isDropdownEnabled then
+        isDropdownEnabled = true
+        OpenDropdown(self)
+    else
+        isDropdownEnabled = false
+        currentOrganizeSelected = typeSelected
+        self.Frame.SortByDropdown.Button.Text = "SORT BY: " .. string.upper(typeSelected)
+        Organize["By"..string.gsub(typeSelected, "%s+", "")](self, "Descending")
+        CloseDropdown(self)
+    end
+end
+
+function OpenDropdown(self)
+    local ddFrame: Frame = self.Frame.SortByDropdown
+    local mainButton: TextButton = ddFrame.Button
+
+    for _, v in pairs(Config.OrganizeOptions) do
+        if v == currentOrganizeSelected then
+            continue
+        end
+
+        local secButton: TextButton? = ddFrame:FindFirstChild(v)
+        if not secButton then
+            secButton = Instance.new("TextButton", self.Frame.SortByDropdown)
+            secButton.Text = string.upper(v)
+            secButton.BackgroundColor3 = mainButton.BackgroundColor3
+            secButton.BackgroundTransparency = mainButton.BackgroundTransparency
+            secButton.Size = mainButton.Size
+            secButton.TextColor3 = mainButton.TextColor3
+            for _, b in pairs(mainButton:GetChildren()) do
+                b:Clone().Parent = secButton
+            end
+            secButton.FontFace = mainButton.FontFace
+
+            local pos = mainButton.Position
+            secButton.Position = UDim2.new(
+                pos.X.Scale,
+                pos.X.Offset,
+                pos.Y.Scale + mainButton.Size.Y.Scale + 0.02,
+                pos.Y.Offset
+            )
+        end
+
+        self.Connections["DropdownSecondary"..v] = secButton.MouseButton1Click:Connect(function()
+            OrganizeButtonClicked(self, v)
+        end)
+    end
+end
+
+function CloseDropdown(self)
+    for i, v in pairs(self.Frame.SortByDropdown:GetChildren()) do
+        if v:IsA("TextButton") and v.Name ~= "Button" then
+            v:Destroy()
+        end
+    end
+    for i, v in pairs(self.Connections) do
+        if string.match(i, "DropdownSecondary") then
+            v:Disconnect()
+            self.Connections[i] = nil
+        end
+    end
 end
 
 return Skin

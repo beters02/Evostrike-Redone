@@ -20,6 +20,7 @@ local Config = require(script.Parent.Config)
 
 function Frames.UpdateSkinFrames(self, playerInventory)
     playerInventory = playerInventory or PlayerData:Get().ownedItems
+
     for i, v in pairs(self.SkinPageFrames) do
         for k, a in pairs(v) do
             a[2]:Destroy()
@@ -132,9 +133,6 @@ function Frames.ConnectSkinFrames(self)
                     return
                 end
                 Frames.SkinFrameSecondaryClick(self, itemFr)
-                --[[Frames.OpenItemDisplayFromSkinFrame(self, itemFr)
-                self.Frame.Visible = false
-                self.Inventory:DisableSubPageButtons()]]
             end))
         end
     end
@@ -215,15 +213,6 @@ function Frames.CreateSkinFrame(self, skinStr, pageIndex)
     local weaponModel = Frames.CreateSkinFrameModel(invSkin)
     weaponModel.Parent = viewport
 
-    --[[local cam = Instance.new("Camera", viewport)
-    local part = weaponModel.PrimaryPart
-    cam.CameraType = Enum.CameraType.Scriptable
-    cam.CFrame = part.CFrame + Vector3.new(0,0,-4)
-    cam.CFrame = CFrame.new(cam.CFrame.Position, part.Position)
-    cam.CameraSubject = part
-    cam.CameraType = Enum.CameraType.Fixed
-    viewport.CurrentCamera = cam]]
-
     frame.Visible = true
     return frame
 end
@@ -264,17 +253,12 @@ function Frames.CreateSkinFrameModel(invSkin)
 end
 
 function Frames.SetSkinFrameEquipped(self, skinfo, ignoreUnequip)
-    print(self)
-    print(skinfo)
-    print(ignoreUnequip)
-    --skinfo.frame.BackgroundColor3 = skinfo.frame:GetAttribute("equippedColor")
     skinfo.frame:WaitForChild("EquippedCheckMark").Visible = true
     skinfo.frame:SetAttribute("Equipped", true)
     if not ignoreUnequip then
         local currEquippedFrame = self.EquippedSkinPageFrames[skinfo.weapon]
         if currEquippedFrame then
             currEquippedFrame:WaitForChild("EquippedCheckMark").Visible = false
-            --currEquippedFrame.BackgroundColor3 = currEquippedFrame:GetAttribute("unequippedColor")
             currEquippedFrame:SetAttribute("Equipped", false)
         end
     end
