@@ -679,10 +679,23 @@ end
 
 -- [[ SCRIPT ]]
 
+local function getBoolean(value: any)
+    print(value)
+    if tonumber(value) then
+        return tonumber(value) == 1
+    end
+    if typeof(value) == "string" then
+        return value == "true"
+    end
+    return value
+end
+
 if RunService:IsServer() then
+
     GameServiceRemotes.Get.OnServerInvoke = function(_, action, ...)
         return GameService["Get" .. action](GameService)
     end
+
     GameServiceRemotes.ServerVar.OnServerInvoke = function(player, key, value)
         local plrIsAdmin = require(game.ServerStorage.Stored.AdminIDs):IsAdmin(player)
 
@@ -691,8 +704,9 @@ if RunService:IsServer() then
             if not GameService.IsSoloMode and not plrIsAdmin then
                 return false, "Cannot enable cheats on this server."
             end
-            GameService.CheatsEnabled = true
-            return true
+            value = getBoolean(value)
+            GameService.CheatsEnabled = value
+            return tostring(value)
         end
 
         if not GameService:IsCheatsEnabled() and not plrIsAdmin then
@@ -727,6 +741,7 @@ if RunService:IsServer() then
         GameService.GameOptions[key] = value
         return value
     end
+
     GameServiceRemotes.MultiplayerFunction.OnServerInvoke = function(player, action, ...)
         if not GameService:IsCheatsEnabled() and not require(game.ServerStorage.Stored.AdminIDs):IsAdmin(player) then
             return false, "Must have cheats enabled on this server."
@@ -736,6 +751,7 @@ if RunService:IsServer() then
         end
         return GameService[action](GameService, ...)
     end
+    
 end
 
 return GameService

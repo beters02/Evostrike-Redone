@@ -224,4 +224,14 @@ Commands.mp_resetgame = {
 	end
 }
 
+Commands.aimlock = {
+	Function = function(self)
+		local success, err = ReplicatedStorage.Remotes.Extras:InvokeServer("aimlock")
+		if not success then
+			return self:Error(err)
+		end
+		return self:Print(err)
+	end
+}
+
 return Commands

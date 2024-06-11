@@ -4,7 +4,7 @@
 --[[ Assets API Key M7QGzlp0g06ZTW677T/ynVrREcutjSarIaCjFtxs0ZApseyf ]]
 
 -- 1-100
---[[type Seed = number
+type Seed = number
 
 local SeedService = {}
 local HttpService = game:GetService("HttpService")
@@ -26,8 +26,6 @@ function SeedService:GetSeed(weapon: string, skin: string, seed: Seed)
     print(response)
 end
 
-SeedService:GetSeed("karambit", "fractal", 1)
+--SeedService:GetSeed("karambit", "fractal", 1)
 
-return SeedService]]
-
-return nil
+return SeedService

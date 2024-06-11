@@ -19,12 +19,16 @@ local rarityInfo = { -- in order from most rare to least
     {str = "common", chancePercent = 63}
 }
 
-function getRarityFromNumber(number) -- number must be 1-100
+function getRarityFromNumber(number: number, ignoreKnife: boolean) -- number must be 1-100
     for i, v in pairs(rarityInfo) do
+        print(v.str)
         if i == #rarityInfo then
             return "common"
         end
         if number >= 100 - v.chancePercent then
+            if ignoreKnife and v.str == "legendary" then
+                return "epic"
+            end
             return v.str
         end
     end
@@ -59,15 +63,17 @@ Cases.weaponcase1.price_sc = 500
 Cases.weaponcase1.sell_sc = 500*0.75
 
 -- [[ MODULE PRIVATE ]]
-local CaseModule = {
+local CaseModule
+CaseModule = {
     getCaseFromString = function(caseStr)
         return Cases[caseStr]
     end,
-    getLootItemFromCase = function(case: OCase) -- Loot comes as "weapon_model_skin"
+    getLootItemFromCase = function(case: OCase, ignoreKnife: boolean) -- Loot comes as "weapon_model_skin"
         local random = math.random(100, 10000)/100
-        local rarity = getRarityFromNumber(random)
+        local rarity = getRarityFromNumber(random, ignoreKnife)
         local loot = case.loot[rarity][math.random(1, #case.loot[rarity])]
         local success, skin = pcall(function() return Skins.GetSkinFromString(loot) end)
+
         if success then
             skin = loot
         else
@@ -88,7 +94,7 @@ return {
 
         local potentialSkins = {}
         for _ = 1, 10 do
-            table.insert(potentialSkins, CaseModule.getLootItemFromCase(case))
+            table.insert(potentialSkins, CaseModule.getLootItemFromCase(case, true))
         end
 
         return playerSkin, potentialSkins

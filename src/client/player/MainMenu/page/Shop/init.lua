@@ -1,5 +1,6 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local PlayerData = require(Framework.Module.PlayerData)
 local Popup = require(script.Parent.Parent.Popup)
@@ -147,15 +148,16 @@ function Shop:TogglePages(toggle)
         self.Frame.SkinsButton.Visible = true
         self.Frame.CollectionsButton.Visible = true
         self.Frame.CasesButton.Visible = true
-    else
-        self.itemLists.ItemList_Skins:Disable()
-        self.itemLists.ItemList_Cases:Disable()
-        self.itemLists.ItemList_Keys:Disable()
-        self.itemLists.ItemList_Collections:Disable()
-        self.Frame.SkinsButton.Visible = false
-        self.Frame.CollectionsButton.Visible = false
-        self.Frame.CasesButton.Visible = false
+        return
     end
+
+    self.itemLists.ItemList_Skins:Disable()
+    self.itemLists.ItemList_Cases:Disable()
+    self.itemLists.ItemList_Keys:Disable()
+    self.itemLists.ItemList_Collections:Disable()
+    self.Frame.SkinsButton.Visible = false
+    self.Frame.CollectionsButton.Visible = false
+    self.Frame.CasesButton.Visible = false
 end
 
 -- [[ ITEM DISPLAY ]]
@@ -248,6 +250,7 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
         weaponLabel.Text = string.upper(tostring(shopItem.weapon))
         caseLabel.Visible = false
     end
+
     local conns = {}
     local function otherDisconnect(index)
         for i, v in pairs(conns) do
@@ -304,8 +307,18 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
         conns = nil
     end)
 
+    local ctrlHeld = false
+
     conns[4] = plusButton.MouseButton1Click:Connect(function()
-        amountPurchased += 1
+        local amount = 1
+        if ctrlHeld then
+            amount = 10
+            if amountPurchased == 1 then
+                amount -= 1
+            end
+        end
+
+        amountPurchased += amount
         amountLabel.Text = tostring(amountPurchased)
         pcAcceptButton.Text = tostring(shopItem.price_pc*amountPurchased) .. " PC"
         scAcceptButton.Text = tostring(shopItem.price_sc*amountPurchased) .. " SC"
@@ -313,10 +326,31 @@ function Shop:_MainClickedItemDisplay(item, itemType, shopItem)
 
     conns[5] = minusButton.MouseButton1Click:Connect(function()
         if amountPurchased - 1 > 0 then
-            amountPurchased -= 1
+            local amount = 1
+            if ctrlHeld then
+                if amountPurchased == 1 then
+                    amount = math.min(amountPurchased-1, 10-1)
+                else
+                    amount = math.min(amountPurchased-1, 10)
+                end
+            end
+
+            amountPurchased -= amount
             amountLabel.Text = tostring(amountPurchased)
             pcAcceptButton.Text = tostring(shopItem.price_pc*amountPurchased) .. " PC"
             scAcceptButton.Text = tostring(shopItem.price_sc*amountPurchased) .. " SC"
+        end
+    end)
+
+    conns[6] = UserInputService.InputBegan:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.LeftControl then
+            ctrlHeld = true
+        end
+    end)
+
+    conns[7] = UserInputService.InputEnded:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.LeftControl then
+            ctrlHeld = false
         end
     end)
 
@@ -332,11 +366,11 @@ function itemDisplayPurchaseItem(self, item, purchaseType, parsedItem, amount)
         self.Main:PlayButtonSound("Purchase1")
         Popup.new(game.Players.LocalPlayer, "Successfully bought item! " .. tostring(parsedItem.name), 3)
         return true
-    else
-        self.Main:PlayButtonSound("Error1")
-        Popup.new(game.Players.LocalPlayer, "Could not buy item " .. tostring(parsedItem.name), 3)
-        return false
     end
+
+    self.Main:PlayButtonSound("Error1")
+    Popup.new(game.Players.LocalPlayer, "Could not buy item " .. tostring(parsedItem.name), 3)
+    return false
 end
 
 -- [[ UTIL ]]
@@ -345,12 +379,10 @@ function Shop:GetSkinDisplayImageID(weapon, skin): string
 end
 
 function Shop:UpdateEconomy(sc: number?, pc: number?)
-    if sc then
-        self.scLabel.Text = tostring(sc)
-    end
-    if pc then
-        self.pcLabel.Text = tostring(pc)
-    end
+    sc = sc and tostring(sc) or self.scLabel.Text
+    pc = pc and tostring(pc) or self.pcLabel.Text
+    self.scLabel.Text = tostring(sc)
+    self.pcLabel.Text = tostring(pc)
 end
 
 return Shop

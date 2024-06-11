@@ -5,8 +5,8 @@ local Types = require(EvoConsole.Types)
 local Tables = require(EvoConsole.Tables)
 local Configuration = require(EvoConsole.Configuration)
 local Events = script.Parent.Events
-local GameService = require(Framework.Service.GameService)
 local Strings = require(Framework.Module.lib.fc_strings)
+local ServerVar = require(script.Parent:WaitForChild("Commands").ServerVar)
 
 local States = require(Framework.Module.States)
 local UIState = States:Get("UI")
@@ -186,16 +186,7 @@ function _printMsg(self, msg: string, msgType: Types.ReturnMessageType|nil)
     return true
 end
 
-function _doServerVarCommand(self, commandSplit)
-    local key = string.gsub(commandSplit[1], "sv_", "")
-    local value = commandSplit[2]
-    print(key, value)
-    local success, err = GameService:ChangeServerVar(key, value)
-    if not success then
-        return self:Error(err)
-    end
-    return self:Print(commandSplit[1] .. " " .. success)
-end
+
 
 function _doCommand(self, commandSplit: table)
 
@@ -205,7 +196,7 @@ function _doCommand(self, commandSplit: table)
 	end
 
     if string.find(commandSplit[1], "sv_") then
-        return _doServerVarCommand(self, commandSplit)
+        return ServerVar.Command(self, commandSplit)
     end
 	
 	-- locate command from Commands

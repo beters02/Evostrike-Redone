@@ -137,10 +137,10 @@ function InventorySubPage:ConnectPageChangeButtons()
 
     local m = game.Players.LocalPlayer:GetMouse()
     self.ItemPageNumberVar.Connections.MouseF = m.WheelForward:Connect(function()
-        self:NextContentFrame()
+        self:PreviousContentFrame()
     end)
     self.ItemPageNumberVar.Connections.MouseF = m.WheelBackward:Connect(function()
-        self:PreviousContentFrame()
+        self:NextContentFrame()
     end)
 end
 
@@ -175,30 +175,21 @@ end
 
 function InventorySubPage:NextContentFrame()
     local curr = self.ItemPageNumberVar.CurrentPage
-    if curr == self.ItemPageNumberVar.PageAmount then
-        return
-    end
-
-    print("Prechange current page: " .. tostring(curr))
-
-    self.Frame["Content" .. tostring(curr)].Visible = false
+    if curr == self.ItemPageNumberVar.PageAmount then return end
     curr += 1
+
+    self.Frame["Content" .. tostring(curr-1)].Visible = false
     self.Frame["Content" .. tostring(curr)].Visible = true
-    
     self.Frame.CurrentPageNumberLabel.Text = tostring(curr)
     self.ItemPageNumberVar.CurrentPage = curr
-
-    print("Postchange current page: " .. tostring(curr))
 end
 
 function InventorySubPage:PreviousContentFrame()
     local curr = self.ItemPageNumberVar.CurrentPage
-    if curr == 1 then
-        return
-    end
-    self.Frame["Content" .. tostring(curr)].Visible = false
-
+    if curr == 1 then return end
     curr -= 1
+
+    self.Frame["Content" .. tostring(curr+1)].Visible = false
     self.Frame["Content" .. tostring(curr)].Visible = true
     self.Frame.CurrentPageNumberLabel.Text = tostring(curr)
     self.ItemPageNumberVar.CurrentPage = curr

@@ -1,5 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local Framework = require(ReplicatedStorage:WaitForChild("Framework"))
 local Strings = require(Framework.Module.lib.fc_strings)
 
@@ -27,12 +28,14 @@ function fillCaseSeqFrame(self, skin, index)
 end
 
 return function(self, gotSkin, potentialSkins)
+
     self:CloseItemDisplay()
     self.Inventory:CloseSubPage()
     self.ItemDisplay.Var.CaseOpeningActive = true
 
     -- Prepare Var & Tween
     local seq = self.Inventory.Frame.CaseOpeningSequence
+    local qobutt = self.Inventory.Frame.CaseOpeningSequence.QuickOpenButton
 
     local seqItem = seq.ItemDisplay
     seqItem.Display.ViewportFrame:ClearAllChildren()
@@ -100,45 +103,83 @@ return function(self, gotSkin, potentialSkins)
     --self.Inventory.Frame.PreviousPageNumberButton.Visible = false
     --self.Inventory.Frame.CurrentPageNumberLabel.Visible = false
     seq.Visible = true
+    qobutt.Visible = true
+
+    local connection = false
+    local connection1 = false
+    local finished = false
+    local function finish()
+        if finished then
+            return
+        end
+        finished = true
+        connection:Disconnect()
+        connection1:Disconnect()
+        WheelTween:Destroy()
+        GrowTween:Destroy()
+
+        self.Inventory.Main:PlayButtonSound("ItemReceive1")
+        seqWheel.Visible = false
+        seqItem.Visible = true
+        seqCase.Visible = false
+        qobutt.Visible = false
+
+        seqItem.BackButton.MouseButton1Click:Once(function()
+            self.ItemDisplay.Var.CaseOpeningActive = false
+            self.Inventory.Frame.CasesButton.Visible = true
+            self.Inventory.Frame.KeysButton.Visible = true
+            self.Inventory.Frame.SkinsButton.Visible = true
+            self.Inventory:OpenSubPage("Case")
+            self.Inventory:EnableSubPageButtons()
+            seq.Visible = false
+        end)
+    end
+
+    connection = UserInputService.InputBegan:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.X then
+            finish()
+        end
+    end)
+    connection1 = qobutt.MouseButton1Click:Connect(function()
+        finish()
+    end)
+
+    local function finalTweens()
+        if finished then
+            return
+        end
+
+        self.Inventory.Main:PlayButtonSound("WoodImpact1")
+        local lastTickPos = 0
+        task.spawn(function() -- ticking sound
+            self.Inventory.Main:PlayButtonSound("WheelTick1")
+            while lastTickPos and not finished do
+                if seqWheel.Wheel.CanvasPosition.X - lastTickPos >= xSizeOffset then
+                    lastTickPos = seqWheel.Wheel.CanvasPosition.X
+                    self.Inventory.Main:PlayButtonSound("WheelTick1")
+                end
+                task.wait()
+            end
+        end)
+
+        seqCase.Visible = false
+        seqWheel.Visible = true
+        WheelTween:Play()
+        WheelTween.Completed:Once(function()
+            -- play Received Item Screen
+            finish()
+        end)
+        lastTickPos = false
+    end
 
     -- Play Grow Tween
     seqCase.Visible = true
     seqWheel.Visible = false
     seqItem.Visible = false
     GrowTween:Play()
-    GrowTween.Completed:Wait()
-    self.Inventory.Main:PlayButtonSound("WoodImpact1")
-    
-    -- Play Wheel Tween
-    local lastTickPos = 0
-    task.spawn(function() -- ticking sound
-        self.Inventory.Main:PlayButtonSound("WheelTick1")
-        while lastTickPos do
-            if seqWheel.Wheel.CanvasPosition.X - lastTickPos >= xSizeOffset then
-                lastTickPos = seqWheel.Wheel.CanvasPosition.X
-                self.Inventory.Main:PlayButtonSound("WheelTick1")
-            end
-            task.wait()
-        end
+    GrowTween.Completed:Once(function()
+        -- Play Wheel Tween
+        finalTweens()
     end)
-    seqCase.Visible = false
-    seqWheel.Visible = true
-    WheelTween:Play()
-    WheelTween.Completed:Wait()
-    lastTickPos = false
 
-    -- play Received Item Screen
-    self.Inventory.Main:PlayButtonSound("ItemReceive1")
-    seqWheel.Visible = false
-    seqItem.Visible = true
-
-    seqItem.BackButton.MouseButton1Click:Once(function()
-        self.ItemDisplay.Var.CaseOpeningActive = false
-        self.Inventory.Frame.CasesButton.Visible = true
-        self.Inventory.Frame.KeysButton.Visible = true
-        self.Inventory.Frame.SkinsButton.Visible = true
-        self.Inventory:OpenSubPage("Case")
-        self.Inventory:EnableSubPageButtons()
-        seq.Visible = false
-    end)
 end

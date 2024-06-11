@@ -19,7 +19,7 @@ local EvoPlayer = {
     LoadingFunctions = { } -- Server: playerName = {callback}  Client: {callback}
 }
 
-local DebugEnabled = true
+local DebugEnabled = false
 local function debugPrint(msg) if DebugEnabled then print(msg) end end
 
 function setCharAttribute(player, attribute, value)

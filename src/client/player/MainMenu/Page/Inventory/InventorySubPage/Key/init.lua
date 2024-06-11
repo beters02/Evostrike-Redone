@@ -11,7 +11,7 @@ local Popup = require(script.Parent.Parent.Parent.Parent.Popup)
 local AttemptOpenCaseGui = ShopAssets:WaitForChild("AttemptOpenCase")
 
 local Config = require(script:WaitForChild("Config"))
-local OpenSequence = require(script:WaitForChild("OpenSequence"))
+local OpenSequence = require(script.Parent:WaitForChild("Case"):WaitForChild("OpenSequence"))
 local InventorySubPage = require(script.Parent)
 local Case = setmetatable({}, InventorySubPage)
 Case.__index = Case
