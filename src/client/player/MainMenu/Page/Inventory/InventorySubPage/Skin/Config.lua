@@ -15,7 +15,7 @@ local Config = {
 }
 
 Config.ConvertOrderToArray = function()
-    return {"common", "rare", "epic", "legendary"}
+    return {"legendary", "epic", "rare", "common"}
 end
 
 local rotDeg90 = math.pi*-.5

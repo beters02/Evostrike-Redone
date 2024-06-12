@@ -82,11 +82,7 @@ function Skin:SetSkinEquipped(skinFrame: Frame?)
     if self.Var.Equipping then return false end
     self.Var.Equipping = true
 
-<<<<<<< Updated upstream
-    local skinfo
-=======
     local skinfo = self.ItemDisplay.Var.CurrentSkinfo
->>>>>>> Stashed changes
 
     if skinFrame then
         skinfo = Frames.GetSkinFromFrame(skinFrame)
