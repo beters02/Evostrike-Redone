@@ -79,6 +79,54 @@ export type FunctionContainer = {
     [ScriptGameObject] = A [GameObject] that is a script and not a ModuleScript.
 ]]
 
+export type ConsoleCfg = {
+    blur_when_opened: boolean,
+    blur_max_size: number,
+    blur_fade_in_length: number,
+    blur_fade_out_length: number,
+    console_fade_in_length: number,
+    console_fade_out_length: number,
+    open_key: string,
+    color_print: Color3,
+    color_warn: Color3,
+    color_error: Color3,
+    print_line_index: boolean,
+    auto_fill_item_color_default: Color3,
+    auto_fill_item_color_selected: Color3
+}
+
+export type CConsole = {
+    gui: ScreenGui,
+    player: Player,
+    cfg: ConsoleCfg,
+    conn: {[string]: RBXScriptConnection},
+    lineIndex: number,
+
+    Open: (console: CConsole) -> (),
+    Close: (console: CConsole) -> (),
+    Return: (console: CConsole, fullCommand: string?) -> (),
+    Print: (console: CConsole, msg: string, cancelLineBreak: boolean?) -> (),
+    Error: (console: CConsole, msg: string, cancelLineBreak: boolean?) -> (),
+    Warn: (console: CConsole, msg: string, cancelLineBreak: boolean?) -> (),
+    GetText: (console: CConsole) -> (string),
+    PrintTable: (console: CConsole, t: table, color: Color3?, callback: (any, any) -> ()?) -> (),
+
+    _setBlur: (console: CConsole, enabled: boolean) -> ()?,
+}
+
+export type AutoFillModule = {
+    init: (console: CConsole) -> (),
+    updateResults: (console: CConsole) -> (),
+    finish: (console: CConsole) -> ()
+}
+
+export type SCommand = {
+    name: string,
+    vars: {[string]: {vartype: string, required: boolean, index: number}},
+    callback: (console: CConsole, ...any) -> (any),
+    server_callback: (player: Player) -> (any)?,
+}
+
 --#endregion
 
 return nil
