@@ -1,15 +1,7 @@
 local Types = require(script.Parent:WaitForChild("Types"))
-local Players = game:GetService("Players")
 type SCommand = Types.SCommand
 
 local Commands = {}
-
--- test for required variables within the command
-
-
----------
--- DEF --
----------
 
 Commands.printMyName = {
     name = "printMyName",
