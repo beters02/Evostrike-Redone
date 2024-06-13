@@ -1,4 +1,7 @@
 local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
+local InsertService = game:GetService("InsertService")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 export type DatabaseSkin = {
     Seed: number, -- 1 -> 100
@@ -6,7 +9,63 @@ export type DatabaseSkin = {
     Stickers: {first: string?, second: string?, third: string?, fourth: string?}
 }
 
+export type AssetIds = {
+    metallic: string,
+    smoothness: string,
+    diffuseOriginal: string
+}
+
 local SkinsDB = {}
+
+local function CreateSeededSkinAsset(invSkin, seed)
+    local response = HttpService:RequestAsync({
+        ["Method"] = "POST",
+        ["Url"] = "http://localhost:8435",
+        ["Headers"] = {
+            ["Content-Type"] = "application/json"
+        },
+        ["Body"] = HttpService:JSONEncode({
+            ["weapon"] = invSkin.weapon,
+            ["model"] = invSkin.model,
+			["skin"] = invSkin.skin,
+			["seed"] = seed
+        })
+    })
+
+    if not response then
+        error("Did not recieve required body. " .. tostring(response))
+    end
+    response = HttpService:JSONDecode(response.Body)
+    return {
+        diffuseOriginal = response.diffuseOriginal,
+        metallic = response.metallic,
+        smoothness = response.smoothness,
+    } :: AssetIds
+end
+
+function SkinsDB:GetSkinTextures(invSkin, seed)
+    local store = DataStoreService:GetDataStore("SkinTexturesDatabase")
+    local dataKey = invSkin.weapon .. "_" .. invSkin.model .. "_" .. invSkin.skin .. "_" .. seed
+    local assetIds: AssetIds? = store:GetAsync(dataKey)
+
+    if not assetIds then
+        
+    end
+    assetIds = CreateSeededSkinAsset(invSkin, seed) :: AssetIds
+    if not assetIds then
+        return false
+    end
+
+    store:SetAsync(dataKey, assetIds)
+
+    for i, v in pairs(assetIds) do
+        local model = game:GetService("InsertService"):LoadAsset(v)
+        model.Name = i
+        model.Parent = workspace
+    end
+
+    print(assetIds)
+end
 
 function SkinsDB:GetSkin(invSkin)
     if invSkin.skin == "Default" or tostring(invSkin.uuid) == "0" then
