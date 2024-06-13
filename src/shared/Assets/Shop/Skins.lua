@@ -121,4 +121,12 @@ SkinsModule.GetSkinFromInvString = function(str)
     return Strings.convertPathToInstance(shopstr, Skins, false, "_")
 end
 
+function SkinsModule.GetSkinRarityFromInvString(str)
+    local split = str:split("_")
+    if split[1] == "knife" then
+        return Skins.knife[split[2]][split[3]].rarity
+    end
+    return Skins[split[2]][split[3]].rarity
+end
+
 return SkinsModule

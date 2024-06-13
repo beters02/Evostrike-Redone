@@ -1,6 +1,22 @@
 local Config = {
-    MaxFramesPerPage = 30
+    MaxFramesPerPage = 30,
+
+    OrganizeOptions = {
+        "Date Added",
+        "Rarity"
+    },
+
+    OrganizeByRarityOrder = {
+        common = 1,
+        rare = 2,
+        epic = 3,
+        legendary = 4
+    }
 }
+
+Config.ConvertOrderToArray = function()
+    return {"legendary", "epic", "rare", "common"}
+end
 
 local rotDeg90 = math.pi*-.5
 local vector3Rad = function(x, y, z)
