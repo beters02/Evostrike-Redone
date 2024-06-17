@@ -53,9 +53,10 @@ function Console.new(gui, cfg) : Types.CConsole
 
     self = setmetatable(self, Console) :: Types.CConsole
 
-    local commandsToAdd = ReplicatedStorage.ConsoleEvents.RemoteFunction:InvokeServer("Init")
-    if commandsToAdd then
-        for i, v in pairs(commandsToAdd) do
+    local adminCommandModule = ReplicatedStorage.ConsoleEvents.RemoteFunction:InvokeServer("Init")
+    print(adminCommandModule)
+    if adminCommandModule then
+        for i, v in pairs(require(adminCommandModule)) do
             Commands[i] = v
         end
     end
@@ -65,6 +66,8 @@ function Console.new(gui, cfg) : Types.CConsole
 
     self:Open()
     self:Close()
+
+    self.commands = Commands
     return self
 end
 
@@ -170,8 +173,9 @@ local function getCommandUsage(command: Types.SCommand)
     return str .. " '"
 end
 
-function Console:testVar(console: Types.CConsole, command: string, args: any) -- args is a packed table of the provided arguments
-    local scommand = Commands[command]
+function Console:testVar(command: string, args: any) -- args is a packed table of the provided arguments
+    local console = self
+    local scommand = Commands[command] or console.commands[command]
     local vartab = clone(scommand.vars)
     local missing = {}
 

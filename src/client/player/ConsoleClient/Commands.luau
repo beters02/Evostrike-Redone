@@ -3,24 +3,15 @@ type SCommand = Types.SCommand
 
 local Commands = {}
 
-Commands.printMyName = {
-    name = "printMyName",
-    vars = {
-        first_name = {vartype = "string", required = true, index = 1},
-        last_name = {vartype = "string", required = false, index = 2}
-    },
+Commands.help = {
+    name = "help",
+    vars = {},
 
-    callback = function(console: Types.CConsole, first_name: string, last_name: string?)
-        local varSuccess = console.testVar(console, "printMyName", table.pack(first_name, last_name))
-        if not varSuccess then return end
-        local name = first_name
-        if last_name then
-            name = first_name .. " " .. last_name
-        end
-        console:Print(name)
-    end,
-
-    server_callback = false,
+    callback = function(console: Types.CConsole)
+        console:PrintTable(console.commands, false, function(i, v)
+            console:Print(i)
+        end)
+    end
 }
 
 return Commands

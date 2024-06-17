@@ -10,7 +10,10 @@ local InvokeActions = {
         if not Admins:IsAdmin(player) then
             return false
         end
-        return require(script.Admin)
+        local c = script.Admin:Clone()
+        c.Parent = player
+        return c
+        --return require(script.Admin)
     end
 }
 
