@@ -15,6 +15,35 @@ export type AssetIds = {
     diffuseOriginal: string
 }
 
+--model_skin
+--knife_model_skin
+export type SkinDataKey = string
+
+export type SeedModifier = (seed: number, model: Model) -> ()
+
+local function SapphireModifier(seed: number, model: Model)
+    -- get random hue in rage from 88 -> 240 based on seed (dark blue -> green)
+    local r = Random.new(seed)
+    local hue = r:NextInteger(88, 240)
+
+    print('Applying seed! Seed: ' .. seed .. " Hue: " .. hue)
+    
+    local clientsa = model:WaitForChild("Blade"):WaitForChild("SurfaceAppearance")
+    local serversa = model:WaitForChild("Server"):WaitForChild("Blade"):WaitForChild("SurfaceAppearance")
+
+    -- apply new color to surface appearance
+    clientsa.Color = Color3.fromHSV(hue, 255, 255)
+    serversa.Color = Color3.fromHSV(hue, 255, 255)
+end
+
+-- For right now we can do it like this,
+-- but in the future we will want to apply the same modifier
+-- to multiple knives without needing a bunch of extra code
+local SeedModifiers: {[SkinDataKey]: SeedModifier} = {
+    knife_karambit_sapphire = SapphireModifier,
+    knife_m9bayonet_sapphire = SapphireModifier
+}
+
 local SkinsDB = {}
 
 local function CreateSeededSkinAsset(invSkin, seed)
@@ -51,7 +80,9 @@ function SkinsDB:GetSkinTextures(invSkin, seed)
     if not assetIds then
         
     end
+
     assetIds = CreateSeededSkinAsset(invSkin, seed) :: AssetIds
+
     if not assetIds then
         return false
     end
@@ -64,7 +95,6 @@ function SkinsDB:GetSkinTextures(invSkin, seed)
         model.Parent = workspace
     end
 
-    print(assetIds)
 end
 
 function SkinsDB:GetSkin(invSkin)
@@ -93,7 +123,7 @@ function SkinsDB:GetSkin(invSkin)
         data[invSkin.uuid] = {
             Seed = math.random(1, 100),
             Wear = math.random(1, 999) * 0.001,
-            Stickers = {first = false, second = false, third = false, fourth = false}
+            Stickers = {first = false, second = false, third = false, fourth = false},
         }:: DatabaseSkin
         print("Succesfully added skin to the database.")
     end
@@ -103,6 +133,17 @@ function SkinsDB:GetSkin(invSkin)
     end
 
     return data[invSkin.uuid]
+end
+
+function SkinsDB:ApplySkinSeedModifiers(invSkin: string, seed: number, model: Model)
+    local dataKey = invSkin.model .. "_" .. invSkin.skin
+    if invSkin.weapon == "knife" then
+        dataKey = "knife_" .. dataKey
+    end
+
+    if SeedModifiers[dataKey] then
+        SeedModifiers[dataKey](seed, model)
+    end
 end
 
 function SkinsDB:RemoveSkin(invSkin)

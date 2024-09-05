@@ -26,6 +26,13 @@ function WeaponTool.new(player: Player, weaponModule: ModuleScript)
 	local invSkin, skinData = InventoryInterface2.GetEquippedSkin(player, string.lower(weaponName))
 	model = InventoryInterface2.GetSkinModelFromSkinObject(invSkin)
 
+	if skinData and skinData.Seed then
+		-- apply seed modifiers if necessary
+		local SkinsDatabase = require(game:GetService("ServerStorage"):WaitForChild("SkinsDatabase"))
+		SkinsDatabase:ApplySkinSeedModifiers(invSkin, skinData.Seed, model)
+	end
+	
+
 	-- set collision groups
 	for _, v in pairs(model:GetDescendants()) do
 		if not v:IsA("MeshPart") and not v:IsA("BasePart") then continue end
