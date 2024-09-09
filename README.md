@@ -10,6 +10,7 @@
 
 ## Codebase References
 - Movement: src/client/character/movementScript && src/server/MovementScript
+- Weapons: service/WeaponService
 - Custom States Module: module/States
 
 This is my *baby*. Counter-Strike has been a passion of mine for a long time, and it's my dream to become professionally involved with something related to CS or Source Engine.
