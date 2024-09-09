@@ -16,7 +16,7 @@ local module = {}
 function module:ApplyFriction(modifier, decel)
 
 	local vel = self.movementVelocity.Velocity
-	local speed = vel.Magnitude
+	local speed = Vector3.new(vel.X, 0, vel.Y).Magnitude --vel.Magnitude
 	
 	-- if we're not moving, don't apply friction
 	if speed <= 0 then
@@ -45,7 +45,12 @@ function module:ApplyFriction(modifier, decel)
 	end
 
 	-- apply
-	self.movementVelocity.Velocity = vel * newSpeed
+	--self.movementVelocity.Velocity = vel * newSpeed
+	self.movementVelocity.Velocity = Vector3.new(
+		self.movementVelocity.Velocity.X * newSpeed,
+		self.movementVelocity.Velocity.Y,
+		self.movementVelocity.Velocity.Z * newSpeed
+	)
 end
 
 --[[

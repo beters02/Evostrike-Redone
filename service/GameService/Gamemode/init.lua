@@ -85,7 +85,6 @@ function Gamemode:BarriersFinished(service) end -- Only called if BARRIERS_ENABL
 function Gamemode:Update() end
 
 -- Not Required, shared access.
-
 function Gamemode:SpawnAllPlayers(service)
     for _, v in pairs(service.PlayerData:GetPlayers()) do
         if service.GameOptions.REQUIRE_REQUEST_JOIN
