@@ -3,15 +3,15 @@
  Programming and engine work done by myself, assets are all made by my little brother, [Donut](https://github.com/metr0nme)
  
 ## Features
-- Custom movement with the goal of having the feeling of movement that is a mix between CSS and CSGO. I used [Fragsurf](https://github.com/Olezen/UnitySourceMovement) as a reference
-- Fine tuned recoil patterns to match that of CSGO and CS 1.6, which when combined with movement makes for a heavily mechanical tactical shooter
+- Custom source-based movement with the main goal of having movement that feels like a mix between CSS and CSGO. I used [Fragsurf](https://github.com/Olezen/UnitySourceMovement) as a reference
+- Fine tuned recoil patterns to match that of CSGO, which when combined with the source movement, makes for a heavily mechanical tactical shooter that is rewarding to master
 - Skins, knives, and cases
-- A large codebase that support modding for gamemodes, weapons, movement, etc
+- A large codebase that supports modding for gamemodes, weapons, movement and more
 
-This is my *baby*. Counter-Strike has long been a passion of mine, and I've always felt extremely motivated to become involved in it's development to better the game and community.
+This is my *baby*. Counter-Strike has been a passion of mine for a long time, and it's my dream to become professionally involved with something related to CS or Source Engine.
 
 ## Links
 - [Game](https://www.roblox.com/games/11287185880/Evostrike-BETA)
-- [Official Roblox DevForums Movement release](https://devforum.roblox.com/t/source-engine-movement-open-sourced/3008646)
+- [Official Evostrike Teaser, Youtube](https://www.youtube.com/watch?v=xN6tvV9pZuY&feature=youtu.be)
+- [Official Roblox DevForums Movement Template release](https://devforum.roblox.com/t/source-engine-movement-open-sourced/3008646)
 - [Fragsurf](https://github.com/Olezen/UnitySourceMovement)
-- [Youtube Evostrike Teaser](https://www.youtube.com/watch?v=xN6tvV9pZuY&feature=youtu.be)
