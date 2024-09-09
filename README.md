@@ -11,7 +11,7 @@
 This is my *baby*. Counter-Strike has long been a passion of mine, and I've always felt extremely motivated to become involved in it's development to better the game and community.
 
 ## Links
-- [Game] (https://www.roblox.com/games/11287185880/Evostrike-BETA)
+- [Game](https://www.roblox.com/games/11287185880/Evostrike-BETA)
 - [Official Roblox DevForums Movement release](https://devforum.roblox.com/t/source-engine-movement-open-sourced/3008646)
 - [Fragsurf](https://github.com/Olezen/UnitySourceMovement)
 - [Youtube Evostrike Teaser](https://www.youtube.com/watch?v=xN6tvV9pZuY&feature=youtu.be)
