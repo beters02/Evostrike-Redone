@@ -1,6 +1,6 @@
 # Evostrike
  [Evostrike](https://www.roblox.com/games/11287185880/Evostrike-BETA) is a multiplayer FPS game made in Roblox Studio, which is deeply inspired by Source Engine.
- Programming and engine work done by myself, as well as some of the maps. Assets are all made by my little brother, [Donut](https://github.com/metr0nme)
+ Programming and engine work done by myself, as well as animations and some of the maps. Assets are all made by my little brother, [Donut](https://github.com/metr0nme)
  
 ## Features
 - Custom source-based movement with the main goal of having movement that feels like a mix between CSS and CSGO. I used [Fragsurf](https://github.com/Olezen/UnitySourceMovement) as a reference
