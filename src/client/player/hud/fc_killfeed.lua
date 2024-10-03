@@ -15,7 +15,6 @@ killfeed.__index = killfeed
 function killfeed.init(self)
     local _n = {}
     _n.frame = self.killfr
-    --_n.itemframe = _n.frame:WaitForChild("ItemFrame")
 	_n.itemframe = _n.frame:WaitForChild("ItemFrame")
 	_n.currentItems = {}
 	_n.upLength = self.upLength or 5
@@ -59,21 +58,29 @@ function killfeed:addItem(killer, killed)
 	item.Visible = true
 	item.GroupTransparency = 1
 
+	local character
+
+	if killed:IsA("Player") then
+		character = killed.Character
+	else
+		character = killed
+	end
+
 	if not self.yours then
-		if killed.Character:GetAttribute("DiedToHeadshot") then
+		if character:GetAttribute("DiedToHeadshot") then
 			item:WaitForChild("WeaponIcon").Position = UDim2.fromScale(0.37, 0.201)
 			item:WaitForChild("Icon1").Visible = true
 		else
 			item:WaitForChild("WeaponIcon").Position = UDim2.fromScale(0.429, 0.201)
 			item:WaitForChild("Icon1").Visible = false
 		end
+
+		local weaponUsed = killed:GetAttribute("WeaponUsedToKill")
+		if weaponUsed then
+			item:WaitForChild("WeaponIcon").Image = getWeaponIconID(weaponUsed)
+		end
 	end
 
-	local weaponUsed = killed:GetAttribute("WeaponUsedToKill")
-	if weaponUsed then
-		item.WeaponIcon.Image = getWeaponIconID(weaponUsed)
-	end
-	
 	local index = #self.currentItems + 1
 	local newTable = {frame = item, tweenIn = nil, tweenOut = nil}
 	newTable.tweenIn = TweenService:Create(item, TweenInfo.new(0.4), {GroupTransparency = 0})

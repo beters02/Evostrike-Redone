@@ -8,6 +8,7 @@ local Globals = require(Framework.Module.lib.fc_global)
 local GamemodeEvents = ReplicatedStorage.GamemodeEvents
 local PlayerData = require(Framework.Module.PlayerData)
 local GameService = require(Framework.Service.GameService)
+local Bridge = script.Parent.Parent.Objects.Bridge
 
 local storedSvList = false
 
@@ -231,6 +232,17 @@ Commands.aimlock = {
 			return self:Error(err)
 		end
 		return self:Print(err)
+	end
+}
+
+--
+
+Commands.demo = {
+	Description = "Spawn bots for the new demo video",
+	Public = true,
+
+	Function = function(self)
+		Bridge:InvokeServer("DemoCommand")
 	end
 }
 
